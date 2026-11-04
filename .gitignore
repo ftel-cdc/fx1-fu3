@@ -1,0 +1,13 @@
+/examples/Blinky/build
+/.claude
+/.vscode
+/examples/FreeRTOS_Blinky/build
+/examples/OTA_Demo/build
+/examples/UART_ECHO_Polling/build/
+/examples/GPIO_Input_Output/build/
+/examples/FPGA_Terminal/build/
+/vscode-extension/node_modules
+/examples/Printf_Log/build/
+
+# Python caches
+__pycache__/

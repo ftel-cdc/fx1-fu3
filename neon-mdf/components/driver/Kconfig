@@ -1,0 +1,112 @@
+menu "components/driver"
+
+config NEON_MDF_DRIVER_UART
+    bool "Biên dịch UART driver"
+    default y
+    help
+        Bao gồm HAL UART polling, FIFO và interrupt-control trong build.
+        FU2: bật UART đồng thời biên dịch printf/vprintf/puts/putchar và
+        syscall hook _write, không cần cờ printf riêng. Console tự khởi
+        tạo UART0 ở lần xuất đầu tiên. Tắt option sẽ loại UART driver
+        và console FU2 khỏi build; gọi các API đó sẽ báo lỗi link.
+
+config NEON_MDF_DRIVER_I2C
+    bool "Biên dịch I2C driver (i2c/neon_i2c_fu2.c)"
+    default y
+    help
+        Bao gồm HAL I2C FU2: master/slave polling và interrupt, địa chỉ 7/10
+        bit, memory-read repeated START, FIFO, SMBus/PEC, DMA request,
+        bus-clear, quản lý CRM và tự cấu hình SDA/SCL. Timing dùng số chu kỳ
+        i2c_clk; board phải có điện trở pull-up ngoài trên cả SDA và SCL.
+
+config NEON_MDF_DRIVER_CRC
+    bool "Biên dịch CRC-8 driver (crc/neon_crc_fu2.c)"
+    default y
+    help
+        Bao gồm driver CRC-8 (NEON_CRC_Calculate) - port thật từ
+        src_fu2/fu2_crc.c. Tắt để giảm dung lượng Flash nếu app không dùng.
+
+config NEON_MDF_DRIVER_EFUSE
+    bool
+    default n
+    help
+        Symbol tương thích sdkconfig cũ; source OTP giữ tại driver/efuse.
+        FU2 ROM v5 lưu security policy và public key trong Flash NVR;
+        dùng API NVR của driver Flash, không dùng địa chỉ OTP cũ.
+
+config NEON_MDF_DRIVER_ADC
+    bool "Biên dịch ADC driver (adc/neon_adc_fu2.c)"
+    default y
+    help
+        FU2 ADC: 12-bit sample slots, cấu hình channel/timing và polling.
+
+config NEON_MDF_DRIVER_DMA
+    bool "Biên dịch DMA driver (dma/neon_dma_fu2.c)"
+    default y
+    help
+        FU2 FTEL DMA: 8 channel, command register và copy word 32-bit.
+
+config NEON_MDF_DRIVER_SPI
+    bool "Biên dịch SPI driver (spi/neon_spi_fu2.c)"
+    default y
+    help
+        Bao gồm HAL SPI master/slave: polling 8/16/24/32-bit, full-duplex,
+        slave-select, timing, FIFO, interrupt-status, clock-failure và cấu
+        hình giao tiếp DMA. Pinmux do board cấu hình trước khi truyền.
+
+config NEON_MDF_DRIVER_PWM
+    bool "Biên dịch PWM driver (pwm/neon_pwm_fu2.c)"
+    default y
+    help
+        Bao gồm driver PWM FU2 v8 DTI hai channel
+        (NEON_PWM_Init/Start/Stop/SetPeriod/SetPulse), bám theo register map
+        PWM DTI được chọn bởi FU2 v8 VP.
+
+config NEON_MDF_DRIVER_TIM
+    bool "Biên dịch TIM driver (tim/neon_tim_fu2.c)"
+    default y
+    help
+        Bao gồm driver Timer đầy đủ cho hai kênh CH0/CH1: cấu hình counter,
+        prescaler/reload, compare, update/preload/one-pulse/center-aligned,
+        interrupt/flag và clock-failure status. Bitfield và logic nền lấy từ
+        FU2 LL; API public kiểm tra tham số và trả NEON_StatusTypeDef.
+
+config NEON_MDF_DRIVER_RTC
+    bool "Biên dịch RTC driver (rtc/neon_rtc_fu2.c)"
+    default y
+    help
+        Bao gồm driver RTC (NEON_RTC_Init/SetTime/GetTime/SetDate/GetDate) -
+        Init/DeInit port thật từ src_fu2/fu2_dti_rtc.c, Set/GetTime/Date viết
+        mới ghép inline helper BCD thật trong header.
+
+config NEON_MDF_DRIVER_TRNG
+    bool "Biên dịch TRNG driver (trng/neon_trng_fu2.c)"
+    default y
+    help
+        Bao gồm driver TRNG (NEON_TRNG_Init/GetRandomNumber) - Init/DeInit
+        port thật từ src_fu2/fu2_dti_trng.c, GetRandomNumber viết mới ghép
+        inline helper thật trong header. IP thứ 3 (Dolphin Technology).
+
+config NEON_MDF_DRIVER_AES
+    bool "Biên dịch AES driver (aes/neon_aes_fu2.c)"
+    default y
+    help
+        FU2 AES-128: ECB/CBC/CTR, key/IV và polling READY/DONE.
+
+config NEON_MDF_DRIVER_QSPI
+    bool "Biên dịch QSPI driver (qspi/neon_qspi_fu2.c)"
+    default y
+    help
+        Bao gồm driver QSPI chế độ Indirect (NEON_QSPI_Init/SendCommand/
+        WriteData/ReadData) - Init/DeInit/SendCommand port thật từ
+        src_fu2/fu2_dti_qspi.c. Chỉ điều khiển qua cửa sổ APB, không dùng
+        chế độ memory-mapped (XiP).
+
+config NEON_MDF_DRIVER_WDT
+    bool "Biên dịch watchdog driver (wdt/neon_wdt_fu2.c)"
+    default y
+    help
+        FU2 watchdog: timeout range, reset/interrupt response, refresh,
+        đọc counter và acknowledge interrupt.
+
+endmenu

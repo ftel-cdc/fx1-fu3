@@ -1,0 +1,22 @@
+{
+  "cmake.sourceDirectory": "${workspaceFolder}",
+  "cmake.configureOnOpen": true,
+  "files.associations": {
+    "*.h": "c"
+  },
+  "cortex-debug.armToolchainPath": "",
+
+  "//": "NEON_MDF_PATH: giong IDF_PATH cua ESP-IDF. VSCode KHONG luon ke thua bien moi truong shell (vd mo qua Dock/Spotlight) - set day de chac chan CMake Tools va integrated terminal deu thay, khong phu thuoc nguoi dung nho `source neon-mdf/export.sh` truoc. Path tinh tuong doi tu app nay (examples/<X>/) len neon-mdf/ (2 cap: <X> -> examples -> repo root -> neon-mdf) - doi lai neu copy app ra vi tri khac.",
+  "cmake.environment": {
+    "NEON_MDF_PATH": "${workspaceFolder}/../../neon-mdf"
+  },
+  "terminal.integrated.env.osx": {
+    "NEON_MDF_PATH": "${workspaceFolder}/../../neon-mdf"
+  },
+  "terminal.integrated.env.linux": {
+    "NEON_MDF_PATH": "${workspaceFolder}/../../neon-mdf"
+  },
+  "cortex-debug.variableUseNaturalFormat": false,
+  "neonMdf.target": "WEACT_F412",
+  "neonMdf.transport": "jtag"
+}

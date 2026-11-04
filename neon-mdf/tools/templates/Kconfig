@@ -1,0 +1,24 @@
+# Kconfig CUA RIENG app __APP_NAME__ - TUY CHON, xoa file nay neu app khong
+# can option rieng gi (khong loi gi ca neu thieu file - xem
+# neon-mdf/Kconfig + cmake/kconfig.cmake, dong osource "optional source").
+#
+# Cac option khai bao o day se hien CUNG 1 menuconfig, gop chung 1
+# sdkconfig/sdkconfig.h voi cac option cua SDK (components/driver) - mo qua
+# CMake target `menuconfig` (VS Code: lenh "NEON-MDF: Menuconfig", CLI:
+# neon_mdf.py menuconfig). Doc gia tri trong code C qua
+# `#include "sdkconfig.h"` + macro CONFIG_<TEN>.
+#
+# Vi du (bo comment de dung - xoa doan nay neu khong can):
+#
+# menu "__APP_NAME__"
+#
+# config APP_EXAMPLE_OPTION
+#     bool "Vi du 1 option bat/tat rieng cua app nay"
+#     default y
+#     help
+#         Doc qua CONFIG_APP_EXAMPLE_OPTION trong Src/main.c (#include
+#         "sdkconfig.h") - xem Projects/Examples/Blinky/Kconfig +
+#         Src/main.c (CONFIG_BLINKY_DELAY_LOOPS) de xem 1 vi du THAT da
+#         chay tren phan cung.
+#
+# endmenu

@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="utf-8"?>
+<device schemaVersion="1.1" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="CMSIS-SVD.xsd">
+  <vendor>STMicroelectronics</vendor>
+  <name>WEACT_F412</name>
+  <description>STM32F412RET6 (board WeAct Studio STM32F4 Core Board) - test rig phần cứng thật user đang có, KHÔNG PHẢI chip FU2. Xem cảnh báo đầu file.</description>
+  <addressUnitBits>8</addressUnitBits>
+  <width>32</width>
+  <size>32</size>
+  <access>read-write</access>
+  <resetValue>0x00000000</resetValue>
+  <resetMask>0xFFFFFFFF</resetMask>
+  <peripherals>
+    <peripheral>
+      <name>RCC</name>
+      <description>Reset and Clock Control THẬT - AHB1ENR (GPIO) + APB2ENR (USART1, can cho bootloader UART)</description>
+      <baseAddress>0x40023800</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x400</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>AHB1ENR</name>
+          <description>AHB1 peripheral clock enable - bit 1=GPIOBEN. KHAC AHBENR (STM32F0, offset 0x14) va IOPENR (STM32L0, offset 0x2C) - xac nhan RCC_AHB1ENR_GPIOBEN that trong stm32f412zx.h</description>
+          <addressOffset>0x30</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>APB2ENR</name>
+          <description>APB2 peripheral clock enable - bit 4=USART1EN. THAT - xac nhan RCC_APB2ENR_USART1EN_Pos=4 trong stm32f412zx.h</description>
+          <addressOffset>0x44</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>GPIOA</name>
+      <description>GPIOA THẬT - chan PA9(TX)/PA10(RX) dung cho bootloader UART (USART1, AF7)</description>
+      <baseAddress>0x40020000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x400</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>MODER</name>
+          <description>Mode - 2 bit/pin (00=input,01=output,10=AF,11=analog). Reset THẬT khac theo pin BOOT/debug, xem RM0402 - de 0xFFFFFFFF (all analog) lam gia tri an toan.</description>
+          <addressOffset>0x0</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0xFFFFFFFF</resetValue>
+        </register>
+        <register>
+          <name>OTYPER</name>
+          <description>Output type - 1 bit/pin (0=push-pull, 1=open-drain)</description>
+          <addressOffset>0x4</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>OSPEEDR</name>
+          <description>Output speed - 2 bit/pin</description>
+          <addressOffset>0x8</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>PUPDR</name>
+          <description>Pull-up/pull-down - 2 bit/pin</description>
+          <addressOffset>0xC</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>IDR</name>
+          <description>Input data - doc muc pin hien tai, moi bit 1 pin</description>
+          <addressOffset>0x10</addressOffset>
+          <size>32</size>
+          <access>read-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>ODR</name>
+          <description>Output data - moi bit 1 pin</description>
+          <addressOffset>0x14</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>BSRR</name>
+          <description>Bit set/reset - bit[15:0] ghi 1 de SET, bit[31:16] ghi 1 de RESET (atomic)</description>
+          <addressOffset>0x18</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>LCKR</name>
+          <description>Configuration lock</description>
+          <addressOffset>0x1C</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>AFRL</name>
+          <description>Alternate function - pin 0..7</description>
+          <addressOffset>0x20</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>AFRH</name>
+          <description>Alternate function - pin 8..15</description>
+          <addressOffset>0x24</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>GPIOB</name>
+      <description>GPIOB THẬT - chân PB2 = LED onboard cua WeAct STM32F4 Core Board</description>
+      <baseAddress>0x40020400</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x400</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>MODER</name>
+          <description>Mode - 2 bit/pin (00=input,01=output,10=AF,11=analog). Reset THẬT khac theo pin BOOT/debug, xem RM0402 - de 0xFFFFFFFF (all analog) lam gia tri an toan.</description>
+          <addressOffset>0x0</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0xFFFFFFFF</resetValue>
+        </register>
+        <register>
+          <name>OTYPER</name>
+          <description>Output type - 1 bit/pin (0=push-pull, 1=open-drain)</description>
+          <addressOffset>0x4</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>OSPEEDR</name>
+          <description>Output speed - 2 bit/pin</description>
+          <addressOffset>0x8</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>PUPDR</name>
+          <description>Pull-up/pull-down - 2 bit/pin</description>
+          <addressOffset>0xC</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>IDR</name>
+          <description>Input data - doc muc pin hien tai, moi bit 1 pin</description>
+          <addressOffset>0x10</addressOffset>
+          <size>32</size>
+          <access>read-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>ODR</name>
+          <description>Output data - moi bit 1 pin</description>
+          <addressOffset>0x14</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>BSRR</name>
+          <description>Bit set/reset - bit[15:0] ghi 1 de SET, bit[31:16] ghi 1 de RESET (atomic)</description>
+          <addressOffset>0x18</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>LCKR</name>
+          <description>Configuration lock</description>
+          <addressOffset>0x1C</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>AFRL</name>
+          <description>Alternate function - pin 0..7</description>
+          <addressOffset>0x20</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>AFRH</name>
+          <description>Alternate function - pin 8..15</description>
+          <addressOffset>0x24</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>USART1</name>
+      <description>USART1 THẬT - dung boi bootloader UART tren PA9(TX)/PA10(RX), AF7, 115200 8N1 (xem bootloader.uart duoi)</description>
+      <baseAddress>0x40011000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x400</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>SR</name>
+          <description>Status - bit5=RXNE, bit6=TC, bit7=TXE. Reset THAT co TXE=TC=1 (san sang gui ngay sau reset)</description>
+          <addressOffset>0x0</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x000000C0</resetValue>
+        </register>
+        <register>
+          <name>DR</name>
+          <description>Data register (doc = RX, ghi = TX)</description>
+          <addressOffset>0x4</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>BRR</name>
+          <description>Baud rate - vd 0x8B cho 115200 baud @ HSI 16MHz (OVER8=0)</description>
+          <addressOffset>0x8</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>CR1</name>
+          <description>Control 1 - bit2=RE, bit3=TE, bit13=UE</description>
+          <addressOffset>0xC</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>CR2</name>
+          <description>Control 2 (chua dung - stop bits/clock)</description>
+          <addressOffset>0x10</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>CR3</name>
+          <description>Control 3 (chua dung - flow control/DMA)</description>
+          <addressOffset>0x14</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>GTPR</name>
+          <description>Guard time + prescaler (chua dung - IrDA/smartcard)</description>
+          <addressOffset>0x18</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>FLASH</name>
+      <description>FLASH controller THẬT - dung boi bootloader de erase/program sector app (xem components/driver/flash)</description>
+      <baseAddress>0x40023C00</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x400</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>ACR</name>
+          <description>Access control (latency/prefetch/cache) - chua dung</description>
+          <addressOffset>0x0</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>KEYR</name>
+          <description>Key register - ghi KEY1=0x45670123 roi KEY2=0xCDEF89AB de mo khoa CR</description>
+          <addressOffset>0x4</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>OPTKEYR</name>
+          <description>Option key register - chua dung (khong dung option bytes)</description>
+          <addressOffset>0x8</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>SR</name>
+          <description>Status - bit0=EOP, bit16=BSY</description>
+          <addressOffset>0xC</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>CR</name>
+          <description>Control - bit0=PG, bit1=SER, bit[6:3]=SNB, bit[9:8]=PSIZE, bit16=STRT, bit31=LOCK (reset THAT = locked)</description>
+          <addressOffset>0x10</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x80000000</resetValue>
+        </register>
+        <register>
+          <name>OPTCR</name>
+          <description>Option control - chua dung</description>
+          <addressOffset>0x14</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>OPTCR1</name>
+          <description>Option control 1 - chua dung</description>
+          <addressOffset>0x18</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+      </registers>
+    </peripheral>
+  </peripherals>
+</device>

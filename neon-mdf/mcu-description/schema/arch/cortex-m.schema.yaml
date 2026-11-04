@@ -1,0 +1,34 @@
+# cortex-m.schema.yaml
+#
+# Field bổ sung khi cpu.core là một biến thể Cortex-M (arch: cortex-m0, cortex-m0plus, ...).
+# Mở rộng cho common.schema.yaml — không lặp lại field chung.
+
+cpu:
+  nvic_priority_bits: int     # số bit priority NVIC hiện thực thật trên silicon (ARMv6-M cho vendor tự
+                              # chọn 1-8 bit; phổ biến nhất là 2 bit trên Cortex-M0). BẮT BUỘC xác nhận lại
+                              # với tài liệu phần cứng thật — sai số này sẽ làm sai lệch toàn bộ priority
+                              # scheme của FreeRTOS (configPRIO_BITS phải khớp giá trị này).
+  num_irq: int                # số ngoại vi IRQ (NVIC hỗ trợ tối đa 32 IRQ trên Cortex-M0/M0+, IRQ0..IRQ31)
+  vtor_supported: bool        # Cortex-M0 (ARMv6-M) không có VTOR chuẩn (chỉ M0+ optional có).
+                              # Nếu false, vector table BẮT BUỘC đặt tại địa chỉ 0x00000000 (đầu vùng FLASH).
+  mpu_present: bool           # (tuỳ chọn, default false) - core có MPU không (Cortex-M4 thường CÓ,
+                              # M0/M0+ thường KHÔNG). Xác nhận qua CMSIS device header thật của vendor
+                              # (macro __MPU_PRESENT), không suy diễn từ core name.
+  fpu_present: bool           # (tuỳ chọn, default false) - CHỈ có ý nghĩa với core cortex-m4 (sinh macro
+                              # __FPU_PRESENT) - Cortex-M4F có FPU phần cứng, Cortex-M4 (không F) thì không.
+                              # Nếu true, còn cần set cờ compile -mfloat-abi=hard -mfpu=fpv4-sp-d16 trong
+                              # cmake/arch/cortex-m.cmake để THẬT SỰ dùng phần cứng (không chỉ khai báo).
+
+# Vector table (kiến trúc ARMv6-M, áp dụng mọi Cortex-M0/M0+, không phụ thuộc vendor):
+#   0:  Initial Main Stack Pointer (lấy từ symbol _estack do linker script cấp)
+#   1:  Reset_Handler
+#   2:  NMI_Handler
+#   3:  HardFault_Handler
+#   4-10: Reserved
+#   11: SVC_Handler
+#   12-13: Reserved
+#   14: PendSV_Handler
+#   15: SysTick_Handler
+#   16+: IRQ0 .. IRQ(num_irq-1)  (mỗi entry lấy tên từ mục `interrupts` trong file device .yaml)
+#
+# gen_startup_vector.py sinh đúng layout này, không cần khai báo lại trong file device .yaml.

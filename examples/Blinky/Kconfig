@@ -1,0 +1,15 @@
+menu "Blinky (app nay)"
+
+config BLINKY_DELAY_LOOPS
+    int "So vong lap delay giua moi lan toggle LED"
+    default 500000
+    help
+        Delay busy-loop (chua co SysTick/NEON_Delay that - xem comment trong
+        Src/main.c) - tang gia tri de LED nhay CHAM hon, giam de nhay NHANH
+        hon. Doc qua CONFIG_BLINKY_DELAY_LOOPS trong Src/main.c.
+
+        Vi du menuconfig KET HOP: option nay la CUA RIENG app Blinky (khong
+        thuoc SDK), xuat hien CUNG 1 menu voi cac option cua SDK
+        (components/driver) - xem neon-mdf/Kconfig + cmake/kconfig.cmake.
+
+endmenu

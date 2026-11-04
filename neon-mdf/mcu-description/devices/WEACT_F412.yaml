@@ -1,0 +1,176 @@
+# WEACT_F412.yaml — KHÔNG PHẢI FU2.
+#
+# ============================================================================
+# TEST RIG PHẦN CỨNG THẬT (STM32F412RET6 trên board WeAct Studio Core Board)
+# ============================================================================
+# Board THẬT user đang có trong tay (WeActStudio.STM32F4_64Pin_CoreBoard, bản
+# populate chip STM32F412RET6). FU2 CHỈ giống STM32 ở mức KIẾN TRÚC CHUNG -
+# KHÔNG có xác nhận register layout khớp nhau, nên KHÔNG dùng device này để
+# suy luận bất cứ điều gì về FU2.
+#
+# KHÁC NUCLEO_L031K6: board WeAct này KHÔNG CÓ debugger on-board (không phải
+# Nucleo) - PHẢI dùng probe SWD rời (ST-LINK V2 clone hoặc tương đương) nối
+# vào header 4 chân (3V3/GND/SWCLK/SWDIO). QEMU không có machine model cho
+# board này - chỉ build/link được ngay bây giờ.
+#
+# NGUỒN DỮ LIỆU (THẬT) - cross-check qua source thật (curl trực tiếp từ
+# STMicroelectronics/cmsis_device_f4, KHÔNG suy diễn từ STM32F0/L0 đã làm
+# trước đó dù cùng hãng ST):
+#   - GPIO_TypeDef, RCC_BASE, GPIOx_BASE, AHB1ENR THẬT từ
+#     Include/stm32f412zx.h (STMicroelectronics/cmsis_device_f4).
+#   - QUAN TRỌNG: STM32F4 bật clock GPIO qua `RCC->AHB1ENR` (offset 0x30,
+#     bit GPIOBEN=1) - KHÁC CẢ HAI board trước: không phải `AHBENR` offset
+#     0x14 (STM32F0) cũng không phải `IOPENR` offset 0x2C (STM32L0). Đây là
+#     kiểu đặt tên/offset THỨ BA trong 3 dòng STM32 đã tra cứu - xác nhận
+#     KHÔNG suy đoán được, phải tra riêng từng dòng.
+#   - __MPU_PRESENT=1, __FPU_PRESENT=1, __NVIC_PRIO_BITS=4 THẬT (xác nhận
+#     qua chính stm32f412zx.h) - KHÁC Cortex-M0/M0+ (không có FPU, chỉ 2 bit
+#     priority) - đây là board Cortex-M4F ĐẦU TIÊN trong SDK.
+#   - LED LD (onboard, theo board WeAct STM32F4 Core Board - cùng layout PCB
+#     cho cả F405/F411/F412/F446) = PB2, active-HIGH (ghi 1 = sáng).
+#   - Flash 512KB, RAM 256KB (STM32F412RET6, KHÁC F405 - 1MB/192KB - dù cùng
+#     board WeAct, khác chip populate).
+#   - Clock mặc định sau reset: HSI 16MHz (chuẩn STM32F4, KHÁC HSI 8MHz của
+#     F0 và MSI ~2.097MHz của L0).
+#   - CHƯA verify chạy thật trên silicon (đang cài openocd + probe SWD rời,
+#     chưa nạp thử) - xem ARCHITECTURE.md khi cập nhật.
+#
+# PHẠM VI: chỉ GPIOB (đủ cho LED) + RCC (chỉ AHB1ENR để bật clock GPIOB) -
+# CHƯA có UART/I2C/SPI.
+# ============================================================================
+
+device: WEACT_F412
+vendor: STMicroelectronics
+family: WEACT_F412
+arch: cortex-m4
+description: >
+  STM32F412RET6 (board WeAct Studio STM32F4 Core Board) - test rig phần
+  cứng thật user đang có, KHÔNG PHẢI chip FU2. Xem cảnh báo đầu file.
+
+cpu:
+  core: cortex-m4
+  revision: r0p1                # THẬT - xác nhận qua __CM4_REV=0x0001U trong stm32f412zx.h
+  max_freq_hz: 100000000        # 100 MHz - tần số tối đa STM32F412 (theo datasheet, KHÁC F405 168MHz)
+  nvic_priority_bits: 4         # THẬT - xác nhận __NVIC_PRIO_BITS=4U (KHÁC Cortex-M0/M0+ chỉ 2 bit)
+  num_irq: 97                   # THẬT - xác nhận qua IRQn_Type trong stm32f412zx.h (STMicroelectronics/cmsis_device_f4): IRQ cao nhất la FMPI2C1_ER_IRQn=96 -> 97 duong (0..96). Dung cho validate loader.py VA cho tinh alignment SCB->VTOR (xem bootloader.image_header_size duoi) - PHAI la nang luc NVIC that cua silicon, khong phai so IRQ da khai o `interrupts:` (hien dang rong).
+  vtor_supported: true          # Cortex-M4 LUÔN có VTOR (bắt buộc theo kiến trúc ARMv7-M, không tuỳ chọn như M0+)
+  mpu_present: true             # THẬT - xác nhận __MPU_PRESENT=1U trong stm32f412zx.h
+  fpu_present: true             # THẬT - xác nhận __FPU_PRESENT=1U trong stm32f412zx.h (STM32F412 là M4F)
+
+memory:
+  - name: FLASH_MEM             # KHONG dat "FLASH" - trung ten voi peripheral FLASH controller (0x40023C00) o
+    # duoi, generator se sinh trung macro FLASH_BASE cho 2 dia chi khac nhau (xem gen_cmsis_header.py memory-map)
+    kind: flash
+    address: 0x08000000         # base FLASH thật của STM32 (giống mọi dòng STM32)
+    size: 0x80000                 # 512 KB (theo datasheet STM32F412RET6 - KHÁC F405 1MB)
+  - name: RAM
+    kind: ram
+    address: 0x20000000
+    size: 0x40000                  # 256 KB - xác nhận qua SRAM1_BASE/comment "(256 KB)" trong stm32f412zx.h
+
+peripherals:
+  - name: RCC
+    base: 0x40023800            # THẬT - theo stm32f412zx.h (AHB1PERIPH_BASE + 0x3800)
+    description: "Reset and Clock Control THẬT - AHB1ENR (GPIO) + APB2ENR (USART1, can cho bootloader UART)"
+    registers:
+      - {name: AHB1ENR, offset: 0x30, size: 32, access: rw, reset: 0x00000000, description: "AHB1 peripheral clock enable - bit 1=GPIOBEN. KHAC AHBENR (STM32F0, offset 0x14) va IOPENR (STM32L0, offset 0x2C) - xac nhan RCC_AHB1ENR_GPIOBEN that trong stm32f412zx.h"}
+      - {name: APB2ENR, offset: 0x44, size: 32, access: rw, reset: 0x00000000, description: "APB2 peripheral clock enable - bit 4=USART1EN. THAT - xac nhan RCC_APB2ENR_USART1EN_Pos=4 trong stm32f412zx.h"}
+
+  - name: GPIOA
+    base: 0x40020000            # THẬT - theo stm32f412zx.h (AHB1PERIPH_BASE + 0x0000)
+    type: GPIO                  # PHAI giong het layout GPIOB (loader.py bat buoc cung `type` = cung register layout) - PA9/PA10 = UART1 TX/RX cua bootloader
+    description: "GPIOA THẬT - chan PA9(TX)/PA10(RX) dung cho bootloader UART (USART1, AF7)"
+    registers:
+      - {name: MODER,   offset: 0x00, size: 32, access: rw, reset: 0xFFFFFFFF, description: "Mode - 2 bit/pin (00=input,01=output,10=AF,11=analog). Reset THẬT khac theo pin BOOT/debug, xem RM0402 - de 0xFFFFFFFF (all analog) lam gia tri an toan."}
+      - {name: OTYPER,  offset: 0x04, size: 32, access: rw, reset: 0x00000000, description: "Output type - 1 bit/pin (0=push-pull, 1=open-drain)"}
+      - {name: OSPEEDR, offset: 0x08, size: 32, access: rw, reset: 0x00000000, description: "Output speed - 2 bit/pin"}
+      - {name: PUPDR,   offset: 0x0C, size: 32, access: rw, reset: 0x00000000, description: "Pull-up/pull-down - 2 bit/pin"}
+      - {name: IDR,     offset: 0x10, size: 32, access: ro, reset: 0x00000000, description: "Input data - doc muc pin hien tai, moi bit 1 pin"}
+      - {name: ODR,     offset: 0x14, size: 32, access: rw, reset: 0x00000000, description: "Output data - moi bit 1 pin"}
+      - {name: BSRR,    offset: 0x18, size: 32, access: wo, reset: 0x00000000, description: "Bit set/reset - bit[15:0] ghi 1 de SET, bit[31:16] ghi 1 de RESET (atomic)"}
+      - {name: LCKR,    offset: 0x1C, size: 32, access: rw, reset: 0x00000000, description: "Configuration lock"}
+      - {name: AFRL,    offset: 0x20, size: 32, access: rw, reset: 0x00000000, description: "Alternate function - pin 0..7"}
+      - {name: AFRH,    offset: 0x24, size: 32, access: rw, reset: 0x00000000, description: "Alternate function - pin 8..15"}
+
+  - name: GPIOB
+    base: 0x40020400            # THẬT - theo stm32f412zx.h (AHB1PERIPH_BASE + 0x400)
+    type: GPIO
+    description: "GPIOB THẬT - chân PB2 = LED onboard cua WeAct STM32F4 Core Board"
+    registers:
+      - {name: MODER,   offset: 0x00, size: 32, access: rw, reset: 0xFFFFFFFF, description: "Mode - 2 bit/pin (00=input,01=output,10=AF,11=analog). Reset THẬT khac theo pin BOOT/debug, xem RM0402 - de 0xFFFFFFFF (all analog) lam gia tri an toan."}
+      - {name: OTYPER,  offset: 0x04, size: 32, access: rw, reset: 0x00000000, description: "Output type - 1 bit/pin (0=push-pull, 1=open-drain)"}
+      - {name: OSPEEDR, offset: 0x08, size: 32, access: rw, reset: 0x00000000, description: "Output speed - 2 bit/pin"}
+      - {name: PUPDR,   offset: 0x0C, size: 32, access: rw, reset: 0x00000000, description: "Pull-up/pull-down - 2 bit/pin"}
+      - {name: IDR,     offset: 0x10, size: 32, access: ro, reset: 0x00000000, description: "Input data - doc muc pin hien tai, moi bit 1 pin"}
+      - {name: ODR,     offset: 0x14, size: 32, access: rw, reset: 0x00000000, description: "Output data - moi bit 1 pin"}
+      - {name: BSRR,    offset: 0x18, size: 32, access: wo, reset: 0x00000000, description: "Bit set/reset - bit[15:0] ghi 1 de SET, bit[31:16] ghi 1 de RESET (atomic)"}
+      - {name: LCKR,    offset: 0x1C, size: 32, access: rw, reset: 0x00000000, description: "Configuration lock"}
+      - {name: AFRL,    offset: 0x20, size: 32, access: rw, reset: 0x00000000, description: "Alternate function - pin 0..7"}
+      - {name: AFRH,    offset: 0x24, size: 32, access: rw, reset: 0x00000000, description: "Alternate function - pin 8..15"}
+
+  - name: USART1
+    base: 0x40011000            # THẬT - theo stm32f412zx.h (APB2PERIPH_BASE 0x40010000 + 0x1000)
+    type: USART                 # quy uoc CMSIS/ST that (USART_TypeDef dung chung cho USART1/2/3...) - de tuong lai them USART2/3 dung chung struct nhu GPIOA/GPIOB
+    description: "USART1 THẬT - dung boi bootloader UART tren PA9(TX)/PA10(RX), AF7, 115200 8N1 (xem bootloader.uart duoi)"
+    registers:
+      - {name: SR,   offset: 0x00, size: 32, access: rw, reset: 0x000000C0, description: "Status - bit5=RXNE, bit6=TC, bit7=TXE. Reset THAT co TXE=TC=1 (san sang gui ngay sau reset)"}
+      - {name: DR,   offset: 0x04, size: 32, access: rw, reset: 0x00000000, description: "Data register (doc = RX, ghi = TX)"}
+      - {name: BRR,  offset: 0x08, size: 32, access: rw, reset: 0x00000000, description: "Baud rate - vd 0x8B cho 115200 baud @ HSI 16MHz (OVER8=0)"}
+      - {name: CR1,  offset: 0x0C, size: 32, access: rw, reset: 0x00000000, description: "Control 1 - bit2=RE, bit3=TE, bit13=UE"}
+      - {name: CR2,  offset: 0x10, size: 32, access: rw, reset: 0x00000000, description: "Control 2 (chua dung - stop bits/clock)"}
+      - {name: CR3,  offset: 0x14, size: 32, access: rw, reset: 0x00000000, description: "Control 3 (chua dung - flow control/DMA)"}
+      - {name: GTPR, offset: 0x18, size: 32, access: rw, reset: 0x00000000, description: "Guard time + prescaler (chua dung - IrDA/smartcard)"}
+
+  - name: FLASH
+    base: 0x40023C00            # THẬT - theo stm32f412zx.h (AHB1PERIPH_BASE 0x40020000 + 0x3C00)
+    description: "FLASH controller THẬT - dung boi bootloader de erase/program sector app (xem components/driver/flash)"
+    registers:
+      - {name: ACR,     offset: 0x00, size: 32, access: rw, reset: 0x00000000, description: "Access control (latency/prefetch/cache) - chua dung"}
+      - {name: KEYR,    offset: 0x04, size: 32, access: wo, reset: 0x00000000, description: "Key register - ghi KEY1=0x45670123 roi KEY2=0xCDEF89AB de mo khoa CR"}
+      - {name: OPTKEYR, offset: 0x08, size: 32, access: wo, reset: 0x00000000, description: "Option key register - chua dung (khong dung option bytes)"}
+      - {name: SR,      offset: 0x0C, size: 32, access: rw, reset: 0x00000000, description: "Status - bit0=EOP, bit16=BSY"}
+      - {name: CR,      offset: 0x10, size: 32, access: rw, reset: 0x80000000, description: "Control - bit0=PG, bit1=SER, bit[6:3]=SNB, bit[9:8]=PSIZE, bit16=STRT, bit31=LOCK (reset THAT = locked)"}
+      - {name: OPTCR,   offset: 0x14, size: 32, access: rw, reset: 0x00000000, description: "Option control - chua dung"}
+      - {name: OPTCR1,  offset: 0x18, size: 32, access: rw, reset: 0x00000000, description: "Option control 1 - chua dung"}
+
+interrupts: []   # vi du blink chi dung polling, khong can IRQ (giong cac target khac)
+
+# ============================================================================
+# BOOTLOADER PARTITION LAYOUT (moi, dung cho mcu-description generator sinh
+# <DEVICE>_BOOTLOADER.ld + <DEVICE>_APP.ld + macro NEON_MDF_APP_* - xem
+# gen_linker_script.py, gen_cmsis_header.py, loader.py).
+#
+# size = 0x8000 (32KB) = sector 0+1 (STM32F412 sector 0-3 = 16KB/sector,
+# xem RM0402) - bootloader that hien tai (Bootloader_WeAct) chi dung ~1.5KB,
+# 32KB du du cho tuong lai.
+#
+# image_header_size = 0x200 (512B), KHONG PHAI 16 (sizeof image_header_t
+# that su) - can du lon de dam bao APP_VECTOR_BASE = flash.address +
+# bootloader.size + image_header_size THOA man yeu cau align cua SCB->VTOR:
+# ARMv7-M bat buoc align theo boi so cua so luong exception THAT trien khai
+# (16 core + num_irq=97 -> 113 -> lam tron len luy thua 2 = 128 -> 128*4 =
+# 0x200 byte). Neu chon nho hon se bi HW tu dong lam tron xuong (khong bao
+# loi) -> VTOR tro sai vi tri that su, loi am tham chi lo ra khi app dung
+# ngat that (vd FreeRTOS SysTick/PendSV) - xem loader.py._check_bootloader_vtor_alignment().
+bootloader:
+  size: 0x8000
+  image_header_size: 0x200
+  uart:
+    peripheral: USART1              # tham chieu peripherals.name o tren
+    tx_pin: PA9
+    rx_pin: PA10
+    af: 7                           # AF7 = USART1/2/3 tren GPIO, quy uoc chuan STM32F4 (khong rieng F412)
+    baud: 115200
+
+# Bang sector THAT cua STM32F412 (RM0402, xac nhan qua WebSearch - KHONG
+# doan tu dong F0/L0 dung page deu nhau, xem comment tuong tu trong
+# components/driver/flash/neon_flash_weact_f412.c - 2 noi PHAI khop nhau,
+# khong tu dong dong bo, doi 1 ben thi doi ca 2) - dung cho
+# tools/gen_flashmap.py validate flashmap.csv cua app (neu co).
+erase_sectors:
+  - size: 0x4000    # sector 0-3, 16KB moi sector
+    count: 4
+  - size: 0x10000   # sector 4, 64KB
+    count: 1
+  - size: 0x20000   # sector 5-7, 128KB moi sector
+    count: 3

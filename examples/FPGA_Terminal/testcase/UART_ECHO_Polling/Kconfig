@@ -1,0 +1,20 @@
+menu "UART_ECHO_Polling testcase"
+
+config UART_ECHO_RX_TIMEOUT_POLLS
+    int "Echo RX timeout (poll iterations, not milliseconds)"
+    range 1 100000000
+    default 10000
+    help
+        Budget poll cho mot lan Receive mot byte trong testcase.
+        Timeout khi chua co du lieu duoc dem va tiep tuc nhan.
+
+config UART_ECHO_TX_TIMEOUT_POLLS
+    int "Echo TX timeout (poll iterations, not milliseconds)"
+    range 1 100000000
+    default 1000000
+    help
+        Budget poll cho mot lan Transmit mot byte echo.
+        Khi loi, testcase ghi nhan va tiep tuc nhan, khong tu gui lai byte.
+        Baud va clock dung chung cau hinh cua FPGA_Terminal.
+
+endmenu

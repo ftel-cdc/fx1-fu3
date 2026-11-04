@@ -1,0 +1,42 @@
+services:
+  fw:
+    build:
+      context: .
+      args:
+        # Bump to whatever is current on developer.arm.com
+        ARM_TOOLCHAIN_VERSION: 15.2.rel1
+        # macOS default UID is 501, GID 20. Linux is usually 1000/1000.
+        # Check with: id -u && id -g
+        UID: "501"
+        GID: "20"
+    image: fw-env:latest
+    container_name: fw-env
+    working_dir: /workspace/examples/Blinky
+    volumes:
+      - ../../:/workspace:cached
+      # SSH agent forwarding. This path is the fixed socket Docker Desktop
+      # exposes on macOS. On Linux use ${SSH_AUTH_SOCK}:/ssh-agent instead
+      # and point SSH_AUTH_SOCK at /ssh-agent.
+      - /run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock
+      # Named volume so the build tree lives in the container filesystem,
+      # not on the slow bind mount.
+      - build-cache:/workspace/build
+    environment:
+      - SSH_AUTH_SOCK=/run/host-services/ssh-auth.sock
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+  # Variant with a USB debug probe attached. Linux hosts only — Docker
+  # Desktop on macOS cannot pass USB devices into its VM.
+  fw-probe:
+    extends:
+      service: fw
+    container_name: fw-env-probe
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    profiles:
+      - probe
+
+volumes:
+  build-cache:

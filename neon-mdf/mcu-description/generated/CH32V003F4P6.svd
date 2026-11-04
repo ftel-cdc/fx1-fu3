@@ -1,0 +1,438 @@
+<?xml version="1.0" encoding="utf-8"?>
+<device schemaVersion="1.1" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="CMSIS-SVD.xsd">
+  <vendor>WCH</vendor>
+  <name>CH32V003F4P6</name>
+  <description>WCH CH32V003F4P6 - RISC-V QingKe V2A (RV32EC), 16KB Flash/2KB SRAM, gói TSSOP20 (chỉ GPIOA/C/D). Board dev RISC-V đầu tiên của SDK này.</description>
+  <addressUnitBits>8</addressUnitBits>
+  <width>32</width>
+  <size>32</size>
+  <access>read-write</access>
+  <resetValue>0x00000000</resetValue>
+  <resetMask>0xFFFFFFFF</resetMask>
+  <peripherals>
+    <peripheral>
+      <name>RCC</name>
+      <description>Reset and Clock Control - RM chuong 3</description>
+      <baseAddress>0x40021000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x400</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>CTLR</name>
+          <description>Clock control register (HSION/HSIRDY/PLLON/...) - RM ghi reset 0x0000xx83, 'xx' la bit factory-trim khong xac dinh - dat 0x00 cho cac bit do (chi field lieu, khong anh huong sinh header)</description>
+          <addressOffset>0x0</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000083</resetValue>
+        </register>
+        <register>
+          <name>CFGR0</name>
+          <description>Clock configuration register 0 (SW/HPRE/PLLSRC/...) - THAT, RM 3.4.2</description>
+          <addressOffset>0x4</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000020</resetValue>
+        </register>
+        <register>
+          <name>INTR</name>
+          <description>Clock interrupt register - THAT, RM 3.4.3</description>
+          <addressOffset>0x8</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>APB2PRSTR</name>
+          <description>PB2 peripheral reset register - THAT, RM 3.4.4</description>
+          <addressOffset>0xC</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>APB1PRSTR</name>
+          <description>PB1 peripheral reset register - THAT, RM 3.4.5</description>
+          <addressOffset>0x10</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>AHBPCENR</name>
+          <description>HB peripheral clock enable register - THAT, RM 3.4.6</description>
+          <addressOffset>0x14</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000004</resetValue>
+        </register>
+        <register>
+          <name>APB2PCENR</name>
+          <description>PB2 peripheral clock enable register - bit0 AFIOEN, bit2 IOPAEN, bit4 IOPCEN, bit5 IOPDEN (THAT, RM 3.4.7) - dung boi NEON_GPIO_ClockEnable()</description>
+          <addressOffset>0x18</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>APB1PCENR</name>
+          <description>PB1 peripheral clock enable register - THAT, RM 3.4.8</description>
+          <addressOffset>0x1C</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>RSTSCKR</name>
+          <description>Control/status register (reset source flags) - THAT, RM 3.4.9</description>
+          <addressOffset>0x24</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x0C000000</resetValue>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>GPIOA</name>
+      <description>GPIOA (PA1-PA2 tren goi TSSOP20) - RM chuong 7</description>
+      <baseAddress>0x40010800</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x400</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>CFGLR</name>
+          <description>Port configuration register low (CNFy/MODEy 2-bit/pin, y=0-7) - THAT, RM 7.3.1.1</description>
+          <addressOffset>0x0</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x44444444</resetValue>
+        </register>
+        <register>
+          <name>INDR</name>
+          <description>Port input data register - THAT, RM 7.3.1.2</description>
+          <addressOffset>0x8</addressOffset>
+          <size>32</size>
+          <access>read-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>OUTDR</name>
+          <description>Port output data register - THAT, RM 7.3.1.3</description>
+          <addressOffset>0xC</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>BSHR</name>
+          <description>Port set/reset register (bit y set, bit 16+y reset, atomic) - THAT, RM 7.3.1.4</description>
+          <addressOffset>0x10</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>BCR</name>
+          <description>Port reset register (bit y = clear, atomic) - THAT, RM 7.3.1.5</description>
+          <addressOffset>0x14</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>LCKR</name>
+          <description>Port configuration lock register - THAT, RM 7.3.1.6</description>
+          <addressOffset>0x18</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>GPIOC</name>
+      <description>GPIOC (PC0-PC7) - RM chuong 7</description>
+      <baseAddress>0x40011000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x400</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>CFGLR</name>
+          <description>Port configuration register low (CNFy/MODEy 2-bit/pin, y=0-7) - THAT, RM 7.3.1.1</description>
+          <addressOffset>0x0</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x44444444</resetValue>
+        </register>
+        <register>
+          <name>INDR</name>
+          <description>Port input data register - THAT, RM 7.3.1.2</description>
+          <addressOffset>0x8</addressOffset>
+          <size>32</size>
+          <access>read-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>OUTDR</name>
+          <description>Port output data register - THAT, RM 7.3.1.3</description>
+          <addressOffset>0xC</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>BSHR</name>
+          <description>Port set/reset register (bit y set, bit 16+y reset, atomic) - THAT, RM 7.3.1.4</description>
+          <addressOffset>0x10</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>BCR</name>
+          <description>Port reset register (bit y = clear, atomic) - THAT, RM 7.3.1.5</description>
+          <addressOffset>0x14</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>LCKR</name>
+          <description>Port configuration lock register - THAT, RM 7.3.1.6</description>
+          <addressOffset>0x18</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>GPIOD</name>
+      <description>GPIOD (PD0-PD7, PD1 trung SWIO debug + LED onboard tren nhieu board dev) - RM chuong 7</description>
+      <baseAddress>0x40011400</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x400</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>CFGLR</name>
+          <description>Port configuration register low (CNFy/MODEy 2-bit/pin, y=0-7) - THAT, RM 7.3.1.1</description>
+          <addressOffset>0x0</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x44444444</resetValue>
+        </register>
+        <register>
+          <name>INDR</name>
+          <description>Port input data register - THAT, RM 7.3.1.2</description>
+          <addressOffset>0x8</addressOffset>
+          <size>32</size>
+          <access>read-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>OUTDR</name>
+          <description>Port output data register - THAT, RM 7.3.1.3</description>
+          <addressOffset>0xC</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>BSHR</name>
+          <description>Port set/reset register (bit y set, bit 16+y reset, atomic) - THAT, RM 7.3.1.4</description>
+          <addressOffset>0x10</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>BCR</name>
+          <description>Port reset register (bit y = clear, atomic) - THAT, RM 7.3.1.5</description>
+          <addressOffset>0x14</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>LCKR</name>
+          <description>Port configuration lock register - THAT, RM 7.3.1.6</description>
+          <addressOffset>0x18</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>USART1</name>
+      <description>USART1 (mapping mac dinh TX=PD5,RX=PD6) - RM chuong 12</description>
+      <baseAddress>0x40013800</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x400</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>STATR</name>
+          <description>Status register (TXE=bit7,TC=bit6,RXNE=bit5) - THAT, RM 12.10.1</description>
+          <addressOffset>0x0</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x000000C0</resetValue>
+        </register>
+        <register>
+          <name>DATAR</name>
+          <description>Data register (DR[8:0]) - THAT, RM 12.10.2</description>
+          <addressOffset>0x4</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>BRR</name>
+          <description>Baud rate register (DIV_Mantissa[15:4]/DIV_Fraction[3:0]) - THAT, RM 12.10.3</description>
+          <addressOffset>0x8</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>CTLR1</name>
+          <description>Control register 1 (UE=bit13,TE=bit3,RE=bit2) - THAT, RM 12.10.4</description>
+          <addressOffset>0xC</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>CTLR2</name>
+          <description>Control register 2 - THAT, RM 12.10.5</description>
+          <addressOffset>0x10</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>CTLR3</name>
+          <description>Control register 3 - THAT, RM 12.10.6</description>
+          <addressOffset>0x14</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>GPR</name>
+          <description>Guard time and prescaler register - THAT, RM 12.10.7</description>
+          <addressOffset>0x18</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>FLASH</name>
+      <description>Flash memory controller (FPEC) - RM chuong 16</description>
+      <baseAddress>0x40022000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x400</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>ACTLR</name>
+          <description>Control register (LATENCY) - THAT, RM 16.3.1</description>
+          <addressOffset>0x0</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>KEYR</name>
+          <description>FPEC key register (KEY1=0x45670123,KEY2=0xCDEF89AB de unlock) - THAT, RM 16.3.2</description>
+          <addressOffset>0x4</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>OBKEYR</name>
+          <description>Option bytes key register - THAT, RM 16.3.3</description>
+          <addressOffset>0x8</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>STATR</name>
+          <description>Status register (BUSY=bit0,EOP=bit5) - THAT, RM 16.3.4</description>
+          <addressOffset>0xC</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00008000</resetValue>
+        </register>
+        <register>
+          <name>CTLR</name>
+          <description>Configuration register (PG=bit0,PER=bit1,MER=bit2,STRT=bit6,LOCK=bit7) - THAT, RM 16.3.5</description>
+          <addressOffset>0x10</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00008080</resetValue>
+        </register>
+        <register>
+          <name>ADDR</name>
+          <description>Address register (dia chi erase/program) - THAT, RM 16.3.6</description>
+          <addressOffset>0x14</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>OBR</name>
+          <description>Option byte register - THAT, RM 16.3.7</description>
+          <addressOffset>0x1C</addressOffset>
+          <size>32</size>
+          <access>read-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>WPR</name>
+          <description>Write protection register - THAT, RM 16.3</description>
+          <addressOffset>0x20</addressOffset>
+          <size>32</size>
+          <access>read-only</access>
+          <resetValue>0xFFFFFFFF</resetValue>
+        </register>
+        <register>
+          <name>MODEKEYR</name>
+          <description>Extended key register (fast programming) - THAT, RM 16.3</description>
+          <addressOffset>0x24</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+        <register>
+          <name>BOOT_MODEKEYR</name>
+          <description>Unlock BOOT key register - THAT, RM 16.3</description>
+          <addressOffset>0x28</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+        </register>
+      </registers>
+    </peripheral>
+  </peripherals>
+</device>

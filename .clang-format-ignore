@@ -1,0 +1,5 @@
+**/build/**
+neon-mdf/rtos/FreeRTOS-Kernel/**
+neon-mdf/arch/CortexM/CMSIS/CMSIS_5/**
+neon-mdf/arch/**/Device/**/Include/**
+neon-mdf/arch/**/Device/**/Source/gcc/**

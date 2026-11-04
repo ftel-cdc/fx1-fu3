@@ -1,0 +1,511 @@
+/**
+ * @file neon_crm.c
+ * @brief Implementation for CRM.
+ * @details
+ * Implements module behavior and target-specific integration.
+ */
+
+/*==================================================================================================
+*                                          INCLUDE FILES
+==================================================================================================*/
+#include "crm/neon_crm.h"
+#include <string.h>
+
+#include <stddef.h>
+
+/*==================================================================================================
+*                                        DEFINES AND MACROS
+==================================================================================================*/
+/*
+ * Backend CRM của FU2.
+ *
+ * Vị trí và mask của field lấy hoàn toàn từ FU2.h được sinh bởi FU2.yaml;
+ * không lặp lại số bit từ driver LL cũ. API public không biết các nhóm thanh
+ * ghi bên dưới.
+ */
+
+#define CRM_PLL_OD_MAX (CRM_PLL_OD_Msk >> CRM_PLL_OD_Pos)
+#define CRM_PLL_M_DIV_MAX (CRM_PLL_M_DIV_Msk >> CRM_PLL_M_DIV_Pos)
+#define CRM_PLL_N_DIV_MAX (CRM_PLL_N_DIV_Msk >> CRM_PLL_N_DIV_Pos)
+#define CRM_PLL_LOCK_COUNT_MAX (CRM_PLL_CTRL_COUNT_Msk >> CRM_PLL_CTRL_COUNT_Pos)
+#define CRM_CLOCK_DIVIDER_MAX (CRM_CLK_DIV_Msk >> CRM_CLK_DIV_Pos)
+
+/*==================================================================================================
+*                                  STRUCTURES AND OTHER TYPEDEFS
+==================================================================================================*/
+typedef enum {
+    FU2_CRM_CLOCK_REGISTER_NONE = 0,
+    FU2_CRM_CLOCK_REGISTER_GATE_0,
+    FU2_CRM_CLOCK_REGISTER_GATE_1,
+} fu2_crm_clock_register_t;
+
+typedef enum {
+    FU2_CRM_RESET_REGISTER_NONE = 0,
+    FU2_CRM_RESET_REGISTER_GROUP_0,
+    FU2_CRM_RESET_REGISTER_GROUP_1,
+    FU2_CRM_RESET_REGISTER_GROUP_2,
+} fu2_crm_reset_register_t;
+
+typedef struct {
+    uint32_t clock_register;
+    uint32_t reset_register;
+    uint32_t clock_mask;
+    uint32_t reset_mask;
+} fu2_crm_peripheral_map_t;
+
+/*==================================================================================================
+*                                   PRIVATE FUNCTION PROTOTYPES
+==================================================================================================*/
+
+static uint32_t crm_enter_critical(void);
+static void crm_exit_critical(uint32_t primask);
+
+/*==================================================================================================
+*                                        PRIVATE FUNCTIONS
+==================================================================================================*/
+
+static uint32_t crm_enter_critical(void) {
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    return primask;
+}
+
+static void crm_exit_critical(uint32_t primask) {
+    __set_PRIMASK(primask);
+}
+
+/*==================================================================================================
+*                                         LOCAL VARIABLES
+==================================================================================================*/
+/* Bảng này là nơi duy nhất ánh xạ tên ngoại vi Neon sang nhóm CRM của FU2. */
+static const fu2_crm_peripheral_map_t fu2_crm_peripheral_map[NEON_CRM_PERIPHERAL_COUNT] = {
+    [NEON_CRM_PERIPHERAL_AES] = {FU2_CRM_CLOCK_REGISTER_GATE_0, FU2_CRM_RESET_REGISTER_GROUP_0,
+                                 CRM_CLK_GATE_0_AES_CLK_EN_Msk, CRM_SW_RST_N_0_AES_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_QSPI] = {FU2_CRM_CLOCK_REGISTER_GATE_0, FU2_CRM_RESET_REGISTER_GROUP_0,
+                                  CRM_CLK_GATE_0_QSPI_CLK_EN_Msk, CRM_SW_RST_N_0_QSPI_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_FLASH] = {FU2_CRM_CLOCK_REGISTER_GATE_0, FU2_CRM_RESET_REGISTER_GROUP_0,
+                                   CRM_CLK_GATE_0_FLASH_CLK_EN_Msk, CRM_SW_RST_N_0_FLASH_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_CRC] = {FU2_CRM_CLOCK_REGISTER_GATE_0, FU2_CRM_RESET_REGISTER_GROUP_0,
+                                 CRM_CLK_GATE_0_CRC_CLK_EN_Msk, CRM_SW_RST_N_0_CRC_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_TRNG] = {FU2_CRM_CLOCK_REGISTER_GATE_0, FU2_CRM_RESET_REGISTER_GROUP_2,
+                                  CRM_CLK_GATE_0_RNG_CLK_EN_Msk, CRM_SW_RST_N_2_RNG_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_WDT] = {FU2_CRM_CLOCK_REGISTER_GATE_0, FU2_CRM_RESET_REGISTER_GROUP_0,
+                                 CRM_CLK_GATE_0_WDT_CLK_EN_Msk, CRM_SW_RST_N_0_WDT_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_ADC] = {FU2_CRM_CLOCK_REGISTER_GATE_0, FU2_CRM_RESET_REGISTER_GROUP_0,
+                                 CRM_CLK_GATE_0_ADC_CLK_EN_Msk, CRM_SW_RST_N_0_ADC_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_TIMER0] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_1,
+                                    CRM_CLK_GATE_1_TIMER0_CLK_EN_Msk, CRM_SW_RST_N_1_TIMER0_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_TIMER1] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_1,
+                                    CRM_CLK_GATE_1_TIMER1_CLK_EN_Msk, CRM_SW_RST_N_1_TIMER1_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_TIMER2] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_1,
+                                    CRM_CLK_GATE_1_TIMER2_CLK_EN_Msk, CRM_SW_RST_N_1_TIMER2_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_TIMER3] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_1,
+                                    CRM_CLK_GATE_1_TIMER3_CLK_EN_Msk, CRM_SW_RST_N_1_TIMER3_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_TIMER4] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_1,
+                                    CRM_CLK_GATE_1_TIMER4_CLK_EN_Msk, CRM_SW_RST_N_1_TIMER4_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_TIMER5] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_1,
+                                    CRM_CLK_GATE_1_TIMER5_CLK_EN_Msk, CRM_SW_RST_N_1_TIMER5_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_TIMER6] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_1,
+                                    CRM_CLK_GATE_1_TIMER6_CLK_EN_Msk, CRM_SW_RST_N_1_TIMER6_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_TIMER7] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_1,
+                                    CRM_CLK_GATE_1_TIMER7_CLK_EN_Msk, CRM_SW_RST_N_1_TIMER7_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_PWM0] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_1,
+                                  CRM_CLK_GATE_1_PWM0_CLK_EN_Msk, CRM_SW_RST_N_1_PWM0_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_PWM1] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_1,
+                                  CRM_CLK_GATE_1_PWM1_CLK_EN_Msk, CRM_SW_RST_N_1_PWM1_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_SPI0] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_2,
+                                  CRM_CLK_GATE_1_SPI0_CLK_EN_Msk, CRM_SW_RST_N_2_SPI0_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_SPI1] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_2,
+                                  CRM_CLK_GATE_1_SPI1_CLK_EN_Msk, CRM_SW_RST_N_2_SPI1_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_UART0] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_2,
+                                   CRM_CLK_GATE_1_USART0_CLK_EN_Msk, CRM_SW_RST_N_2_USART0_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_UART1] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_2,
+                                   CRM_CLK_GATE_1_USART1_CLK_EN_Msk, CRM_SW_RST_N_2_USART1_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_UART2] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_2,
+                                   CRM_CLK_GATE_1_USART2_CLK_EN_Msk, CRM_SW_RST_N_2_USART2_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_UART3] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_2,
+                                   CRM_CLK_GATE_1_USART3_CLK_EN_Msk, CRM_SW_RST_N_2_USART3_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_UART4] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_2,
+                                   CRM_CLK_GATE_1_USART4_CLK_EN_Msk, CRM_SW_RST_N_2_USART4_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_I2C0] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_2,
+                                  CRM_CLK_GATE_1_I2C0_CLK_EN_Msk, CRM_SW_RST_N_2_I2C0_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_GPIOA] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_2,
+                                   CRM_CLK_GATE_1_GPIO0_OSC_CLK_EN_Msk, CRM_SW_RST_N_2_GPIO0_OSC_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_GPIOB] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_2,
+                                   CRM_CLK_GATE_1_GPIO1_OSC_CLK_EN_Msk, CRM_SW_RST_N_2_GPIO1_OSC_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_GPIOC] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_2,
+                                   CRM_CLK_GATE_1_GPIO2_OSC_CLK_EN_Msk, CRM_SW_RST_N_2_GPIO2_OSC_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_GPIOD] = {FU2_CRM_CLOCK_REGISTER_GATE_1, FU2_CRM_RESET_REGISTER_GROUP_2,
+                                   CRM_CLK_GATE_1_GPIO3_OSC_CLK_EN_Msk, CRM_SW_RST_N_2_GPIO3_OSC_CLK_SWRST_Msk},
+    /* FU2 v8 exposes GPIOE/F instances but no dedicated gate/reset bits for
+   * them in the four-domain CRM map. Treat their clocks as always on and do
+   * not claim reset support. */
+    [NEON_CRM_PERIPHERAL_GPIOE] = {FU2_CRM_CLOCK_REGISTER_NONE, FU2_CRM_RESET_REGISTER_NONE, 0U, 0U},
+    [NEON_CRM_PERIPHERAL_GPIOF] = {FU2_CRM_CLOCK_REGISTER_NONE, FU2_CRM_RESET_REGISTER_NONE, 0U, 0U},
+    [NEON_CRM_PERIPHERAL_RTC] = {FU2_CRM_CLOCK_REGISTER_NONE, FU2_CRM_RESET_REGISTER_GROUP_1, 0U,
+                                 CRM_SW_RST_N_1_RTC_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_DMA0] = {FU2_CRM_CLOCK_REGISTER_NONE, FU2_CRM_RESET_REGISTER_GROUP_2, 0U,
+                                  CRM_SW_RST_N_2_DMA0_CLK_SWRST_Msk},
+    [NEON_CRM_PERIPHERAL_DMA1] = {FU2_CRM_CLOCK_REGISTER_NONE, FU2_CRM_RESET_REGISTER_GROUP_2, 0U,
+                                  CRM_SW_RST_N_2_DMA1_CLK_SWRST_Msk},
+};
+
+/*==================================================================================================
+*                                   PRIVATE FUNCTION PROTOTYPES
+==================================================================================================*/
+
+static const fu2_crm_peripheral_map_t *crm_get_peripheral_map(neon_crm_peripheral_t peripheral);
+static volatile uint32_t *crm_get_clock_register(uint32_t selector);
+static volatile uint32_t *crm_get_reset_register(uint32_t selector);
+static uint8_t crm_config_is_valid(const neon_crm_config_t *config);
+
+/*==================================================================================================
+*                                         GLOBAL FUNCTIONS
+==================================================================================================*/
+
+/** @copydoc neon_crm_get_default_config */
+void neon_crm_get_default_config(neon_crm_config_t *config) {
+    if (config == NULL) {
+        return;
+    }
+
+    config->pll_state = NEON_CRM_PLL_DISABLE;
+    config->pll_output_divider = 3U;
+    config->pllm_divider = 10U;
+    config->plln_divider = 1U;
+    config->pll_bypass = 0U;
+    config->pll_lock_count = 404U;
+    config->clock_source = NEON_CRM_CLOCK_SOURCE_HSI;
+    config->clock_divider = 0U;
+    config->pll_timeout_polls = NEON_CRM_DEFAULT_PLL_TIMEOUT;
+}
+
+/** @copydoc neon_crm_init */
+neon_status_t neon_crm_init(const neon_crm_config_t *config) {
+    uint32_t timeout_polls;
+
+    if (crm_config_is_valid(config) == 0U) {
+        return NEON_INVALID_PARAM;
+    }
+
+    /* Luôn chuyển về HSI trước khi thay đổi hoặc tắt PLL để CPU không mất
+   * clock nếu cấu hình hiện tại đang dùng PLL. */
+    CRM->CLK_1 &= ~CRM_CLK_1_SEL_Msk;
+    CRM->CLK_0 &= ~CRM_CLK_0_SEL_Msk;
+
+    CRM->PLL_CTRL |= CRM_PLL_CTRL_POWERDOWN_Msk;
+    CRM->PLL = (CRM->PLL & CRM_PLL_LOCK_Msk) |
+               (((uint32_t)config->pll_output_divider << CRM_PLL_OD_Pos) & CRM_PLL_OD_Msk) |
+               (((uint32_t)config->pllm_divider << CRM_PLL_M_DIV_Pos) & CRM_PLL_M_DIV_Msk) |
+               (((uint32_t)config->plln_divider << CRM_PLL_N_DIV_Pos) & CRM_PLL_N_DIV_Msk);
+    CRM->PLL_CTRL = (CRM->PLL_CTRL & ~(CRM_PLL_CTRL_BYPASS_Msk | CRM_PLL_CTRL_LKEN_Msk | CRM_PLL_CTRL_LOCK_TYPE_Msk |
+                                       CRM_PLL_CTRL_COUNT_Msk | CRM_PLL_CTRL_OE_Msk)) |
+                    ((config->pll_bypass != 0U) ? CRM_PLL_CTRL_BYPASS_Msk : 0U) |
+                    (((uint32_t)config->pll_lock_count << CRM_PLL_CTRL_COUNT_Pos) & CRM_PLL_CTRL_COUNT_Msk);
+
+    if (config->pll_state == NEON_CRM_PLL_ENABLE) {
+        CRM->PLL_CTRL |= CRM_PLL_CTRL_LOCK_TYPE_Msk | CRM_PLL_CTRL_OE_Msk;
+        CRM->PLL_CTRL &= ~CRM_PLL_CTRL_POWERDOWN_Msk;
+
+        if (config->pll_bypass == 0U) {
+            timeout_polls = config->pll_timeout_polls;
+            while ((CRM->PLL & CRM_PLL_LOCK_Msk) == 0U && timeout_polls > 0U) {
+                timeout_polls--;
+            }
+
+            if ((CRM->PLL & CRM_PLL_LOCK_Msk) == 0U) {
+                CRM->PLL_CTRL |= CRM_PLL_CTRL_POWERDOWN_Msk;
+                CRM->PLL_CTRL &= ~CRM_PLL_CTRL_OE_Msk;
+                SystemCoreClockUpdate();
+                return NEON_TIMEOUT;
+            }
+        }
+    }
+
+    CRM->CLK = (CRM->CLK & ~CRM_CLK_DIV_Msk) | ((config->clock_divider << CRM_CLK_DIV_Pos) & CRM_CLK_DIV_Msk);
+
+    if (config->clock_source == NEON_CRM_CLOCK_SOURCE_PLL) {
+        CRM->CLK_0 |= CRM_CLK_0_SEL_Msk;
+        CRM->CLK_1 |= CRM_CLK_1_SEL_Msk;
+    }
+
+    SystemCoreClockUpdate();
+    return NEON_OK;
+}
+
+/** @copydoc neon_crm_deinit */
+neon_status_t neon_crm_deinit(void) {
+    neon_crm_config_t config;
+
+    neon_crm_get_default_config(&config);
+    return neon_crm_init(&config);
+}
+
+/** @copydoc neon_crm_get_config */
+neon_status_t neon_crm_get_config(neon_crm_config_t *config) {
+    if (config == NULL) {
+        return NEON_INVALID_PARAM;
+    }
+
+    config->pll_state =
+        ((CRM->PLL_CTRL & CRM_PLL_CTRL_POWERDOWN_Msk) == 0U && (CRM->PLL_CTRL & CRM_PLL_CTRL_OE_Msk) != 0U)
+            ? NEON_CRM_PLL_ENABLE
+            : NEON_CRM_PLL_DISABLE;
+    config->pll_output_divider = (uint8_t)((CRM->PLL & CRM_PLL_OD_Msk) >> CRM_PLL_OD_Pos);
+    config->pllm_divider = (uint8_t)((CRM->PLL & CRM_PLL_M_DIV_Msk) >> CRM_PLL_M_DIV_Pos);
+    config->plln_divider = (uint8_t)((CRM->PLL & CRM_PLL_N_DIV_Msk) >> CRM_PLL_N_DIV_Pos);
+    config->pll_bypass = ((CRM->PLL_CTRL & CRM_PLL_CTRL_BYPASS_Msk) != 0U) ? 1U : 0U;
+    config->pll_lock_count = (uint16_t)((CRM->PLL_CTRL & CRM_PLL_CTRL_COUNT_Msk) >> CRM_PLL_CTRL_COUNT_Pos);
+    config->clock_source = ((CRM->CLK_1 & CRM_CLK_1_SEL_Msk) != 0U && (CRM->CLK_0 & CRM_CLK_0_SEL_Msk) != 0U)
+                               ? NEON_CRM_CLOCK_SOURCE_PLL
+                               : NEON_CRM_CLOCK_SOURCE_HSI;
+    config->clock_divider = (CRM->CLK & CRM_CLK_DIV_Msk) >> CRM_CLK_DIV_Pos;
+    config->pll_timeout_polls = NEON_CRM_DEFAULT_PLL_TIMEOUT;
+
+    return NEON_OK;
+}
+
+/** @copydoc neon_crm_get_system_clock_frequency */
+uint32_t neon_crm_get_system_clock_frequency(void) {
+    SystemCoreClockUpdate();
+    return SystemCoreClock;
+}
+
+/** @copydoc neon_crm_get_version */
+uint32_t neon_crm_get_version(void) {
+    return CRM->VERSION;
+}
+
+/** @copydoc neon_crm_get_reset_source */
+uint32_t neon_crm_get_reset_source(void) {
+    uint32_t source = NEON_CRM_RESET_SOURCE_NONE;
+    uint32_t value = CRM->SW_RESET_REQ;
+
+    if ((value & CRM_SW_RESET_REQ_GLOBAL_Msk) != 0U) {
+        source |= NEON_CRM_RESET_SOURCE_GLOBAL;
+    }
+    if ((value & CRM_SW_RESET_REQ_SYSTEM_Msk) != 0U) {
+        source |= NEON_CRM_RESET_SOURCE_SYSTEM;
+    }
+    if ((value & CRM_SW_RESET_REQ_WATCHDOG_Msk) != 0U) {
+        source |= NEON_CRM_RESET_SOURCE_WATCHDOG;
+    }
+    if ((value & CRM_SW_RESET_REQ_SYSRESETREQ_Msk) != 0U) {
+        source |= NEON_CRM_RESET_SOURCE_CPU;
+    }
+
+    return source;
+}
+
+/** @copydoc neon_crm_is_pll_ready */
+uint8_t neon_crm_is_pll_ready(void) {
+    return (CRM->PLL & CRM_PLL_LOCK_Msk) != 0U ? 1U : 0U;
+}
+
+/** @copydoc neon_crm_peripheral_clock_enable */
+neon_status_t neon_crm_peripheral_clock_enable(neon_crm_peripheral_t peripheral) {
+    const fu2_crm_peripheral_map_t *map = crm_get_peripheral_map(peripheral);
+    volatile uint32_t *reg;
+    uint32_t primask;
+
+    if (map == NULL) {
+        return NEON_INVALID_PARAM;
+    }
+
+    reg = crm_get_clock_register(map->clock_register);
+    if (reg == NULL) {
+        return NEON_OK;
+    }
+
+    primask = crm_enter_critical();
+    *reg |= map->clock_mask;
+    (void)*reg;
+    crm_exit_critical(primask);
+    return NEON_OK;
+}
+
+/** @copydoc neon_crm_peripheral_clock_disable */
+neon_status_t neon_crm_peripheral_clock_disable(neon_crm_peripheral_t peripheral) {
+    const fu2_crm_peripheral_map_t *map = crm_get_peripheral_map(peripheral);
+    volatile uint32_t *reg;
+    uint32_t primask;
+
+    if (map == NULL) {
+        return NEON_INVALID_PARAM;
+    }
+
+    reg = crm_get_clock_register(map->clock_register);
+    if (reg == NULL) {
+        return NEON_OK;
+    }
+
+    primask = crm_enter_critical();
+    *reg &= ~map->clock_mask;
+    (void)*reg;
+    crm_exit_critical(primask);
+    return NEON_OK;
+}
+
+/** @copydoc neon_crm_is_peripheral_clock_enabled */
+neon_status_t neon_crm_is_peripheral_clock_enabled(neon_crm_peripheral_t peripheral, uint8_t *enabled) {
+    const fu2_crm_peripheral_map_t *map = crm_get_peripheral_map(peripheral);
+    volatile uint32_t *reg;
+
+    if (map == NULL || enabled == NULL) {
+        return NEON_INVALID_PARAM;
+    }
+
+    reg = crm_get_clock_register(map->clock_register);
+    if (reg == NULL) {
+        const uint32_t result_word = 1U;
+        memcpy(enabled, &result_word, 1U);
+        return NEON_OK;
+    }
+
+    const uint32_t result_word = ((*reg & map->clock_mask) == map->clock_mask) ? 1U : 0U;
+    memcpy(enabled, &result_word, 1U);
+    return NEON_OK;
+}
+
+/** @copydoc neon_crm_peripheral_force_reset */
+neon_status_t neon_crm_peripheral_force_reset(neon_crm_peripheral_t peripheral) {
+    const fu2_crm_peripheral_map_t *map = crm_get_peripheral_map(peripheral);
+    volatile uint32_t *reg;
+    uint32_t primask;
+
+    if (map == NULL) {
+        return NEON_INVALID_PARAM;
+    }
+
+    reg = crm_get_reset_register(map->reset_register);
+    if (reg == NULL) {
+        return NEON_NOT_SUPPORTED;
+    }
+
+    primask = crm_enter_critical();
+    *reg &= ~map->reset_mask;
+    (void)*reg;
+    __DSB();
+    crm_exit_critical(primask);
+    return NEON_OK;
+}
+
+/** @copydoc neon_crm_peripheral_release_reset */
+neon_status_t neon_crm_peripheral_release_reset(neon_crm_peripheral_t peripheral) {
+    const fu2_crm_peripheral_map_t *map = crm_get_peripheral_map(peripheral);
+    volatile uint32_t *reg;
+    uint32_t primask;
+
+    if (map == NULL) {
+        return NEON_INVALID_PARAM;
+    }
+
+    reg = crm_get_reset_register(map->reset_register);
+    if (reg == NULL) {
+        return NEON_NOT_SUPPORTED;
+    }
+
+    primask = crm_enter_critical();
+    *reg |= map->reset_mask;
+    (void)*reg;
+    __DSB();
+    crm_exit_critical(primask);
+    return NEON_OK;
+}
+
+/** @copydoc neon_crm_peripheral_reset */
+neon_status_t neon_crm_peripheral_reset(neon_crm_peripheral_t peripheral) {
+    neon_status_t status = neon_crm_peripheral_force_reset(peripheral);
+
+    if (status != NEON_OK) {
+        return status;
+    }
+
+    return neon_crm_peripheral_release_reset(peripheral);
+}
+
+/** @copydoc neon_crm_is_peripheral_reset_asserted */
+neon_status_t neon_crm_is_peripheral_reset_asserted(neon_crm_peripheral_t peripheral, uint8_t *asserted) {
+    const fu2_crm_peripheral_map_t *map = crm_get_peripheral_map(peripheral);
+    volatile uint32_t *reg;
+
+    if (map == NULL || asserted == NULL) {
+        return NEON_INVALID_PARAM;
+    }
+
+    reg = crm_get_reset_register(map->reset_register);
+    if (reg == NULL) {
+        return NEON_NOT_SUPPORTED;
+    }
+
+    const uint32_t result_word = ((*reg & map->reset_mask) == 0U) ? 1U : 0U;
+    memcpy(asserted, &result_word, 1U);
+    return NEON_OK;
+}
+
+/*==================================================================================================
+*                                        PRIVATE FUNCTIONS
+==================================================================================================*/
+
+static const fu2_crm_peripheral_map_t *crm_get_peripheral_map(neon_crm_peripheral_t peripheral) {
+    if ((uint32_t)peripheral >= (uint32_t)NEON_CRM_PERIPHERAL_COUNT) {
+        return NULL;
+    }
+
+    return &fu2_crm_peripheral_map[(uint32_t)peripheral];
+}
+
+static volatile uint32_t *crm_get_clock_register(uint32_t selector) {
+    switch ((fu2_crm_clock_register_t)selector) {
+        case FU2_CRM_CLOCK_REGISTER_GATE_0:
+            return &CRM->CLK_GATE_0;
+        case FU2_CRM_CLOCK_REGISTER_GATE_1:
+            return &CRM->CLK_GATE_1;
+        default:
+            return NULL;
+    }
+}
+
+static volatile uint32_t *crm_get_reset_register(uint32_t selector) {
+    switch ((fu2_crm_reset_register_t)selector) {
+        case FU2_CRM_RESET_REGISTER_GROUP_0:
+            return &CRM->SW_RST_N_0;
+        case FU2_CRM_RESET_REGISTER_GROUP_1:
+            return &CRM->SW_RST_N_1;
+        case FU2_CRM_RESET_REGISTER_GROUP_2:
+            return &CRM->SW_RST_N_2;
+        default:
+            return NULL;
+    }
+}
+
+static uint8_t crm_config_is_valid(const neon_crm_config_t *config) {
+    if (config == NULL || (config->pll_state != NEON_CRM_PLL_DISABLE && config->pll_state != NEON_CRM_PLL_ENABLE) ||
+        (config->clock_source != NEON_CRM_CLOCK_SOURCE_HSI && config->clock_source != NEON_CRM_CLOCK_SOURCE_PLL) ||
+        config->pll_output_divider > CRM_PLL_OD_MAX || config->pllm_divider > CRM_PLL_M_DIV_MAX ||
+        config->plln_divider > CRM_PLL_N_DIV_MAX || config->pll_lock_count > CRM_PLL_LOCK_COUNT_MAX ||
+        config->pll_bypass > 1U) {
+        return 0U;
+    }
+
+    if (config->clock_source == NEON_CRM_CLOCK_SOURCE_PLL && config->pll_state != NEON_CRM_PLL_ENABLE) {
+        return 0U;
+    }
+
+    if (config->pll_state == NEON_CRM_PLL_ENABLE) {
+        if (config->plln_divider == 0U || (config->pll_bypass == 0U && config->pllm_divider == 0U)) {
+            return 0U;
+        }
+    }
+
+    /* FU2 v8: DIV=0 bypasses; DIV=n divides the selected clock by 2*n. */
+    if (config->clock_divider > CRM_CLOCK_DIVIDER_MAX) {
+        return 0U;
+    }
+
+    if (config->pll_state == NEON_CRM_PLL_ENABLE && config->pll_timeout_polls == 0U) {
+        return 0U;
+    }
+
+    return 1U;
+}

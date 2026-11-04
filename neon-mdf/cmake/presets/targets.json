@@ -1,0 +1,60 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25 },
+  "configurePresets": [
+    {
+      "name": "FU2",
+      "displayName": "FU2 (Cortex-M0, RTL BootROM v5)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/FU2",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/../toolchain/arm-none-eabi.cmake",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "NEON_MDF_TARGET": "FU2",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "STM32F103CB",
+      "displayName": "STM32F103CB (Cortex-M3, GCC)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/STM32F103CB",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/../toolchain/arm-none-eabi.cmake",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "NEON_MDF_TARGET": "STM32F103CB",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "WEACT_F412",
+      "displayName": "WEACT_F412 (STM32F412RET6 that - test rig, KHONG PHAI FU2)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/WEACT_F412",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/../toolchain/arm-none-eabi.cmake",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "NEON_MDF_TARGET": "WEACT_F412",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "CH32V003F4P6",
+      "displayName": "CH32V003F4P6 (WCH QingKe V2A / RV32EC - target RISC-V dau tien)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/CH32V003F4P6",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/../toolchain/riscv-none-elf.cmake",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "NEON_MDF_TARGET": "CH32V003F4P6",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "FU2", "configurePreset": "FU2" },
+    { "name": "STM32F103CB", "configurePreset": "STM32F103CB" },
+    { "name": "WEACT_F412", "configurePreset": "WEACT_F412" },
+    { "name": "CH32V003F4P6", "configurePreset": "CH32V003F4P6" }
+  ]
+}

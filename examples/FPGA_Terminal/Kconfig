@@ -1,0 +1,25 @@
+menu "FPGA_Terminal"
+
+config FPGA_TERMINAL_FIXED_CLOCK_HZ
+    int "Fixed FPGA clock (Hz; 0 uses normal SDK clock setup)"
+    range 0 1000000000
+    default 10000000
+    help
+        Phai khop clock FPGA thuc te. Gia tri 0 dung SystemInit cua SDK.
+
+config FPGA_TERMINAL_LINE_SIZE
+    int "Command line buffer size (bytes, including terminator)"
+    range 16 512
+    default 128
+
+config FPGA_TERMINAL_RX_TIMEOUT_POLLS
+    int "RX timeout (poll iterations, not milliseconds)"
+    range 1 100000000
+    default 10000
+
+rsource "testcase/UART_ECHO_Polling/Kconfig"
+rsource "testcase/UART_RX_Interrupt/Kconfig"
+rsource "testcase/PWM_Output/Kconfig"
+rsource "testcase/SPI_W5500/Kconfig"
+
+endmenu

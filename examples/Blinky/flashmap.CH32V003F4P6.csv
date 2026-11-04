@@ -1,0 +1,12 @@
+# flashmap.CH32V003F4P6.csv - override THEO DEVICE cua flashmap.csv (xem
+# cmake/flashmap.cmake) - CH32V003F4P6 chi co 16KB flash tong (KHAC HAN
+# WEACT_F412 512KB dung trong flashmap.csv mac dinh canh file nay) nen can
+# 1 layout partition rieng, nho hon nhieu.
+#
+# bootloader.size=0x1000 (4KB, xem mcu-description/devices/CH32V003F4P6.yaml)
+# - con lai 16KB-4KB=12KB cho flashmap nay.
+#
+# name,     type, subtype, size
+app,        app,  factory, 0x1400     # 5KB = 5 sector x 1KB
+otadata,    data, ota,     0x400      # 1KB = 1 sector (du du, chi can nguyen 1 sector)
+app_ota,    app,  ota,     0x1800     # 6KB = 6 sector x 1KB

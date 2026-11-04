@@ -1,0 +1,23 @@
+# flashmap.WEACT_F412.csv - partition table CUA RIENG app nay tren WEACT_F412
+# (xem neon-mdf/cmake/flashmap.cmake). Thu tu dong khong bat buoc - chi can
+# co dung 1 partition ten "app" (type=app, subtype=factory), xem
+# neon-mdf/tools/gen_flashmap.py. Cung layout voi examples/OTA_Demo/ va
+# examples/Blinky/ (cung chip WEACT_F412, khong ly do gi khac di).
+#
+# DAT TEN THEO DEVICE (khong dung ten "flashmap.csv" mac dinh nhu Blinky/) -
+# vi app nay, KHAC Blinky, CO 1 target (CH32V003F4P6) CHU DICH KHONG dung
+# flashmap/OTA chut nao (FreeRTOS-Kernel toi thieu da ~8.5KB flash/~2KB RAM,
+# khong the fit 2 ban image + bootloader trong 16KB/2KB that cua chip - xem
+# comment dau Src/main.c) - CH32V003F4P6 dung nhanh "bootloader + 1 app co
+# dinh, KHONG OTA" (neon_mdf_add_app_executable(), NEON_MDF_APP_BASE co dinh
+# tu YAML, xem CMakeLists.txt) thay vi nhanh flashmap. Neu file nay ten
+# "flashmap.csv" (mac dinh), CH32V003F4P6 se VO TINH "roi" xuong dung NHAM
+# partition table nay (size tinh cho WEACT_F412 512KB, sai hoan toan cho chip
+# 16KB) do co che fallback flashmap.<TARGET>.csv -> flashmap.csv trong
+# neon-mdf/CMakeLists.txt - dat ten ro rang de KHONG co file "mac dinh" nao
+# ca, tranh fallback nham.
+#
+# name,     type, subtype, size
+app,        app,  factory, 0x8000     # sector 2+3 (16+16KB) = 0x08008000..0x08010000
+otadata,    data, ota,     0x10000    # sector 4 (64KB, du du - can nguyen 1 sector)
+app_ota,    app,  ota,     0x60000    # sector 5+6+7 (128*3KB) = het flash

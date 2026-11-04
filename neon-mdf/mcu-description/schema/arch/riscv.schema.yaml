@@ -1,0 +1,35 @@
+# riscv.schema.yaml — field cpu.* dành riêng cho arch bắt đầu bằng "riscv"
+# (đọc vào model.Cpu.extra, xem mcu_desc/loader.py - KHÔNG cần sửa
+# model.py/loader.py, field arch-specific đã tự động rơi vào `extra` dict).
+#
+# ĐÃ TRIỂN KHAI THẬT (2026-08-10, target CH32V003F4P6 - xem
+# devices/CH32V003F4P6.yaml) - không còn RESERVED. Field thật đang dùng:
+#   cpu.isa                  vd "rv32ec" (WCH QingKe V2A - Embedded+Compressed,
+#                             KHÔNG có M/A/F, khác "rv32imac" từng dự kiến ban
+#                             đầu trước khi có chip thật để xác nhận).
+#   cpu.mtvec_mode            "vectored-address" - giá trị VENDOR-SPECIFIC của
+#                             WCH (mtvec[1:0]=3, "Address" mode theo RM chương
+#                             1: mỗi entry là 1 con trỏ hàm, entry 0 là LỆNH `j`
+#                             chứ không phải địa chỉ) - KHÔNG phải "direct"/
+#                             "vectored" chuẩn RISC-V cơ bản (mtvec[1:0]=0/1).
+#                             Core RISC-V khác (không phải QingKe/PFIC) có thể
+#                             cần thêm giá trị khác cho field này khi gặp thật.
+#   cpu.interrupt_controller  "pfic" (WCH Programmable Fast Interrupt
+#                             Controller, vendor-specific - KHÔNG PHẢI CLINT/
+#                             PLIC chuẩn RISC-V, đúng như cảnh báo ban đầu của
+#                             chính sách RESERVED cũ) - core-private, KHÔNG
+#                             xuất hiện trong `peripherals:` (giống NVIC của
+#                             Cortex-M) - địa chỉ hardcode trong
+#                             mcu-description/tools/backends/riscv/gen_startup.py
+#                             + arch/RISCV/Port/ (0xE000E000, xem RM chương 6).
+#   cpu.hart_count            1 (đơn hart trên CH32V003 - QingKe V2A).
+#
+# Không có peripheral/register nào khác biệt giữa Cortex-M và RISC-V ở
+# schema/common — phần đó (UART/SPI/GPIO/...) dùng chung, đã xác nhận qua
+# CH32V003F4P6.yaml (GPIO layout kiểu STM32F1, dùng đúng model.Peripheral/
+# Register như mọi device khác, không cần field mới nào ở đó).
+#
+# Nguồn: CH32V003RM.PDF V1.9 (WCH chính thức) + đối chiếu
+# basilhussain/ch32v003-startup (mã nguồn thực đã chạy trên silicon thật)
+# cho phần lõi/CSR mà Reference Manual không đủ chi tiết (tự nói phần lõi
+# nằm ở tài liệu riêng "QingKeV2_Processor_Manual", chưa tải).

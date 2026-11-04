@@ -1,0 +1,5 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "include": ["__NEON_MDF_RELATIVE_PATH__/cmake/presets/targets.json"]
+}
