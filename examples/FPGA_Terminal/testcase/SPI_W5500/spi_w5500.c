@@ -304,12 +304,135 @@ restore:
     }
 }
 
+static void spi_w5500_dump_registers(void) {
+    /* RX is deliberately omitted: reading it removes a FIFO entry. */
+    printf("[REG] CTRL=%08lX FIFO=%08lX CLK=%08lX CMDCONF=%08lX\n",
+           (unsigned long)SPI0->CTRL, (unsigned long)SPI0->FIFO,
+           (unsigned long)SPI0->CLK, (unsigned long)SPI0->CMDCONF);
+    printf("[REG] TREG0=%08lX TREG1=%08lX STT=%08lX CLKS=%08lX\n",
+           (unsigned long)SPI0->TREG0, (unsigned long)SPI0->TREG1,
+           (unsigned long)SPI0->STT, (unsigned long)SPI0->CLKS);
+    printf("[PINS] right21 mux=%lu IE=%lu DR=%lu OD=%lu (expected 1/1/0/0)\n",
+           (unsigned long)((SYSCSR->RIGHT_IO_CFG_EXT >> 10) & 3U),
+           (unsigned long)((SYSCSR->RIGHT_PAD_CTRL0 >> 21) & 1U),
+           (unsigned long)((SYSCSR->RIGHT_PAD_CTRL5 >> 21) & 1U),
+           (unsigned long)((SYSCSR->RIGHT_PAD_CTRL7 >> 21) & 1U));
+    printf("[PINS] top0..2 mux=%02lX IE=%lX DR=%lX OD=%lX (expected 15/7/0/0)\n",
+           (unsigned long)(SYSCSR->TOP_IO_CFG & 0x3FU),
+           (unsigned long)(SYSCSR->TOP_PAD_CTRL0 & 7U),
+           (unsigned long)(SYSCSR->TOP_PAD_CTRL5 & 7U),
+           (unsigned long)(SYSCSR->TOP_PAD_CTRL7 & 7U));
+}
+
+/* Single-owner MMIO probe to isolate FIFO read timing from the polling API.
+ * Only reads VERSIONR. Each successful call pops RX exactly once. */
+static neon_status_t w5500_version_raw(uint32_t wait_ms, uint32_t *rx, uint32_t *stt) {
+    uint32_t polls = SPI_TIMEOUT, before, ready;
+    do {
+        before = SPI0->STT;
+        if (polls-- == 0U) { return NEON_TIMEOUT; }
+    } while ((before & SPI_STT_INT_TXFF_FULL_Msk) != 0U);
+    SPI0->CMDCONF = (31U << SPI_CMDCONF_LEN_Pos) | SPI_CMDCONF_RD_Msk |
+                    (1U << SPI_CMDCONF_SLAVE_EN_Pos);
+    SPI0->TX = W5500_VERSIONR << 16;
+    do {
+        ready = SPI0->STT;
+        if (polls-- == 0U) { return NEON_TIMEOUT; }
+    } while ((ready & SPI_STT_INT_RXFF_EMPTY_Msk) != 0U);
+    if (wait_ms != 0U && !spi_w5500_delay_ms(wait_ms)) { return NEON_TIMEOUT; }
+    *rx = SPI0->RX;
+    stt[0] = before;
+    stt[1] = ready;
+    stt[2] = SPI0->STT;
+    return NEON_OK;
+}
+
+static void w5500_version_test(neon_uart_handle_t *uart) {
+    neon_spi_config_t saved_config = g_spi_config;
+    uint32_t saved_mode = g_mode, saved_hz = g_sck_hz;
+    const uint32_t tries = CONFIG_SPI_W5500_VERSION_TRIES;
+    printf("[VERSION] Read-only A/B test, mode 3 / requested SCK 1 MHz, auto OFF.\n");
+    if (!spi_w5500_configure(3U, 1000000U)) { goto restore; }
+    uint32_t ten_sck = 10U * 2U * (g_spi_config.clock_divider + 1U);
+    printf("[VERSION] TX=00390000, expected low byte=04, %lu tries per case.\n", (unsigned long)tries);
+    printf("[VERSION] Cases 0: API/10 SCK; 1/2: MMIO/5 core; 3/4: MMIO/10 SCK.\n");
+    printf("[VERSION] Cases 2/4 wait 1 ms BEFORE RX; other cases read immediately.\n");
+    printf("[VERSION] Every attempt has the same 1 ms pause after the read.\n");
+    for (uint32_t probe = 0U; probe < 5U; ++probe) {
+        uint32_t b2b = probe == 1U || probe == 2U ? 5U : ten_sck;
+        uint32_t wait_ms = probe == 2U || probe == 4U ? 1U : 0U;
+        g_spi_config.timing.between_frames = b2b;
+        g_spi_config.timing.between_frames_unit = NEON_SPI_B2B_CORE_CYCLES;
+        if (neon_spi_init(SPI0, &g_spi_config) != NEON_OK) {
+            printf("[VERSION] Case %lu: SPI0 init failed.\n", (unsigned long)probe);
+            goto restore;
+        }
+        printf("[VERSION] Case %lu path=%s T_B2B=%lu core cycles wait_RX=%lu ms\n",
+               (unsigned long)probe, probe == 0U ? "API" : "MMIO",
+               (unsigned long)b2b, (unsigned long)wait_ms);
+        spi_w5500_dump_registers();
+        uint32_t ok = 0U, bad = 0U, io = 0U, sample_count = 0U;
+        uint32_t samples[4] = {0U}, first_stt[3] = {0U};
+        for (uint32_t attempt = 0U; attempt < tries; ++attempt) {
+            uint32_t key = 0U, tx = W5500_VERSIONR << 16, rx = 0U, stt[3] = {0U};
+            if (neon_uart_try_receive(uart, &key) == NEON_OK &&
+                (key == 'q' || key == 'Q' || key == 3U)) {
+                printf("[VERSION] Cancelled; returning to menu.\n");
+                goto restore;
+            }
+            spi_w5500_ticks();
+            neon_status_t status = probe == 0U ?
+                neon_spi_transmit_receive_words(SPI0, &tx, &rx, 1U, SPI_TIMEOUT) :
+                w5500_version_raw(wait_ms, &rx, stt);
+            if (status != NEON_OK) {
+                ++io;
+                if (neon_spi_init(SPI0, &g_spi_config) != NEON_OK) {
+                    printf("[VERSION] SPI0 recovery failed.\n");
+                    goto restore;
+                }
+            } else {
+                if ((rx & 0xFFU) == 0x04U) { ++ok; } else { ++bad; }
+                if (sample_count == 0U) {
+                    first_stt[0] = stt[0]; first_stt[1] = stt[1]; first_stt[2] = stt[2];
+                }
+                if (sample_count < 4U) { samples[sample_count++] = rx; }
+            }
+            /* Complete the frame/CS hold before the next attempt in all cases. */
+            if (!spi_w5500_delay_ms(1U)) { goto restore; }
+        }
+        printf("[VERSION] Case %lu OK=%lu BAD_ID=%lu IO=%lu total=%lu %s\n",
+               (unsigned long)probe, (unsigned long)ok, (unsigned long)bad,
+               (unsigned long)io, (unsigned long)tries, ok == tries ? "[PASS]" : "[FAIL]");
+        printf("[VERSION] First RX samples:");
+        for (uint32_t sample = 0U; sample < sample_count; ++sample) {
+            printf(" %08lX", (unsigned long)samples[sample]);
+        }
+        printf("\n");
+        if (probe != 0U && sample_count != 0U) {
+            printf("[VERSION] First STT before_TX=%08lX RX_ready=%08lX after_RX=%08lX\n",
+                   (unsigned long)first_stt[0], (unsigned long)first_stt[1], (unsigned long)first_stt[2]);
+        }
+    }
+    printf("[VERSION] Compare 1 vs 2 / 3 vs 4 for RX wait, 1 vs 3 / 2 vs 4 for B2B.\n");
+    printf("[VERSION] Compare 0 vs 3 for API versus direct MMIO; capture SCK/CS/MOSI/MISO too.\n");
+restore:
+    g_spi_config = saved_config;
+    g_mode = saved_mode;
+    g_sck_hz = saved_hz;
+    if (neon_spi_init(SPI0, &g_spi_config) != NEON_OK) {
+        printf("[FAIL] Could not restore SPI0 after VERSION test.\n");
+    } else {
+        printf("[VERSION] Original SPI configuration restored; auto is OFF.\n");
+    }
+}
+
 static void w5500_diagnose(void) {
     uint32_t saved_mode = g_mode, saved_hz = g_sck_hz, value = 0U;
     printf("[DIAG] Read-only probes, mode 0/3 at 1 MHz/100 kHz.\n");
     for (uint32_t mode = 0U; mode <= 3U; mode += 3U) {
         for (uint32_t speed = 0U; speed < 2U; ++speed) {
             if (spi_w5500_configure(mode, speed == 0U ? 1000000U : 100000U)) {
+                spi_w5500_dump_registers();
                 w5500_access8(W5500_VERSIONR, 0U, 0U, &value);
                 w5500_access8(W5500_RCR, 0U, 0U, &value);
                 w5500_access8(W5500_PHYCFGR, 0U, 0U, &value);
@@ -324,6 +447,7 @@ static void spi_w5500_help(void) {
     printf("\n i: init/reset W5500 | t: info | p: SPI write/read/restore RCR\n");
     printf(" r: read 32 SRAM bytes | d: read-only diagnostics | h/?: help\n");
     printf(" b: read-only B2B sweep 10..0 SCK periods (auto OFF)\n");
+    printf(" v: read-only VERSION A/B test, B2B and wait before RX (auto OFF)\n");
     printf(" 0..4: mode 0 at 100/500/1000/2500/5000 kHz\n");
     printf(" 5..9: mode 3 at 100/500/1000/2500/5000 kHz\n");
     printf(" Preset runs ping/pong now, then every 3 s; a: toggle auto (starts OFF)\n");
@@ -379,7 +503,17 @@ void spi_w5500_run(neon_uart_handle_t *uart) {
                     case 't': w5500_info(); break;
                     case 'p': w5500_ping_pong(); last = spi_w5500_ticks(); break;
                     case 'r': w5500_read32(); last = spi_w5500_ticks(); break;
-                    case 'd': w5500_diagnose(); last = spi_w5500_ticks(); break;
+                    case 'd':
+                        automatic = 0U;
+                        printf("[AUTO] OFF for read-only diagnostics.\n");
+                        w5500_diagnose();
+                        last = spi_w5500_ticks();
+                        break;
+                    case 'v':
+                        automatic = 0U;
+                        w5500_version_test(uart);
+                        last = spi_w5500_ticks();
+                        break;
                     case 'b':
                         automatic = 0U;
                         w5500_b2b_test(uart);

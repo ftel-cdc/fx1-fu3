@@ -25,4 +25,14 @@ config SPI_W5500_B2B_TRIES
         CRC32 must match the reference validated at 10 SCK periods.
         No W5500 registers or SRAM are written by this sweep.
 
+config SPI_W5500_VERSION_TRIES
+    int "Read attempts per VERSION A/B case"
+    range 1 10000
+    default 100
+    help
+        Menu key v compares the polling API with direct VERSIONR reads.
+        Direct reads test 5 core cycles versus 10 SCK periods for B2B,
+        with either zero or 1 ms wait before popping the RX FIFO.
+        No W5500 register is written; original SPI settings are restored.
+
 endmenu
