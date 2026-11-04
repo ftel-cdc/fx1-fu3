@@ -149,8 +149,7 @@ RCR after reading correct ID. After `[READY]`, press each key, do not need Enter
 | `p` | Save RCR; write/read `0x55`, `0xAA`; rewrite and check the original value |
 | `r` | Continuous reading 32 bytes socket 0 TX SRAM at offset `0x0000` |
 | `b` | Turn off auto, B2B scan from 10 to 0 SCK cycles; repeat reading and CRC32/ID/SPI error statistics |
-| `d` | Disable auto; dump SPI/pin registers and read VERSIONR/RCR/PHYCFGR in mode 0/3 at 1 MHz/100 kHz, then restore the selected mode/speed |
-| `v` | Disable auto; compare VERSION reads through the API and direct MMIO with two B2B delays and a wait before RX |
+| `d` | Read only VERSIONR/RCR/PHYCFGR in mode 0/3, 1 MHz/100 kHz, then return the selected mode/speed |
 | `0`–`4` | Mode 0: 100 kHz, 500 kHz, 1 MHz, 2,5 MHz, 5 MHz |
 | `5`–`9` | Mode 3: same five speed levels above |
 | `a` | Turn on/off ping/pong automatically every 3 seconds |
@@ -194,38 +193,6 @@ transaction when scanning. Press `q`/Ctrl+C to cancel and return to the menu; te
 restore the original configuration, auto keep OFF. Run again at the mode/speed used before choosing
 a new default. CRC32 checks for numeric repeatability with templates, does not prove SRAM internal
 use is correct; VERSIONR is an additional test with known values.
-
-If VERSIONR never reads `04`, run `v` before the B2B sweep. This read-only
-test temporarily selects mode 3 / requested SCK 1 MHz and runs five cases:
-
-| Case | Read path | B2B | Wait after RX-ready, before reading RX |
-|---|---|---|---|
-| 0 | NEON API | 10 SCK periods | Current driver receive path |
-| 1 | Direct MMIO | 5 core-clock cycles | 0 ms |
-| 2 | Direct MMIO | 5 core-clock cycles | 1 ms |
-| 3 | Direct MMIO | 10 SCK periods | 0 ms |
-| 4 | Direct MMIO | 10 SCK periods | 1 ms |
-
-Each case defaults to 100 attempts (`CONFIG_SPI_W5500_VERSION_TRIES`). All
-cases include an additional 1 ms pause after each attempt. Logs report OK,
-BAD_ID, IO, up to four initial RX samples, and STT snapshots from the first
-successful MMIO transfer. Results are printed after the measurement loop
-so UART logging does not delay the RX read. Each successful transfer reads
-RX once; register dumps omit RX because reading it removes a FIFO entry.
-
-Compare cases 1/2 and 3/4 for the effect of waiting before RX; compare 1/3
-and 2/4 for B2B; compare 0/3 for the API versus direct MMIO. These results
-help locate the fault and do not automatically change the driver. The test
-does not write W5500 registers and always attempts to restore the original
-SPI configuration. Press `q`/Ctrl+C to cancel to the menu; auto stays OFF.
-
-`[PINS]` reports SYSCSR pad/mux readback. It does not confirm that the
-module is connected or that the FPGA bitstream routes SPI0 to those PMOD
-pins. Check a logic-analyzer capture too: a VERSION read should keep CS
-LOW for all 32 clocks, send MOSI `00 39 00 00`, and receive `04` in the
-last MISO byte. If MISO is correct but RX is wrong, inspect sampling/FIFO/RX
-read timing. Otherwise check mux, bitstream mapping, wiring, power and RSTn.
-Avoid live-watching RX in the debugger: debugger reads can consume data.
 
 SPI uses polling, not DMA/IRQ. SysTick runs cycle counting, does not enable interrupt; if SysTick is
 on, the testcase says busy and returns. Timeout SPI resets controller before next transaction; burst
