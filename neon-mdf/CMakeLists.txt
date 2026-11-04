@@ -120,3 +120,14 @@ if(NEON_MDF_TARGET_${NEON_MDF_TARGET}_FAMILY STREQUAL "FU2" OR
     set(NEON_MDF_BOOTLOADER_MAIN_SOURCES ${NEON_MDF_BOOTLOADER_MAIN_SOURCES} PARENT_SCOPE)
   endif()
 endif()
+
+# FX1 uses the bundled CLINT/PLIC BSP, with no MCU GPIO HAL dependency.
+if(NEON_MDF_TARGET STREQUAL "FX1")
+  include(${NEON_MDF_PATH}/cmake/kconfig.cmake)
+  neon_mdf_process_kconfig(${CMAKE_SOURCE_DIR})
+  add_library(neon_mdf_driver INTERFACE)
+  target_link_libraries(neon_mdf_driver INTERFACE ${NEON_MDF_DEVICE_TARGET} neon_mdf_kconfig)
+  if(CONFIG_NEON_MDF_FTEL_ISP)
+    add_subdirectory(components/ftel_isp)
+  endif()
+endif()

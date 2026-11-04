@@ -16,6 +16,9 @@
 # tools/cmake/project.cmake) nên việc này tự nhiên đúng, không còn rủi ro
 # nhiều app FreeRTOS cùng build chung 1 lần configure như trước.
 function(neon_mdf_add_freertos TARGET_NAME CONFIG_DIR)
+  if(TARGET_NAME STREQUAL "FX1")
+    message(FATAL_ERROR "FX1 currently supports bare-metal only; FreeRTOS tick/trap integration is not ported")
+  endif()
   if(TARGET freertos_kernel)
     return()
   endif()

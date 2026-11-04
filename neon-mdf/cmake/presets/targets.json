@@ -1,6 +1,9 @@
 {
   "version": 6,
-  "cmakeMinimumRequired": { "major": 3, "minor": 25 },
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25
+  },
   "configurePresets": [
     {
       "name": "FU2",
@@ -49,12 +52,40 @@
         "NEON_MDF_TARGET": "CH32V003F4P6",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
+    },
+    {
+      "name": "FX1",
+      "displayName": "FX1 (RV32IMAFC, standalone BSP snapshot)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/FX1",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/../toolchain/fx1.cmake",
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "NEON_MDF_TARGET": "FX1",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
     }
   ],
   "buildPresets": [
-    { "name": "FU2", "configurePreset": "FU2" },
-    { "name": "STM32F103CB", "configurePreset": "STM32F103CB" },
-    { "name": "WEACT_F412", "configurePreset": "WEACT_F412" },
-    { "name": "CH32V003F4P6", "configurePreset": "CH32V003F4P6" }
+    {
+      "name": "FU2",
+      "configurePreset": "FU2"
+    },
+    {
+      "name": "STM32F103CB",
+      "configurePreset": "STM32F103CB"
+    },
+    {
+      "name": "WEACT_F412",
+      "configurePreset": "WEACT_F412"
+    },
+    {
+      "name": "CH32V003F4P6",
+      "configurePreset": "CH32V003F4P6"
+    },
+    {
+      "name": "FX1",
+      "configurePreset": "FX1"
+    }
   ]
 }

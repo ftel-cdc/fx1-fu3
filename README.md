@@ -252,3 +252,7 @@ thích **cách làm** cụ thể.
   OpenOCD fork riêng của WCH, chưa xác nhận hoạt động.
 - timeout của driver polling là số vòng chờ, không phải mili-giây. SRAM/DMA
   trên FU2 dùng aligned word 32-bit; buffer byte phải sở hữu trọn các word.
+
+## FX1 ISP
+
+Target FX1 và component ISP build độc lập bằng preset `FX1`. Xem [FX1 Quickstart](guide/FX1_Quickstart.md) cho các app Smoke/Init/FullInit/Frame, artifact ELF/MAP/BIN và cách tự chép sang VP.

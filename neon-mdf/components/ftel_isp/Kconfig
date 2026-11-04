@@ -1,0 +1,3 @@
+config NEON_MDF_FTEL_ISP
+    bool "Build FX1 ISP v1.07 component (FX1 platform only)"
+    default n

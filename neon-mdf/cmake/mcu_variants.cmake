@@ -7,7 +7,10 @@
 # tools/cmake/project.cmake) - đây là thư mục gốc của neon-mdf, không phải
 # CMAKE_SOURCE_DIR của app đang include project.cmake.
 
-set(NEON_MDF_KNOWN_TARGETS FU2 STM32F103CB WEACT_F412 CH32V003F4P6)
+set(NEON_MDF_TARGET_FX1_ARCH riscv-rv32imafc_zicsr_zifencei)
+set(NEON_MDF_TARGET_FX1_FAMILY FX1)
+
+set(NEON_MDF_KNOWN_TARGETS FX1 FU2 STM32F103CB WEACT_F412 CH32V003F4P6)
 
 set(NEON_MDF_TARGET_FU2_ARCH   cortex-m0)
 set(NEON_MDF_TARGET_FU2_FAMILY FU2)
@@ -50,6 +53,10 @@ set(NEON_MDF_TARGET_CH32V003F4P6_ABI    ilp32e)
 # phải build-time custom command - sau khi sửa file .yaml phải re-run cmake
 # configure để header được sinh lại. Đơn giản, đủ dùng ở giai đoạn hiện tại.
 function(neon_mdf_configure_target TARGET_NAME)
+  if(TARGET_NAME STREQUAL "FX1")
+    include(${NEON_MDF_PATH}/cmake/fx1.cmake)
+    return()
+  endif()
   if(NOT NEON_MDF_PATH)
     message(FATAL_ERROR "NEON_MDF_PATH chua duoc set truoc khi include cmake/mcu_variants.cmake")
   endif()

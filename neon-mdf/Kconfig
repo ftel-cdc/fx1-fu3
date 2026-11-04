@@ -12,3 +12,5 @@ rsource "components/driver/Kconfig"
 # set = <APP_DIR>/Kconfig - xem comment ở đó. Ví dụ thật:
 # Projects/Examples/Blinky/Kconfig.
 osource "$(NEON_MDF_APP_KCONFIG)"
+
+rsource "components/ftel_isp/Kconfig"
