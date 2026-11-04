@@ -1,145 +1,145 @@
-# Cài đặt môi trường phát triển
+# Development environment setup
 
-Hướng dẫn cài dependency trước khi dùng neon-mdf — cho cả build/chạy ví dụ
-có sẵn lẫn viết driver/thêm target mới. **Chỉ macOS (Homebrew) đã được xác
-nhận thật trong dự án này** (mọi build/flash/debug thật trong lịch sử dự án
-đều chạy trên macOS) — phần Linux/Windows dưới đây là hướng dẫn tốt nhất
-theo hiểu biết chung, **chưa được test thật**, đánh dấu rõ ở từng mục.
+Install these dependencies before using neon-mdf to build and run existing
+examples, write drivers, or add targets. **Only macOS with Homebrew has been
+verified in this project**: the project's recorded hardware build, flash and
+debug sessions used macOS. The Linux and Windows instructions below are based
+on general platform knowledge and **have not been tested in this project**.
 
-## 1. Bảng tổng quan — cần gì tuỳ mục đích
+## 1. Dependencies by task
 
-| Mục đích | Cần cài |
+| Task | Dependencies |
 |---|---|
-| Chỉ build ví dụ có sẵn (`examples/`) | CMake, Ninja, Python3 + `pyyaml`/`kconfiglib`, toolchain compiler theo target muốn build |
-| Nạp FU2 qua UART ROMCODE | Linux/macOS dùng thư viện chuẩn Python; Windows cần `pyserial`. Chọn boot mode 100 và reset thủ công; xem `guide/FU2Flashing.md` |
-| Flash/debug Cortex-M qua debugger (board có cấu hình hỗ trợ) | + `openocd`; cấu hình FU2 hiện là placeholder |
-| + Build cho `CH32V003F4P6` (RISC-V) | + toolchain `riscv64-elf-gcc` (xem mục 4) |
-| + Flash `CH32V003F4P6` thật | + `wlink` (Rust) — **chưa wire vào CMake target nào, xem `README.md` mục giới hạn** |
-| Viết driver/thêm target mới (`guide/AddNewMCU.md`) | Như "chỉ build" + trình đọc PDF Reference Manual thật của chip (không có công cụ nào trong repo hỗ trợ bước này, đọc tay) |
-| Dùng VS Code (khuyến nghị) | + VS Code, extension `cmake-tools`/`cpptools`/`cortex-debug`, Node.js (build extension `neon-mdf-tools` từ source) |
+| Build an existing example (`examples/`) | CMake, Ninja, Python 3 with `pyyaml`/`kconfiglib`, and a compiler toolchain for the target |
+| Load FU2 through UART ROMCODE | Python standard library on Linux/macOS; `pyserial` on Windows. Select boot mode 100 and reset manually; see `guide/FU2Flashing.md` |
+| Flash/debug Cortex-M through a supported debug probe | Also install `openocd`; the FU2 configuration is currently a placeholder |
+| Build for `CH32V003F4P6` (RISC-V) | Also install a suitable toolchain, such as `riscv64-elf-gcc` (section 4) |
+| Flash physical `CH32V003F4P6` hardware | Also install `wlink` (Rust). **It is not connected to a CMake target**; see the limitations in `README.md` |
+| Write drivers or add targets (`guide/AddNewMCU.md`) | The build dependencies above and a PDF reader for the chip's reference manual; this step requires reading the manual directly |
+| Use VS Code (recommended) | VS Code, `cmake-tools`/`cpptools`/`cortex-debug`, and Node.js to build `neon-mdf-tools` from source |
 
-## 2. Công cụ chung (mọi platform)
+## 2. Common tools on all platforms
 
-- **CMake ≥ 3.25** — build system chính (`cmake/presets/targets.json` và
-  các example dùng định dạng CMakePresets phiên bản 6, cần CMake từ 3.25).
-- **Ninja** — generator dùng trong mọi `CMakePresets.json` của SDK.
-- **Python 3** + pip package:
+- **CMake ≥ 3.25** — the main build system. `cmake/presets/targets.json` and the
+  examples use CMakePresets version 6, which requires CMake 3.25 or later.
+- **Ninja** — the generator used by the SDK's `CMakePresets.json` files.
+- **Python 3** and these pip packages:
   ```sh
   pip3 install pyyaml kconfiglib
   ```
-  - `pyyaml` — bắt buộc, `mcu-description/tools/generate.py` đọc file `.yaml`.
-  - `kconfiglib` — bắt buộc nếu dùng `menuconfig` (xem `guide/MenuConfig.md`).
-  - `pyserial` — cần cho tool UART STM32, tự dò cổng của CLI và nạp/monitor
-    FU2 trên Windows. Cài thêm bằng `python3 -m pip install pyserial` vào đúng
-    interpreter đang dùng. Với Python hệ thống Ubuntu/Debian có thể dùng
-    `sudo apt install python3-serial` cho các chức năng cần thư viện này.
-    Nạp/monitor FU2 trên Linux/macOS với port chỉ định dùng thư viện chuẩn
-    Python, không cần cài thêm `pyserial`.
-    Xem [phần chuẩn bị nạp FU2](guide/FU2Flashing.md#chuẩn-bị).
-- **Git** — không bắt buộc để build (repo hiện chưa `git init`), nhưng cần
-  nếu cài `wlink` qua `cargo install --git ...` (mục 4).
+  - `pyyaml` is required by `mcu-description/tools/generate.py` to read YAML files.
+  - `kconfiglib` is required for `menuconfig` (see `guide/MenuConfig.md`).
+  - `pyserial` is required by the STM32 UART tool, automatic serial-port detection
+    in the CLI, and the FU2 loader/monitor on Windows. Install it into the Python
+    interpreter you use with `python3 -m pip install pyserial`. For the system
+    Python on Ubuntu/Debian, `sudo apt install python3-serial` is an alternative.
+    The FU2 loader/monitor uses the Python standard library on Linux/macOS when
+    a port is specified explicitly, so `pyserial` is optional for that workflow.
+    See [FU2 flashing preparation](guide/FU2Flashing.md#preparation).
+- **Git** is optional for builds, but required to install `wlink` using
+  `cargo install --git ...` (section 4).
 
-## 3. Toolchain Cortex-M (`FU2`, `WEACT_F412`)
+## 3. Cortex-M toolchain (`FU2`, `WEACT_F412`)
 
-Compiler `arm-none-eabi-gcc` + (muốn flash/debug board thật) `openocd`.
+Install `arm-none-eabi-gcc` and, for supported hardware flash/debug workflows,
+`openocd`.
 
-**macOS** (Homebrew, đã xác nhận thật — verify lại trực tiếp trên máy dùng
-để viết guide này, `arm-none-eabi-gcc` 10.3-2021.07):
+**macOS** (Homebrew; verified on the machine used to write this guide with
+`arm-none-eabi-gcc` 10.3-2021.07):
 ```sh
 brew install arm-none-eabi-gcc cmake ninja openocd
 ```
 
-**Linux** (Debian/Ubuntu — tên gói theo distro, chưa test thật trong dự án
-này):
+**Linux** (Debian/Ubuntu package names; untested in this project):
 ```sh
 sudo apt install gcc-arm-none-eabi cmake ninja-build openocd python3-pip
 ```
-Nếu bản trong repo distro cũ, cân nhắc tải trực tiếp "Arm GNU Toolchain"
-từ trang chính thức ARM (developer.arm.com) thay vì gói hệ thống.
+If your distribution provides an old version, consider downloading the Arm GNU
+Toolchain from developer.arm.com.
 
-**Windows** (chưa test thật trong dự án này):
-- "Arm GNU Toolchain" — tải installer chính thức từ developer.arm.com,
-  hoặc `winget install Arm.GnuArmEmbeddedToolchain`.
-- `winget install Kitware.CMake` + `winget install Ninja-build.Ninja`
-  (hoặc cài kèm qua Visual Studio Installer, mục "C++ CMake tools").
-- `openocd` — tải binary release chính thức (openocd.org) hoặc
-  `winget install OpenOCD.OpenOCD` (nếu có trong nguồn winget), thêm vào PATH tay.
-- **Xem mục 6 (bash) — 2 target CMake cụ thể cần shell kiểu Unix, không
-  chạy được bằng `cmd`/PowerShell thuần trên Windows.**
+**Windows** (untested in this project):
 
-Verify:
+- Install the official Arm GNU Toolchain from developer.arm.com, or use
+  `winget install Arm.GnuArmEmbeddedToolchain`.
+- Install `winget install Kitware.CMake` and `winget install Ninja-build.Ninja`,
+  or install the C++ CMake tools through Visual Studio Installer.
+- Download an OpenOCD binary release from openocd.org, or use
+  `winget install OpenOCD.OpenOCD` if available. Add it to `PATH` manually.
+- **See section 6:** two CMake targets require a Unix-style shell and cannot run
+  directly under `cmd.exe` or PowerShell.
+
+Check the installed tools:
 ```sh
 arm-none-eabi-gcc --version
 openocd --version
 ```
 
-## 4. Toolchain RISC-V (`CH32V003F4P6`)
+## 4. RISC-V toolchain (`CH32V003F4P6`)
 
-**macOS** (Homebrew, đã xác nhận thật — toolchain THẬT dùng trong SDK này
-là `riscv64-elf-gcc`, KHÔNG PHẢI gói `riscv-none-elf-gcc` của xPack dù tên
-file `cmake/toolchain/riscv-none-elf.cmake` gợi ý vậy, xem comment đầu file
-đó):
+**macOS** (Homebrew; verified): this SDK uses `riscv64-elf-gcc`. The filename
+`cmake/toolchain/riscv-none-elf.cmake` does not indicate that the xPack
+`riscv-none-elf-gcc` package is used; see the comment at the start of that file.
 ```sh
 brew install riscv64-elf-gcc riscv64-elf-gdb
 ```
 
-**Linux/Windows** (CHƯA xác nhận thật trong dự án này — tự kiểm tra lại
-trước khi tin dùng): dùng toolchain nào cũng được **miễn compile đúng**
-`-march=rv32ec_zicsr -mabi=ilp32e` (RV32EC — chip CH32V003 thật KHÔNG có
-extension M, dùng `rv32imac`/ABI `ilp32` thường thấy hơn sẽ khiến compiler
-phát lệnh nhân/chia phần cứng không tồn tại trên silicon này, xem
-`ARCHITECTURE.md` mục 10). xPack `riscv-none-elf-gcc` (đa nền tảng, cài qua
-`npm install -g xpm` rồi `xpm install @xpack-dev-tools/riscv-none-elf-gcc`)
-là lựa chọn hợp lý để thử — sau khi cài, kiểm tra multilib hỗ trợ đúng ABI
-trên:
+**Linux/Windows** (untested in this project): use a toolchain that correctly
+supports **`-march=rv32ec_zicsr -mabi=ilp32e`**. The CH32V003 implements RV32EC
+without the M extension. Using the more common `rv32imac` and `ilp32` settings
+can emit hardware multiply/divide instructions that this chip does not support;
+see section 10 of `ARCHITECTURE.md`.
+
+One option to evaluate is the cross-platform xPack `riscv-none-elf-gcc` package:
+install `npm install -g xpm`, then
+`xpm install @xpack-dev-tools/riscv-none-elf-gcc`. Check its multilib support:
 ```sh
 <compiler> -print-multi-lib | grep ilp32e
 ```
-Không thấy dòng nào chứa `ilp32e` — vẫn build được (SDK tự cung cấp
-`__udivsi3`/... qua `arch/RISCV/Core/Src/riscv_soft_math.c`, không cần
-`-lgcc` khớp ABI, xem `ARCHITECTURE.md` mục 10) nhưng nên xác nhận lại
-`-march=rv32ec_zicsr -mabi=ilp32e` thật sự được compiler chấp nhận (không
-tự rơi về ISA/ABI khác) trước khi tin dùng cho build thật.
+If there is no `ilp32e` entry, builds can still work: the SDK supplies
+`__udivsi3` and related helpers in `arch/RISCV/Core/Src/riscv_soft_math.c`
+without requiring an ABI-matching `-lgcc`. See section 10 of `ARCHITECTURE.md`.
+Confirm that the compiler accepts `-march=rv32ec_zicsr -mabi=ilp32e` without
+falling back to another ISA or ABI before using it on hardware.
 
-**`wlink`** (công cụ nạp firmware cho `CH32V003F4P6` qua WCH-LinkE — hiện
-**chưa wire vào target CMake nào**, chỉ cần nếu tự thử nạp tay):
+**`wlink`** loads firmware onto `CH32V003F4P6` through WCH-LinkE. It is currently
+**not connected to a CMake target** and is only needed for manual flashing:
 ```sh
-# Can Rust/cargo truoc (https://rustup.rs)
+# Install Rust/cargo first (https://rustup.rs).
 cargo install --git https://github.com/ch32-rs/wlink
 ```
 
-## 5. VS Code (khuyến nghị, không bắt buộc)
+## 5. VS Code (recommended, optional)
 
-1. Cài VS Code.
-2. Cài 3 extension: `ms-vscode.cmake-tools`, `ms-vscode.cpptools`,
-   `marus25.cortex-debug` (VS Code tự đề xuất khi mở 1 app trong `examples/`).
-3. Build extension `neon-mdf-tools` từ source (chưa có bản `.vsix` phát
-   hành sẵn):
+1. Install VS Code.
+2. Install `ms-vscode.cmake-tools`, `ms-vscode.cpptools` and
+   `marus25.cortex-debug`. VS Code recommends them when an app in `examples/`
+   is opened.
+3. Build `neon-mdf-tools` from source; a prebuilt `.vsix` release is not provided:
    ```sh
-   # Can Node.js (>=18 khuyen nghi) + npm
+   # Requires Node.js (18 or later recommended) and npm.
    cd vscode-extension
    npm install
    npm run typecheck && npm run package && npm run vsix
    ```
-   Cài `.vsix` sinh ra qua **Extensions: Install from VSIX...** trong VS
-   Code. Xem `VSCODE.md` mục "Lỗi thường gặp" nếu sửa code extension mà
-   hành vi không đổi (phải build+cài lại `.vsix`, không tự rebuild).
+   Install the resulting `.vsix` using **Extensions: Install from VSIX...**.
+   If extension changes do not appear, see the troubleshooting section in
+   `VSCODE.md`: rebuild and reinstall the `.vsix` after editing the source.
 
-## 6. Lưu ý riêng Windows — 2 target CMake cần `bash`
+## 6. Windows: two CMake targets require `bash`
 
-`serial_monitor` và `flash_uart_stm32` (`cmake/flash_targets.cmake`) chạy
-qua `COMMAND bash -c "..."` — **không chạy được bằng `cmd.exe`/PowerShell
-thuần trên Windows**. Cần 1 trong 2:
+`serial_monitor` and `flash_uart_stm32` in `cmake/flash_targets.cmake` use
+`COMMAND bash -c "..."`, so they cannot run directly in `cmd.exe` or PowerShell.
+Install one of these environments:
 
-- **Git for Windows** (`git-scm.com`) — đã kèm sẵn Git Bash, `bash` tự có
-  trong PATH sau khi cài, không cần thêm gì.
-- **WSL** (Windows Subsystem for Linux) — nặng hơn nhưng cho môi trường
-  Linux đầy đủ, hợp lý nếu đã dùng WSL cho việc khác.
+- **Git for Windows** (`git-scm.com`), which includes Git Bash. Ensure `bash`
+  is available in `PATH`.
+- **WSL** (Windows Subsystem for Linux), which provides a full Linux environment
+  and is useful if you already use WSL for other work.
 
-Các target còn lại (`flash_jtag`, `flash_ota`, `menuconfig`, build thường)
-không phụ thuộc `bash`, chạy bình thường trên Windows thuần.
+The other targets (`flash_jtag`, `flash_ota`, `menuconfig` and normal builds)
+do not depend on `bash` and can run on native Windows.
 
-## 7. Verify cài đặt xong — build thử
+## 7. Check the installation with an example build
 
 ```sh
 cd examples/Blinky
@@ -147,7 +147,7 @@ cmake --preset WEACT_F412
 cmake --build --preset WEACT_F412
 ```
 
-Thấy `Memory region .../%age Used` cho cả `bootloader`/`blinky`/`blinky_ota`
-là cài đặt đã đủ để phát triển ứng dụng. Muốn phát triển driver/thêm target
-mới, đọc tiếp `guide/AddNewMCU.md` + `guide/DeviceYAML.md` +
-`guide/DriverImplement.md`.
+The `Memory region .../%age Used` output for `bootloader`, `blinky` and
+`blinky_ota` indicates that the required build tools are available. For driver
+or target development, continue with `guide/AddNewMCU.md`,
+`guide/DeviceYAML.md` and `guide/DriverImplement.md`.

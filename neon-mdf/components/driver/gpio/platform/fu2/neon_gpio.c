@@ -2,11 +2,11 @@
  * @file neon_gpio.c
  * @brief Implementation for GPIO.
  * @details
- * * NEON GPIO backend cho FU2.
+ * * NEON GPIO backend for FU2.
  *
- * Register GPIO, mapping physical pin và hành vi reset lấy theo FU2 LL.
- * Khác LL, API public không nhận giá trị mux thô: config luôn yêu cầu chức năng
- * GPIO và backend SYSCSR tự chọn đúng mux riêng của từng physical pin.
+ * Register GPIO, mapping physical pin and reset behavior taken according to FU2 LL. Other LL, public
+ * API does not receive raw mux value: config always requires the GPIO function and backend SYSCSR
+ * manually selects the proper mux of each physical pin.
  */
 
 /*==================================================================================================
@@ -77,8 +77,8 @@ neon_status_t neon_gpio_clock_enable(GPIO_TypeDef *instance) {
         return status;
     }
 
-    /* ClockEnable phải đủ để peripheral hoạt động trở lại cả sau khi phần mềm
-   * từng force reset. GPIOE/F không có reset bit riêng trong CRM v8. */
+    /* ClockEnable must be sufficient for peripheral to work again both after each force reset software.
+   * GPIOE/F does not have its own bit reset in CRM v8. */
     status = neon_crm_peripheral_release_reset(peripheral);
     return (status == NEON_NOT_SUPPORTED) ? NEON_OK : status;
 }
@@ -94,10 +94,9 @@ neon_status_t neon_gpio_init(GPIO_TypeDef *instance, const neon_gpio_config_t *i
         return NEON_INVALID_PARAM;
     }
 
-    /* Xác nhận toàn bộ pin được chọn đều là chân bonded và có route GPIO trước
-   * khi ghi bất kỳ register nào. GPIOE có E0/E1/E2/E4 theo IO_PAD_MAP;
-   * E3 không có chân bonded. GPIOF hiện không có
-   * chân bonded trong bảng pin-mux FU2 v8 nên mask tương ứng sẽ bị từ chối. */
+    /* Confirm all pins selected are bonded pins and have GPIO route before writing any register. GPIOE has
+   * E0/E1/E2/E4 according to IO_PAD_MAP; E3 has no bonded pins. GPIOF currently does not have a
+   * bonded pin in the pin-mux panel FU2 v8 so the corresponding mask will be rejected. */
     memcpy(&pin_mask, &init->pin, sizeof(pin_mask));
     status = fu2_syscsr_validate_gpio_pins(instance, pin_mask);
     if (status != NEON_OK) {
@@ -111,8 +110,8 @@ neon_status_t neon_gpio_init(GPIO_TypeDef *instance, const neon_gpio_config_t *i
 
     gpio_make_pad_config(init, &pad_config);
 
-    /* Tắt output và ngắt trước khi thay PAD/mux. Nạp OUT trong lúc OE đang tắt
-   * để khi bật output, chân xuất thẳng initial_state thay vì mức OUT cũ. */
+    /* Disable output and interrupt before seeing PAD/mux. flash OUT while OE is off so that when output is
+   * on, straight output pins initial_state see because of the old OUT level. */
     primask = gpio_enter_critical();
     instance->OE &= ~(pin_mask & GPIO_OE_EN_Msk);
     instance->INT_EN &= ~(pin_mask & GPIO_INT_EN_INTR_A_Msk);
@@ -144,14 +143,14 @@ neon_status_t neon_gpio_init(GPIO_TypeDef *instance, const neon_gpio_config_t *i
     }
 
     if (init->interrupt == NEON_GPIO_INTERRUPT_ENABLE) {
-        /* INT_STA = (RAW_INT | INT_INJ) & INT_EN. Xóa cả hai nguồn cũ rồi mới
-     * enable để không nhận một IRQ tồn tại từ trước cấu hình. */
+        /* INT_STA = (RAW_INT | INT_INJ) & INT_EN. erase both old and new sources enable to not accept an IRQ
+     * that existed before configuration. */
         instance->INT_INJ &= ~(pin_mask & GPIO_INT_INJ_INTR_A_Msk);
         instance->RAW_INT = pin_mask & GPIO_RAW_INT_INTR_A_Msk;
         instance->INT_EN |= pin_mask & GPIO_INT_EN_INTR_A_Msk;
     }
 
-    /* OE được ghi cuối cùng để output chỉ hoạt động sau khi PAD/mux hoàn tất. */
+    /* OE is written last so that output only works after PAD/mux is complete. */
     if (init->mode == NEON_GPIO_MODE_OUTPUT) {
         instance->OE |= pin_mask & GPIO_OE_EN_Msk;
     }
@@ -174,7 +173,7 @@ neon_status_t neon_gpio_deinit(GPIO_TypeDef *instance, uint32_t pin_mask) {
         return status;
     }
 
-    /* Trả register GPIO về trạng thái LL cho riêng các pin được chọn. */
+    /* Return the GPIO register to LL state for the selected batteries alone. */
     primask = gpio_enter_critical();
     instance->OE &= ~(pin_mask & GPIO_OE_EN_Msk);
     instance->OUT &= ~(pin_mask & GPIO_OUT_OUT_Msk);
@@ -183,7 +182,7 @@ neon_status_t neon_gpio_deinit(GPIO_TypeDef *instance, uint32_t pin_mask) {
     instance->INT_INJ &= ~(pin_mask & GPIO_INT_INJ_INTR_A_Msk);
     gpio_exit_critical(primask);
 
-    /* RAW_INT là W1C, tuyệt đối không dùng read-modify-write. */
+    /* RAW_INT is W1C, absolutely not read-modify-write. */
     instance->RAW_INT = pin_mask & GPIO_RAW_INT_INTR_A_Msk;
 
     return fu2_syscsr_reset_gpio_pins(instance, pin_mask);
@@ -250,8 +249,8 @@ neon_status_t neon_gpio_set_interrupt_enabled(GPIO_TypeDef *instance, uint32_t p
 
     primask = gpio_enter_critical();
     if (enable != 0U) {
-        /* FU2 chỉ phát hiện cạnh khi SYNC_EN bật. Một phiên mới phải xóa cả raw
-     * pending và software injection trước khi mở mask. */
+        /* FU2 only detects edges when SYNC_EN is on. A new session must erase both raw pending and software
+     * injection before opening the mask. */
         instance->CTL |= pin_mask & GPIO_CTL_SYNC_EN_Msk;
         instance->INT_INJ &= ~(pin_mask & GPIO_INT_INJ_INTR_A_Msk);
         instance->RAW_INT = pin_mask & GPIO_RAW_INT_INTR_A_Msk;
@@ -350,9 +349,9 @@ static neon_status_t gpio_claim_jtag_pins(GPIO_TypeDef const *instance, uint32_t
         return NEON_OK;
     }
 
-    /* PA0..PA4 dùng chung chân vật lý với JTAG. Yêu cầu chúng làm GPIO đồng
-   * nghĩa với việc nhả route JTAG. Nếu route đã bị khóa khi còn bật,
-   * SYSCSR trả NEON_LOCKED và config dừng trước khi thay đổi GPIO/PAD. */
+    /* PA0..PA4 share physical pins with JTAG. Requesting them to do GPIO means releasing the JTAG route.
+   * If the route is locked while on, SYSCSR returns NEON_LOCKED and config stops before seeing
+   * GPIO/PAD. change */
     return neon_syscsr_set_jtag_mux(0U);
 }
 
@@ -391,8 +390,8 @@ static neon_status_t gpio_get_crm_peripheral(GPIO_TypeDef const *instance, neon_
 }
 
 static void gpio_make_pad_config(const neon_gpio_config_t *init, fu2_syscsr_pad_config_t *pad_config) {
-    /* Các enum Neon và SYSCSR được chuyển đổi tường minh để hai interface
-   * không phụ thuộc ngầm vào giá trị số của nhau. */
+    /* The Neon and SYSCSR enums were explicitly converted so that the two interfaces did not implicitly
+   * depend on each other's numerical values. */
     pad_config->input_enable = 1U;
 
     switch (init->pull) {

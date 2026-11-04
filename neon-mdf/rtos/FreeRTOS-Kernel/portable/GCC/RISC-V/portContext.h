@@ -403,19 +403,16 @@ portasmRESTORE_ADDITIONAL_REGISTERS
  * is not clobbered by portcontextRESTORE_VPU_CONTEXT and
  * portcontextRESTORE_FPU_CONTEXT.
  *
- * PATCH (neon-mdf, 2026-08-10): t3 (x28) KHONG TON TAI tren RV32E (chi co
- * x0-x15, xem CH32V003F4P6 - target RISC-V dau tien cua SDK nay) - GNU AS
- * bao loi that "illegal operands"/"csrw requires absolute expression" khi
- * build voi -march=rv32ec. Day la 1 trong 2 CHO DUY NHAT trong ca file nay
- * dung thanh ghi ngoai x0-x15 ma KHONG duoc bao `#ifndef __riscv_32e` (moi
- * cho khac deu da bao dung, xem cac dong ~287-291/444-461 duoi) - ro rang
- * la 1 lo sot cua upstream port khi ket hop voi E-variant. Fix: tren E dung
- * t0 THAY t3 (an toan - da xac nhan t0 RANH tu sau "csrw mepc, t0" o tren
- * toi khi bi ghi de lai o "load_x t0, portCRITICAL_NESTING_OFFSET..." ben
- * duoi, VA ca 2 nhanh doc lai t3/t0 (VPU/FPU) deu bi #if 0 tren target nay
- * - configENABLE_VPU/FPU=0, xem FreeRTOSConfig.h). Tren non-E GIU NGUYEN
- * t3 nhu upstream (KHONG doi hanh vi cho cac target Cortex-M/RISC-V khac -
- * chi CH32V003F4P6 di qua nhanh moi). */
+ * PATCH (neon-mdf, 2026-08-10): t3 (x28) does not exist on RV32E (x0-x15 only, see CH32V003F4P6 - the
+ * first RISC-V target of this SDK) - GNU AS true "illegal operands"/"csrw requires absolute
+ * expression" when building with -march=rv32ec. This is one of only two places in this file that
+ * use registers other than x0-x15 without being reported `#ifndef __riscv_32e` (each other has been
+ * reported for use, see dynamic ~287-291/444-461 below) - clear is an upstream port flaw
+ * associated with E-variant. Fix: on E using t0 found t3 (safe - confirmed t0 RANH after "csrw
+ * mepc, t0" above to me when bi write overrides at "load_x t0, portCRITICAL_NESTING_OFFSET..."
+ * below; the t3/t0 (VPU/FPU) checks are guarded by #if 0 on this target
+ * - configENABLE_VPU/FPU=0, see FreeRTOSConfig.h. on non-E keeps the same t3 as upstream (unchanged
+ * behavior for other Cortex-M/RISC-V targets - only CH32V003F4P6 passes through fast each). */
 #ifdef __riscv_32e
     #define neonmdfMSTATUS_SCRATCH t0
 #else

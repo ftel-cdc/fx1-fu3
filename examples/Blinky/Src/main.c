@@ -2,44 +2,35 @@
  * @file main.c
  * @brief Implementation for blinky.
  * @details
- * * Vi du toi thieu: toggle 1 pin GPIO lien tuc. Chi de chung minh pipeline
+ * * Minimal example: continuously toggle one GPIO pin to demonstrate the pipeline
  * mcu-description -> CMSIS/RISC-V header/linker/startup -> Driver -> firmware
- * chay duoc end-to-end. Delay dung busy-loop (chua co SysTick/NEON_Delay
- * that - se lam khi co vi du FreeRTOS), so vong lap doc tu
- * CONFIG_BLINKY_DELAY_LOOPS (xem Kconfig cua RIENG app nay canh file
- * CMakeLists.txt - vi du menuconfig KET HOP: option cua app gop chung 1
- * menu voi option cua SDK, xem neon-mdf/Kconfig).
+ * works end to end. Delay uses a busy loop; SysTick/NEON_Delay support was deferred to the FreeRTOS
+ * example. CONFIG_BLINKY_DELAY_LOOPS comes from this app's Kconfig beside CMakeLists.txt. App
+ * options share one menuconfig menu with SDK options; see neon-mdf/Kconfig.
  *
- * 1 file main.c CHAY DUOC CA 3 TARGET (FU2, WEACT_F412, CH32V003F4P6 -
- * them 2026-08-10, target RISC-V dau tien cua SDK) - chi khac nhau o
+ * The same main.c supports FU2, WEACT_F412 and CH32V003F4P6 (added 2026-08-10, the SDK's first RISC-V
+ * target). Only these settings differ:
  * LED_INSTANCE/LED_PIN (macro target do
- * target_compile_definitions(..., PUBLIC ${TARGET_NAME}) trong
- * cmake/mcu_variants.cmake dinh nghia san). Logic goi NEON_GPIO_* giong het
- * nhau - implementation THAT khac nhau nam trong
- * components/driver/gpio/neon_gpio_{fu2,weact_f412,ch32v003}.c (chon dung
- * file theo FAMILY luc build, xem CMakeLists.txt cua components/driver va
+ * target_compile_definitions(..., PUBLIC ${TARGET_NAME}) in cmake/mcu_variants.cmake). NEON_GPIO_*
+ * calls are shared; implementations are in
+ * components/driver/gpio/neon_gpio_{fu2,weact_f412,ch32v003}.c, selected by FAMILY. See
+ * components/driver/CMakeLists.txt and
  * ARCHITECTURE.md).
  *
- * neon_gpio_clock_enable() PHAI goi truoc config() - tren chip that co
- * clock-gating (STM32/CH32V003), GPIO khong hoat dong neu chua bat clock -
- * xem ARCHITECTURE.md.
+ * Call neon_gpio_clock_enable() before config(). On clock-gated STM32/CH32V003 devices, GPIO requires
+ * its peripheral clock; see ARCHITECTURE.md.
  *
- * WEACT_F412 khong con syscall retarget printf() sang UART; cac lenh log
- * cua example nay dung stub newlib/nosys, khong co output UART.
- * CH32V003F4P6 KHONG dung printf() o day (toolchain RISC-V bare-metal dang
- * dung KHONG co libc thuc su, xem cmake/toolchain/riscv-none-elf.cmake -
- * printf() se khong link duoc) - dung chu ky delay lam dau hieu phan biet
- * version thay the, giong FreeRTOS_Blinky.
+ * WEACT_F412 has no UART printf() syscall retarget; newlib/nosys stubs produce no UART output.
+ * CH32V003F4P6 does not use printf(): its bare-metal RISC-V toolchain has no libc, so printf()
+ * would not link (cmake/toolchain/riscv-none-elf.cmake). As in FreeRTOS_Blinky, the blink delay
+ * identifies the version.
  *
- * OTA (2026-08-10, WEACT_F412 va CH32V003F4P6): app nay gio duoc BUILD 2
- * LAN tu CUNG 1 source (xem CMakeLists.txt) - ban factory
- * (NEON_OTA_APP_VERSION=1) va ban ota (NEON_OTA_APP_VERSION=2) - xem
- * examples/OTA_Demo/ cho vi du OTA day du + flashmap.csv/flashmap.<DEVICE>.csv
- * canh file nay cho partition table (moi device co layout partition RIENG,
- * vi flash size chenh lech rat lon - 512KB WEACT_F412 vs 16KB CH32V003F4P6).
- * Sau ~10 lan toggle, tu goi neon_ota_confirm_valid() - xem
- * components/ota/neon_ota.h. FU2 CHUA co bootloader/OTA (giu nguyen build
- * don, khong OTA).
+ * OTA (2026-08-10, WEACT_F412 and CH32V003F4P6): build this source twice, as factory
+ * (NEON_OTA_APP_VERSION=1) and OTA (NEON_OTA_APP_VERSION=2); see CMakeLists.txt and
+ * examples/OTA_Demo/. flashmap.csv/flashmap.<DEVICE>.csv define device-specific partition layouts,
+ * because flash sizes differ greatly: 512KB on WEACT_F412 versus 16KB on CH32V003F4P6).
+ * After about ten toggles, call neon_ota_confirm_valid(); see components/ota/neon_ota.h. FU2 has no
+ * SDK bootloader/OTA and retains a single build.
  */
 
 /*==================================================================================================
@@ -51,11 +42,9 @@
 #include "sdkconfig.h"
 
 #if defined(WEACT_F412)
-/* <stdio.h>/printf() CHI dung duoc tren target co libc that (FU2/WEACT_F412
- * qua arm-none-eabi-gcc + newlib nano.specs) - toolchain RISC-V dang dung
- * (riscv64-elf-gcc, xem cmake/toolchain/riscv-none-elf.cmake) la bare-metal
- * KHONG libc, #include <stdio.h> se loi "No such file" ngay o buoc
- * preprocess neu khong bao boc dieu kien. */
+/* <stdio.h>/printf() require a target with libc, such as FU2/WEACT_F412 using arm-none-eabi-gcc and
+ * newlib nano.specs. The riscv64-elf-gcc toolchain (cmake/toolchain/riscv-none-elf.cmake) is bare
+ * metal without libc. Guard #include <stdio.h> to avoid a "No such file" preprocessing error. */
 #include <stdio.h>
 #include "neon_bootloader_uart.h"
 #include "neon_ota.h"
@@ -72,9 +61,9 @@
 #endif
 
 #if defined(FU2)
-/* GPIO0 (bản cũ) không còn tồn tại - FU2.yaml giờ khai đúng 4 instance thật
- * GPIOA-D (theo inc_fu2/fu2.h), mỗi port 8 pin. Chưa có board thật/pin_map.md
- * nên chọn tạm GPIOA pin 0 (arbitrary, không phải LED thật nào đã xác nhận). */
+/* The old GPIO0 instance no longer exists. FU2.yaml declares GPIOA-D from inc_fu2/fu2.h, with eight
+ * pins per port. GPIOA pin 0 is provisional pending hardware/pin_map.md verification, not a
+ * confirmed LED pin. */
 #define LED_INSTANCE GPIOA
 #define LED_PIN (1U << 0)
 #elif defined(WEACT_F412)
@@ -83,9 +72,9 @@
 #elif defined(CH32V003F4P6)
 #define LED_INSTANCE GPIOD
 #define LED_PIN                                                                                                        \
-    (1U << 1) /* PD1 - trung SWIO debug + LED tren board dev CH32V003F4P6 (xac nhan qua Zephyr board doc, xem memory) */
+    (1U << 1) /* PD1 is shared by SWIO debug and the development-board LED on CH32V003F4P6; checked against Zephyr board documentation */
 #else
-#error "Blinky: chua dinh nghia LED_INSTANCE/LED_PIN cho target nay"
+#error "Blinky: LED_INSTANCE/LED_PIN are not defined for this target"
 #endif
 
 /*==================================================================================================
@@ -129,7 +118,7 @@ int main(void) {
         if (loop_count == 10U) {
             neon_ota_confirm_valid();
 #if defined(WEACT_F412)
-            printf("Blinky v%d: DA CONFIRM VALID\n", NEON_OTA_APP_VERSION);
+            printf("Blinky v%d: CONFIRMED VALID\n", NEON_OTA_APP_VERSION);
 #endif
         }
 #endif

@@ -13,7 +13,7 @@
 /*==================================================================================================
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
-/* Bit vị trí/mask THẬT (inc_fu2/fu2_dti_rtc.h). */
+/* bit location/true mask (inc_fu2/fu2_dti_rtc.h). */
 #define RTC_CPSR_DIV_MASK 0x3FFFFFFU
 #define RTC_CPSR_RTC_EN (1U << 31)
 
@@ -72,8 +72,8 @@ neon_status_t neon_rtc_init(RTC_TypeDef *instance, const neon_rtc_config_t *init
         return NEON_INVALID_PARAM;
     }
 
-    /* Ghi prescaler với RTC_EN=0 trước (pre-setup), rồi mới bật RTC_EN - đúng
-   * thứ tự thật theo fu2_dti_rtc.c::LL_RTC_Init (Fig.11 trong tài liệu gốc). */
+    /* write prescaler with RTC_EN=0 first (pre-setup), then enable RTC_EN - in the correct order according
+   * to fu2_dti_rtc.c::LL_RTC_Init (Fig.11 in original document). */
     instance->CPSR = prescaler & RTC_CPSR_DIV_MASK;
     instance->CPSR |= RTC_CPSR_RTC_EN;
 
@@ -86,7 +86,7 @@ neon_status_t neon_rtc_deinit(RTC_TypeDef *instance) {
         return NEON_INVALID_PARAM;
     }
 
-    instance->CPSR &= ~RTC_CPSR_RTC_EN; /* dừng counter trước */
+    instance->CPSR &= ~RTC_CPSR_RTC_EN; /* stop counter first */
     instance->TIMECFG = 0;
     instance->DATECFG = 0;
     instance->CPSR = 0;
@@ -108,8 +108,8 @@ neon_status_t neon_rtc_set_time(RTC_TypeDef *instance, const neon_rtc_time_t *ti
         return NEON_INVALID_PARAM;
     }
 
-    /* Ghi TIMECFG kích hoạt phần cứng tự latch giờ mới trong 1 chu kỳ clock -
-   * khớp fu2_dti_rtc.h::LL_RTC_TIME_Set. */
+    /* write TIMECFG activates hardware to automatically latch new hours in 1 period clock - matches
+   * fu2_dti_rtc.h::LL_RTC_TIME_Set. */
     instance->TIMECFG = ((rtc_decimal_to_bcd(time->hour) << RTC_TIMECFG_HOUR_POS) & RTC_TIMECFG_HOUR_MASK) |
                         ((rtc_decimal_to_bcd(time->minute) << RTC_TIMECFG_MINUTE_POS) & RTC_TIMECFG_MINUTE_MASK) |
                         ((rtc_decimal_to_bcd(time->second) << RTC_TIMECFG_SECOND_POS) & RTC_TIMECFG_SECOND_MASK);
@@ -150,8 +150,8 @@ neon_status_t neon_rtc_set_date(RTC_TypeDef *instance, const neon_rtc_date_t *da
         return NEON_INVALID_PARAM;
     }
 
-    /* day-of-week KHÔNG ghi được - phần cứng tự tính khi ghi DATECFG, khớp
-   * fu2_dti_rtc.h::LL_RTC_DATE_Set (ghi chú "day is auto-computed"). */
+    /* day-of-week NOT writeable - hardware autocomputes when writing DATECFG, matching
+   * fu2_dti_rtc.h::LL_RTC_DATE_Set (write note "day is auto-computed"). */
     instance->DATECFG = ((rtc_decimal_to_bcd(date->year) << RTC_DATECFG_YEAR_POS) & RTC_DATECFG_YEAR_MASK) |
                         ((rtc_decimal_to_bcd(date->month) << RTC_DATECFG_MONTH_POS) & RTC_DATECFG_MONTH_MASK) |
                         ((rtc_decimal_to_bcd(date->date) << RTC_DATECFG_DATE_POS) & RTC_DATECFG_DATE_MASK);
@@ -171,7 +171,7 @@ neon_status_t neon_rtc_get_date(RTC_TypeDef *instance, neon_rtc_date_t *date) {
     date->year = (uint16_t)rtc_bcd_to_decimal((raw & RTC_RDATE_YEAR_MASK) >> RTC_RDATE_YEAR_POS);
     date->month = (uint8_t)rtc_bcd_to_decimal((raw & RTC_RDATE_MONTH_MASK) >> RTC_RDATE_MONTH_POS);
     date->date = (uint8_t)rtc_bcd_to_decimal((raw & RTC_RDATE_DATE_MASK) >> RTC_RDATE_DATE_POS);
-    date->day = (uint8_t)((raw & RTC_RDATE_DAY_MASK) >> RTC_RDATE_DAY_POS); /* day KHÔNG phải BCD theo header gốc */
+    date->day = (uint8_t)((raw & RTC_RDATE_DAY_MASK) >> RTC_RDATE_DAY_POS); /* day NOT BCD according to original header */
 
     return NEON_OK;
 }

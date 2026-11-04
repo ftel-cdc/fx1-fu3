@@ -18,10 +18,10 @@ class Field:
 
 @dataclass
 class RegisterAlias:
-    """Một view logic của register dùng chung cùng địa chỉ vật lý.
+    """A logical view of the register shares the same physical address.
 
-    Ví dụ UART 16550 dùng offset 0x00 cho RBR khi đọc, THR khi ghi và DLL
-    khi DLAB=1. Alias giữ đúng tên/access/bitfield mà không làm sai struct C.
+    For example, UART 16550 uses the 0x00 offset for RBR when read, THR when write and DLL when DLAB=1.
+    Alias keeps the name/access/bitfield correct without misusing struct C.
     """
     name: str
     access: str
@@ -48,9 +48,9 @@ class Peripheral:
     base: int
     description: str = ""
     registers: list = field(default_factory=list)  # list[Register]
-    type: str = ""  # tên struct dùng chung giữa nhiều instance (vd UART0..UART4 -> "UART").
-    # Mặc định = name (peripheral tự đứng 1 mình, struct trùng tên instance).
-    # loader.py điền default này khi field `type` không có trong YAML.
+    type: str = ""  # struct name shared between multiple instances (e.g. UART0..UART4 -> "UART"). Default = name
+    # (peripheral alone, same instance struct name). loader.py fill this default when field `type`
+    # is not in YAML.
 
 
 @dataclass
@@ -78,7 +78,7 @@ class Cpu:
 
 @dataclass
 class BootloaderUart:
-    peripheral: str  # ten peripherals[].name dung lam UART cho bootloader (vd "USART1")
+    peripheral: str  # peripherals[].name use UART for bootloader (e.g. "USART1")
     tx_pin: str
     rx_pin: str
     af: int
@@ -87,25 +87,24 @@ class BootloaderUart:
 
 @dataclass
 class Bootloader:
-    """Khai bao TUY CHON: device co bootloader hay khong (xem
-    schema/common.schema.yaml). Khi co, generator sinh THEM
-    <DEVICE>_BOOTLOADER.ld + <DEVICE>_APP.ld (ngoai <DEVICE>_FLASH.ld van
-    sinh binh thuong) - xem gen_linker_script.py."""
-    size: int               # kich thuoc partition bootloader (byte), tinh tu dau flash
-    image_header_size: int  # kich thuoc "slot" header truoc vector table cua app (byte) -
-    # PHAI du lon de flash.address+size+image_header_size thoa man align
-    # SCB->VTOR (xem loader.py _check_bootloader_vtor_alignment) - KHONG
-    # phai chi can >= sizeof(image_header_t) that su.
+    """optional declaration: device has bootloader please not (see schema/common.schema.yaml). when it
+    does, generator generates more
+    <DEVICE>_BOOTLOADER.ld + <DEVICE>_APP.ld (other than <DEVICE>_FLASH.ld still generate normally) -
+    see gen_linker_script.py."""
+    size: int               # size partition bootloader (bytes), from the beginning of the flash
+    image_header_size: int  # size "slot" header before app vector table (byte) - must be large enough for
+    # flash.address+size+image_header_size to align SCB->VTOR (see loader.py
+    # _check_bootloader_vtor_alignment) - not just >= actual sizeof(image_header_t).
     uart: BootloaderUart
 
 
 @dataclass
 class EraseSector:
-    """1 nhom sector erase-cung-kich-thuoc, dang run-length (xem
-    schema/common.schema.yaml `erase_sectors`) - vd STM32F412 co 3 nhom:
-    4 sector 16KB, 1 sector 64KB, 3 sector 128KB, LIET KE THEO DUNG THU TU
-    dia chi tang dan (khong duoc dao lon, tools/gen_flashmap.py doc tuan
-    tu tu dau flash de tinh ranh gioi)."""
+    """1 sector erase-joint group, running-length (see
+    schema/common.schema.yaml erase_sectors); STM32F412 has three groups:
+    four 16KB sectors, one 64KB sector and three 128KB sectors, listed in increasing address order (not a
+    large knife, tools/gen_flashmap.py read sequentially from the beginning of the flash to calculate the
+    gioi)."""
     size: int
     count: int
 
@@ -147,10 +146,10 @@ class Device:
     memory: list  # list[MemoryRegion]
     peripherals: list  # list[Peripheral]
     interrupts: list  # list[Interrupt]
-    bootloader: object = None  # Optional[Bootloader] - None = device khong co bootloader partition
-    erase_sectors: object = None  # Optional[list[EraseSector]] - None = khong khai, tools/gen_flashmap.py
-    # bo qua validate can sector khi device khong cung cap thong tin nay (KHONG bat buoc, chi de validate
-    # them cho device co sector khong deu nhau - xem WEACT_F412.yaml).
+    bootloader: object = None  # Optional[Bootloader] - None = device without bootloader partition
+    erase_sectors: object = None  # Optional[list[EraseSector]] - None = no declarations, tools/gen_flashmap.py ignores validation of
+    # sectors when devices are not at the same level (optional, only for additional validation of
+    # devices with uneven sectors - see WEACT_F412.yaml).
     profile: ProfileParam = field(default_factory=ProfileParam)
 
     def memory_by_kind(self, kind: str):

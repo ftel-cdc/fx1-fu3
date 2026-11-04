@@ -4,195 +4,200 @@ FU2 uses a single `FU2` target/preset with the RTL BootROM v5 layout. Applicatio
 vectors are at `0x00020080`; builds produce `<app>_image.bin` containing the
 128-byte header to load at `0x00020000`. See [FU2 build and boot contract](guide/FU2.md).
 
+An ESP-IDF-style SDK for embedded microcontrollers: **one MCU description
+(YAML) generates the device headers, linker scripts and startup code**.
+Architecture-independent drivers share an API across chip families. The SDK also
+provides bootloader and OTA integration. Each application includes one SDK
+CMake file and remains a separate, independent CMake project.
 
-SDK phong cách ESP-IDF cho vi điều khiển embedded: **1 file mô tả MCU
-(YAML) sinh tự động toàn bộ header/linker script/startup**, driver arch-agnostic
-dùng chung API trên nhiều family chip, bootloader + OTA thật, và app dùng SDK
-qua đúng 1 dòng `include()` — mỗi app là 1 project CMake độc lập hoàn toàn,
-không nằm trong SDK.
+Both **Arm Cortex-M** (CMSIS) and **RISC-V** (custom CSR/startup support without
+CMSIS) use the same code generation pipeline.
 
-Hỗ trợ cả **Arm Cortex-M** (CMSIS) và **RISC-V** (tự viết CSR/startup, không
-CMSIS) từ cùng 1 pipeline sinh code.
+**Set up the environment first:** see `SETUP.md` for Windows, macOS and Linux.
 
-**Cài đặt môi trường trước khi bắt đầu**: `SETUP.md` (Windows/macOS/Linux).
+Coding conventions: [NEON Coding Convention V1.3](guide/NEON_Coding_Convention_V1.3.md)
+and [how they apply to Neon MDF](guide/NEON_MDF_Source_Format_Guideline.md).
 
-Quy ước code: [NEON Coding Convention V1.3](guide/NEON_Coding_Convention_V1.3.md)
-và [cách áp dụng trong Neon MDF](guide/NEON_MDF_Source_Format_Guideline.md).
+## Available targets
 
-## Target hiện có
-
-| Target | Vendor | Core | Flash | RAM | Bootloader/OTA | Trạng thái |
+| Target | Vendor | Core | Flash | RAM | Bootloader/OTA | Status |
 |---|---|---|---|---|---|---|
-| `FU2` | FPT Telecom | Cortex-M0, tối đa 60MHz | 512KB | 128KB | RTL BootROM v5 | Register map v8; build/link và MMIO emulation, timing FPGA cần đo thực tế |
-| `WEACT_F412` | STMicroelectronics (STM32F412RET6) | Cortex-M4F, 100MHz | 512KB | 256KB | Có | **Hardware-verified** — board thật, dùng làm test rig chính |
-| `CH32V003F4P6` | WCH | RISC-V QingKe V2A (RV32EC), 48MHz | 16KB | 2KB | Có (tuỳ app, xem dưới) | Build/link-verified, **chưa chạy trên board thật** |
+| `FU2` | FPT Telecom | Cortex-M0, up to 60MHz | 512KB | 128KB | RTL BootROM v5 | Register map v8; build/link and MMIO emulation checked; FPGA timing requires hardware measurements |
+| `WEACT_F412` | STMicroelectronics (STM32F412RET6) | Cortex-M4F, 100MHz | 512KB | 256KB | Yes | **Hardware-verified**; the main hardware test board |
+| `CH32V003F4P6` | WCH | RISC-V QingKe V2A (RV32EC), 48MHz | 16KB | 2KB | Application-dependent; see below | Build/link verified; **not yet run on hardware** |
 
-## Cấu trúc thư mục
+## Directory structure
 
-```
+```text
 neon_mdf/
-  neon-mdf/                  # === SDK — độc lập hoàn toàn, không app nào bên trong ===
-    export.sh                  # set NEON_MDF_PATH (giống export.sh của ESP-IDF)
-    CMakeLists.txt              # build neon_mdf_driver + neon_mdf_device_<TARGET>
-    Kconfig                     # mainmenu, source Kconfig của components + app
+  neon-mdf/                      # Independent SDK; contains no applications
+    export.sh                    # Sets NEON_MDF_PATH, like ESP-IDF export.sh
+    CMakeLists.txt               # Builds neon_mdf_driver and neon_mdf_device_<TARGET>
+    Kconfig                      # Sources component and application Kconfig files
 
-    mcu-description/            # nguồn sự thật — MỌI header/linker/startup sinh ra từ đây
-      schema/                    # shape của .yaml (common + theo arch: cortex-m/riscv)
-      devices/<TARGET>.yaml      # mô tả 1 MCU: memory map, peripheral, IRQ, bootloader
-      tools/                     # generator Python (loader, model, backends/{cortex_m,riscv})
-      generated/                 # output phụ (.svd cho debugger, fragment .cmake) — gitignored
+    mcu-description/             # Source of truth for generated headers/linker/startup
+      schema/                    # Common and architecture-specific YAML schemas
+      devices/<TARGET>.yaml      # MCU memory map, peripherals, IRQs and bootloader layout
+      tools/                     # Python loader, model and cortex_m/riscv backends
+      generated/                 # Debugger SVD and generated CMake fragments
 
     arch/
       CortexM/
-        CMSIS/CMSIS_5/            # vendor ARM CMSIS-Core (chỉ Core/Include)
-        CMSIS/Device/<FAMILY>/    # header/linker/startup sinh tự động + system_<TARGET>.c viết tay
+        CMSIS/CMSIS_5/           # ARM CMSIS-Core vendor files; Core/Include only
+        CMSIS/Device/<FAMILY>/   # Generated files and handwritten system_<TARGET>.c
       RISCV/
-        Core/                    # CSR macro, soft-math (__udivsi3/...), libc shim tối thiểu
-        Device/<VENDOR>/<FAMILY>/ # header/linker/startup sinh tự động + system_<TARGET>.c viết tay
-        Port/                    # PFIC (IRQ enable/disable/priority, critical section)
+        Core/                    # CSR helpers, software arithmetic and minimal libc shim
+        Device/<VENDOR>/<FAMILY>/ # Generated files and handwritten system_<TARGET>.c
+        Port/                    # PFIC interrupt and critical-section support
 
     components/
-      console/                   # FU2 printf/_write qua UART; biên dịch khi bật driver UART
-      driver/                    # HAL theo family; FU2 clock/pinmux, serial, timer, DMA, Flash, WDT...
-      bootloader/                # bootloader 2-stage: main.c dùng chung + glue arch-specific/family-specific
-      ota/                       # đọc/ghi otadata, dùng chung bởi bootloader và app
+      console/                   # FU2 printf/_write over UART; enabled with the UART driver
+      driver/                    # Family-specific HAL backends
+      bootloader/                # Shared second-stage loader with architecture/family glue
+      ota/                       # OTA metadata shared by bootloader and application
 
-    rtos/FreeRTOS-Kernel/        # vendor FreeRTOS chính thức + 2 patch nhỏ cho port RISC-V (RV32E-safe)
-
-    cmake/                       # toolchain, arch flags, mcu_variants, flashmap, freertos, flash_targets, kconfig
+    rtos/FreeRTOS-Kernel/        # Upstream FreeRTOS with two RV32E compatibility patches
+    cmake/                      # Toolchains, architecture flags, targets and build integration
     tools/
-      cmake/project.cmake        # file DUY NHẤT app cần include
-      templates/                 # nguồn "Tạo App Mới" — app thường (bare-metal)
-      templates_freertos/        # nguồn "Tạo App Mới" — app dùng FreeRTOS
-      neon_mdf.py                # CLI kiểu idf.py (build/flash/monitor/menuconfig)
-      gen_flashmap.py, build_*.py # sinh partition table + đóng gói ảnh flash
+      cmake/project.cmake       # The single SDK CMake file applications include
+      templates/                # Bare-metal application template
+      templates_freertos/       # FreeRTOS application template
+      neon_mdf.py               # CLI for build/flash/monitor/menuconfig
+      gen_flashmap.py, build_*.py # Partition generation and firmware image packaging
 
   examples/
-    Blinky/                     # 1 pin GPIO toggle — build cả 3 target, có bootloader+OTA (WEACT_F412/CH32V003F4P6)
-    FreeRTOS_Blinky/            # 2 task FreeRTOS toggle 2 pin — build cả 3 target
-    OTA_Demo/                   # 3 executable (factory/ota/ota-lỗi-cố-ý) minh hoạ verify+auto-rollback
-    Printf_Log/                 # FU2: printf word-only qua _write/UART0, chỉ cần stdio.h
-    UART_ECHO_Polling/          # FU2: UART0 polling echo từng byte, menuconfig baud/clock/timeout
-    GPIO_Input_Output/          # FU2: nhấn PB5 bật LED PB1, nhả nút tắt LED, log UART0
-    FPGA_Terminal/             # FU2: terminal UART0, help/info/clear; thư mục testcase chờ bổ sung
+    Blinky/                     # GPIO toggle; bootloader/OTA on WEACT_F412/CH32V003F4P6
+    FreeRTOS_Blinky/             # Two FreeRTOS tasks toggling two pins; three targets
+    OTA_Demo/                    # Factory, OTA and deliberately invalid OTA variants
+    Printf_Log/                  # FU2 word-only printf through _write/UART0
+    UART_ECHO_Polling/           # FU2 UART0 polling echo; configurable baud/clock/timeout
+    GPIO_Input_Output/           # FU2 PB5 button controls PB1 LED; logs over UART0
+    FPGA_Terminal/               # FU2 UART0 terminal and testcase directory
 
-  vscode-extension/             # extension VS Code: build/flash/monitor/debug/menuconfig, xem VSCODE.md
+  vscode-extension/             # Build/flash/monitor/debug/menuconfig UI; see VSCODE.md
 ```
 
-Mỗi thư mục trong `examples/<App>/` tự có `CMakeLists.txt` + `CMakePresets.json`
-+ `.vscode/` riêng — configure/build **độc lập hoàn toàn** với nhau và với
-`neon-mdf/`, giống mỗi ví dụ trong `esp-idf/examples/` là 1 project riêng.
+Each `examples/<App>/` directory has its own `CMakeLists.txt`,
+`CMakePresets.json` and `.vscode/` configuration. Applications configure and
+build independently of each other and of the SDK, just like ESP-IDF examples.
 
-FU2 Flash Tool **1.0** cung cấp target CMake `flash_uart_fu2`, truyền port/baud
-lúc chạy và chờ người dùng nhấn RESET sau khi chọn boot mode 100. Xem
-[Nạp firmware FU2 qua UART](guide/FU2Flashing.md).
-Quy trình chuẩn bị image và chạy firmware cho từng chế độ nằm trong
-[Chế độ khởi động FU2](guide/FU2BootModes.md).
+FU2 Flash Tool **1.0** provides the `flash_uart_fu2` CMake target. Port and baud
+settings are supplied at execution time. Select boot mode 100 and press RESET
+when the tool is ready. See [FU2 UART programming](guide/FU2Flashing.md) and
+[FU2 boot modes](guide/FU2BootModes.md) for image preparation and boot procedures.
 
-Đồ thị phụ thuộc thật giữa các khối trên (target CMake nào link target
-nào): `guide/ArchitectDetail.md`.
+See `guide/ArchitectDetail.md` for the dependency graph between CMake targets.
 
-## Build thử
+## Try an example
 
-Đây là ví dụ có sẵn — muốn tạo app mới từ đầu (wizard VS Code hoặc copy tay),
-xem tutorial đầy đủ: `guide/FirstApp.md`.
+For a new application, see `guide/FirstApp.md`. To build an existing example:
 
 ```sh
-. neon-mdf/export.sh              # set NEON_MDF_PATH — 1 lần/terminal session
+. neon-mdf/export.sh              # Once per terminal session
 cd examples/Blinky
 cmake --preset WEACT_F412
 cmake --build --preset WEACT_F412
 # -> build/WEACT_F412/{bootloader,blinky,blinky_ota}.{elf,bin,map}
 ```
 
-Đổi `WEACT_F412` thành `FU2` hoặc `CH32V003F4P6` để build cho target khác —
-cùng 1 `Src/main.c`, driver thật khác nhau theo family được CMake tự chọn.
+Use `FU2` or `CH32V003F4P6` instead to select another target. The same
+`Src/main.c` uses the appropriate family driver selected by CMake.
 
-## Bootloader + OTA
+## Bootloader and OTA
 
-`WEACT_F412`, `STM32F103CB` và `CH32V003F4P6` có khai `bootloader:` trong YAML → mỗi app build
-ra thêm executable `bootloader` (SDK tự cung cấp `main.c`), nạp qua UART
-(giao thức riêng: SYNC → header 16-byte (magic/size/crc32) → chunk 256 byte →
-verify CRC32) hoặc qua SWD/JTAG.
+`WEACT_F412`, `STM32F103CB` and `CH32V003F4P6` declare `bootloader:` in their
+device YAML. Their applications also build a `bootloader` executable with
+SDK-provided `main.c`. Programming uses SWD/JTAG or the custom UART protocol:
+SYNC, a 16-byte header (magic/size/crc32), 256-byte chunks and CRC32 verification.
 
-Nếu app có file `flashmap.csv` (khai `app`/`otadata`/`app_ota`, kiểu
-`partitions.csv` của ESP-IDF) — bootloader chạy mô hình OTA **bất đối xứng**:
-slot `app` (factory) không bao giờ bị OTA đụng tới, slot `app_ota` là nơi duy
-nhất OTA ghi vào, `otadata` lưu trạng thái xác nhận (`active_slot`/`state`/
-`boot_attempts`). App phải tự gọi `neon_ota_confirm_valid()` sau khi chạy ổn
-định — không xác nhận + reset lặp lại quá `NEON_OTA_MAX_BOOT_ATTEMPTS` (mặc
-định 3) sẽ **tự động rollback về factory**. Đã hardware-verify đầy đủ
-(factory boot, OTA switch, auto-rollback) trên `WEACT_F412`.
+An application with `flashmap.csv` defines `app`, `otadata` and `app_ota`
+partitions, similar to ESP-IDF `partitions.csv`. OTA uses an **asymmetric**
+layout: updates never overwrite the factory `app` slot; they write only
+`app_ota`. The `otadata` partition stores `active_slot`, `state` and
+`boot_attempts`.
 
-Hướng dẫn thực hành thêm OTA vào app mới (viết `flashmap.csv`, sửa
-`CMakeLists.txt`, gọi API, test factory→OTA→rollback thật): `guide/BootloaderOTA.md`.
+The application calls `neon_ota_confirm_valid()` after running reliably. An
+unconfirmed image that repeatedly resets beyond `NEON_OTA_MAX_BOOT_ATTEMPTS`
+(default 3) **automatically rolls back to the factory image**. Factory boot,
+OTA switching and rollback have been verified on WEACT_F412 hardware.
 
-`CH32V003F4P6` **có OTA thật** cho app bare-metal — `examples/Blinky` build 3
-executable (`bootloader`/`blinky`/`blinky_ota`) qua
-`flashmap.CH32V003F4P6.csv` (12KB còn lại sau bootloader 4KB, đủ chỗ cho 2
-bản ảnh). Riêng `examples/FreeRTOS_Blinky` trên **cùng chip** này KHÔNG có
-OTA (không có file `flashmap.CH32V003F4P6.csv` cho app đó) — FreeRTOS-Kernel
-tối thiểu đã chiếm ~8.5KB flash/~2KB RAM (do that 2026-08-11: text+data=8488B, bss=1936B), không đủ chỗ cho 2 bản ảnh
-(factory+OTA) trong 16KB flash/2KB RAM thật của chip, chỉ build 1 executable
-qua `neon_mdf_add_app_executable()`. Bootloader trên target này luôn thật
-(verify header/CRC32, nhận firmware mới qua UART) ở cả 2 trường hợp — chỉ
-khác là `FreeRTOS_Blinky` không có A/B/rollback, ghi đè lên đúng 1 slot cố
-định.
+See `guide/BootloaderOTA.md` for partition definitions, CMake integration, API
+calls and factory-to-OTA-to-rollback testing.
 
-`FU2` không khai `bootloader:` → build nguyên flash, 1 executable duy nhất,
-không OTA.
+Bare-metal `examples/Blinky` on `CH32V003F4P6` builds three executables:
+`bootloader`, `blinky` and `blinky_ota`. Its
+`flashmap.CH32V003F4P6.csv` fits two application images into the 12KB remaining
+after the 4KB bootloader.
+
+`examples/FreeRTOS_Blinky` on the same chip has no OTA partition map. The
+minimal FreeRTOS build already uses about 8.5KB Flash and 2KB RAM
+(measured on 2026-08-11: text+data=8488B, bss=1936B), leaving insufficient space
+for two application images in the chip's 16KB Flash and 2KB RAM. It builds one
+application through `neon_mdf_add_app_executable()`. Both configurations use a
+bootloader that verifies the header/CRC32 and receives UART updates; the
+FreeRTOS version overwrites one fixed slot without A/B switching or rollback.
+
+`FU2` does not declare `bootloader:`. It builds one application and its
+BootROM image, without OTA.
 
 ## FreeRTOS
 
-`FreeRTOS_Blinky` build cho cả 3 target, dùng port chính thức của
-FreeRTOS-Kernel (không tự viết port):
+`FreeRTOS_Blinky` supports all three targets using upstream FreeRTOS ports:
 
-- `FU2` (Cortex-M0): port `GCC_ARM_CM0`.
-- `WEACT_F412` (Cortex-M4F): port `GCC_ARM_CM4F`.
-- `CH32V003F4P6` (RISC-V, không có CLINT): port `GCC_RISC_V_GENERIC` +
-  chip-extension `RISCV_no_extensions` — app tự cấu hình tick timer (STK của
-  QingKe) và chuyển `mtvec` sang Direct mode trong `vPortSetupTimerInterrupt()`
-  (xem comment đầu `Src/main.c`). 2 patch nhỏ, có giới hạn phạm vi rõ ràng,
-  được áp vào `neon-mdf/rtos/FreeRTOS-Kernel/portable/GCC/RISC-V/` để port
-  chạy đúng trên RV32E (register file rút gọn 16 thanh ghi).
+- `FU2` (Cortex-M0): `GCC_ARM_CM0`.
+- `WEACT_F412` (Cortex-M4F): `GCC_ARM_CM4F`.
+- `CH32V003F4P6` (RISC-V without CLINT): `GCC_RISC_V_GENERIC` with the
+  `RISCV_no_extensions` chip extension. The application configures the QingKe
+  STK tick timer and switches `mtvec` to Direct mode in
+  `vPortSetupTimerInterrupt()`; see the opening comments in `Src/main.c`.
+  Two scoped patches in `portable/GCC/RISC-V/` support RV32E's reduced
+  16-register file.
 
-Cách wire FreeRTOS cho 1 kiến trúc CPU mới (cơ chế dispatch, pattern
-"Direct Routing", pattern "CLINT-less"): `guide/FreeRTOSPort.md`.
+See `guide/FreeRTOSPort.md` for port selection, Direct Routing and CLINT-less
+integration on a new CPU architecture.
 
-## Log bằng printf trên FU2
+## FU2 printf logging
 
-Với FU2, bật `CONFIG_NEON_MDF_DRIVER_UART=y` là có cả UART và `printf/_write`,
-không cần cờ printf riêng. Tắt UART sẽ loại cả driver và console khỏi build.
-App chỉ cần `<stdio.h>` và `printf("counter=%u hex=0x%08lX\n", 1U, 0x1234UL)`.
-Output đi qua `_write`, tự khởi tạo UART0 ở 19200 baud, 8N1 trong lần ghi đầu
-tiên. `neon_console_attach_uart()` là API tùy chọn nếu cần UART/baud khác.
-Bộ formatter dùng word-only memory access, hỗ trợ chuỗi/số nguyên/hex, chưa
-hỗ trợ float hoặc toàn bộ stdio. STM32F103 và WEACT_F412 không có retarget
-printf sang UART; ứng dụng dùng API UART trực tiếp hoặc tự cung cấp console.
+Enable `CONFIG_NEON_MDF_DRIVER_UART=y` for both UART and `printf/_write`;
+there is no separate printf flag. Disabling UART excludes the driver and
+console.
 
-Example: [Printf_Log](examples/Printf_Log/README.md). API, cách nối UART, xem log
-và kiểm chứng: [guide/PrintfLogging.md](guide/PrintfLogging.md).
+Include `<stdio.h>` and call
+`printf("counter=%u hex=0x%08lX\n", 1U, 0x1234UL)`.
+The first `_write` initializes UART0 at 19200 baud, 8N1.
+`neon_console_attach_uart()` optionally selects a different UART or baud rate.
+
+The word-only formatter supports strings, integers and hexadecimal output,
+without floating-point formatting or full stdio support. STM32F103 and
+WEACT_F412 have no built-in UART printf retarget; use their UART APIs directly
+or provide an application console.
+
+See [Printf_Log](examples/Printf_Log/README.md) and
+[PrintfLogging.md](guide/PrintfLogging.md) for API details, wiring, monitoring
+and verification.
 
 ## menuconfig (Kconfig)
 
-Mỗi app có file `sdkconfig` riêng quyết định driver nào được compile (cách
-khai option mới: `guide/MenuConfig.md`):
+Each application's `sdkconfig` selects which drivers are compiled. See
+`guide/MenuConfig.md` to add options.
 
 ```sh
-cmake --build --preset WEACT_F412 --target menuconfig   # giống idf.py menuconfig
-cmake --preset WEACT_F412                                 # re-configure để áp dụng
+cmake --build --preset WEACT_F412 --target menuconfig   # Like idf.py menuconfig
+cmake --preset WEACT_F412                              # Reconfigure to apply changes
 ```
 
 ## VS Code
 
-Mở đúng thư mục app cụ thể (vd `examples/Blinky/`), **không mở
-`neon_mdf/` gốc**. Cài extension `neon-mdf-tools` (xem `vscode-extension/`) —
-status bar chọn target/transport/port, lệnh Build/Flash/Debug/Serial
-Monitor/menuconfig, wizard "Tạo App Mới" (chọn bare-metal hoặc FreeRTOS). Chi
-tiết: `VSCODE.md`. Cơ chế debug (flash-trước-rồi-attach, 2 gotcha thật đã
-gặp và fix trên phần cứng): `guide/Debugging.md`.
+Open an application directory such as `examples/Blinky/`. Install
+`neon-mdf-tools` from `vscode-extension/`. The status bar selects the target,
+transport and serial port. Commands provide Build, Flash, Debug, Serial Monitor
+and menuconfig; the Create New App wizard offers bare-metal and FreeRTOS
+templates.
 
-## CLI (không cần VS Code)
+See `VSCODE.md` for usage and `guide/Debugging.md` for the flash-then-attach
+workflow and two hardware issues that have been diagnosed and fixed.
+
+## CLI without VS Code
 
 ```sh
 . neon-mdf/export.sh
@@ -200,55 +205,55 @@ cd examples/Blinky
 python3 $NEON_MDF_PATH/tools/neon_mdf.py build flash-jtag monitor
 ```
 
-Hành động: `build`, `flash-jtag`, `flash-uart-stm32`, `flash-ota`, `monitor`,
-`menuconfig`, `set-target` — chạy tuần tự nhiều hành động trong 1 lệnh.
+Actions include `build`, `flash-jtag`, `flash-uart-stm32`, `flash-ota`,
+`monitor`, `menuconfig` and `set-target`. Multiple actions run sequentially
+in one command.
 
-## Thêm MCU target mới
+## Add an MCU target
 
-Hướng dẫn chi tiết từng bước: `guide/AddNewMCU.md`. Tóm tắt:
+See `guide/AddNewMCU.md` for the full procedure:
 
-1. Viết `neon-mdf/mcu-description/devices/<TARGET>.yaml` theo
-   `schema/common.schema.yaml` + `schema/arch/<arch>.schema.yaml` (địa chỉ
-   phải THẬT — không có register layout thật thì đánh dấu rõ PLACEHOLDER,
-   không đoán). Tham chiếu đầy đủ từng field: `guide/DeviceYAML.md`.
-2. Đăng ký trong `neon-mdf/cmake/mcu_variants.cmake`
-   (`NEON_MDF_TARGET_<TARGET>_{ARCH,FAMILY,...}`).
-3. Viết tay `system_<TARGET>.c/.h` (không sinh tự động — cấu hình clock thật
-   của chip).
-4. Nếu family mới: thêm implementation GPIO (`components/driver/gpio/`), và
-   nếu cần bootloader: Flash + UART (`components/driver/flash/`,
-   `components/bootloader/`) — cách viết + wire CMake: `guide/DriverImplement.md`.
-5. Thêm preset trong `neon-mdf/cmake/presets/targets.json` (dùng chung cho
-   mọi app qua `include`).
+1. Write `neon-mdf/mcu-description/devices/<TARGET>.yaml` using the common
+   schema and `schema/arch/<arch>.schema.yaml`. Use verified addresses and
+   register layouts; mark unknown data as PLACEHOLDER. See `guide/DeviceYAML.md`.
+2. Register `NEON_MDF_TARGET_<TARGET>_{ARCH,FAMILY,...}` in
+   `neon-mdf/cmake/mcu_variants.cmake`.
+3. Write `system_<TARGET>.c/.h` for the chip's actual clock setup.
+4. For a new family, add a GPIO backend in `components/driver/gpio/`. A
+   bootloader also requires Flash and UART backends in
+   `components/driver/flash/` and `components/bootloader/`.
+   See `guide/DriverImplement.md`.
+5. Add a preset to `neon-mdf/cmake/presets/targets.json`, shared by applications
+   through `include`.
 
-## Tài liệu chi tiết (`guide/`)
+## Detailed guides
 
-| File | Nội dung |
+| File | Contents |
 |---|---|
-| `guide/FirstApp.md` | Tutorial nhập môn: tạo app mới, cấu trúc file, build/nạp/xem log, sửa code. |
-| `guide/AddNewMCU.md` | Từng bước thêm 1 MCU target mới — YAML, đăng ký CMake, driver, bootloader/OTA tuỳ chọn, FreeRTOS tuỳ chọn, checklist. |
-| `guide/DeviceYAML.md` | Tham chiếu đầy đủ từng field khi khai `mcu-description/devices/<TARGET>.yaml`. |
-| `guide/DriverImplement.md` | Cách khai API driver dùng chung + viết implementation theo family + 3 kiểu wire vào CMake (bắt buộc/có điều kiện/qua Kconfig). |
-| `guide/MenuConfig.md` | Cách khai tuỳ chọn `menuconfig`/`sdkconfig` (bool/int/hex/string), dùng trong C và CMake. |
-| `guide/PrintfLogging.md` | FU2 printf qua UART: cấu hình, format hỗ trợ, Serial Monitor và kiểm chứng word-only. |
-| `guide/ArchitectDetail.md` | Đồ thị phụ thuộc thật giữa các target CMake (`neon_mdf_driver`/`neon_mdf_ota`/...) + include-dependency giữa các layer. |
-| `guide/BootloaderOTA.md` | Hướng dẫn thực hành thêm OTA vào app — `flashmap.csv`, `CMakeLists.txt`, API, test factory→OTA→rollback thật. |
-| `guide/FreeRTOSPort.md` | Cách wire FreeRTOS cho 1 kiến trúc CPU mới — dispatch port, pattern "Direct Routing", pattern "CLINT-less". |
-| `guide/Debugging.md` | Cơ chế debug qua VS Code + 2 gotcha thật đã gặp và fix trên phần cứng (header bị `load` xoá, reset không tin cậy). |
+| `guide/FirstApp.md` | Create an application, understand its files, build, flash, view logs and edit code. |
+| `guide/AddNewMCU.md` | Add a target: YAML, CMake registration, drivers, optional bootloader/OTA and FreeRTOS, and verification. |
+| `guide/DeviceYAML.md` | Complete reference for device YAML fields. |
+| `guide/DriverImplement.md` | Shared APIs, family backends and required, conditional or Kconfig-controlled CMake integration. |
+| `guide/MenuConfig.md` | Define bool/int/hex/string options and use them in C and CMake. |
+| `guide/PrintfLogging.md` | FU2 UART printf configuration, formats, monitoring and word-only verification. |
+| `guide/ArchitectDetail.md` | CMake target dependencies and include dependencies between layers. |
+| `guide/BootloaderOTA.md` | Add OTA partitions, CMake integration and API calls; test factory/OTA/rollback. |
+| `guide/FreeRTOSPort.md` | Select ports and integrate Direct Routing or CLINT-less operation. |
+| `guide/Debugging.md` | VS Code debugging and hardware fixes for header erasure by `load` and unreliable reset. |
 
-`ARCHITECTURE.md` giải thích **vì sao** thiết kế như vậy; `guide/` giải
-thích **cách làm** cụ thể.
+`ARCHITECTURE.md` explains the design rationale; `guide/` provides procedures.
 
-## Giới hạn hiện tại
+## Current limitations
 
-- `FU2`: register map theo Common Specification v8, image theo RTL BootROM
-  v5. MMIO emulation chưa thay thế đo timing và kiểm chứng trên FPGA; xem
-  `guide/FU2.md` và `FU2_PORTING_STATUS.md`.
-- `CH32V003F4P6`: toàn bộ (driver, bootloader, RISC-V port của FreeRTOS)
-  build/link-verified nhưng **chưa chạy trên board thật** (board đặt mua
-  chưa về) — flash qua VS Code extension/CLI cũng chưa wire (cần `wlink`,
-  khác cơ chế OpenOCD/SWD của 2 target Cortex-M).
-- Debug qua VS Code hiện chỉ hỗ trợ Cortex-M (OpenOCD/SWD) — RISC-V cần
-  OpenOCD fork riêng của WCH, chưa xác nhận hoạt động.
-- timeout của driver polling là số vòng chờ, không phải mili-giây. SRAM/DMA
-  trên FU2 dùng aligned word 32-bit; buffer byte phải sở hữu trọn các word.
+- `FU2` uses the Common Specification v8 register map and RTL BootROM v5 image
+  contract. MMIO emulation complements FPGA timing measurements and hardware
+  verification. See `guide/FU2.md` and `FU2_PORTING_STATUS.md`.
+- `CH32V003F4P6` drivers, bootloader and FreeRTOS port are build/link verified
+  and await hardware testing; the ordered board has not arrived. Extension and
+  CLI flashing integration also awaits `wlink`, which differs from
+  Cortex-M OpenOCD/SWD programming.
+- VS Code debugging currently supports Cortex-M through OpenOCD/SWD. RISC-V
+  requires WCH's OpenOCD fork and has not been validated.
+- Polling driver timeouts count polling iterations, rather than milliseconds.
+  FU2 SRAM/DMA accesses use aligned 32-bit words; byte buffers must own each
+  complete word that they occupy.

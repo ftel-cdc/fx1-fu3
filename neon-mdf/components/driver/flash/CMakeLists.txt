@@ -1,5 +1,5 @@
-# FU2 dùng Flash HAL cả cho cấu hình controller/bad-sector, không chỉ cho
-# bootloader. Các family cũ vẫn chỉ kéo backend khi bootloader được bật.
+# FU2 uses HAL Flash both for the controller/bad-sector configuration, and not just for the
+# bootloader. Older families still only drag the backend when the bootloader is enabled.
 if(NEON_MDF_TARGET_${NEON_MDF_TARGET}_FAMILY STREQUAL "FU2")
   target_sources(neon_mdf_driver PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/platform/fu2/neon_flash.c

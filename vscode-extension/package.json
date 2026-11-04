@@ -1,7 +1,7 @@
 {
   "name": "neon-mdf-tools",
   "displayName": "NEON-MDF Tools",
-  "description": "Build/flash/monitor UI cho neon-mdf (bootloader + app), giong ESP-IDF extension - khong thay the flash_targets.cmake/.vscode/tasks.json, chi la lop UI goi lai.",
+  "description": "Build, flash and monitor UI for neon-mdf (bootloader and application), similar to the ESP-IDF extension. Calls the existing flash_targets.cmake and .vscode/tasks.json workflows.",
   "publisher": "neon-mdf",
   "version": "0.1.0",
   "private": true,
@@ -16,11 +16,11 @@
   "extensionDependencies": ["marus25.cortex-debug"],
   "contributes": {
     "commands": [
-      { "command": "neonMdf.createApp", "title": "NEON-MDF: Tao App Moi..." },
-      { "command": "neonMdf.selectSdkPath", "title": "NEON-MDF: Chon Duong Dan SDK..." },
-      { "command": "neonMdf.selectTarget", "title": "NEON-MDF: Chon Target" },
-      { "command": "neonMdf.selectTransport", "title": "NEON-MDF: Chon Transport (UART/JTAG)" },
-      { "command": "neonMdf.selectPort", "title": "NEON-MDF: Chon Cong Serial" },
+      { "command": "neonMdf.createApp", "title": "NEON-MDF: Create New App..." },
+      { "command": "neonMdf.selectSdkPath", "title": "NEON-MDF: Select SDK Path..." },
+      { "command": "neonMdf.selectTarget", "title": "NEON-MDF: Select Target" },
+      { "command": "neonMdf.selectTransport", "title": "NEON-MDF: Select Transport (UART/JTAG)" },
+      { "command": "neonMdf.selectPort", "title": "NEON-MDF: Select Serial Port" },
       { "command": "neonMdf.build", "title": "NEON-MDF: Build" },
       { "command": "neonMdf.flash", "title": "NEON-MDF: Flash" },
       { "command": "neonMdf.buildFlashMonitor", "title": "NEON-MDF: Build + Flash + Log" },
@@ -34,29 +34,29 @@
         "neonMdf.target": {
           "type": "string",
           "default": "",
-          "description": "Target dang chon (vd WEACT_F412) - doc dong tu CMakePresets.json, khong hardcode."
+          "description": "Selected target (for example, WEACT_F412), read dynamically from CMakePresets.json rather than hardcoded."
         },
         "neonMdf.transport": {
           "type": "string",
           "enum": ["uart", "jtag"],
           "default": "jtag",
-          "description": "Giao tiep nap firmware. FU2: UART qua ROMCODE, chon boot mode 100 va bam RESET khi tool san sang. STM32: UART System Bootloader hoac JTAG/SWD theo board."
+          "description": "Firmware programming interface. FU2: ROMCODE UART; select boot mode 100 and press RESET when the tool is ready. STM32: UART System Bootloader or JTAG/SWD, depending on the board."
         },
         "neonMdf.baudRate": {
           "type": "number",
           "default": 115200,
-          "description": "Baud UART ung dung/Serial Monitor, doc lap voi baud nap. Khi chua dat, FU2 dung 19200; target khac dung 115200."
+          "description": "Application UART/Serial Monitor baud rate, independent of the programming baud rate. Defaults to 19200 for FU2 and 115200 for other targets when unset."
         },
         "neonMdf.fu2FlashBaudRate": {
           "type": "integer",
           "minimum": 1,
           "default": 19200,
-          "description": "Baud nap UART FU2, phai khop ROMCODE tren board. Truyen luc chay target CMake; khong thay doi baud tren chip."
+          "description": "FU2 UART programming baud rate; must match the board ROMCODE. Passed when the CMake target runs; does not change the chip baud rate."
         },
         "neonMdf.sdkPath": {
           "type": "string",
           "default": "",
-          "description": "Duong dan TUYET DOI toi neon-mdf SDK (giong idf.espIdfPath cua ESP-IDF). De trong = tu dong suy tu vi tri app (../../neon-mdf), giong quy uoc cac vi du co san dang dung. Chi can dat neu SDK nam o vi tri khac quy uoc - dung lenh 'NEON-MDF: Chon Duong Dan SDK...' thay vi sua truc tiep o day."
+          "description": "Absolute path to the neon-mdf SDK, similar to ESP-IDF idf.espIdfPath. Leave empty to infer it from the application location (../../neon-mdf), as in the bundled examples. Set this only when the SDK is elsewhere, using NEON-MDF: Select SDK Path... rather than editing it here."
         }
       }
     }

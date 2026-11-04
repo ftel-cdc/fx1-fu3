@@ -1,5 +1,5 @@
-# CRM là hạ tầng clock/reset nền tảng của FU2 nên luôn được biên dịch cho
-# family này, không đặt sau một Kconfig tùy chọn.
+# CRM is the platform clock/reset infrastructure of FU2 should always be compiled for this family, not
+# put after a Kconfig option.
 neon_mdf_driver_select_family_source(
   TARGET neon_mdf_driver
   PERIPHERAL crm

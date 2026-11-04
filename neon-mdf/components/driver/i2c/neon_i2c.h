@@ -2,10 +2,10 @@
  * @file neon_i2c.h
  * @brief Public declarations for I2C.
  * @details
- * * NEON I2C - HAL cho bộ điều khiển DTI I2C của FU2.
+ * * NEON I2C - HAL for FU2's DTI I2C controller.
  *
- * API public dùng địa chỉ chưa shift và giá trị logic. Backend quản lý
- * clock/reset, pinmux, FIFO và các xung clear đặc thù của phần cứng FU2.
+ * The public API uses unshifted addresses and logical values. The backend manages clock/reset, pinmux,
+ * FIFO and FU2 hardware specific clear pulses.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.
@@ -56,10 +56,10 @@ typedef enum {
 } neon_i2c_clock_stretch_t;
 
 typedef enum {
-    /* FU2: SDA=package 18, SCL=19, input feedback/open-drain bật.
-     * DeInit khôi phục pad/mux đã lưu; bus cần pull-up ngoài. */
+    /* FU2: SDA=package 18, SCL=19, input feedback/open-drain enabled. DeInit restores saved pad/mux; bus
+     * needs external pull-up. */
     NEON_I2C_PIN_CONFIG_AUTO = 0,
-    /* Giữ nguyên cấu hình pin do board/boot firmware đã thiết lập. */
+    /* Keep that battery configuration board/boot firmware set. */
     NEON_I2C_PIN_CONFIG_KEEP = 1,
 } neon_i2c_pin_config_t;
 
@@ -82,7 +82,7 @@ typedef enum {
     NEON_I2C_DMA_RX = 1,
 } neon_i2c_dma_direction_t;
 
-/* Giá trị flag khớp ISR để có thể OR nhiều flag trong một lần kiểm tra. */
+/* Flag value matches ISR to be able to OR multiple flags in one test. */
 typedef uint32_t neon_i2c_flag_t;
 #define NEON_I2C_FLAG_BUS_BUSY ((1U << 0))
 #define NEON_I2C_FLAG_TRANSFER_DONE ((1U << 1))
@@ -102,7 +102,7 @@ typedef uint32_t neon_i2c_flag_t;
 #define NEON_I2C_FLAG_ALERT_DETECTED ((1U << 15))
 #define NEON_I2C_FLAG_ALL (0x0000FFFFU)
 
-/* Bit interrupt khớp IIER/IICR/IITR, không khớp vị trí flag trong ISR. */
+/* interrupt bit matches IIER/IICR/IITR, not flag position in ISR. */
 typedef uint32_t neon_i2c_interrupt_t;
 #define NEON_I2C_INTERRUPT_TRANSFER_DONE ((1U << 0))
 #define NEON_I2C_INTERRUPT_ADDRESS_NACK ((1U << 1))
@@ -135,8 +135,8 @@ typedef uint32_t neon_i2c_interrupt_t;
 #define NEON_I2C_ERROR_TIMEOUT 0x00000080U
 
 typedef struct {
-    /* Số chu kỳ i2c_clk ghi trực tiếp vào register. scl_high_count là giá trị
-   * lập trình, chưa cộng độ trễ đồng bộ và spike filter quan sát ngoài pin. */
+    /* The period number i2c_clk writes directly to the register. scl_high_count is the programming value,
+   * not including sync latency and spike filter observed outside the battery. */
     neon_field16_t scl_low_count;
     neon_field16_t scl_high_count;
     neon_field16_t scl_low_count_high_speed;
@@ -152,7 +152,7 @@ typedef struct {
 } neon_i2c_timing_t;
 
 typedef struct {
-    /* FU2 tích hợp FIFO sâu 32 nhưng các field threshold chỉ rộng 4 bit. */
+    /* FU2 integrates FIFO 32 deep but the field threshold is only 4 bit wide. */
     neon_field8_t tx_full_level;
     neon_field8_t tx_empty_level;
     neon_field8_t rx_full_level;
@@ -172,7 +172,7 @@ typedef struct {
     neon_i2c_speed_mode_t speed_mode;
     neon_i2c_addressing_mode_t addressing_mode;
     neon_i2c_clock_stretch_t clock_stretch;
-    /* Địa chỉ FU2 khi ở slave mode; master mode bỏ qua field này. */
+    /* address FU2 when in slave mode; master mode ignores this field. */
     neon_field16_t own_address;
     neon_i2c_pin_config_t pin_config;
     neon_i2c_timing_t timing;
@@ -196,7 +196,7 @@ typedef struct neon_i2c_handle_s {
     neon_i2c_t instance;
     volatile neon_i2c_state_t state;
     volatile uint32_t error_code;
-    uint32_t private_context; /* Backend sử dụng; ứng dụng không sửa field này. */
+    uint32_t private_context; /* Backend used; application does not fix this field. */
 } neon_i2c_handle_t;
 
 /*==================================================================================================
@@ -206,10 +206,10 @@ typedef struct neon_i2c_handle_s {
  * @brief Fill the default configuration for i2 c.
  * @param[out] config Module configuration.
  * @details
- * Cấu hình tham chiếu Standard-mode theo DTI guide/UVM tại i2c_clk xấp xỉ
- * 3,4 MHz: low=20, high lập trình=9, spike=1 và các timing setup/hold đã
- * được testbench IP sử dụng. Giá trị high=14 trong LL là số chu kỳ quan sát
- * ngoài chân, chưa trừ 5 chu kỳ đồng bộ/lọc của IP.
+ * Standard-mode reference configuration according to DTI guide/UVM at i2c_clk approx. 3.4 MHz: low=20,
+ * programmable high=9, spike=1 and the timing setup/hold has been used by IP testbench. The value
+ * high=14 in LL is the number of observed periods outside the pins, excluding 5
+ * synchronization/filter periods of the IP.
  */
 void neon_i2c_get_default_config(neon_i2c_config_t *config);
 
@@ -266,12 +266,11 @@ neon_status_t neon_i2c_deinit(neon_i2c_handle_t *hi2c);
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * dev_address là địa chỉ 7/10 bit chưa shift. Size hợp lệ 1..256; giá trị 256
- * được mã hoá thành 0 trong IBCR 8 bit theo giới hạn 256 byte của DTI IP.
- * timeout_polls là tổng số vòng poll cho cả API, không phải mili-giây.
- * Các API polling và ReadData/WriteData trả NEON_BUSY khi request DMA bật.
- * Buffer byte phải sở hữu trọn các word 32 bit chứa nó (padding hai đầu),
- * theo hợp đồng buffer của runtime FU2. Driver dùng memcpy cho buffer RAM.
+ * dev_address is the unshifted address 7/10 bit. Valid size 1..256; value 256 encoded as 0 in 8-bit
+ * IBCR according to DTI IP's 256-byte limit. timeout_polls is the total number of poll rings for
+ * the whole API, not milliseconds. Polling APIs and ReadData/WriteData return NEON_BUSY when DMA
+ * requests are enabled. The byte buffer must own all 32-bit words containing it (two-end padding),
+ * under the FU2 runtime buffer contract. Drivers use memcpy for RAM buffers.
  */
 neon_status_t neon_i2c_master_transmit(neon_i2c_handle_t *hi2c, uint16_t dev_address, const uint8_t *data,
                                        uint16_t size, uint32_t timeout_polls);
@@ -297,9 +296,8 @@ neon_status_t neon_i2c_master_receive(neon_i2c_handle_t *hi2c, uint16_t dev_addr
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Mem_Read dùng sub-address 8 bit + repeated START bằng phần cứng.
- * Mem_Write gửi sub-address như byte dữ liệu đầu tiên nên data_size tối đa
- * 255 byte (tổng giao dịch không vượt 256 byte).
+ * Mem_Read uses 8 bit sub-address + repeated START by hardware. Mem_Write sends the sub-address as
+ * first data byte so data_size max 255 bytes (total transaction does not exceed 256 bytes).
  */
 neon_status_t neon_i2c_mem_read(neon_i2c_handle_t *hi2c, uint16_t dev_address, uint8_t register_address, uint8_t *data,
                                 neon_field16_t data_size, uint32_t timeout_polls);
@@ -324,9 +322,9 @@ neon_status_t neon_i2c_mem_write(neon_i2c_handle_t *hi2c, uint16_t dev_address, 
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * API slave blocking. Phải gọi trước khi controller bên kia bắt đầu giao dịch
- * để FIFO sẵn sàng; API trả về sau khi nhận được STOP. Với dữ liệu lớn hơn
- * FIFO, nên bật clock_stretch để tránh TX underflow/RX overflow.
+ * API slave blocking. Calls must be made before the other controller starts the transaction so that
+ * FIFO is ready; API returns after receiving STOP. With data larger than FIFO, clock_stretch should
+ * be enabled to avoid TX underflow/RX overflow.
  */
 neon_status_t neon_i2c_slave_transmit(neon_i2c_handle_t *hi2c, const uint8_t *data, uint16_t size,
                                       uint32_t timeout_polls);
@@ -346,8 +344,8 @@ neon_status_t neon_i2c_slave_receive(neon_i2c_handle_t *hi2c, uint8_t *data, uin
  * @param[in] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Primitive không blocking cho slave chạy bằng ngắt. Trả NEON_BUSY khi FIFO
- * TX đang đầy hoặc FIFO RX đang rỗng. Chỉ gọi khi handle ở READY.
+ * Primitive does not block interrupt slaves. Returns NEON_BUSY when FIFO TX is full or FIFO RX is
+ * empty. Calls only when handle is READY.
  */
 neon_status_t neon_i2c_write_data(neon_i2c_handle_t *hi2c, uint8_t data);
 /**
@@ -371,9 +369,8 @@ neon_status_t neon_i2c_get_slave_status(const neon_i2c_handle_t *hi2c, neon_i2c_
  * @param[in] interrupts interrupt-source bitmask.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Trong master mode, bật TRANSFER_DONE làm FU2 giữ SCL thấp tại cuối
- * byte-count và không tự tạo STOP; ISR phải quyết định repeated START hoặc
- * gọi GenerateStop().
+ * In master mode, enable TRANSFER_DONE as FU2 keeps SCL low at the end of byte-count and does not
+ * generate STOP itself; ISR must decide to repeated START or call GenerateStop().
  */
 neon_status_t neon_i2c_enable_interrupts(neon_i2c_handle_t *hi2c, uint32_t interrupts);
 /**
@@ -396,9 +393,9 @@ neon_status_t neon_i2c_get_interrupt_status(const neon_i2c_handle_t *hi2c, uint3
  * @param[in] interrupts interrupt-source bitmask.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * IICR của FU2 yêu cầu xung 1 -> 0; API thực hiện đủ cả hai lần ghi.
- * ClearInterrupts/ClearSMBusFlags/GenerateStop trả NEON_BUSY khi API khác
- * đang giữ handle; ISR không được dùng raw MMIO để xóa cờ của polling.
+ * FU2's IICR requires pulse 1 -> 0; the API performs enough of both writes.
+ * ClearInterrupts/ClearSMBusFlags/GenerateStop returns NEON_BUSY when the other API is holding the
+ * handle; ISR must not use raw MMIO to erase polling flags.
  */
 neon_status_t neon_i2c_clear_interrupts(neon_i2c_handle_t *hi2c, uint32_t interrupts);
 
@@ -425,8 +422,8 @@ neon_status_t neon_i2c_is_active_flag(const neon_i2c_handle_t *hi2c, uint32_t fl
  * @param[in] enable Nonzero to enable, zero to disable.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * ConfigureDMA chỉ đóng/mở request của I2C; ứng dụng vẫn phải cấu hình kênh,
- * địa chỉ và số phần tử ở DMA driver.
+ * ConfigureDMA only closes/opens I2C requests; the application must still configure the channel,
+ * address and number of elements in the DMA driver.
  */
 neon_status_t neon_i2c_configure_dma(neon_i2c_handle_t *hi2c, neon_i2c_dma_direction_t direction, uint8_t enable);
 /**
@@ -485,7 +482,7 @@ neon_status_t neon_i2c_enable_general_call_reset(neon_i2c_handle_t *hi2c, uint8_
  * @param[out] status Destination for the status snapshot.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * ICLFT có tác dụng read-to-clear, vì vậy mỗi lần gọi lấy đúng một snapshot.
+ * ICLFT is read-to-clear, so each call takes exactly one snapshot.
  */
 neon_status_t neon_i2c_get_clock_status(neon_i2c_handle_t *hi2c, neon_i2c_clock_status_t *status);
 
@@ -505,7 +502,7 @@ uint32_t neon_i2c_get_error(const neon_i2c_handle_t *hi2c);
  * @brief Clear i2 c error.
  * @param[in,out] hi2c I2C handle and runtime state.
  * @details
- * Chỉ xóa lỗi khi handle READY; lời gọi trong transfer không có tác dụng.
+ * Only erase errors when handle READY; call in transfer does not work.
  */
 void neon_i2c_clear_error(neon_i2c_handle_t *hi2c);
 

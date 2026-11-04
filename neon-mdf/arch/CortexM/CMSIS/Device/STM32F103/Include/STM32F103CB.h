@@ -25,7 +25,7 @@ typedef enum {
   DebugMonitor_IRQn      = -4,
   PendSV_IRQn         = -2,
   SysTick_IRQn        = -1,
-  /* STM32F103CB device-specific interrupts (xem mcu-description/devices/STM32F103CB.yaml) */
+  /* STM32F103CB device-specific interrupts (see mcu-description/devices/STM32F103CB.yaml) */
   WWDG_IRQn = 0,
   PVD_IRQn = 1,
   TAMPER_IRQn = 2,
@@ -71,14 +71,14 @@ typedef enum {
   USBWakeUp_IRQn = 42,
 } IRQn_Type;
 
-/* =========================== Core config (cần trước khi include core_cm3.h) ======== */
+/* ========================= Core config (need before include core_cm3.h) ======== */
 #define __CM3_REV                0x0200U
 #define __MPU_PRESENT             0U
 #define __VTOR_PRESENT            1U
 #define __NVIC_PRIO_BITS          4U
 #define __Vendor_SysTickConfig    0U
 
-#include "core_cm3.h"          /* CMSIS-Core ARM, xem arch/CortexM/CMSIS/Core */
+#include "core_cm3.h"          /* CMSIS-Core ARM, see arch/CortexM/CMSIS/Core */
 #include "system_STM32F103CB.h"
 
 /* =========================== Peripheral register structures ======================== */
@@ -152,11 +152,11 @@ typedef struct {
 #define FLASH_MEM_BASE   0x08000000UL   /* flash, 0x20000 bytes */
 #define RAM_BASE   0x20000000UL   /* ram, 0x5000 bytes */
 
-/* =========================== Bootloader partition layout (xem devices YAML, muc `bootloader:`) === */
+/* ========================= Bootloader partition layout (see YAML devices, item `bootloader:`) === */
 #define NEON_MDF_BOOTLOADER_SIZE     0x00002000UL
 #define NEON_MDF_IMAGE_HEADER_SIZE   0x00000100UL
-#define NEON_MDF_APP_BASE            0x08002000UL   /* dau partition app - header nam tai day */
-#define NEON_MDF_APP_VECTOR_BASE     0x08002100UL   /* = APP_BASE + IMAGE_HEADER_SIZE - vector table THAT cua app */
+#define NEON_MDF_APP_BASE            0x08002000UL   /* application header partition; construct its header here */
+#define NEON_MDF_APP_VECTOR_BASE     0x08002100UL   /* = APP_BASE + IMAGE_HEADER_SIZE - real app vector table */
 #define NEON_MDF_APP_SIZE            0x0001DF00UL
 
 #ifdef __cplusplus

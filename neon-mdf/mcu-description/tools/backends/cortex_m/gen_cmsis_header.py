@@ -1,6 +1,6 @@
-"""Sinh CMSIS-style device header (<DEVICE>.h) từ model.Device.
+"""create CMSIS-style device header (<DEVICE>.h) from model.Device.
 
-Layout tuân theo quy ước CMSIS-Core chuẩn (giống stm32fxxx.h/tương tự):
+Layout complies with CMSIS-Core standard conventions (similar to stm32fxxx.h/similar):
 IRQn_Type enum -> #define core config (__NVIC_PRIO_BITS...) -> include
 core_cmX.h -> peripheral register struct -> base address define.
 """
@@ -10,9 +10,9 @@ import re
 try:
     from . import core_info
 except ImportError:
-    # gen_riscv_header.py import file nay qua sys.path.insert() (khong qua
-    # package "backends.cortex_m") de dung lai _peripheral_struct() - luc do
-    # khong co ngu canh package cho relative import, fallback ve absolute.
+    # gen_riscv_header.py import this file via sys.path.insert() (not through the package
+    # "backends.cortex_m") to reuse _peripheral_struct() - there is no package context for relative
+    # import, fallback to absolute.
     import core_info
 
 _ACCESS_QUALIFIER = {"rw": "__IO", "ro": "__I ", "wo": "__O "}
@@ -28,10 +28,10 @@ GENERATED_BANNER = (
 
 
 def _cmsis_revision(revision: str) -> int:
-    """Đổi revision chuẩn ``rXpY`` trong device YAML sang macro CMSIS 0xXXYY.
+    """Change standard revision ``rXpY`` in YAML device to CMSIS macro 0xXXYY.
 
-    Giữ 0x0000 cho device cũ khai ``unknown`` để tương thích với hành vi cũ,
-    nhưng từ chối mọi chuỗi khác thay vì âm thầm sinh revision sai.
+    Keeping 0x0000 for the old device declares ``unknown`` to be compatible with the old behavior, but
+    rejects any other sequences seen because silently creating wrong revisions.
     """
     if revision == "unknown":
         return 0
@@ -39,15 +39,15 @@ def _cmsis_revision(revision: str) -> int:
     match = re.fullmatch(r"r(\d+)p(\d+)", revision)
     if match is None:
         raise ValueError(
-            f"cpu.revision='{revision}' khong hop le; Cortex-M yeu cau "
-            "dang rXpY (vd r2p0) hoac 'unknown'"
+            f"cpu.revision='{revision}' mismatched; Cortex-M required "
+            "is rXpY (e.g. r2p0) or 'unknown'"
         )
 
     revision_number, patch_number = (int(part) for part in match.groups())
     if revision_number > 0xFF or patch_number > 0xFF:
         raise ValueError(
-            f"cpu.revision='{revision}' vuot qua pham vi CMSIS 0xXXYY "
-            "(X va Y phai nam trong 0..255)"
+            f"cpu.revision='{revision}' pass microphone CMSIS 0xXXYY "
+            "(X and Y must be male in 0..255)"
         )
     return (revision_number << 8) | patch_number
 
@@ -92,13 +92,13 @@ def _peripheral_struct(type_name, registers):
 
 
 def _peripheral_field_defines(type_name, registers):
-    """Sinh macro vị trí và mặt nạ bit theo phong cách CMSIS."""
+    """create location macros and bitmask bits in CMSIS way."""
     lines = []
     peripheral_name = type_name.upper()
 
-    # Dùng chung một cột giá trị cho toàn bộ macro của peripheral. Nếu tính
-    # độ rộng riêng cho từng register thì các khối *_Pos/*_Msk sẽ bị lệch cột
-    # khi tên register/field có độ dài khác nhau.
+    # Share a single column of values for the entire peripheral macro. If you calculate the width
+    # separately for each register, *_Pos/*_Msk blocks will be deflected when register/field names
+    # have different lengths.
     macro_names = []
     for reg in registers:
         views = reg.aliases if reg.aliases else [reg]
@@ -118,7 +118,7 @@ def _peripheral_field_defines(type_name, registers):
             if not view.fields:
                 continue
 
-            lines.append(f"/* Các trường của {peripheral_name}_{view.name.upper()} */")
+            lines.append(f"/* Schools of {peripheral_name}_{view.name.upper()} */")
             for fld in view.fields:
                 prefix = f"{peripheral_name}_{view.name.upper()}_{fld.name.upper()}"
                 value_mask = (1 << fld.bit_width) - 1
@@ -143,14 +143,13 @@ def generate(device, out_path: str):
     cpu = device.cpu
     prio_bits = cpu.extra.get("nvic_priority_bits", 2)
     vtor_present = 1 if cpu.extra.get("vtor_supported", False) else 0
-    # mpu_present/fpu_present PHAI lay tu YAML (khong hard-code 0 nhu truoc) -
-    # nhieu chip Cortex-M4 (vd STM32F4) CO MPU+FPU that, hard-code 0 se sai.
+    # mpu_present/fpu_present must be derived from YAML (not hard-code 0 as before) - many Cortex-M4 chips
+    # (e.g. STM32F4) have real MPU+FPU, hard-code 0 would be wrong.
     mpu_present = 1 if cpu.extra.get("mpu_present", False) else 0
     fpu_present = 1 if cpu.extra.get("fpu_present", False) else 0
-    # lookup() raise ro rang neu core chua duoc xac nhan (xem core_info.py) -
-    # KHONG con fallback am tham ve core_cm0.h nhu truoc (chinh la dang bug
-    # ma comment cu o day tung tu nhan da fix 1 lan nhung van con sot lai
-    # duoi dang ".get(..., default)").
+    # lookup() raise clear if core has not been confirmed (see core_info.py) - no silent fallback on
+    # core_cm0.h as before; that earlier incorrect assumption was fixed
+    # once but still remains below ".get(..., default)").
     core = core_info.lookup(cpu.core)
     cmsis_revision = _cmsis_revision(cpu.revision)
     core_header, rev_macro, needs_fpu_macro = (
@@ -229,7 +228,7 @@ def generate(device, out_path: str):
     lines.append("")
 
     # ---- Core config for core_cmX.h ----
-    lines.append(f"/* =========================== Core config (cần trước khi include {core_header}) ======== */")
+    lines.append(f"/* =========================== Core config (need before include {core_header}) ======== */")
     lines.append(f"#define {rev_macro}                0x{cmsis_revision:04X}U")
     lines.append(f"#define __MPU_PRESENT             {mpu_present}U")
     lines.append(f"#define __VTOR_PRESENT            {vtor_present}U")
@@ -238,15 +237,15 @@ def generate(device, out_path: str):
     if needs_fpu_macro:
         lines.append(f"#define __FPU_PRESENT             {fpu_present}U")
     lines.append("")
-    lines.append(f"#include \"{core_header}\"          /* CMSIS-Core ARM, xem arch/CortexM/CMSIS/Core */")
+    lines.append(f"#include \"{core_header}\"          /* CMSIS-Core ARM, see arch/CortexM/CMSIS/Core */")
     lines.append(f'#include "system_{device.device}.h"')
     lines.append("")
 
     # ---- Peripheral structs ----
-    # Instance cùng `type` (vd UART0..UART4 -> type UART) chỉ sinh 1 struct
-    # dùng chung, giống cách CMSIS/STM32 để USART1/2/3 dùng chung
-    # USART_TypeDef - loader.py đã validate mọi instance cùng type có register
-    # layout giống hệt nhau nên lấy layout của instance đầu tiên làm canonical.
+    # Instance with `type` (e.g. UART0..UART4 -> type UART) only creates a shared struct, the same way
+    # CMSIS/STM32 lets USART1/2/3 share it USART_TypeDef - loader.py has validated all instances of
+    # the same type that have identical register layouts so takes the layout of the first instance
+    # as canonical.
     lines.append("/* =========================== Peripheral register structures ======================== */")
     seen_types = set()
     for p in device.peripherals:
@@ -261,8 +260,8 @@ def generate(device, out_path: str):
         lines.append(_peripheral_struct(p.type, p.registers))
         lines.append("")
 
-    # ---- Định nghĩa bit của các thanh ghi ngoại vi ----
-    lines.append("/* =========================== Định nghĩa bit thanh ghi ngoại vi ===================== */")
+    # ---- Definition of bits of peripheral registers----
+    lines.append("/* =========================== Definition of peripheral register bits ===================== */")
     seen_types = set()
     for p in device.peripherals:
         if p.type in seen_types:
@@ -304,11 +303,11 @@ def generate(device, out_path: str):
         app_base = flash.address + bl.size
         app_vector_base = app_base + bl.image_header_size
         app_size = flash.size - bl.size - bl.image_header_size
-        lines.append("/* =========================== Bootloader partition layout (xem devices YAML, muc `bootloader:`) === */")
+        lines.append("/* ========================= Bootloader partition layout (see YAML devices, item `bootloader:`) === */")
         lines.append(f"#define NEON_MDF_BOOTLOADER_SIZE     0x{bl.size:08X}UL")
         lines.append(f"#define NEON_MDF_IMAGE_HEADER_SIZE   0x{bl.image_header_size:08X}UL")
-        lines.append(f"#define NEON_MDF_APP_BASE            0x{app_base:08X}UL   /* dau partition app - header nam tai day */")
-        lines.append(f"#define NEON_MDF_APP_VECTOR_BASE     0x{app_vector_base:08X}UL   /* = APP_BASE + IMAGE_HEADER_SIZE - vector table THAT cua app */")
+        lines.append(f"#define NEON_MDF_APP_BASE            0x{app_base:08X}UL   /* application header partition; construct its header here */")
+        lines.append(f"#define NEON_MDF_APP_VECTOR_BASE     0x{app_vector_base:08X}UL   /* = APP_BASE + IMAGE_HEADER_SIZE - real app vector table */")
         lines.append(f"#define NEON_MDF_APP_SIZE            0x{app_size:08X}UL")
         lines.append("")
 

@@ -1,7 +1,7 @@
 # tools/cmake/project.cmake
 #
-# File DUY NHẤT mà CMakeLists.txt của 1 app cần include - mô phỏng
-# $IDF_PATH/tools/cmake/project.cmake của ESP-IDF. Dùng:
+# The only file that an app's CMakeLists.txt needs to include - simulates ESP-IDF's
+# $IDF_PATH/tools/cmake/project.cmake. Use:
 #
 #   cmake_minimum_required(VERSION 3.21)
 #   project(my_app C ASM)
@@ -9,32 +9,30 @@
 #
 #   neon_mdf_add_executable(my_app Src/main.c)
 #
-# LƯU Ý khác ESP-IDF thật: ESP-IDF cho include() TRƯỚC project() rồi tự
-# "shadow" lệnh project() bằng macro riêng để chèn logic vào giữa. Ở đây
-# project() do app gọi trước, include() sau - đơn giản hơn, tránh CMake
+# NOTE other than real ESP-IDF: ESP-IDF for include() BEFORE project() then manually "shadow" command
+# project() with its own macro to insert logic in the middle. Here project() that app calls first,
+# include() later - simpler, avoid CMake
 # Warning (dev) "cmake_minimum_required() should be called prior to this
-# top-level project() call" (đã tự verify: gọi project() bên trong macro qua
-# include() gây ra warning này, gọi trực tiếp thì hết). Đổi lại: mất đúng thứ
-# tự y hệt ESP-IDF, nhưng số dòng boilerplate cho app gần như không đổi. Xem
-# ARCHITECTURE.md mục 5.
+# top-level project() call" (already verified: calling project() inside macro via include() causes
+# this warning, direct call is out). In turn: lost the exact order ESP-IDF, but the number of lines
+# boilerplate for the app is almost constant. See ARCHITECTURE.md section 5.
 
-# --- NEON_MDF_PATH: giống $IDF_PATH của ESP-IDF ---
-# Ưu tiên: đã set tay (-DNEON_MDF_PATH=...) > biến môi trường (source export.sh)
-# > tự suy ra từ vị trí file này (phòng khi quên set, vẫn chạy được nếu
-# neon-mdf/ nằm ngay cạnh app - không khuyến khích, chỉ để đỡ lỗi vặt).
+# --- NEON_MDF_PATH: same as $IDF_PATH of ESP-IDF --- Priority: hand set (-DNEON_MDF_PATH=...) >
+# environment variable (source export.sh)
+# > deduced by itself from this file location (in case of forgetting to set, it will still work if
+# neon-mdf/ is next to the app - not recommended, just for minor errors).
 if(NOT NEON_MDF_PATH)
   if(DEFINED ENV{NEON_MDF_PATH})
     set(NEON_MDF_PATH $ENV{NEON_MDF_PATH})
   else()
     get_filename_component(NEON_MDF_PATH "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
-    message(WARNING "NEON_MDF_PATH chua duoc set (chay `. neon-mdf/export.sh` truoc) - tam suy ra: ${NEON_MDF_PATH}")
+    message(WARNING "NEON_MDF_PATH not set (running `. neon-mdf/export.sh` first) - extrapolation triad: ${NEON_MDF_PATH}")
   endif()
 endif()
 
-# --- NEON_MDF_TARGET: giống IDF_TARGET của ESP-IDF (esp32, esp32c3...) ---
-# Cache lại để những lần configure sau không cần truyền lại -D, giống hệt
-# cách `idf.py set-target <chip>` hoạt động (ghi 1 lần, dùng lại mãi cho tới
-# khi đổi target khác + xoá build/).
+# --- NEON_MDF_TARGET: same as ESP-IDF's IDF_TARGET (esp32, esp32c3...) --- Cache again so that later
+# configurations do not need to pass -D, just like how `idf.py set-target <chip>` works (write 1
+# time, use it again until you change the target + erase build/).
 if(NOT DEFINED NEON_MDF_TARGET)
   if(DEFINED ENV{NEON_MDF_TARGET})
     set(NEON_MDF_TARGET $ENV{NEON_MDF_TARGET})
@@ -42,21 +40,21 @@ if(NOT DEFINED NEON_MDF_TARGET)
     set(NEON_MDF_TARGET FU2)
   endif()
 endif()
-set(NEON_MDF_TARGET ${NEON_MDF_TARGET} CACHE STRING "neon-mdf target (chip variant) - xem cmake/mcu_variants.cmake")
+set(NEON_MDF_TARGET ${NEON_MDF_TARGET} CACHE STRING "neon-mdf target (chip variant) - see cmake/mcu_variants.cmake")
 
 include(${NEON_MDF_PATH}/cmake/mcu_variants.cmake)
 if(NOT NEON_MDF_TARGET IN_LIST NEON_MDF_KNOWN_TARGETS)
-  message(FATAL_ERROR "NEON_MDF_TARGET='${NEON_MDF_TARGET}' chưa đăng ký trong cmake/mcu_variants.cmake (target hợp lệ: ${NEON_MDF_KNOWN_TARGETS})")
+  message(FATAL_ERROR "NEON_MDF_TARGET='${NEON_MDF_TARGET}' not registered in cmake/mcu_variants.cmake (valid target: ${NEON_MDF_KNOWN_TARGETS})")
 endif()
 
 add_subdirectory(${NEON_MDF_PATH} neon-mdf-build)
 include(${NEON_MDF_PATH}/cmake/fu2_image.cmake)
 
-# neon_mdf_add_executable(<name> <nguồn.c...>) - gói sẵn link neon_mdf_driver +
-# linker script + objcopy/size, giống mức tiện lợi của idf_component_register()
-# nhưng đơn giản hơn nhiều (neon-mdf hiện chỉ có 1 "component" gộp là
-# neon_mdf_driver, không có hệ thống component/dependency graph nhiều tầng như
-# ESP-IDF - xem ARCHITECTURE.md mục 6 lý do chưa làm tới mức đó).
+# neon_mdf_add_executable(<name> <source.c...>) packages linking with neon_mdf_driver, the linker script and
+# objcopy/size, like the convenience of idf_component_register() but much simpler (neon-mdf
+# currently has only one composite "component" neon_mdf_driver, there is no multilayered
+# component/dependency graph system such as ESP-IDF - see ARCHITECTURE.md section 6 that hasn't done
+# that yet).
 function(neon_mdf_add_executable name)
   add_executable(${name} ${ARGN})
   target_link_libraries(${name} PRIVATE neon_mdf_driver)
@@ -81,17 +79,16 @@ function(neon_mdf_add_executable name)
   endif()
 endfunction()
 
-# neon_mdf_add_app_executable(<name> <nguồn.c...>) - giống neon_mdf_add_executable()
-# nhưng link -T${NEON_MDF_APP_LINKER_SCRIPT} (partition SAU bootloader, xem
-# mcu-description/schema/common.schema.yaml `bootloader:`) thay vì toàn bộ
-# flash - dùng cho app CHẠY DƯỚI 1 bootloader, nạp TRỌN BỘ [bootloader+header+app]
-# qua target CMake flash_jtag (SWD) hoặc flash_uart_stm32 (UART qua ROM System
-# Bootloader thật - xem cmake/flash_targets.cmake). Target phải có NEON_MDF_TARGET với
-# `bootloader:` trong YAML (NEON_MDF_BOOTLOADER_ENABLED=ON) - FATAL_ERROR rõ
-# ràng nếu không, thay vì âm thầm link nhầm linker script.
+# neon_mdf_add_app_executable(<name> <source.c...>) works like neon_mdf_add_executable() but links
+# -T${NEON_MDF_APP_LINKER_SCRIPT} (partition after bootloader, see
+# mcu-description/schema/common.schema.yaml `bootloader:`) seen because full flash - used for app
+# RUN UNDER 1 bootloader, FULL flash [bootloader+header+app] via target CMake flash_jtag (SWD) or
+# flash_uart_stm32 (UART via real System Bootloader ROM - see cmake/flash_targets.cmake). Target
+# must have NEON_MDF_TARGET with `bootloader:` in YAML (NEON_MDF_BOOTLOADER_ENABLED=ON) -
+# FATAL_ERROR clear otherwise, seen because silently mistaken linker script.
 function(neon_mdf_add_app_executable name)
   if(NOT NEON_MDF_BOOTLOADER_ENABLED)
-    message(FATAL_ERROR "neon_mdf_add_app_executable('${name}'): target '${NEON_MDF_TARGET}' chưa khai `bootloader:` trong device YAML (xem mcu-description/devices/${NEON_MDF_TARGET}.yaml) - dùng neon_mdf_add_executable() nếu app này build nguyên flash, không qua bootloader")
+    message(FATAL_ERROR "neon_mdf_add_app_executable('${name}'): target '${NEON_MDF_TARGET}' not declared `bootloader:` in YAML device (see mcu-description/devices/${NEON_MDF_TARGET}.yaml) - use neon_mdf_add_executable() if this app builds native flash, not via bootloader")
   endif()
   add_executable(${name} ${ARGN})
   target_link_libraries(${name} PRIVATE neon_mdf_driver)
@@ -104,14 +101,13 @@ function(neon_mdf_add_app_executable name)
   )
 endfunction()
 
-# neon_mdf_add_bootloader_executable(<name>) - KHÔNG nhận file nguồn cho app -
-# SDK tự cung cấp main.c+arch file qua NEON_MDF_BOOTLOADER_MAIN_SOURCES (xem
-# components/bootloader/CMakeLists.txt - compile TRUC TIEP nhu nguon cua
-# CHINH executable nay, khong con qua 1 thu vien trung gian nua kem file
-# stub rong - xem comment day du o do). Link -T${NEON_MDF_BOOTLOADER_LINKER_SCRIPT}.
+# neon_mdf_add_bootloader_executable(<name>) - DO NOT receive source files for app - SDK self-leveling
+# main.c+arch files via NEON_MDF_BOOTLOADER_MAIN_SOURCES (see components/bootloader/CMakeLists.txt -
+# compile directly as the source of this executable itself, not through an intermediate old message
+# an empty stub; see the full comment there). Link with -T${NEON_MDF_BOOTLOADER_LINKER_SCRIPT}.
 function(neon_mdf_add_bootloader_executable name)
   if(NOT NEON_MDF_BOOTLOADER_ENABLED)
-    message(FATAL_ERROR "neon_mdf_add_bootloader_executable('${name}'): target '${NEON_MDF_TARGET}' chưa khai `bootloader:` trong device YAML (xem mcu-description/devices/${NEON_MDF_TARGET}.yaml)")
+    message(FATAL_ERROR "neon_mdf_add_bootloader_executable('${name}'): target '${NEON_MDF_TARGET}' not declared `bootloader:` in YAML device (see mcu-description/devices/${NEON_MDF_TARGET}.yaml)")
   endif()
   add_executable(${name} ${NEON_MDF_BOOTLOADER_MAIN_SOURCES})
   target_link_libraries(${name} PRIVATE neon_mdf_bootloader_uart neon_mdf_driver neon_mdf_crc32)

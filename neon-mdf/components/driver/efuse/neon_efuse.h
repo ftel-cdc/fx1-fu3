@@ -7,17 +7,16 @@
  */
 
 /*
- * NEON_EFUSE - đọc/ghi OTP (one-time-programmable) theo hàng 8-bit.
- * Port THẬT từ src_fu2/fu2_efuse.c (team cũ, BuuPQ) - mảng eFuse là vùng nhớ
- * memory-mapped riêng (FU2_EFUSE_ARRAY_BASE = OTP_BASE + 0x1000, 128 hàng ×
- * 4 byte stride, xem inc_fu2/fu2_efuse.h), KHÔNG đọc/ghi qua thanh ghi
- * `instance` như CRC/ADC - `instance` chỉ dùng để set timing trước khi
- * đọc/ghi (timing áp dụng chung cho toàn khối OTP, không theo từng hàng).
+ * NEON_EFUSE - read/write OTP (one-time-programmable) in 8-bit rows. Port TRUE from
+ * src_fu2/fu2_efuse.c (former team, BuuPQ) - eFuse array is a separate memory-mapped area
+ * (FU2_EFUSE_ARRAY_BASE = OTP_BASE + 0x1000, 128 rows × 4 byte stride, see inc_fu2/fu2_efuse.h), DO
+ * NOT read/write via register `instance` like CRC/ADC - `instance` is only used to set timing
+ * before read/write (timing applies to the entire OTP block, not in rows).
  *
- * CẢNH BÁO GHI: mỗi hàng OTP chỉ ghi được 1 LẦN DUY NHẤT (one-time
- * programmable, đúng như tên) - ProgramRow gọi nhầm hàng đã ghi rồi sẽ
- * KHÔNG lỗi báo (phần cứng OTP thường chỉ OR thêm bit, không revert được)
- * nhưng dữ liệu cũ có thể bị hỏng vĩnh viễn - gọi cẩn thận.
+ * Write WARNING: OTP rows can only be written 1 TIME (one-time programmable, as the name implies) -
+ * ProgramRow calls a row that has already been written incorrectly and will NOT report errors
+ * (hardware OTP usually only OR add bits, cannot revert) but old data can be permanently corrupted
+ * - call carefully.
  */
 #ifndef __NEON_EFUSE_H__
 #define __NEON_EFUSE_H__
@@ -56,7 +55,7 @@ typedef struct {
 /*==================================================================================================
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
-#define NEON_EFUSE_ROW_COUNT 128U /* 0..127, xem FU2_EFUSE_ROW_COUNT */
+#define NEON_EFUSE_ROW_COUNT 128U /* 0..127, see FU2_EFUSE_ROW_COUNT */
 
 /*==================================================================================================
 *                                       FUNCTION PROTOTYPES
@@ -82,9 +81,9 @@ neon_status_t neon_efuse_set_program_timing(OTP_TypeDef *instance, const neon_ef
  * @param[in,out] p_data P data.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * row: 0..NEON_EFUSE_ROW_COUNT-1. `instance` không dùng trong 2 hàm dưới
- * (mảng OTP là 1 vùng nhớ cố định duy nhất) nhưng vẫn nhận để giữ khuôn API
- * chung - xem cảnh báo ghi ở trên trước khi gọi ProgramRow.
+ * row: 0..NEON_EFUSE_ROW_COUNT-1. `instance` is not used in the underlying two functions (the OTP
+ * array is a single fixed memory area) but is accepted to keep the common API framework - see write
+ * warning above before calling ProgramRow.
  */
 neon_status_t neon_efuse_read_row(uint32_t row, uint8_t *p_data);
 /**

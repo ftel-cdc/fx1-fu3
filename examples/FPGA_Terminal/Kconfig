@@ -5,7 +5,7 @@ config FPGA_TERMINAL_FIXED_CLOCK_HZ
     range 0 1000000000
     default 10000000
     help
-        Phai khop clock FPGA thuc te. Gia tri 0 dung SystemInit cua SDK.
+        must match the actual FPGA clock. Use 0 to retain SDK SystemInit settings.
 
 config FPGA_TERMINAL_LINE_SIZE
     int "Command line buffer size (bytes, including terminator)"

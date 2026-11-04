@@ -89,24 +89,20 @@ void vPortSetupTimerInterrupt( void ) __attribute__( ( weak ) );
 /* Used to program the machine timer compare register. */
 uint64_t ullNextTime = 0ULL;
 const uint64_t * pullNextTime = &ullNextTime;
-/* PATCH (neon-mdf, 2026-08-10): khai bao uxTimerIncrementsForOneTick nguyen
- * ban KHONG DIEU KIEN, du CHI duoc DOC o vPortSetupTimerInterrupt() mac
- * dinh (weak) VA portUPDATE_MTIMER_COMPARE_REGISTER (portASM.S) - CA HAI
- * deu nam trong nhanh `#if (configMTIME_BASE_ADDRESS != 0) && (...)`/
- * `#if(portasmHAS_MTIME != 0)`. Tren target nay (CH32V003F4P6,
- * configMTIME_BASE_ADDRESS=0 - KHONG co CLINT that, xem FreeRTOSConfig.h)
- * bien nay khong bao gio duoc doc thuc su - NHUNG khai bao "const size_t x
- * = (configCPU_CLOCK_HZ)/(configTICK_RATE_HZ)" van bi COMPILE (khai bao
- * global luon duoc compile bat ke co dung hay khong) va that bai THAT: SDK
- * nay dinh nghia configCPU_CLOCK_HZ la `(SystemCoreClock)` - 1 BIEN runtime
- * (dùng CHUNG cho ca Cortex-M lan RISC-V vi SystemCoreClock co the thay doi
- * theo cau hinh clock luc chay, xem FreeRTOSConfig.h) - KHONG PHAI hang so
- * compile-time nhu da so demo FreeRTOS khac gia dinh -> GCC bao loi that
- * "initializer element is not constant" cho 1 bien `const` global. Fix:
- * bao dieu kien giong het dieu kien noi bien nay THAT SU duoc dung (an
- * toan - portASM.S's `.extern uxTimerIncrementsForOneTick` khong tao loi
- * link neu khong co tham chieu thuc su, ma tham chieu do CUNG nam trong
- * cung dieu kien nay ben portASM.S). */
+/* PATCH (neon-mdf, 2026-08-10): declare uxTimerIncrementsForOneTick with exactly
+ * KIEN unregulated version, sufficiently read only in default vPortSetupTimerInterrupt() (weak) and
+ * portUPDATE_MTIMER_COMPARE_REGISTER (portASM.S) - both male in fast `#if (configMTIME_BASE_ADDRESS
+ * != 0) && (...)`/ `#if(portasmHAS_MTIME != 0)`. on this target (CH32V003F4P6,
+ * configMTIME_BASE_ADDRESS=0 - no real CLINT, see FreeRTOSConfig.h) this variable does not declare
+ * the actual read time - but declares "const size_t x
+ * = (configCPU_CLOCK_HZ)/(configTICK_RATE_HZ)" is still bi COMPILE and fails: This SDK defines
+ * configCPU_CLOCK_HZ as `(SystemCoreClock)` - 1 runtime variable (commonly used for both Cortex-M
+ * and RISC-V so that SystemCoreClock can be seen changing according to the configuration clock at
+ * runtime, see FreeRTOSConfig.h) - not a compile-time number like other FreeRTOS demo numbers
+ * assume -> GCC gives real error "initializer element is not constant" for 1 variable `const`
+ * global. Fix: tells the same thing that this variable is actually used (safety - portASM.S's
+ * `.extern uxTimerIncrementsForOneTick` does not generate link errors without actual references,
+ * which are equivalent in portASM.S). */
 #if ( configMTIME_BASE_ADDRESS != 0 ) && ( configMTIMECMP_BASE_ADDRESS != 0 )
     const size_t uxTimerIncrementsForOneTick = ( size_t ) ( ( configCPU_CLOCK_HZ ) / ( configTICK_RATE_HZ ) ); /* Assumes increment won't go over 32-bits. */
 #endif

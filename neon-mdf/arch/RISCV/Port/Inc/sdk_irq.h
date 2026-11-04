@@ -43,14 +43,14 @@ void SDK_IRQ_SetPriority(int32_t irqn, uint32_t priority);
  * @brief Mask interrupts and return the previous interrupt-mask state.
  * @return The requested value or operation result.
  * @details
- * Tắt interrupt, trả về state trước đó để truyền vào SDK_IRQ_ExitCritical().
+ * Disable interrupt, return previous state to pass into SDK_IRQ_ExitCritical().
  */
 uint32_t SDK_IRQ_EnterCritical(void);
 /**
  * @brief Restore the interrupt-mask state saved on entry to a critical section.
  * @param[in] saved_state interrupt state returned by SDK_IRQ_EnterCritical.
  * @details
- * Khôi phục interrupt state đã lưu từ SDK_IRQ_EnterCritical().
+ * Restore interrupt state saved from SDK_IRQ_EnterCritical().
  */
 void SDK_IRQ_ExitCritical(uint32_t saved_state);
 

@@ -22,7 +22,7 @@ static const fu2_syscsr_pin_route_t qspi_routes[] = {
 /*==================================================================================================
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
-/* Bit vị trí/mask THẬT (inc_fu2/fu2_dti_qspi.h). */
+/* bit location/true mask (inc_fu2/fu2_dti_qspi.h). */
 #define QSPI_SCLK_DIV_MASK 0x7U
 
 #define QSPI_TREG0_T_SS2CK_POS 0U
@@ -37,7 +37,7 @@ static const fu2_syscsr_pin_route_t qspi_routes[] = {
 #define QSPI_CCR_INST_MODE_POS 8U
 #define QSPI_CCR_ADDR_MODE_POS 10U
 #define QSPI_CCR_ADSIZE_POS 12U
-#define QSPI_CCR_ADSIZE_24BIT (0x2U << QSPI_CCR_ADSIZE_POS) /* 24-bit địa chỉ - phổ biến nhất cho NOR flash */
+#define QSPI_CCR_ADSIZE_24BIT (0x2U << QSPI_CCR_ADSIZE_POS) /* 24-bit address - most popular for NOR flash */
 #define QSPI_CCR_DCYC_POS 18U
 #define QSPI_CCR_DATA_MODE_POS 23U
 #define QSPI_CCR_RX_EN (1U << 25)
@@ -81,7 +81,7 @@ neon_status_t neon_qspi_init(QSPI_TypeDef *instance, const neon_qspi_config_t *i
     }
 
     saved_state = qspi_enter_critical();
-    /* Phải gọi khi BUSY=0 - khớp fu2_dti_qspi.c::LL_QSPI_Init */
+    /* Must call when BUSY=0 - matches fu2_dti_qspi.c::LL_QSPI_Init */
     if (instance->STT & QSPI_STT_BUSY) {
         qspi_exit_critical(saved_state);
         return NEON_BUSY;
@@ -98,11 +98,11 @@ neon_status_t neon_qspi_init(QSPI_TypeDef *instance, const neon_qspi_config_t *i
     }
 
     instance->SCLK = init->clock_divider & QSPI_SCLK_DIV_MASK;
-    instance->TREG0 = 0; /* SS2CK/CK2SS delay = 0, đơn giản hoá - mở rộng struct config nếu cần chỉnh */
+    instance->TREG0 = 0; /* SS2CK/CK2SS delay = 0, simplified - extend struct config if needed */
 
-    /* CFG: CPOL=0/CPHA=0/SDR/FMODE=Indirect - đơn giản hoá cho use-case đọc/ghi
-   * flash NOR chuẩn (chế độ phổ biến nhất). Mở rộng struct config trước nếu
-   * cần CPOL/CPHA/DDR khác (theo guide/DriverImplement.md mục 2). */
+    /* CFG: CPOL=0/CPHA=0/SDR/FMODE=Indirect - simplified for standard use-case read/write flash NOR (most
+   * common mode). Expand struct config first if other CPOL/CPHA/DDR are needed (according to
+   * guide/DriverImplement.md section 2). */
     instance->CFG = (QSPI_CFG_RESET_VALUE & ~QSPI_CFG_FMODE_MASK) | QSPI_CFG_FMODE_INDIRECT;
     qspi_exit_critical(saved_state);
 
@@ -148,9 +148,8 @@ neon_status_t neon_qspi_send_command(QSPI_TypeDef *instance, const neon_qspi_com
         instance->DLR = cmd->data_length;
     }
 
-    /* Ghi CCR cuối cùng - đây là lệnh THẬT SỰ BẮT ĐẦU transfer ở chế độ
-   * Indirect, khớp thứ tự thật trong fu2_dti_qspi.c::LL_QSPI_ConfigCommand
-   * (AR/ABR/DLR trước, CCR sau cùng). */
+    /* write last CCR - this is a REALLY START transfer command in Indirect mode, matching the real order
+   * in fu2_dti_qspi.c::LL_QSPI_ConfigCommand (AR/ABR/DLR first, CCR last). */
     ccr = ((uint32_t)cmd->instruction << QSPI_CCR_INST_POS) | (cmd->instruction_lines << QSPI_CCR_INST_MODE_POS) |
           (cmd->address_lines << QSPI_CCR_ADDR_MODE_POS) |
           ((cmd->address_lines != NEON_QSPI_LINES_NONE) ? QSPI_CCR_ADSIZE_24BIT : 0U) |

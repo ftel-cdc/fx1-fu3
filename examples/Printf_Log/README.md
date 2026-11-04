@@ -1,13 +1,16 @@
-# Printf_Log — log UART trên FU2
+# Printf_Log — UART logging on FU2
 
-Example bare-metal dùng `printf` trực tiếp, qua bộ formatter word-only built-in
-của SDK và `_write`; app chỉ include `<stdio.h>`, không cần gọi UART config/Attach.
-Chỉ cần `CONFIG_NEON_MDF_DRIVER_UART=y`; không có cờ printf riêng. Lần printf
-đầu tiên tự khởi tạo UART0.
-UART0 mặc định **19200 baud, 8N1**. Clock FPGA cố định **10 MHz**, cùng chính sách
-với Test_VP. `NEON_PRINTF_FIXED_CLOCK_HZ` áp dụng cho cả startup/device và app.
-`sdkconfig` đã bật UART. Nếu tắt UART, cả backend UART và console đều không
-được biên dịch; app gọi printf sẽ báo lỗi link.
+This bare-metal example calls `printf` directly through the SDK's built-in
+word-only formatter and `_write`. The application only includes `<stdio.h>`;
+it does not need to configure or attach a UART explicitly.
+Enable `CONFIG_NEON_MDF_DRIVER_UART=y`; there is no separate printf flag.
+The first printf call initializes UART0 automatically.
+
+UART0 defaults to **19200 baud, 8N1**. The FPGA uses a fixed **10 MHz** clock,
+following the Test_VP policy. `NEON_PRINTF_FIXED_CLOCK_HZ` applies to both
+startup/device code and the application. UART is enabled in `sdkconfig`.
+Disabling it excludes both the UART backend and console; an application that
+calls printf will then fail to link.
 
 ## Build
 
@@ -17,38 +20,41 @@ cmake --preset FU2
 cmake --build --preset FU2
 ```
 
-Output:
+Outputs:
 
-- `build/FU2/printf_log`: ELF cho debugger/emulator.
-- `build/FU2/printf_log.bin`: payload raw.
-- `build/FU2/printf_log_image.bin`: header ROM v5 128-byte + payload; nạp tại
-  `0x00020000` qua công cụ FU2 hiện có.
+- `build/FU2/printf_log`: ELF for the debugger or emulator.
+- `build/FU2/printf_log.bin`: raw payload.
+- `build/FU2/printf_log_image.bin`: 128-byte ROM v5 header and payload, programmed
+  at `0x00020000` with the existing FU2 tools.
 
-Không dùng payload raw để boot qua ROM. Hợp đồng nạp và XIP: [FU2.md](../../guide/FU2.md).
-Example không bổ sung công cụ flash FU2 hoặc bootloader riêng.
+Use the complete image for ROM boot. See [FU2.md](../../guide/FU2.md) for the
+programming and XIP contract. This example does not add a separate FU2 flashing
+tool or bootloader.
 
-Board có clock khác phải configure lại, ví dụ:
+Reconfigure for a board with a different clock:
 
 ```sh
-# Board cung cấp clock cố định 20 MHz:
+# Board supplying a fixed 20 MHz clock:
 cmake --preset FU2 -DNEON_PRINTF_FIXED_CLOCK_HZ=20000000
-# Hoặc dùng chính sách SystemInit bình thường của SDK:
+# Or use the SDK's normal SystemInit policy:
 cmake --preset FU2 -DNEON_PRINTF_FIXED_CLOCK_HZ=0
 ```
 
-Chọn đúng một cấu hình clock cho board, rồi build lại. Console mặc định 19200
-baud; muốn đổi UART/baud có thể dùng API AttachUART tùy chọn trong hướng dẫn.
+Choose one clock configuration for the board and rebuild. The console defaults
+to 19200 baud. The optional AttachUART API described in the guide allows a
+different UART or baud rate.
 
-## Xem log
+## View logs
 
-UART0 TX → USB-UART RX, GND chung; xác nhận route và điện áp theo board map.
-Mở Serial Monitor của extension ở 19200 baud hoặc:
+Connect UART0 TX to USB-UART RX and share GND. Check routing and voltage against
+the board map. Open the extension's Serial Monitor at 19200 baud or run:
 
 ```sh
 python3 -m serial.tools.miniterm /dev/ttyUSB0 19200
 ```
 
-Reset board sau khi mở monitor. Output mong đợi với cấu hình mặc định:
+Reset the board after opening the monitor. Expected output with the default
+configuration:
 
 ```text
 [INFO] NEON MDF printf ready
@@ -59,9 +65,10 @@ Reset board sau khi mở monitor. Output mong đợi với cấu hình mặc đ�
 ...
 ```
 
-Counter dùng busy-loop, không phải chu kỳ thời gian chính xác. Ví dụ dừng tại
-`halt()` nếu printf thất bại (kể cả UART init tự động lỗi); có thể xem status trong
-debugger. Prefix INFO/DEBUG là chuỗi do app viết, chưa có hệ thống lọc log level.
+The counter uses a busy loop rather than a precise time interval. The example
+stops in `halt()` if printf fails, including automatic UART initialization
+failures; inspect the status in the debugger. INFO/DEBUG prefixes are strings
+written by the application; there is no log-level filtering system yet.
 
-API, format hỗ trợ và cách sử dụng trong app khác:
+For the API, supported formats and use in other applications, see
 [PrintfLogging.md](../../guide/PrintfLogging.md).

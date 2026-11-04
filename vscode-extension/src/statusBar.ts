@@ -1,6 +1,5 @@
-// statusBar.ts - 3 StatusBarItem (target/transport/port), chi la UI phan
-// anh NeonMdfState - khong tu giu state rieng, luon refresh() theo
-// onDidChange de tranh lech voi Device Explorer/webview sau nay.
+// Three status bar items reflect NeonMdfState (target, transport and port).
+// Refresh on onDidChange so all extension views share the same state.
 import * as vscode from "vscode";
 import { NeonMdfState } from "./state";
 
@@ -29,16 +28,16 @@ export class NeonMdfStatusBar implements vscode.Disposable {
   }
 
   private refresh(): void {
-    this.targetItem.text = `$(circuit-board) ${this.state.target || "chon target"}`;
-    this.targetItem.tooltip = "NEON-MDF: Chon Target";
+    this.targetItem.text = `$(circuit-board) ${this.state.target || "select target"}`;
+    this.targetItem.tooltip = "NEON-MDF: Select Target";
 
     this.transportItem.text =
       this.state.transport === "jtag" ? "$(circuit-board) JTAG" : "$(plug) UART";
     this.transportItem.tooltip =
-      "NEON-MDF: Chien luoc Flash (JTAG = qua SWD 1 phien, nhanh; UART = qua System Bootloader, can thao tac tay)";
+      "NEON-MDF: Flash transport (JTAG: one fast SWD session; UART: System Bootloader, manual preparation required)";
 
-    this.portItem.text = `$(radio-tower) ${this.state.port ?? "chua chon cong"}`;
-    this.portItem.tooltip = "NEON-MDF: Chon Cong Serial";
+    this.portItem.text = `$(radio-tower) ${this.state.port ?? "no port selected"}`;
+    this.portItem.tooltip = "NEON-MDF: Select Serial Port";
   }
 
   dispose(): void {

@@ -55,7 +55,7 @@ void pwm_output_run(neon_uart_handle_t *uart) {
 
     printf("\n[INFO] Starting PWM Output Testcase (TIM0 channel 0)...\n");
 
-    /* 1. Khoi tao PWM */
+    /* 1. Initialize PWM */
     neon_pwm_get_default_config(&pwm_config);
     pwm_config.period = TEST_PWM_PERIOD_TICKS;
     pwm_config.pulse = 0U;
@@ -79,10 +79,10 @@ void pwm_output_run(neon_uart_handle_t *uart) {
     printf("[SUCCESS] PWM Initialized & Started successfully on TIM0_CH0.\n");
     pwm_output_verify_hardware_readback();
 
-    /* In Menu 1 lan duy nhat khi bat dau */
+    /* Print the menu once at startup */
     pwm_output_print_pwm_menu();
 
-    /* 2. Vong lap tuong tac */
+    /* 2. Interactive loop */
     bool running_test = true;
     while (running_test) {
         printf("Select option > ");
@@ -95,7 +95,7 @@ void pwm_output_run(neon_uart_handle_t *uart) {
 
         uint8_t rx_byte = (uint8_t)(rx_word & 0xFFU);
 
-        /* Bo qua ky tu xuong dong / ve dau dong */
+        /* Ignore line-feed and carriage-return characters */
         if (rx_byte == '\r' || rx_byte == '\n') {
             printf("\n");
             continue;
@@ -199,11 +199,11 @@ static void pwm_output_print_pwm_menu(void) {
 }
 
 static void pwm_output_verify_hardware_readback(void) {
-    uint32_t raw_chl = TIM0->CHL_CH0;   /* Thanh ghi chu ky period thuc */
-    uint32_t raw_ccr1 = TIM0->CCR1_CH0; /* Thanh ghi so sanh pulse thuc */
-    uint32_t raw_prsc = TIM0->PRSC_CH0; /* Thanh ghi chia tan prescaler thuc */
-    uint32_t raw_cnt = TIM0->CNT_CH0;   /* Bo dem thoi gian thuc đang chay */
-    uint32_t raw_ctrl = TIM0->CTRL_CH0; /* Thanh ghi dieu khien CTRL thuc */
+    uint32_t raw_chl = TIM0->CHL_CH0;   /* Actual period register */
+    uint32_t raw_ccr1 = TIM0->CCR1_CH0; /* Actual pulse comparison register */
+    uint32_t raw_prsc = TIM0->PRSC_CH0; /* Actual prescaler register */
+    uint32_t raw_cnt = TIM0->CNT_CH0;   /* Current running counter value */
+    uint32_t raw_ctrl = TIM0->CTRL_CH0; /* Actual CTRL control register */
 
     uint32_t mode_bits = raw_ctrl & TIM_CTRL_CH0_TIMER_MODE_Msk;
     bool is_hw_running = (mode_bits == ((uint32_t)NEON_PWM_MODE_0 << TIM_CTRL_CH0_TIMER_MODE_Pos)) ||

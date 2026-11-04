@@ -1,5 +1,5 @@
-// openMonitor.ts - mo Serial Monitor native (xem serialMonitor/monitor.ts)
-// tren cong dang chon trong NeonMdfState.
+// openMonitor.ts - open Serial Monitor native (see serialMonitor/monitor.ts) on the selected port in
+// NeonMdfState.
 import { NeonMdfState } from "../state";
 import { NeonMdfSerialMonitor } from "../serialMonitor/monitor";
 

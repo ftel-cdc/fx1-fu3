@@ -1,10 +1,9 @@
-# flashmap.csv - partition table CUA RIENG app nay (xem
-# neon-mdf/cmake/flashmap.cmake). Thu tu dong khong bat buoc - chi can co
-# dung 1 partition ten "app" (type=app, subtype=factory), xem
-# neon-mdf/tools/gen_flashmap.py. Cung layout voi examples/OTA_Demo/ (cung
-# chip WEACT_F412, khong ly do gi khac di).
+# flashmap.csv - this app's own partition table (see neon-mdf/cmake/flashmap.cmake). Automatic mail is
+# not required - just use the 1 partition named "app" (type=app, subtype=factory), see
+# neon-mdf/tools/gen_flashmap.py. same layout as examples/OTA_Demo/ (same chip as WEACT_F412, no
+# difference).
 #
 # name,     type, subtype, size
 app,        app,  factory, 0x8000     # sector 2+3 (16+16KB) = 0x08008000..0x08010000
-otadata,    data, ota,     0x10000    # sector 4 (64KB, du du - can nguyen 1 sector)
-app_ota,    app,  ota,     0x60000    # sector 5+6+7 (128*3KB) = het flash
+otadata,    data, ota,     0x10000    # sector 4 (64KB; reserve a complete sector)
+app_ota,    app,  ota,     0x60000    # sector 5+6+7 (128*3KB) = end of flash

@@ -2,18 +2,17 @@
  * @file neon_gpio.c
  * @brief Implementation for GPIO.
  * @details
- * * platform/ch32v003/neon_gpio.c - implementation THAT cho CH32V003 GPIO (CFGLR/INDR/
- * OUTDR/BSHR/BCR - kieu STM32F1, THAT tu CH32V003RM.PDF V1.9 chuong 7, xem
- * mcu-description/devices/CH32V003F4P6.yaml). Cung API voi
- * platform/weact_f412/neon_gpio.c/platform/fu2/neon_gpio.c - app code (vd Blinky) goi giong
- * het nhau.
+ * * platform/ch32v003/neon_gpio.c - real implementation for CH32V003 GPIO (CFGLR/INDR/ OUTDR/BSHR/BCR
+ * - kieu STM32F1, real from CH32V003RM.PDF V1.9 chapter 7, see
+ * mcu-description/devices/CH32V003F4P6.yaml). same API as
+ * platform/weact_f412/neon_gpio.c/platform/fu2/neon_gpio.c - app code (e.g. Blinky) calls the same
+ * are identical.
  *
- * CFGLR: 4 bit/pin (CNFy[1:0] + MODEy[1:0], y=0-7, KHONG co CFGHR vi chip
- * nay toi da 8 chan/port) - gia tri nibble dung trong file nay:
+ * CFGLR uses 4 bits/pin (CNFy[1:0] + MODEy[1:0], Y=0-7). This chip has eight pins per port and no CFGHR -
+ * the nibble value used in this file:
  *   0x1 = MODE=01 (output, 10MHz), CNF=00 (general push-pull output)
- *   0x4 = MODE=00 (input), CNF=01 (floating input) - KHOP voi reset value
- *         0x44444444 that cua CFGLR (moi pin floating input mac dinh sau
- *         reset) - xac nhan cheo voi RM, khong doan.
+ *   0x4 = MODE=00 (input), CNF=01 (floating input) - matches the real 0x44444444 value reset of CFGLR
+ *         (each pin defaults to floating input after reset) - confirms the cheo with RM, no guess.
  */
 
 /*==================================================================================================
@@ -116,7 +115,7 @@ neon_status_t neon_gpio_init(GPIO_TypeDef *instance, const neon_gpio_config_t *i
         return NEON_NOT_SUPPORTED;
     }
 
-    /* Nạp OUTDR gián tiếp trước khi CFGLR bật output để tránh glitch. */
+    /* indirect OUTDR flash before CFGLR turns on output to avoid glitch. */
     if (init->mode == NEON_GPIO_MODE_OUTPUT) {
         if (init->initial_state == NEON_GPIO_PIN_SET) {
             instance->BSHR = init->pin;
@@ -143,8 +142,8 @@ neon_status_t neon_gpio_init(GPIO_TypeDef *instance, const neon_gpio_config_t *i
 
 /** @copydoc neon_gpio_write_pin */
 void neon_gpio_write_pin(GPIO_TypeDef *instance, uint32_t pin_mask, uint8_t state) {
-    /* BSHR = set (THAT, RM 7.3.1.4), BCR = reset (THAT, RM 7.3.1.5) - 2 thanh
-   * ghi rieng, khac BSRR gop chung 1 thanh ghi 32-bit cua STM32F4. */
+    /* BSHR = set (true, RM 7.3.1.4), BCR = reset (true, RM 7.3.1.5) - 2 separate registers, other than the
+   * common BSRR 1 32-bit register of STM32F4. */
     if (state) {
         instance->BSHR = pin_mask;
     } else {

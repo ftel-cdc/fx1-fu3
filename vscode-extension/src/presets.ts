@@ -1,14 +1,11 @@
-// presets.ts - doc CMakePresets.json (+ include cua no) de lay danh sach
-// target THAT (vd FU2, WEACT_F412) - KHONG hardcode, KHONG parse
-// mcu_variants.cmake (qua fragile, khong phai machine-readable). Day la
-// diem duy nhat can sua neu sau nay them target moi vao
-// neon-mdf/cmake/presets/targets.json - extension tu dong thay, khong can
-// sua source.
+// presets.ts - read CMakePresets.json (+ include of no) to get real target list (e.g. FU2, WEACT_F412)
+// - without hardcoding or parsing the fragile mcu_variants.cmake format. This is the single
+// diem to fix if later add new target and neon-mdf/cmake/presets/targets.json - extension
+// automatically sees, no need to fix source.
 //
-// CO Y THUC KHONG resolve cac tinh nang preset-inheritance phuc tap cua
-// CMake (`inherits`, `condition`) - chi doc field truc tiep + include phang
-// 1 cap. Neu 1 file preset trong tuong lai dung nhung tinh nang do, ham nay
-// se BO QUA (khong crash) thay vi doan sai.
+// intentionally did not resolve CMake's preset-inheritance tap features (`inherits`, `condition`) -
+// only read field directly + include phang 1 level. if a preset file in the future uses but that
+// feature, this function will ignore (not crash) seen because of mis guessing.
 import * as vscode from "vscode";
 
 export interface TargetInfo {
@@ -37,7 +34,7 @@ async function readJsonFile(uri: vscode.Uri): Promise<CMakePresetsFile | undefin
   }
 }
 
-/** Gop configurePresets tu 1 file goc + cac file include (1 cap, khong de quy) thanh danh sach target duy nhat. */
+/** Merge configurePresets from the root file and its includes into one target list, with one include level and no recursion. */
 function collectTargets(files: CMakePresetsFile[]): TargetInfo[] {
   const seen = new Set<string>();
   const targets: TargetInfo[] = [];
@@ -57,9 +54,8 @@ function collectTargets(files: CMakePresetsFile[]): TargetInfo[] {
 }
 
 /**
- * Doc <workspaceFolder>/CMakePresets.json + include cua no, tra ve danh
- * sach target (rong neu khong tim thay file hoac khong parse duoc - goi
- * noi dung tu xu ly truong hop nay, vd hien "chua phai project neon-mdf").
+ * read <workspaceFolder>/CMakePresets.json + include of no, look up the target list (empty if no file
+ * is found or parsable - use this handle instead, e.g. currently "not project neon-mdf").
  */
 export async function discoverTargets(workspaceFolder: vscode.Uri): Promise<TargetInfo[]> {
   const rootUri = vscode.Uri.joinPath(workspaceFolder, "CMakePresets.json");

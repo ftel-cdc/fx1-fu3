@@ -1,27 +1,27 @@
-# GPIO_Input_Output — testcase 2 cho FU2
+# GPIO_Input_Output — testcase 2 for FU2
 
-Đọc nút bấm tại **GPIOB_5 (PB5)** và điều khiển LED tại **GPIOB_1 (PB1)**:
-**nhấn thì bật, nhả thì tắt**. Vòng lặp main đọc GPIO trực tiếp.
-`printf` báo trạng thái qua UART0, 19200 baud, 8N1.
+Read buttons at GPIOB_5 (PB5) and LED control at GPIOB_1 (PB1):
+**press on, release off**. Main loop reads GPIO directly. `printf` reports status via UART0, 19200
+baud, 8N1.
 
-## Đấu nối và hoạt động
+## Connection and operation
 
-| Tín hiệu | Cấu hình trong main.c |
+| Signals | configuration in main.c |
 |---|---|
-| PB5 | Input pull-up, nhấn = 0, nhả = 1 |
-| PB1 | Output active-high: nhấn = 1, nhả = 0; khởi động ở 0 |
-| UART0 | Log `printf`, giữ PC0/PC1 cho TX/RX |
+| PB5 | Input pull-up, press=0, release=1 |
+| PB1 | Output active-high: press=1, release=0; start at 0 |
+| UART0 | Log `printf`, keep PC0/PC1 for TX/RX |
 
-Nút bấm nối PB5 xuống GND. Nếu FPGA/PDI không thực hiện pull-up của PAD,
-dùng điện trở kéo lên ngoài theo đúng điện áp bank. PB1 có thể nối LED kèm
-điện trở hoặc thiết bị đo; chân header phụ thuộc mapping của PDI đang nạp.
-Chân và mức logic được viết trực tiếp trong `Src/main.c` để dễ đọc và sửa.
+The button connects the PB5 to the GND. If FPGA/PDI does not pull-up of the PAD, use a pull-up
+resistor outside in accordance with the bank voltage. The PB1 can connect the LED to the resistor or
+measuring device; the header pin depends on the mapping of the flashing PDI. Pins and logic levels
+are written directly in `Src/main.c` for easy readability and correction.
 
-PB1 khởi động ở mức 0. Khi main đọc PB5 bằng 0, PB1 lên 1 để bật LED;
-khi PB5 bằng 1, PB1 về 0 để tắt LED. Log chỉ in khi mức input thay đổi.
-Ví dụ không dùng chống dội, nên nút cơ khí có thể tạo nhiều log lúc nhấn/nhả.
+PB1 starts at 0 level. when main read PB5 by 0, PB1 to 1 to turn on the LED; when PB5 by 1, PB1 to 0
+to turn off the LED. Log only prints when the input level sees a change. For example, without
+anti-rebound, so the mechanical button can create multiple logs at press / release.
 
-## Build và cấu hình
+## Build and configuration
 
 ```sh
 cd /home/quang-hoang/merge_neon_mdf/CDC_NEON_MDF_merged/examples/GPIO_Input_Output
@@ -29,7 +29,7 @@ cmake --preset FU2
 cmake --build --preset FU2
 ```
 
-Đổi clock bằng:
+Change clock by:
 
 ```sh
 cmake --build --preset FU2 --target menuconfig
@@ -37,31 +37,30 @@ cmake --preset FU2
 cmake --build --preset FU2
 ```
 
-Cấu hình clock nằm trong menu `GPIO_Input_Output`. Clock FPGA mặc định 10 MHz;
-cần khớp clock thật để baud UART chính xác. Giá trị clock 0 dùng clock startup
-của SDK. Giữ driver UART bật để dùng `printf` với `<stdio.h>`; ứng dụng không
-cần gọi `neon_console_attach_uart()` hay tự khởi tạo UART.
-Đổi chân, pull hoặc mức active bằng cách sửa trực tiếp `Src/main.c`.
+configuration clock is in the `GPIO_Input_Output` menu. Default FPGA clock 10 MHz; true clock
+matching required for correct UART baud. Clock value 0 uses SDK startup clock. Keep UART driver on
+to use `printf` with `<stdio.h>`; application does not need to call `neon_console_attach_uart()` or
+manually initialize UART. Change pin, pull or active level by editing `Src/main.c` directly.
 
-## Nạp và xem log
+## flash and view log
 
-File nạp là **`build/FU2/gpio_input_output_image.bin`**, có header boot 128 byte.
-`gpio_input_output.bin` chỉ là payload raw, không dùng trực tiếp với loader.
+The flash file is `build/FU2/gpio_input_output_image.bin`, which has a 128 byte boot header.
+`gpio_input_output.bin` is only payload raw, not directly used with the loader.
 
-Trên máy nối FPGA, thay serial port và đường dẫn theo máy đó:
+On an FPGA connector, replace the serial port and path for that machine:
 
 ```sh
 python3 /home/quang-hoang/fu2_fpga/uart_boot_loader.py --port /dev/serial/by-id/usb-Xilinx_VEK280_262502175696-if02-port0 --image /home/quang-hoang/merge_neon_mdf/CDC_NEON_MDF_merged/examples/GPIO_Input_Output/build/FU2/gpio_input_output_image.bin --baud 9600 --byte-gap-ms 2 --no-monitor
 ```
 
-Chạy loader rồi reset theo quy trình board. Khi nạp xong, mở terminal:
+Run the loader and reset it according to the board procedure. When the flash is complete, open the terminal:
 
 ```sh
 python3 -m serial.tools.miniterm /dev/serial/by-id/usb-Xilinx_VEK280_262502175696-if02-port0 19200 --raw
 ```
 
-Nhấn rồi nhả nút PB5. PB1 phải lên 1 khi nhấn và về 0
-khi nhả, đồng thời xuất log:
+Press and release the PB5 button. PB1 must be up 1 when pressed and down 0 when released, and log
+output:
 
 ```text
 [INFO] PB5 button -> PB1 LED
@@ -70,14 +69,14 @@ khi nhả, đồng thời xuất log:
 [GPIO] RELEASED -> LED OFF
 ```
 
-Banner và trạng thái ban đầu có thể đã đi qua trước khi mở terminal;
-nhấn/nhả nút để nhận log mới. Thoát miniterm bằng `Ctrl+]`.
+Banner and initial status may have passed before opening terminal; press/release button to receive
+new log. Exit miniterm with `Ctrl+]`.
 
-## Ghi chú
+## Notes
 
-Không dùng SysTick, ngắt GPIO, delay, DMA hay FreeRTOS. Main đọc nút và ghi
-output bằng `neon_gpio_read_pin()` / `neon_gpio_write_pin()`. Trong lúc UART
-in log, main tạm chờ; vòng lặp tiếp tục đọc nút sau khi printf trả về.
+Do not use SysTick, interrupt GPIO, delay, DMA or FreeRTOS. Main reads the node and writes output
+with `neon_gpio_read_pin()` / `neon_gpio_write_pin()`. While UART prints log, main waits; loop
+continues to read the node after printf returns.
 
-Giữ PC0/PC1 cho UART0 nếu sửa chân GPIO. Xác nhận trên FPGA thật bằng log
-cùng trạng thái PB1/LED; kết quả build không xác nhận đường dây và pad.
+Keep PC0/PC1 for UART0 if fixing GPIO pins. Confirm on real FPGA with log same state PB1/LED; build
+results do not confirm line and pad.

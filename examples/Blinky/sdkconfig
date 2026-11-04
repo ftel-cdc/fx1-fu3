@@ -17,7 +17,7 @@ CONFIG_NEON_MDF_DRIVER_QSPI=y
 # end of components/driver
 
 #
-# Blinky (app nay)
+# Blinky (this app)
 #
 CONFIG_BLINKY_DELAY_LOOPS=500000
-# end of Blinky (app nay)
+# end of Blinky (this app)

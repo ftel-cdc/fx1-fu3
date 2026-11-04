@@ -1,24 +1,25 @@
 # Core/Arch/CortexM/CMSIS
 
-- `CMSIS_5/` — vendor từ repo chính thức của ARM
-  (`https://github.com/ARM-software/CMSIS_5`), chỉ chứa sparse
-  `CMSIS/Core/Include` (để không kéo theo toàn bộ monorepo
-  DSP/NN/RTOS2/device packs... mà SDK này không cần). Không sửa tay bất kỳ
-  file nào trong này.
+- `CMSIS_5/` is vendored from ARM's official repository
+  (`https://github.com/ARM-software/CMSIS_5`). It contains only the sparse
+  `CMSIS/Core/Include` tree, excluding DSP, NN, RTOS2 and device packs that this
+  SDK does not need. Do not edit these vendor files manually.
 
-  **Trạng thái hiện tại:** thư mục này đang là **vendor thuần** (file đã copy
-  sẵn, không phải git submodule sống — repo gốc chưa `git init`). Nếu muốn
-  tái lập lại thành git submodule sau khi `git init` repo này (để dễ
-  `git submodule update --remote` nhận fix từ ARM sau này):
+  **Current status:** this is a **plain vendored copy**, not an active Git
+  submodule; the original repository had not been initialized with `git init`.
+  To convert it to a submodule after initializing this repository, allowing
+  future ARM fixes through `git submodule update --remote`:
+
   ```sh
-  rm -rf Core/Arch/CortexM/CMSIS/CMSIS_5   # xoá bản vendor thuần hiện tại
+  rm -rf Core/Arch/CortexM/CMSIS/CMSIS_5   # Remove the current vendored copy
   git submodule add https://github.com/ARM-software/CMSIS_5.git Core/Arch/CortexM/CMSIS/CMSIS_5
   cd Core/Arch/CortexM/CMSIS/CMSIS_5
   git sparse-checkout init --cone
   git sparse-checkout set CMSIS/Core/Include
   ```
 
-- `Device/<Family>/` — header/linker/startup sinh tự động từ
-  `mcu-description/` (xem `mcu-description/tools/generate.py`), vd `Device/FU2/`.
-  Không phân theo vendor (`<Vendor>/<Family>/`) — chỉ 1 cấp tên family cho gọn.
-  Không sửa tay các file sinh ra (chỉ `system_<DEVICE>.c/.h` là viết tay).
+- `Device/<Family>/` contains headers, linker scripts and startup code generated
+  from `mcu-description/`; see `mcu-description/tools/generate.py` and
+  `Device/FU2/`. Paths use a single family level rather than
+  `<Vendor>/<Family>/`. Do not edit generated files manually. Only
+  `system_<DEVICE>.c/.h` are handwritten.

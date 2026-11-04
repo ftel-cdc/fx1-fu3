@@ -1,16 +1,15 @@
-"""Sinh device header (<DEVICE>.h) cho RISC-V (WCH QingKe V2A) tu model.Device.
+"""create device header (<DEVICE>.h) for RISC-V (WCH QingKe V2A) from model.Device.
 
-Mirror gen_cmsis_header.py (Cortex-M) ve HINH DANG output (banner, include
-guard, peripheral struct, base address define, memory map) - nhung phan
-"core config" khac hoan toan: KHONG co core_cmX.h/CMSIS, KHONG co IRQn_Type
-kieu am (-14..-1 cho core exception) vi RISC-V dung co che trap khac han
-(mcause CSR, khong phai bang so IRQn am/duong nhu ARM) - IRQn o day CHI la
-so PFIC THAT (>=0), dung lam chi so nhan voi 4 de tinh dia chi trong vector
-table (xem gen_startup.py).
+Mirror gen_cmsis_header.py (Cortex-M) about the output image (banner, include guard, peripheral
+struct, base address define, memory map) - but other "core config" is safe: no negative
+core_cmX.h/CMSIS, no negative IRQn_Type (-14..-1 for core exception) RISC-V uses a different trap
+mask (mcause CSR, not the same number of negative IRQn/path as ARM) - IRQn here is just the actual
+PFIC number (>=0), uses the receiver blue with 4 to calculate address in vector table (see
+gen_startup.py).
 
-_peripheral_struct() IMPORT TRUC TIEP tu backends.cortex_m.gen_cmsis_header
-(khong copy logic - sinh struct C tu list Register la thuan tuy generic,
-khong phu thuoc kien truc CPU, xem model.py's docstring).
+_peripheral_struct() IMPORT directly from backends.cortex_m.gen_cmsis_header (do not copy logic -
+create C struct from list Register as generic, do not depend on CPU directivity, see model.py's
+docstring).
 """
 import os
 import sys
@@ -37,13 +36,12 @@ def generate(device, out_path: str):
     lines.append("")
 
     # ---- IRQn (PFIC) ----
-    # KHAC HAN quy uoc ARM: KHONG co core exception am (-14..-1) - RISC-V
-    # dung mcause CSR de phan biet trap/exception (bit MSB=1 = interrupt),
-    # con day CHI la so IRQ THIET BI (>=0, dung nhan 4 lam offset trong
-    # vector table PFIC - xem gen_startup.py). SysTick/SW la 2 "core-ish"
-    # IRQ nhung van danh so duong binh thuong tren kien truc nay (khac ARM).
+    # Unlike ARM, RISC-V has no negative core-exception numbers (-14..-1). mcause identifies
+    # traps/exceptions, with the MSB set for interrupts. This list contains device IRQ numbers only
+    # (>=0), used as offsets in the PFIC vector table; see gen_startup.py. SysTick/SW are
+    # core-related IRQs but still use ordinary positive numbers on this architecture.
     lines.append("/* =========================== Interrupt Number Definition (PFIC) ===================== */")
-    lines.append(f"/* {device.device} - xem mcu-description/devices/{device.device}.yaml */")
+    lines.append(f"/* {device.device} - see mcu-description/devices/{device.device}.yaml */")
     lines.append("typedef enum {")
     for irq in device.interrupts:
         lines.append(f"  {irq.name}_IRQn = {irq.number},")
@@ -51,24 +49,23 @@ def generate(device, out_path: str):
     lines.append("")
 
     lines.append(f"#define NEON_RISCV_ISA \"{isa}\"")
-    # riscv_csr.h - tuong duong core_cmX.h ben Cortex-M (CSR macro + __NOP())
-    # - include o day de code app dung __NOP()/RISCV_CSR_* ma chi can
-    # #include "mcu_device.h" nhu binh thuong, khong can biet ten file rieng.
+    # riscv_csr.h serves the role of Cortex-M core_cmX.h with CSR macros and __NOP()
+    # - include it so apps can use __NOP()/RISCV_CSR_* through just
+    # #include "mcu_device.h" as usual, no need to know the proper file name.
     lines.append('#include "riscv_csr.h"')
     lines.append(f'#include "system_{device.device}.h"')
     lines.append("")
 
-    # __IO/__I/__O - Cortex-M lay 3 macro nay tu core_cmX.h (CMSIS) khi
-    # _peripheral_struct() sinh struct - RISC-V KHONG include core_cmX.h nen
-    # phai tu dinh nghia o day (dung DUNG 3 gia tri CMSIS goc de _peripheral_struct()
-    # dung chung khong doi logic).
-    lines.append("/* =========================== Access qualifier (tuong duong CMSIS __IO/__I/__O) ===== */")
+    # __IO/__I/__O - Cortex-M takes these three macros from core_cmX.h (CMSIS) when _peripheral_struct()
+    # creates the struct. RISC-V has no core_cmX.h definition, so define it locally using
+    # 3 original CMSIS values so that _peripheral_struct() shares the same logic).
+    lines.append("/* ========================= Access qualifier ( CMSIS __IO/__I/__O) ===== */")
     lines.append("#define __I     volatile const")
     lines.append("#define __O     volatile")
     lines.append("#define __IO    volatile")
     lines.append("")
 
-    # ---- Peripheral structs (DUNG CHUNG logic voi Cortex-M, xem docstring dau file) ----
+    # ---- Peripheral structs (shared logic with Cortex-M, see docstring at the beginning of the file)----
     lines.append("/* =========================== Peripheral register structures ======================== */")
     seen_types = set()
     for p in device.peripherals:
@@ -99,7 +96,7 @@ def generate(device, out_path: str):
         app_base = flash.address + bl.size
         app_vector_base = app_base + bl.image_header_size
         app_size = flash.size - bl.size - bl.image_header_size
-        lines.append("/* =========================== Bootloader partition layout (xem devices YAML, muc `bootloader:`) === */")
+        lines.append("/* ========================= Bootloader partition layout (see YAML devices, item `bootloader:`) === */")
         lines.append(f"#define NEON_MDF_BOOTLOADER_SIZE     0x{bl.size:08X}UL")
         lines.append(f"#define NEON_MDF_IMAGE_HEADER_SIZE   0x{bl.image_header_size:08X}UL")
         lines.append(f"#define NEON_MDF_APP_BASE            0x{app_base:08X}UL")

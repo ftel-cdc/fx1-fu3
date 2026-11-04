@@ -2,22 +2,20 @@
  * @file main.c
  * @brief Implementation for OTA demo.
  * @details
- * * OTA_Demo - vi du OTA THAT tren phan cung: 1 source main.c duoc BUILD
- * NHIEU LAN (macro NEON_OTA_APP_VERSION + NEON_OTA_SKIP_CONFIRM, xem
- * CMakeLists.txt) thanh nhieu executable khac nhau:
- *   ota_demo         - factory (slot "app"), version 1, nap CUNG bootloader
- *                       (flash_jtag/flash_uart_stm32) - KHONG BAO GIO bi
- *                       OTA dung toi.
- *   ota_demo_ota     - ota (slot "app_ota"), version 2, TU XAC NHAN tot
- *                       sau vai giay chay on dinh (goi neon_ota_confirm_valid()).
- *   ota_demo_ota_bad - ota (slot "app_ota"), version 3, CO CHU DICH KHONG
- *                       BAO GIO xac nhan - dung rieng de test co che tu
- *                       dong ROLLBACK cua bootloader (xem flash_ota target +
- *                       plan file, muc "Test that tren phan cung").
+ * * OTA_Demo - full real OTA on hardware: 1 source main.c is BUILD several times (macro
+ *                       NEON_OTA_APP_VERSION + NEON_OTA_SKIP_CONFIRM, see CMakeLists.txt) into
+ *                       various executable: ota_demo - factory (slot "app"), version 1, flash with
+ *                       bootloader (flash_jtag/flash_uart_stm32) - does not indicate the time to
+ *                       use my real OTA. ota_demo_ota - ota (slot "app_ota"), version 2, from tot
+ *                       confirmation after a few seconds of running on specified (call
+ *                       neon_ota_confirm_valid()). ota_demo_ota_bad - ota (slot "app_ota"), version
+ *                       3, has translation text that does not indicate the confirmation time - used
+ *                       exclusively for testing with automatic ROLLBACK covering of the bootloader
+ *                       (see flash_ota target + plan file, section "Real test on hardware").
  *
- * WEACT_F412 dung PB3 (khong co LED onboard); STM32F103CB Blue Pill dung LED
- * onboard PC13 active-low. STM32F103CB in log qua USART1 PA9/PA10,
- * 115200 8N1; WEACT_F412 khong con syscall printf-to-UART.
+ * WEACT_F412 uses PB3 (without LED onboard); STM32F103CB Blue Pill uses LED onboard PC13 active-low.
+ * STM32F103CB logs through USART1 PA9/PA10 at 115200 8N1; WEACT_F412 no longer has a syscall
+ * printf-to-UART.
  */
 
 /*==================================================================================================
@@ -42,15 +40,15 @@
 #define LED_INSTANCE GPIOB
 #define LED_PIN (1U << 3)
 #elif defined(STM32F103CB)
-/* Blue Pill LED onboard tai PC13, active-low. */
+/* Blue Pill onboard LED on PC13, active-low. */
 #define LED_INSTANCE GPIOC
 #define LED_PIN (1U << 13)
 #else
-#error "OTA_Demo: chi ho tro WEACT_F412 va STM32F103CB"
+#error "OTA_Demo: only support WEACT_F412 and STM32F103CB"
 #endif
 
-/* So vong lap busy-wait truoc khi tu xac nhan tot - ~vai giay, du de quan
- * sat qua UART/SWD la app moi da chay on dinh (khong crash/treo ngay). */
+/* busy-wait loop number before tot confirmation word - ~several seconds, enough to quan sat via
+ * UART/SWD is the new app has run on specified (not crash/treo right). */
 #define CONFIRM_AFTER_LOOPS 10U
 
 /*==================================================================================================
@@ -74,7 +72,7 @@ int main(void) {
     };
     neon_gpio_clock_enable(LED_INSTANCE);
 #if defined(STM32F103CB)
-    /* Tat LED active-low truoc khi chuyen PC13 sang output. */
+    /* turn off the active-low LED before switching PC13 to output. */
     neon_gpio_write_pin(LED_INSTANCE, LED_PIN, 1U);
 #endif
     neon_gpio_init(LED_INSTANCE, &led_init);
@@ -83,16 +81,16 @@ int main(void) {
     uint32_t loop_count = 0;
     for (;;) {
         neon_gpio_toggle_pin(LED_INSTANCE, LED_PIN);
-        printf("OTA_Demo v%d dang chay (loop=%lu)\n", NEON_OTA_APP_VERSION, (unsigned long)loop_count);
+        printf("OTA_Demo v%d running (loop=%lu)\n", NEON_OTA_APP_VERSION, (unsigned long)loop_count);
         ota_demo_delay_busy(1000000U);
         loop_count++;
 
         if (loop_count == CONFIRM_AFTER_LOOPS) {
 #if !defined(NEON_OTA_SKIP_CONFIRM)
             neon_ota_confirm_valid();
-            printf("OTA_Demo v%d: DA CONFIRM VALID\n", NEON_OTA_APP_VERSION);
+            printf("OTA_Demo v%d: CONFIRMED VALID\n", NEON_OTA_APP_VERSION);
 #else
-            printf("OTA_Demo v%d: (test rollback) CO CHU DICH khong confirm\n", NEON_OTA_APP_VERSION);
+            printf("OTA_Demo v%d: (test rollback) has translation not confirm\n", NEON_OTA_APP_VERSION);
 #endif
         }
     }

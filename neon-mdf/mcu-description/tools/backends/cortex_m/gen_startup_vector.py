@@ -1,34 +1,29 @@
-"""Sinh startup_<DEVICE>.s (GNU AS) cho Cortex-M — dùng chung cho MỌI core đã
-xác nhận trong core_info.py (hiện: cortex-m0/cortex-m0plus ARMv6-M,
+"""create startup_<DEVICE>.s (GNU AS) for Cortex-M — shared to EVERY core confirmed in core_info.py
+(currently: cortex-m0/cortex-m0plus ARMv6-M,
 cortex-m3/cortex-m4 ARMv7-M).
 
-16 entry đầu tiên của vector table CỐ ĐỊNH theo kiến trúc ARM (không đổi
-giữa vendor), NHƯNG 4 slot (4/5/6/12) khác nhau thật giữa 2 họ:
-  0:  Initial Main Stack Pointer (_estack, từ linker script)
+The first 16 entries of the table vector are ARM-based (constant between vendors), BUT 4 slots
+  (4/5/6/12) differ from each other: 0: Initial Main Stack Pointer (_estack, from linker script)
   1:  Reset_Handler
   2:  NMI_Handler
   3:  HardFault_Handler
-  4:  MemManage_Handler   — CHỈ core có has_extended_fault_handlers=True (ARMv7-M+/mainline); còn lại Reserved
-  5:  BusFault_Handler    — như trên
-  6:  UsageFault_Handler  — như trên
-  7-10: Reserved (mọi core)
+  4: MemManage_Handler — ONLY core have has_extended_fault_handlers=True (ARMv7-M+/mainline); rest
+  Reserved 5: BusFault_Handler — as above 6: UsageFault_Handler — as above 7-10: Reserved (all core)
   11: SVC_Handler
-  12: DebugMon_Handler    — như MemManage, chỉ ARMv7-M+/mainline
+  12: DebugMon_Handler — as MemManage, only ARMv7-M+/mainline
   13: Reserved
   14: PendSV_Handler
   15: SysTick_Handler
-  16+: <NAME>_IRQHandler theo `interrupts` trong device .yaml — vị trí THẬT =
-       16 + irq.number (không phải thứ tự liệt kê trong file YAML), khe
-       trống (`number` bị bỏ qua giữa chừng) = Reserved (`.word 0`) — cùng
-       cách gap-fill với backends/riscv/gen_startup.py, tránh lệch vector
-       table nếu 1 device YAML tương lai không khai liên tục 0..N-1.
+  16+: <NAME>_IRQHandler follows `interrupts` in .yaml device — position TRUE = 16 + irq.number (not
+       listed order in YAML file), gap fill (`number` is ignored midway) = Reserved (`.word 0`) —
+       same way gap-fill with backends/riscv/gen_startup.py, avoid vector table deviation if 1
+       corresponding YAML device does not declare continuously 0..N-1.
 
-Bug đã fix (lịch sử, xem guide/ArchitectDetail.md nếu cần): bản cũ dùng 1
-template layout ARMv6-M cố định cho MỌI core (kể cả Cortex-M4 WEACT_F412,
-mpu_present=true) — entry 4/5/6/12 bị ghi `.word 0` (literal, KHÔNG PHẢI
-Default_Handler) thay vì handler thật; đồng thời entry IRQ chỉ theo thứ tự
-liệt kê trong YAML, không theo `number` — dễ lệch vector table nếu YAML có
-khoảng trống không được điền RESERVED thủ công.
+Fixed bug (history, see guide/ArchitectDetail.md if needed): old version uses a fixed ARMv6-M
+template layout for EVERY core (including Cortex-M4 WEACT_F412, mpu_present=true) — entry 4/5/6/12
+is written `.word 0` (literal, NOT Default_Handler) seen because of the actual handler; also IRQ
+entry only in the order listed in YAML, not according to `number` — vector table deflection easy if
+YAML has empty spaces are filled RESERVED manually.
 """
 
 from . import core_info

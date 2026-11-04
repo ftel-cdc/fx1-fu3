@@ -2,24 +2,22 @@
  * @file string.h
  * @brief Public declarations for string.
  * @details
- * * string.h - shim TOI THIEU cho FreeRTOS-Kernel core (list.c/tasks.c/
+ * * string.h provides the minimal shim required by FreeRTOS-Kernel core (list.c/tasks.c/
  * queue.c/timers.c/portable/MemMang/heap_4.c/stream_buffer.c/
- * portable/GCC/RISC-V/port.c) tren target RISC-V - toolchain riscv64-elf-gcc
- * (Homebrew) KHONG co multilib khop ABI ilp32e (xem
- * cmake/toolchain/riscv-none-elf.cmake) nen KHONG co sysroot/libc that cho
- * kien truc nay -> KHONG co <string.h> that. FreeRTOS-Kernel (vendor,
- * rtos/FreeRTOS-Kernel/) dung memcpy()/memset()/strlen() KHONG DIEU KIEN o
- * vai noi cot loi (heap_4.c cho allocator, tasks.c cho TCB, queue.c cho
- * item copy...) - khong the "bop" bang #if nhu code cua CHINH SDK nay
- * (khong muon patch qua nhieu vao source vendor).
+ * portable/GCC/RISC-V/port.c) on RISC-V target - riscv64-elf-gcc toolchain (Homebrew) does not have
+ * multilib matching ilp32e ABI (see cmake/toolchain/riscv-none-elf.cmake) so there is no real
+ * sysroot/libc for this live kien -> no real <string.h>. FreeRTOS-Kernel (vendor,
+ * rtos/FreeRTOS-Kernel/) uses memcpy()/memset()/strlen() without errors (heap_4.c for allocator,
+ * tasks.c for TCB, queue.c for item copy...) - cannot "bop" with #if as code of SDK itself (doesn't
+ * want to patch through multiple source vendors).
  *
- * CHI include duong dan nay cho freertos_kernel/freertos_kernel_port khi
- * arch RISC-V (xem cmake/freertos.cmake) - KHONG anh huong FU2/WEACT_F412
- * (co newlib that qua arm-none-eabi-gcc) hay code SDK khac cua CH32V003F4P6
- * (van dung __builtin_memcpy() nhu truoc, xem components/ota/neon_ota.c).
+ * include only this dan path for freertos_kernel/freertos_kernel_port when arch RISC-V (see
+ * cmake/freertos.cmake) - not image-oriented FU2/WEACT_F412 (real newlib via arm-none-eabi-gcc)
+ * please code other SDKs of CH32V003F4P6 (still use __builtin_memcpy() as before, see
+ * components/ota/neon_ota.c).
  *
- * Implementation THAT: arch/RISCV/Core/Src/riscv_libc_shim.c (tu viet don
- * gian, an toan cho MOI ISA - khong dung lenh nao ngoai rv32ec, giong tinh
+ * Real implementation: arch/RISCV/Core/Src/riscv_libc_shim.c (written don space, secure for each ISA -
+ * uses no instructions beyond rv32ec, like
  * than riscv_soft_math.c).
  */
 
@@ -29,7 +27,7 @@
 /*==================================================================================================
 *                                          INCLUDE FILES
 ==================================================================================================*/
-#include <stddef.h> /* size_t - freestanding-safe, bundled voi GCC (khong can sysroot) */
+#include <stddef.h> /* size_t - freestanding-safe, bundled with GCC (no sysroot required) */
 
 #ifdef __cplusplus
 extern "C" {

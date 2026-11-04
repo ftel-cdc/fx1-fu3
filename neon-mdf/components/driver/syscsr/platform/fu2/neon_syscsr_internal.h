@@ -2,10 +2,10 @@
  * @file neon_syscsr_internal.h
  * @brief Internal backend interface for SYSCSR fu2 internal.
  * @details
- * * Backend pin control nội bộ của SYSCSR FU2.
+ * * Backend internal battery control of SYSCSR FU2.
  *
- * Ứng dụng không include file này. GPIO/UART/SPI/I2C/PWM/QSPI dùng tên
- * function logic; chỉ backend này biết giá trị mux 0..3 và chân vật lý.
+ * The application does not include this file. GPIO/UART/SPI/I2C/PWM/QSPI uses the logical function
+ * name; only this backend knows mux value 0..3 and physical pin.
  * @internal
  */
 
@@ -24,7 +24,7 @@ extern "C" {
 /*==================================================================================================
 *                                  STRUCTURES AND OTHER TYPEDEFS
 ==================================================================================================*/
-/* Package pin theo IO map mới của FU2 VP: package 1..80, die 1..96. */
+/* Package battery according to FU2 VP's new IO map: package 1..80, die 1..96. */
 typedef enum {
     SYSCSR_PIN_INVALID = 0,
     SYSCSR_PIN_1 = 1,
@@ -112,7 +112,7 @@ typedef enum {
 /*==================================================================================================
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
-/* GPIO bank/bit → package pin theo vp/.../syscsr/iopad_map.h. */
+/* GPIO bank/bit → package battery according to vp/.../syscsr/iopad_map.h. */
 #define SYSCSR_PIN_PA0 SYSCSR_PIN_6
 #define SYSCSR_PIN_PA1 SYSCSR_PIN_11
 #define SYSCSR_PIN_PA2 SYSCSR_PIN_12
@@ -155,7 +155,7 @@ typedef enum {
     SYSCSR_PIN_FUNCTION_NONE = 0,
     SYSCSR_PIN_FUNCTION_GPIO = 1,
     SYSCSR_PIN_FUNCTION_JTAG_TDI = 2,
-    SYSCSR_PIN_FUNCTION_JTAG_TSM = 3, /* Giữ đúng tên TSM trong FU2 LL. */
+    SYSCSR_PIN_FUNCTION_JTAG_TSM = 3, /* Keep the TSM name correct in FU2 LL. */
     SYSCSR_PIN_FUNCTION_JTAG_TDO = 4,
     SYSCSR_PIN_FUNCTION_JTAG_TRSTN = 5,
     SYSCSR_PIN_FUNCTION_JTAG_TCLK = 6,
@@ -239,8 +239,8 @@ typedef enum {
     SYSCSR_REGISTER_GROUP_TOP = 3,
 } fu2_syscsr_register_group_t;
 
-/* Cấu hình PAD mà LL_GPIO_Init() thực sự sử dụng. DS/coarse drive không nằm
- * đây vì LL_GPIO_Init() không thay đổi DS; dùng API SetPadCoarseDrive riêng. */
+/* configuration PAD that LL_GPIO_Init() actually uses. The DS/coarse drive isn't here because
+ * LL_GPIO_Init() doesn't see DS change; uses its own SetPadCoarseDrive API. */
 typedef struct {
     neon_field8_t input_enable;
     fu2_syscsr_pull_t pull;
@@ -302,8 +302,8 @@ void fu2_syscsr_release_pins(fu2_syscsr_pin_group_t *group);
  * @brief Read SYSCSR GPIO init default pad config.
  * @param[out] config Module configuration.
  * @details
- * Cấu hình khởi tạo GPIO mặc định của LL: input path bật, no-pull, 2mA,
- * schmitt tắt và slew chậm. Đây không phải reset state của phần cứng.
+ * configuration initialize LL's default GPIO: input path on, no-pull, 2mA, schmitt off and slow slew.
+ * This is not a hardware state reset.
  */
 void fu2_syscsr_get_gpio_init_default_pad_config(fu2_syscsr_pad_config_t *config);
 
@@ -313,7 +313,7 @@ void fu2_syscsr_get_gpio_init_default_pad_config(fu2_syscsr_pad_config_t *config
  * @param[in,out] map Map.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * API tra cứu ba lớp mapping độc lập.
+ * API lookup three independent mapping layers.
  */
 neon_status_t fu2_syscsr_get_physical_pad_map(fu2_syscsr_physical_pin_t physical_pin,
                                               fu2_syscsr_physical_pad_map_t *map);
@@ -341,8 +341,8 @@ neon_status_t fu2_syscsr_get_gpio_physical_pin(GPIO_TypeDef *gpio, uint32_t pin_
  * @param[in] function Function.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Mux và PAD được tách riêng để driver ngoại vi không vô tình ghi đè cấu
- * hình điện khi chỉ muốn đổi chức năng pin.
+ * Mux and PAD are separated so that the peripheral driver does not accidentally write over power
+ * configuration when only want to change battery function.
  */
 neon_status_t fu2_syscsr_set_pin_function(fu2_syscsr_physical_pin_t physical_pin, fu2_syscsr_pin_function_t function);
 /**
@@ -373,7 +373,7 @@ neon_status_t fu2_syscsr_get_pad_config(fu2_syscsr_physical_pin_t physical_pin, 
  * @param[in] drive drive.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * DS được điều khiển riêng vì LL_GPIO_Init() không thay đổi field này.
+ * DS is controlled separately because LL_GPIO_Init() does not see this field change.
  */
 neon_status_t fu2_syscsr_set_pad_coarse_drive(fu2_syscsr_physical_pin_t physical_pin, fu2_syscsr_coarse_drive_t drive);
 /**
@@ -389,9 +389,9 @@ neon_status_t fu2_syscsr_get_pad_coarse_drive(fu2_syscsr_physical_pin_t physical
  * @param[in] physical_pin Physical pin.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Khôi phục chính xác mux/PAD của một pin theo reset state FU2 v8.
- * Driver sở hữu pin phải tắt output/OE trước khi gọi để tránh glitch khi mux
- * quay về chức năng mặc định MUX_0 (có thể là JTAG/QSPI/UART, không phải GPIO).
+ * Correctly restore the mux/PAD of a battery according to FU2 v8 state reset. The battery owner driver
+ * must turn off output/OE before calling to avoid glitch when mux returns to default function MUX_0
+ * (possibly JTAG/QSPI/UART, not GPIO).
  */
 neon_status_t fu2_syscsr_reset_pin(fu2_syscsr_physical_pin_t physical_pin);
 
@@ -401,8 +401,8 @@ neon_status_t fu2_syscsr_reset_pin(fu2_syscsr_physical_pin_t physical_pin);
  * @param[in] pin_mask Bitmask of the selected GPIO pins.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Helper cho GPIO backend; hai bước vẫn tách riêng để GPIO chủ động thứ tự
- * chống glitch giữa OUT, PAD, mux và OE.
+ * Helper for GPIO backend; two steps still separated to actively GPIO anti-glitch order between OUT,
+ * PAD, mux and OE.
  */
 neon_status_t fu2_syscsr_set_gpio_pins_function(GPIO_TypeDef *gpio, uint32_t pin_mask);
 /**
@@ -421,8 +421,8 @@ neon_status_t fu2_syscsr_configure_gpio_pads(GPIO_TypeDef *gpio, uint32_t pin_ma
  * @param[in] pin_mask Bitmask of the selected GPIO pins.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Kiểm tra trước toàn bộ mapping GPIO -> physical pad -> mux mà không ghi
- * register. GPIO dùng hàm này để bảo đảm lỗi mapping không để cấu hình dở.
+ * Pre-check the entire mapping GPIO -> physical pad -> mux without writing register. GPIO uses this
+ * function to ensure that the mapping error does not result in bad configuration.
  */
 neon_status_t fu2_syscsr_validate_gpio_pins(GPIO_TypeDef *gpio, uint32_t pin_mask);
 
@@ -432,8 +432,8 @@ neon_status_t fu2_syscsr_validate_gpio_pins(GPIO_TypeDef *gpio, uint32_t pin_mas
  * @param[in] pin_mask Bitmask of the selected GPIO pins.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Khôi phục mux và PAD reset cho toàn bộ pin GPIO đã chọn. GPIO phải tắt OE
- * trước khi gọi để chức năng mặc định như JTAG/QSPI không gây glitch.
+ * Restore mux and PAD reset for the entire selected GPIO battery. The GPIO must turn off OE before
+ * calling so that default function like JTAG/QSPI does not cause glitch.
  */
 neon_status_t fu2_syscsr_reset_gpio_pins(GPIO_TypeDef *gpio, uint32_t pin_mask);
 

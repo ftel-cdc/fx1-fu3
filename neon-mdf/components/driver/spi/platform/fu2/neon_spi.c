@@ -2,11 +2,11 @@
  * @file neon_spi.c
  * @brief Implementation for SPI.
  * @details
- * * Backend SPI cho FU2.
+ * * Backend SPI for FU2.
  *
- * POS/MASK lấy từ FU2.h sinh bởi FU2.yaml. Logic register bám theo
- * DTI SPI User Guide rev1.1, chapters 4/7/9; lớp HAL bổ sung kiểm tra tham số,
- * quản lý CRM, chống truy cập đồng thời và các transfer polling an toàn.
+ * POS/MASK is derived from FU2.h created by FU2.yaml. Logic register follows DTI SPI User Guide
+ * rev1.1, chapters 4/7/9; HAL class adds parametric testing, CRM management, concurrent anti-access
+ * and secure transfer polling.
  */
 
 /*==================================================================================================
@@ -832,7 +832,7 @@ static uint8_t spi_is_valid_config(const neon_spi_config_t *config) {
         return 0U;
     }
 
-    /* Shift register ở slave được cấu hình cố định 8 bit trong FU2. */
+    /* Shift registers in slaves are fixed to 8 bit configuration in FU2. */
     if ((config->mode == NEON_SPI_MODE_SLAVE) && (config->data_width != NEON_SPI_DATA_WIDTH_8BIT)) {
         return 0U;
     }
@@ -1044,8 +1044,8 @@ static neon_status_t spi_transfer_core(SPI_TypeDef *instance, const uint32_t *tx
     }
     master = (mode == 1U) ? 1U : 0U;
     if ((transfer == FU2_SPI_TRANSFER_TX_RX) && (master == 0U)) {
-        /* Slave cần preload FIFO theo timing của master; API blocking từng word
-     * không thể bảo đảm không underrun khi master chạy liên tục. */
+        /* Slave needs to preload FIFO according to master timing; API blocking each word cannot guarantee no
+     * underrun when the master is running continuously. */
         spi_release(instance);
         return NEON_NOT_SUPPORTED;
     }
@@ -1062,7 +1062,7 @@ static neon_status_t spi_transfer_core(SPI_TypeDef *instance, const uint32_t *tx
             instance->CMDCONF &= ~SPI_CMDCONF_RD_Msk;
         } else {
             instance->CMDCONF |= SPI_CMDCONF_RD_Msk;
-            /* Loại dữ liệu sót lại từ một transfer trước bị timeout_polls. */
+            /* The type of data left over from a previous transfer is timeout_polls. */
             spi_drain_rx_fifo(instance);
         }
     }

@@ -2,11 +2,11 @@
  * @file neon_tim.c
  * @brief Implementation for timer.
  * @details
- * * Backend TIM cho FU2.
+ * * Backend find for FU2.
  *
- * Register, POS và MASK lấy từ FU2.h được sinh bởi FU2.yaml. Logic cấu hình
- * nền tảng bám theo fu2_dti_tim.[ch], còn kiểm tra tham số, quản lý clock và
- * API status được tổ chức theo lớp HAL Neon.
+ * Register, POS and MASK are derived from FU2.h created by FU2.yaml. The foundational logic
+ * configuration follows fu2_dti_tim.[ch], while parameter checking, clock management and API status
+ * are organized in HAL Neon class.
  */
 
 /*==================================================================================================
@@ -88,7 +88,7 @@ neon_status_t neon_tim_init(TIM_TypeDef *instance, uint8_t channel, const neon_t
     peripheral = tim_crm_peripheral(instance);
     status = neon_crm_peripheral_clock_enable(peripheral);
     if (status == NEON_OK) {
-        /* Không pulse reset: reset này dùng chung cho cả CH0 và CH1. */
+        /* No pulse reset: This reset is common to both CH0 and CH1. */
         status = neon_crm_peripheral_release_reset(peripheral);
     }
     if (status != NEON_OK) {
@@ -114,8 +114,8 @@ neon_status_t neon_tim_init(TIM_TypeDef *instance, uint8_t channel, const neon_t
     control = tim_control_reg(instance, channel);
     primask = tim_enter_critical();
 
-    /* Tắt counter và nguồn ngắt trước khi thay cấu hình. mode được ghi lại ở
-   * cuối nên config với NORMAL chỉ chạy sau khi toàn bộ register đã sẵn sàng. */
+    /* Disable counters and interrupt sources before seeing configuration. mode is rewritten at the end, so
+   * config with NORMAL only runs after the entire register is ready. */
     *control &= ~TIM_CTRL_CH0_TIMER_MODE_Msk;
     *tim_interrupt_reg(instance, channel) = 0U;
     *tim_prescaler_reg(instance, channel) = init->prescaler;
@@ -278,7 +278,7 @@ neon_status_t neon_tim_get_counter_mode(TIM_TypeDef *instance, uint8_t channel, 
 
 /** @copydoc neon_tim_enable_update_event */
 neon_status_t neon_tim_enable_update_event(TIM_TypeDef *instance, uint8_t channel) {
-    /* UPDATE_DIS có logic đảo: bit 0 mới là enable. */
+    /* UPDATE_DIS has an inverse logic: the new 0 bit is enable. */
     return tim_set_control_bit(instance, channel, TIM_CTRL_CH0_UPDATE_DIS_Msk, 0U);
 }
 
@@ -561,8 +561,8 @@ static neon_status_t tim_validate_config(const neon_tim_config_t *config) {
         return NEON_INVALID_PARAM;
     }
 
-    /* FU2 v8 chỉ áp dụng ONE_PULSE và CENTER_ALIGN cho PWM0/PWM1. Driver hiện
-   * chưa hỗ trợ PWM nên không được báo thành công cho cấu hình vô hiệu. */
+    /* FU2 v8 only applies ONE_PULSE and CENTER_ALIGN to PWM0/PWM1. Drivers do not currently support PWM,
+   * so no success was reported for disabled configuration. */
     if ((config->one_pulse_mode == NEON_TIM_ONE_PULSE_SINGLE) ||
         (config->center_aligned_mode == NEON_TIM_CENTER_ALIGNED_ENABLE)) {
         return NEON_NOT_SUPPORTED;

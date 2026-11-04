@@ -1,26 +1,19 @@
-// createApp.ts - "New App" wizard (giong esp-idf "New Project"): hoi bare-metal
-// hay FreeRTOS truoc, roi copy <SDK>/tools/templates/ HOAC
-// <SDK>/tools/templates_freertos/ (2 nguon THAT nam trong repo, KHONG bundle
-// vao extension - sua template khong can rebuild/repackage extension) sang 1
-// thu muc moi, thay 2 token trong NOI DUNG file:
-//   __APP_NAME__               -> ten app nguoi dung chon
-//   __NEON_MDF_RELATIVE_PATH__ -> duong dan tuong doi TU DEST DIR toi SDK
-//                                  dang duoc chon (xem ../sdkPath.ts) - TINH
-//                                  THAT dua tren vi tri app + SDK, KHONG con
-//                                  gia dinh co dinh "../../neon-mdf" nua
-//                                  (gia dinh do sai neu nguoi dung bam "Chon
-//                                  thu muc khac..." ra ngoai examples/, hoac
-//                                  da chon SDK path rieng qua neonMdf.sdkPath).
-// roi mo trong cua so moi. Ca 2 template da duoc build-test THAT (ca 3 preset
-// FU2/WEACT_F412/CH32V003F4P6, flash+chay that tren WEACT_F412) truoc khi
-// tinh nang nay duoc viet - xem CMakeLists.txt/Src/main.c trong
-// tools/templates/ va tools/templates_freertos/.
+// createApp.ts implements the New App wizard: choose bare-metal
+// please FreeRTOS first, then copy <SDK>/tools/templates/ or
+// <SDK>/tools/templates_freertos/ (2 real sources in repo, no bundle and extension - edit template
+// without rebuilding or repackaging the extension) to a destination directory. Replace the two tokens inside each file:
+// __APP_NAME__ -> user app name choose __NEON_MDF_RELATIVE_PATH__ -> corresponding path from DEST
+// DIR to the currently selected SDK (see ../sdkPath.ts) - true on app + SDK value, no assumed
+// the old "../../neon-mdf" assumption, which fails when Select Another Folder places an app outside examples/,
+// or have chosen separate SDK path via neonMdf.sdkPath). then open in each. both templates were
+// built-test for real (both 3 presets FU2/WEACT_F412/CH32V003F4P6, flash+real on WEACT_F412) before
+// this feature was written - see CMakeLists.txt/Src/main.c in
+// tools/templates/ and tools/templates_freertos/.
 //
-// templatesDir TINH TU sdkDir (khong phai tu workspaceFolder dang mo) -
-// chuyen tu Projects/Templates/ vao trong SDK 2026-08-10 (day la tai san
-// CUA SDK, giong openocd cfg tap trung - xem cmake/openocd/), nen phai doi
-// resolveSdkPathUri() cua CHINH destDir de tim dung, cung 1 tinh than voi
-// cach sdkDir/relPath duoi day da duoc tinh dung tu truoc.
+// templatesDir is derived from sdkDir (not from open workspaceFolder) - it is derived from
+// Projects/Templates/ into the SDK on 2026-08-10, like the shared OpenOCD configuration; see
+// cmake/openocd/), so you have to change resolveSdkPathUri() of destDir itself to find its use,
+// which is how sdkDir/relPath are used below.
 import * as vscode from "vscode";
 import { resolveSdkPathUri, relativePathToSdk, looksLikeSdkRoot } from "../sdkPath";
 
@@ -36,24 +29,21 @@ async function pathExists(uri: vscode.Uri): Promise<boolean> {
 }
 
 /**
- * examples/ THAT de tao app moi trong do - tu nhan dien 2 truong hop
- * (2026-08-10, fix bug that: truoc day LUON gia dinh workspace dang mo la 1
- * thu muc app cu the vd examples/Blinky roi lay `..` lam examples/ - neu
- * nguoi dung mo NGUYEN REPO ROOT (neon_mdf/, chua ca neon-mdf/ SDK lan
- * examples/) thay vi 1 app, phep tinh do LECH 1 CAP, tao app o vi tri sai
- * hoan toan - da xac nhan that qua bug report cua nguoi dung, khong phai
- * doan):
- *   1. Workspace dang mo LA 1 thu muc app (vd examples/Blinky) -
- *      examples/ la thu muc CHA cua no (hanh vi cu, GIU NGUYEN).
- *   2. Workspace dang mo LA repo root (co ca neon-mdf/ SDK lan examples/
- *      lam thu muc con) - examples/ la thu muc CON cua no.
- * Uu tien kiem tra (2) truoc vi de xac dinh CHAC CHAN hon (co marker That
- * qua looksLikeSdkRoot() tren `<folder>/neon-mdf`, khong chi dua vao
- * `examples/` co ton tai hay khong - 1 thu muc app cu bat ky cung co the
- * tinh co co thu muc con ten "examples/" khong lien quan). Neu ca 2 khong
- * khop (vd nguoi dung mo 1 thu muc hoan toan khac), fallback ve hanh vi cu
- * (thu muc cha) - khong te hon truoc day, van co canh bao rieng o buoc
- * kiem tra sdkDir ben duoi neu sai that.
+ * Real examples/ to create new app in which - from receiver fill 2 cases (2026-08-10, real bug fix:
+ * previously assumed the workspace was an existing app such as examples/Blinky, then used
+ * .. as examples/. Opening the repository root (which contains neon-mdf/ and examples/) instead of an
+ * app made that calculation one level too high and selected the wrong destination. Confirmed
+ * via user's bug report, not
+ * cases):
+ *   1. Opening workspace is an app folder (e.g. examples/Blinky) - examples/ is the CHA folder of no (old
+ *      behavior, unchanged).
+ *   2. If the workspace is the repository root, containing neon-mdf/ and examples/, use its examples/
+ * subdirectory. Check this case before the app-directory heuristic for reliable detection
+ * markers through looksLikeSdkRoot() on `<folder>/neon-mdf`, not only dua vao `examples/` exist
+ * please do not - 1 old app folder turned on periodically can count yes has subdirectory named
+ * "examples/" irrelevant). if both 2 do not match (eg user open another safe directory), fallback
+ * the previous parent-directory behavior, with a separate SDK-directory warning below when the path is
+ * invalid.
  */
 async function resolveExamplesDir(openedFolder: vscode.Uri): Promise<vscode.Uri> {
   const childExamples = vscode.Uri.joinPath(openedFolder, "examples");
@@ -65,11 +55,10 @@ async function resolveExamplesDir(openedFolder: vscode.Uri): Promise<vscode.Uri>
 }
 
 /**
- * Copy de quy tu templateDir sang destDir, thay tung token trong `tokens`
- * trong NOI DUNG moi file (khong phai ten file - khong file template nao
- * dung token trong ten). Gia dinh moi file template la text (dung voi toan
- * bo tools/templates/ hien tai: .c/.h/.json/.cfg/txt) - neu sau nay them
- * file nhi phan vao template, ham nay se lam hong no, can sua lai.
+ * Copy templateDir to destDir and replace the supplied `tokens` inside each file
+ * file (not the file name - no template files use tokens in the name). assume each template file is
+ * text (correct for all current tools/templates/: .c/.h/.json/.cfg/txt) - if later add more
+ * template files, this function must be updated accordingly.
  */
 async function copyTemplateDir(src: vscode.Uri, dest: vscode.Uri, tokens: Record<string, string>): Promise<void> {
   await vscode.workspace.fs.createDirectory(dest);
@@ -94,20 +83,20 @@ export async function createAppCommand(): Promise<void> {
   const folder = vscode.workspace.workspaceFolders?.[0];
   if (!folder) {
     vscode.window.showWarningMessage(
-      "NEON-MDF: chua mo workspace folder nao - mo thu muc goc repo (neon_mdf/) hoac 1 app vi du (vd examples/Blinky/) truoc."
+      "NEON-MDF: No workspace folder is open. Open the repository root (neon_mdf/) or an application such as examples/Blinky/."
     );
     return;
   }
 
   const appName = await vscode.window.showInputBox({
-    prompt: "Ten app moi (dung lam ten thu muc + ten CMake target - chi chu/so/underscore, khong bat dau bang so)",
+    prompt: "App name, used for the folder and CMake target: letters, digits and underscores; must not start with a digit",
     placeHolder: "vd my_app",
     validateInput: (value) => {
       if (!value) {
-        return "Ten app khong duoc de trong";
+        return "app name not in";
       }
       if (!APP_NAME_PATTERN.test(value)) {
-        return "Chi cho phep chu/so/underscore, khong bat dau bang so (vd my_app)";
+        return "Use letters, digits and underscores; do not start with a digit, for example my_app";
       }
       return undefined;
     },
@@ -116,30 +105,30 @@ export async function createAppCommand(): Promise<void> {
     return;
   }
 
-  // App thuong (bare-metal, superloop) vs app FreeRTOS (scheduler that,
-  // xTaskCreate/vTaskStartScheduler) - 2 bo file NGUON KHAC NHAU (CMakeLists.txt/
-  // Src/main.c/Inc/FreeRTOSConfig.h) chu khong phai 1 flag runtime, vi
-  // FreeRTOS can them include(cmake/freertos.cmake)/neon_mdf_add_freertos()
-  // + glue arch-specific (SVC/PendSV/SysTick cho WEACT_F412, STK/mtvec cho
-  // CH32V003F4P6 - xem tools/templates_freertos/Src/main.c) khong the "tat"
-  // don gian bang #ifdef trong 1 template chung. Xem tools/templates/ (bare-
-  // metal) vs tools/templates_freertos/ (FreeRTOS) - ca 2 deu la template
-  // TOI GIAN nhu nhau (khong GPIO/LED, chi proof-of-life), khac nhau THUAN
-  // TUY o co scheduler hay khong.
+  // Bare-metal app (superloop) versus FreeRTOS app (scheduler,
+  // xTaskCreate/vTaskStartScheduler). The two templates have different source sets (CMakeLists.txt/
+  // Src/main.c/Inc/FreeRTOSConfig.h) font not a flag runtime, en
+  // FreeRTOS additionally needs include(cmake/freertos.cmake)/neon_mdf_add_freertos()
+  // + glue arch-specific (SVC/PendSV/SysTick for WEACT_F412, STK/mtvec for CH32V003F4P6 - see
+  // tools/templates_freertos/Src/main.c) cannot "off" space with #ifdef in a generic template. See
+  // tools/templates/ (bare-
+  // metal) and tools/templates_freertos/ (FreeRTOS) are both minimal templates
+  // are both minimal proof-of-life templates without GPIO/LED demos; they differ in scheduler support
+  // not.
   const templateChoice = await vscode.window.showQuickPick(
     [
       {
-        label: "$(circuit-board) App thuong (bare-metal)",
-        description: "superloop don gian, khong FreeRTOS",
+        label: "$(circuit-board) Bare-metal app",
+        description: "superloop don space, no FreeRTOS",
         templateFolder: "templates",
       },
       {
-        label: "$(list-tree) App dung FreeRTOS",
-        description: "1 task + scheduler, xem examples/FreeRTOS_Blinky/ cho vi du day du hon",
+        label: "$(list-tree) App using FreeRTOS",
+        description: "1 task + scheduler, see examples/FreeRTOS_Blinky/ for more detail",
         templateFolder: "templates_freertos",
       },
     ],
-    { placeHolder: "Tao app kieu gi?" }
+    { placeHolder: "What kind of app?" }
   );
   if (!templateChoice) {
     return;
@@ -150,10 +139,10 @@ export async function createAppCommand(): Promise<void> {
 
   const picked = await vscode.window.showQuickPick(
     [
-      { label: "$(folder) Tao trong examples/ (khuyen dung)", description: defaultDest.fsPath, dest: defaultDest },
-      { label: "$(folder-opened) Chon thu muc khac...", description: "duyet thu muc", dest: undefined },
+      { label: "$(folder) created in examples/ (recommended)", description: defaultDest.fsPath, dest: defaultDest },
+      { label: "$(folder-opened) select different folder...", description: "duyet directory", dest: undefined },
     ],
-    { placeHolder: "Tao app o dau?" }
+    { placeHolder: "create app at the top?" }
   );
   if (!picked) {
     return;
@@ -165,7 +154,7 @@ export async function createAppCommand(): Promise<void> {
       canSelectFolders: true,
       canSelectFiles: false,
       canSelectMany: false,
-      openLabel: "Tao app o day",
+      openLabel: "Create app here",
     });
     if (!chosen || chosen.length === 0) {
       return;
@@ -174,30 +163,28 @@ export async function createAppCommand(): Promise<void> {
   }
 
   if (await pathExists(destDir)) {
-    vscode.window.showErrorMessage(`NEON-MDF: thu muc da ton tai: ${destDir.fsPath}`);
+    vscode.window.showErrorMessage(`NEON-MDF: directory already exists: ${destDir.fsPath}`);
     return;
   }
 
-  // SDK path TINH THAT dua tren vi tri destDir (khong phai workspaceFolder
-  // dang mo) - khop voi cach CMakeLists.txt cua app moi se tu tinh
-  // (${CMAKE_CURRENT_SOURCE_DIR} = destDir luc build that). Dung setting
-  // neonMdf.sdkPath neu nguoi dung da chon, khong thi quy uoc cu (2 cap len
-  // neon-mdf/) - xem sdkPath.ts.
+  // SDK path true on destDir (not open workspaceFolder) - matches how CMakeLists.txt of new app will be
+  // magnetic (${CMAKE_CURRENT_SOURCE_DIR} = destDir for real build). use setting neonMdf.sdkPath if
+  // user selected, otherwise old convention (2 level up to neon-mdf/) - see sdkPath.ts.
   const sdkDir = resolveSdkPathUri(destDir);
   if (!(await looksLikeSdkRoot(sdkDir))) {
     const proceed = await vscode.window.showWarningMessage(
-      `NEON-MDF: khong tim thay neon-mdf SDK tai ${sdkDir.fsPath} (thu muc nay khong giong 1 checkout SDK that). Neu app dang tao o vi tri khong chuan (khong nam duoi examples/), hay chon SDK path rieng qua lenh "NEON-MDF: Chon Duong Dan SDK..." truoc. Van tao app (co the build se loi)?`,
-      "Van tao",
-      "Huy"
+      `NEON-MDF: can't find neon-mdf SDK at ${sdkDir.fsPath} (this directory is not the same as a real SDK checkout). if the app is creating at an unknown value (not below examples/), select its own SDK path via the command "NEON-MDF: select Dan SDK path..." first. still creating app (build might fail)?`,
+      "still create",
+      "deactivate"
     );
-    if (proceed !== "Van tao") {
+    if (proceed !== "still create") {
       return;
     }
   }
 
   const templatesDir = vscode.Uri.joinPath(sdkDir, "tools", templateChoice.templateFolder);
   if (!(await pathExists(templatesDir))) {
-    vscode.window.showErrorMessage(`NEON-MDF: khong tim thay thu muc template: ${templatesDir.fsPath}`);
+    vscode.window.showErrorMessage(`NEON-MDF: template directory not found: ${templatesDir.fsPath}`);
     return;
   }
 
@@ -209,8 +196,8 @@ export async function createAppCommand(): Promise<void> {
   });
 
   const openNow = await vscode.window.showInformationMessage(
-    `NEON-MDF: da tao app "${appName}" tai ${destDir.fsPath}`,
-    "Mo trong cua so moi"
+    `NEON-MDF: created app "${appName}" at ${destDir.fsPath}`,
+    "open in of each number"
   );
   if (openNow) {
     await vscode.commands.executeCommand("vscode.openFolder", destDir, { forceNewWindow: true });

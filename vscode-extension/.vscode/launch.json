@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run Extension (mo FreeRTOS_Blinky)",
+      "name": "Run Extension (open FreeRTOS_Blinky)",
       "type": "extensionHost",
       "request": "launch",
       "args": [
@@ -13,7 +13,7 @@
       "preLaunchTask": "npm: compile"
     },
     {
-      "name": "Run Extension (mo Blinky)",
+      "name": "Run Extension (open Blinky)",
       "type": "extensionHost",
       "request": "launch",
       "args": [

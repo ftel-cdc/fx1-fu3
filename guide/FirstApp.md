@@ -1,44 +1,45 @@
-# Tạo app đầu tiên
+# Create your first application
 
-Tutorial từ đầu — tạo, build, nạp, và sửa 1 app mới. Đã cài đặt xong môi
-trường chưa? Xem `SETUP.md` trước.
+This tutorial covers creating, building, flashing and editing a new application.
+Install the development environment first; see `SETUP.md`.
 
-## 1. Tạo app mới
+## 1. Create a new application
 
-**Qua VS Code** (khuyến nghị): mở nguyên thư mục `neon_mdf/` (thư mục gốc)
-hoặc 1 app có sẵn trong VS Code, `Cmd/Ctrl+Shift+P` → **NEON-MDF: Tạo App
-Moi** → nhập tên (chỉ chữ/số/underscore, không bắt đầu bằng số, vd
-`my_app`) → chọn **App thường (bare-metal)** hoặc **App dùng FreeRTOS** →
-chọn tạo trong `examples/` (mặc định). Xong sẽ hỏi mở thư mục app mới
-trong cửa sổ riêng — chọn có.
+**Using VS Code** (recommended): open the repository root `neon_mdf/` or an
+existing application. Press `Cmd/Ctrl+Shift+P`, select **NEON-MDF: Create New
+App...**, enter a name containing letters, digits and underscores that does not
+start with a digit (for example, `my_app`), then choose **Bare-metal app** or
+**FreeRTOS app**. Create it in `examples/` by default. Accept the prompt to open
+the new application directory in a separate window.
 
-**Qua dòng lệnh** (không cần VS Code): copy tay 1 trong 2 thư mục nguồn,
-đổi 2 token trong nội dung file:
+**Using the command line**: copy one of the two templates and replace two
+tokens in the file contents:
 
 ```sh
-cp -r neon-mdf/tools/templates examples/my_app   # hoặc tools/templates_freertos
+cp -r neon-mdf/tools/templates examples/my_app   # Or tools/templates_freertos
 cd examples/my_app
-# thay __APP_NAME__ -> my_app, __NEON_MDF_RELATIVE_PATH__ -> ../../neon-mdf
-# trong CMakeLists.txt, CMakePresets.json, Src/main.c, .vscode/settings.json
+# Replace __APP_NAME__ with my_app and __NEON_MDF_RELATIVE_PATH__ with ../../neon-mdf
+# in CMakeLists.txt, CMakePresets.json, Src/main.c and .vscode/settings.json
 ```
 
-(Wizard VS Code tự làm bước thay token này — copy tay cần tự thay, dùng
-`sed` hoặc tay đều được, chỉ cần đúng 2 token trên.)
+The VS Code wizard replaces these tokens automatically. When copying manually,
+replace them yourself using an editor or `sed`.
 
-## 2. Cấu trúc app vừa tạo
+## 2. Application structure
 
-```
+```text
 my_app/
-  CMakeLists.txt      # project(my_app) + neon_mdf_add_executable()/neon_mdf_add_app_executable()
-  CMakePresets.json    # include cmake/presets/targets.json dùng chung - tự có preset cho MỌI target
-  Src/main.c            # điểm bắt đầu - int main(void) toi giản, KHÔNG GPIO/LED demo
-  Kconfig               # placeholder rỗng (comment sẵn cấu trúc mẫu) - cả 2 template đều có, xem guide/MenuConfig.md nếu muốn thêm option riêng
-  .vscode/              # settings.json (cmake.environment trỏ NEON_MDF_PATH) + extensions.json
+  CMakeLists.txt      # project(my_app) and neon_mdf_add_executable()/neon_mdf_add_app_executable()
+  CMakePresets.json   # Includes shared cmake/presets/targets.json presets for every target
+  Src/main.c         # Minimal int main(void) entry point, without a GPIO/LED demo
+  Kconfig            # Empty placeholder with a commented example; present in both templates
+  .vscode/           # settings.json sets NEON_MDF_PATH in cmake.environment; extensions.json
 ```
 
-`Src/main.c` cung cấp vòng lặp main hoặc task làm điểm bắt đầu để sửa/thêm
-logic ứng dụng. `WEACT_F412` hiện không có syscall retarget `printf()` sang
-UART, nên các lệnh `printf()` trong template không tạo log UART trên target này.
+See `guide/MenuConfig.md` to add application-specific Kconfig options.
+`Src/main.c` provides a main loop or task as the starting point for application
+logic. `WEACT_F412` currently has no syscall retarget for UART `printf()`, so
+template `printf()` calls do not produce UART logs on that target.
 
 ## 3. Build
 
@@ -48,41 +49,43 @@ cmake --preset WEACT_F412
 cmake --build --preset WEACT_F412
 ```
 
-Đổi `WEACT_F412` thành `FU2`/`CH32V003F4P6` để build target khác — không
-cần sửa gì trong `CMakeLists.txt`/`Src/main.c` (trừ khi code có `#ifdef`
-theo tên target, xem `examples/Blinky/Src/main.c` cho ví dụ 1 file chạy
-được cả 3 target).
+Replace `WEACT_F412` with `FU2` or `CH32V003F4P6` to build another target.
+No changes to `CMakeLists.txt` or `Src/main.c` are needed unless the application
+uses target-specific `#ifdef` branches. See `examples/Blinky/Src/main.c` for
+one source file supporting all three targets.
 
-Nếu target có `bootloader:` trong YAML (`WEACT_F412`/`CH32V003F4P6`), build
-ra thêm executable `bootloader` — app template mặc định KHÔNG có OTA (build
-1 bản duy nhất, `neon_mdf_add_app_executable()`) — muốn thêm OTA thật, xem
-`guide/BootloaderOTA.md`.
+Targets with `bootloader:` in their YAML, such as `WEACT_F412` and
+`CH32V003F4P6`, also build a `bootloader` executable. The default application
+template builds a single application through `neon_mdf_add_app_executable()`
+and has no OTA support. See `guide/BootloaderOTA.md` to add OTA.
 
-## 4. Nạp + xem log (board thật, `WEACT_F412`)
+## 4. Flash and view logs on WEACT_F412 hardware
 
-Qua VS Code: chọn target `WEACT_F412` ở status bar → **NEON-MDF: Build +
+In VS Code, select `WEACT_F412` in the status bar, then run **NEON-MDF: Build +
 Flash + Log**.
 
-Qua dòng lệnh:
+From the command line:
+
 ```sh
 cmake --build --preset WEACT_F412 --target flash_jtag
-cmake --build --preset WEACT_F412 --target serial_monitor   # Ctrl+] de thoat
+cmake --build --preset WEACT_F412 --target serial_monitor   # Press Ctrl+] to exit
 ```
 
-Thấy dòng in ra `"my_app dang chay"` lặp lại — app đã chạy thật trên board.
+A repeating `"my_app is running"` message indicates that the application is
+running on the board.
 
-## 5. Sửa code, build lại
+## 5. Edit and rebuild
 
-Sửa `Src/main.c` (vd thêm GPIO toggle LED — copy logic từ
-`examples/Blinky/Src/main.c` làm mẫu: `neon_gpio_clock_enable()` PHẢI gọi
-trước `neon_gpio_init()`, xem `guide/DriverImplement.md` nếu muốn hiểu API
-driver). Build lại + flash lại — không cần `cmake --preset` lại trừ khi
-sửa `CMakeLists.txt`/`flashmap.csv`/`Kconfig`.
+Edit `Src/main.c`, for example to toggle an LED through GPIO. Use
+`examples/Blinky/Src/main.c` as a reference: call `neon_gpio_clock_enable()`
+before `neon_gpio_init()`. See `guide/DriverImplement.md` for the driver API.
 
-## 6. Bước tiếp theo
+Rebuild and flash again. Reconfiguration with `cmake --preset` is only needed
+after changes to `CMakeLists.txt`, `flashmap.csv` or `Kconfig`.
 
-- Muốn bật/tắt tính năng qua `menuconfig` (option riêng cho app này):
-  `guide/MenuConfig.md`.
-- Muốn thêm OTA thật: `guide/BootloaderOTA.md`.
-- Muốn debug qua VS Code (breakpoint, step): `guide/Debugging.md`.
-- Muốn hiểu vì sao SDK thiết kế thế này: `ARCHITECTURE.md`.
+## 6. Next steps
+
+- Application-specific `menuconfig` options: `guide/MenuConfig.md`.
+- OTA support: `guide/BootloaderOTA.md`.
+- VS Code debugging, breakpoints and stepping: `guide/Debugging.md`.
+- SDK design rationale: `ARCHITECTURE.md`.

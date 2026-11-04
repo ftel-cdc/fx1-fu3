@@ -5,34 +5,33 @@ config UART_ECHO_BAUD_RATE
     range 1200 3000000
     default 19200
     help
-        Baud cua ung dung sau khi BootROM chuyen quyen dieu khien.
-        Baud nay khong thay doi cau hinh baud cua BootROM tren FPGA.
+        Baud is used after the bootROM has been inserted into the driver. This Baud does not change the
+        configuration baud of the bootROM on the FPGA.
 
 config UART_ECHO_FIXED_CLOCK_HZ
     int "Fixed FPGA clock (Hz; 0 uses normal SDK clock setup)"
     range 0 1000000000
     default 10000000
     help
-        Clock ngoai co dinh cua FPGA; mac dinh 10 MHz nhu Test_VP.
-        Gia tri khac 0 ap dung cho ca SystemInit, driver va ung dung.
-        Chon 0 de dung chinh sach clock binh thuong cua SDK.
-        Phai khop tan so clock thuc te cua board.
+        External clock specified by FPGA; defaults to 10 MHz as Test_VP. values other than 0 apply to both
+        SystemInit, driver and onboard. select 0 to use the SDK's normal clock itself. must match
+        the actual clock frequency supplied by the board.
 
 config UART_ECHO_RX_TIMEOUT_POLLS
     int "RX timeout (poll iterations, not milliseconds)"
     range 1 100000000
     default 10000
     help
-        Budget poll cho mot lan Receive mot byte. Het budget khi chua
-        co du lieu la trang thai idle binh thuong; ung dung tiep tuc nhan.
+        Polling budget for receiving one byte. Exhausting the budget without data is normal while idle
+        state; cancer user continues to receive.
 
 config UART_ECHO_TX_TIMEOUT_POLLS
     int "TX timeout (poll iterations, not milliseconds)"
     range 1 100000000
     default 1000000
     help
-        Budget poll cho mot lan Transmit mot byte. Khi timeout, ghi nhan
-        trang thai va quay lai nhan; khong tu dong gui lai byte vi no
-        co the da duoc ghi vao thanh ghi UART truoc khi driver bao loi.
+        Budget poll for a single byte transfer. when timeout, write receive state and return to receive; do
+        not automatically reguise bytes because no may have been written in the UART register before
+        the driver gave an error.
 
 endmenu

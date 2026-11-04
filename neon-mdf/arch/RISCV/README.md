@@ -1,20 +1,21 @@
 # Architecture support for RISC-V
 
-Neon MDF hiện có backend cho `CH32V003F4P6` của WCH, dùng lõi QingKe V2A
-(RV32EC). Cấu trúc trong thư mục này:
+Neon MDF provides a backend for WCH's `CH32V003F4P6`, which uses the QingKe V2A
+(RV32EC) core. This directory is organized as follows:
 
 ```text
 arch/RISCV/
-  Core/                     # CSR helpers, soft-math và libc shim
-  Device/<Vendor>/<Family>/ # Device header/startup/linker sinh từ YAML; system code viết tay
-  Port/                     # SDK_IRQ_* cho PFIC và critical section qua mstatus
+  Core/                     # CSR helpers, software arithmetic and libc shim
+  Device/<Vendor>/<Family>/ # YAML-generated device header/startup/linker; handwritten system code
+  Port/                     # SDK_IRQ_* for PFIC and mstatus critical sections
 ```
 
-`Port/Src/sdk_irq.c` điều khiển PFIC riêng của WCH và bit interrupt-enable
-trong CSR `mstatus`. Đây không phải implementation PLIC/CLINT chuẩn.
-`examples/FreeRTOS_Blinky` và template FreeRTOS dùng `SDK_IRQ_Enable()` để
-bật ngắt tick của CH32V003.
+`Port/Src/sdk_irq.c` controls WCH's PFIC and the interrupt-enable bit in the
+`mstatus` CSR. This is a WCH-specific implementation rather than standard
+PLIC/CLINT support. `examples/FreeRTOS_Blinky` and the FreeRTOS template use
+`SDK_IRQ_Enable()` to enable the CH32V003 tick interrupt.
 
-CMake thêm source/include của Port khi chọn target RISC-V. Backend Cortex-M
-dùng CMSIS NVIC/PRIMASK trực tiếp. Xem [FreeRTOSPort.md](../../../guide/FreeRTOSPort.md)
-để biết cách nối tick và trap handler với FreeRTOS.
+CMake adds the Port sources and include directories for RISC-V targets. The
+Cortex-M backend uses CMSIS NVIC/PRIMASK directly. See
+[FreeRTOSPort.md](../../../guide/FreeRTOSPort.md) for FreeRTOS tick and trap
+handler integration.

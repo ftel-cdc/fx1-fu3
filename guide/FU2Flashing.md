@@ -1,54 +1,54 @@
-# Nạp firmware FU2 qua UART
+# Flashing FU2 firmware through UART
 
-FU2 Flash Tool **1.0** dùng dịch vụ USART update của ROMCODE để ghi image vào
-Internal Flash. Tool chạy trên máy tính; không cần OpenOCD cho đường nạp này.
+FU2 Flash Tool **1.0** uses ROMCODE's USART update service to burn images to Internal Flash. The
+tool runs on a computer; OpenOCD is not required for this flash path.
 
-Quy trình cho đầy đủ các đường boot nằm trong
-[Chế độ khởi động và quy trình chạy firmware FU2](FU2BootModes.md).
+Process for full boot lines located in
+[FU2 boot modes and firmware workflow](FU2BootModes.md).
 
-## Chuẩn bị
+## Preparation
 
-**Linux/macOS:** phần nạp UART và monitor FU2 dùng `termios`, `select` và
-`os` trong thư viện chuẩn Python, tương tự tool `uart_boot_loader.py` ban đầu.
-Không cần cài `pyserial` hoặc `python3-serial` để chạy tool FU2 khi đã chỉ rõ
-port. Có thể chuyển thẳng sang bước kết nối board và chạy lệnh nạp.
+**Linux/macOS:** UART flash and FU2 monitor use `termios`, `select` and `os` in Python standard
+library, similar to the original `uart_boot_loader.py` tool. No need to install `pyserial` or
+`python3-serial` to run FU2 tool when port is specified. You can go straight to connecting boards
+and running flash commands.
 
-**Windows:** tool dùng `pyserial` để truy cập cổng COM. Cài dependency từ thư
-mục gốc repository:
+**Windows:** tool uses `pyserial` to access COM ports. Install dependencies from the repository root
+directory:
 
 ```sh
 python3 -m pip install -r neon-mdf/tools/requirements.txt
 ```
 
-Cài bằng đúng Python mà CMake dùng để chạy tool; kiểm tra trên Windows bằng
-interpreter tương ứng, chẳng hạn:
+Install in the exact Python that CMake uses to run the tool; test it on Windows with the
+corresponding interpreter, for example:
 
 ```sh
 python3 -c "import serial; print(serial.__version__)"
 ```
 
-`pyserial` vẫn được dùng cho các tool UART STM32 và chức năng tự dò cổng của
-CLI SDK. Khi dùng FU2 trên Linux/macOS, truyền cổng bằng `--port`, `-p` hoặc
-`NEON_MDF_SERIAL_PORT` như các ví dụ bên dưới để không cần thư viện này.
+`pyserial` is still used for UART STM32 tools and the CLI SDK's port self-detection function. When
+using FU2 on Linux/macOS, pass the port with `--port`, `-p` or `NEON_MDF_SERIAL_PORT` as the
+examples below so that this library is not needed.
 
-Kết nối UART nạp của board: TX của bộ chuyển đổi nối RX của board, RX nối TX
-và nối chung GND. Dùng mức điện áp phù hợp với board. Chọn boot mode **100 —
-USART update** theo sơ đồ chân/jumper của board. Đóng chương trình Serial
-Monitor khác đang giữ cổng trước khi nạp.
+Connect the UART flash of the board: TX of the adapter connects the RX of the board, RX connects the
+TX and connects the GND together. Use the voltage level suitable for the board. Select boot mode 100
+— USART update according to the foot/jumper diagram of the board. Close the other Serial Monitor
+program that is holding the port before flashing.
 
-Board cần có NVR policy hợp lệ, tương thích với image Secure/Non-secure.
-Tool này không thực hiện provisioning NVR. Chữ ký và chính sách bảo mật được
-ROMCODE kiểm tra trên thiết bị; kiểm tra CRC trên PC không thay thế bước đó.
+Board needs valid NVR policy, compatible with image Secure/Non-secure. This tool does not perform
+provisioning NVR. Signatures and security policies are checked by ROMCODE on the device; CRC
+checking on PC does not replace that step.
 
-## Nạp bằng CMake
+## Flash through CMake
 
-Chạy trong thư mục ứng dụng, ví dụ `examples/Printf_Log/`:
+Run in the application folder, for example `examples/Printf_Log/`:
 
 ```sh
 cmake --preset FU2
 ```
 
-Truyền port và baud ở lần chạy target nạp:
+Transfer port and baud at target flash run:
 
 ```sh
 cmake -E env \
@@ -59,49 +59,49 @@ cmake -E env \
   cmake --build --preset FU2 --target flash_uart_fu2
 ```
 
-Với PowerShell hoặc CMD, viết cùng lệnh trên một dòng và thay cổng bằng
-`COM3`, chẳng hạn. `cmake -E env` truyền biến môi trường cho tiến trình build
-và tool, không lưu port/baud vào CMake cache. Đổi các giá trị này không cần
-configure lại. `cmake --build` không nhận trực tiếp tùy chọn `--port`/`--baud`.
+With PowerShell or CMD, write the same command on one line and replace the port with `COM3`, for
+example. `cmake -E env` passes environment variables to build and tool processes, does not store
+port/baud in CMake cache. Changing these values requires no re-configuration. `cmake --build` does
+not directly accept `--port`/`--baud` options.
 
-Target tự build ứng dụng và lấy đúng `<app>_image.bin`. Không chọn file `.elf`
-hoặc `.bin` chỉ chứa payload. Target `flash_uart_fu2` trỏ tới ứng dụng đầu tiên
-được đóng gói; nếu project có nhiều image, chọn `<app>_flash_uart_fu2` cụ thể.
-Project dùng `neon_mdf_add_executable()` hoặc `neon_mdf_add_fu2_image()` được
-đăng ký các target này tự động.
+Target builds the application itself and gets `<app>_image.bin` correctly. Do not select a `.elf` or
+`.bin` file that contains only payloads. Target `flash_uart_fu2` points to the first packaged
+application; if the project has multiple images, select a specific `<app>_flash_uart_fu2`. Projects
+using `neon_mdf_add_executable()` or `neon_mdf_add_fu2_image()` are registered with these targets
+automatically.
 
-Tool hiển thị banner gồm version, boot mode yêu cầu, image profile, version
-ứng dụng, địa chỉ image, port, baud và phương thức reset. Khi xuất hiện:
+The tool displays the banner including version, required boot mode, image profile, application
+version, address image, port, baud and reset method. When it appears:
 
 ```text
 [WAIT] Select boot mode 100 - USART update, then press RESET on the FU2 board.
 [WAIT] UART is ready. Press Ctrl+C to cancel.
 ```
 
-Nhấn **RESET trên board FU2**. Lúc này cổng UART đã mở và tool sẵn sàng trả lời
-ROMCODE. Mặc định tool chờ lần Reset đầu tiên đến khi nhận được yêu cầu hoặc
-người dùng nhấn Ctrl+C. Sau khi truyền bắt đầu, mỗi yêu cầu có timeout 300 giây,
-bao gồm khoảng ROMCODE tạm ngừng giao tiếp để chuẩn bị/xóa Flash.
+Press RESET on FU2 board. At this point the UART port is open and the tool is ready to reply to
+ROMCODE. By default the tool waits for the first Reset until a request is received or the user
+presses Ctrl+C. After transmission starts, each request has a 300 second timeout, which indicates
+about how long ROMCODE pauses communication for preparing/erase Flash.
 
-Khi hoàn tất:
+When finished:
 
 ```text
 [PASS] Image transfer completed in ... seconds; total runtime ... seconds.
 [INFO] ROMCODE verified and committed the image; application handoff follows.
 ```
 
-Tool chỉ báo thành công khi ROMCODE đã yêu cầu đủ image và trả về
-`0xFFFFFFFF`. ROMCODE sau đó chuyển sang ứng dụng; không cần reset lần nữa
-để bắt đầu phiên chạy này. Chọn lại boot mode **000 — Internal Flash** trước
-những lần reset/cấp nguồn tiếp theo để chạy firmware đã cài.
+The tool indicates success when ROMCODE has requested enough images and returns `0xFFFFFFFF`.
+ROMCODE then switches to the application; no reset is required again to start this session.
+Re-select boot mode 000 — Internal Flash before subsequent resets/powerups to run the installed
+firmware.
 
-Baud nạp phải khớp với ROMCODE thực tế trên board. `19200` là ví dụ; tham số
-chỉ cấu hình UART phía PC, không thay đổi baud của ROMCODE. Khung truyền là
-**8 data bits, no parity, 1 stop bit (8N1)**, không dùng flow control.
+Baud flash must match the actual ROMCODE on board. `19200` is an example; parameter indicates
+PC-side UART configuration, does not change baud of ROMCODE. Transmission frame is
+**8 data bits, no parity, 1 stop bit (8N1)**, no flow control.
 
-## Theo dõi ứng dụng
+## Application monitoring
 
-Baud của ứng dụng độc lập với baud nạp:
+Baud of application independent of baud flash:
 
 ```sh
 cmake -E env \
@@ -110,14 +110,14 @@ cmake -E env \
   cmake --build --preset FU2 --target serial_monitor
 ```
 
-Mặc định monitor FU2 dùng 19200 baud; nhấn Ctrl+C để thoát. Log `[WAIT]`,
-`[TX]`, `[PASS]` thuộc tool PC. Nội dung sau khi ứng dụng chạy phụ thuộc vào
-chính ứng dụng; không có một dòng log khởi động bắt buộc cho mọi firmware.
-Mở monitor sau khi nạp có thể bỏ lỡ log đầu tiên của ứng dụng.
+Default FU2 monitor uses 19200 baud; press Ctrl+C to quit. Log `[WAIT]`, `[TX]`, `[PASS]` belong to
+PC tool. The content after the application runs depends on the application itself; there is no
+mandatory boot log for all firmwares. Opening the monitor after flash may miss the first log of the
+application.
 
-## Sử dụng tool trực tiếp và CLI của SDK
+## Using live tool and SDK CLI
 
-Từ thư mục gốc repository:
+From root repository:
 
 ```sh
 python3 neon-mdf/tools/fu2_flash.py --version
@@ -129,10 +129,10 @@ python3 neon-mdf/tools/fu2_flash.py \
   --monitor --monitor-baud 19200
 ```
 
-Tool nhận `.bin` hoặc `.hex`/`.mem` dạng token byte/word; đây không phải parser
-Intel HEX. Dùng `--hex-format byte|word` nếu cần chỉ rõ cách diễn giải.
-`--byte-gap-ms` mặc định 2 ms để giãn các byte trả lời, giống tool
-`uart_boot_loader.py` ban đầu. Log mặc định hiển thị từng yêu cầu và phản hồi:
+The tool receives `.bin` or `.hex`/`.mem` tokens as byte/word; this is not an Intel HEX parser. Use
+`--hex-format byte|word` if you need to specify the interpretation. `--byte-gap-ms` defaults to 2 ms
+for reply bytes, just like the original `uart_boot_loader.py` tool. Log shows each request and
+response by default:
 
 ```text
 [RX #1] 00 00 00 00  request offset=0x00000000
@@ -141,85 +141,83 @@ Intel HEX. Dùng `--hex-format byte|word` nếu cần chỉ rõ cách diễn gi�
 [TX] ...  image[0x00000004:0x00000008]  ...%
 ```
 
-Tool trả đủ 4 byte theo từng offset, ghi log bằng luồng riêng sau khi phản
-hồi để việc hiển thị terminal không chặn vòng truyền. Không kiểm tra/hủy TX
-giữa các byte của cùng một word. Nếu ROMCODE yêu cầu lại offset, tool gửi lại
-đúng word đó. Có thể chọn `--log-mode progress` hoặc `--quiet` để chỉ xem
-phần trăm; `--verbose` tương đương `--log-mode full`.
+The tool returns all 4 bytes in offset, write log with separate stream after response so that the
+terminal display does not block the transmission loop. Do not check/cancel TX between bytes of the
+same word. If ROMCODE requests to re-offset, the tool sends back the correct word. You can choose
+`--log-mode progress` or `--quiet` to view only percentages; `--verbose` is equivalent to
+`--log-mode full`.
 
-`--timeout` thay timeout yêu cầu; `--wait-timeout` giới hạn
-thời gian chờ Reset đầu tiên. Mặc định nạp xong thì thoát, chỉ mở monitor nếu
-có `--monitor`.
+`--timeout` replaces the requested timeout; `--wait-timeout` limits the first Reset timeout. By
+default, when the flash is finished, exit, only open the monitor if there is `--monitor`.
 
-### Điều chỉnh tốc độ truyền
+### Adjustable transmission speed
 
-Các tham số được đọc lúc chạy, không cần configure lại:
+Parameters read at runtime, no need to configure again:
 
-| Biến môi trường | Tùy chọn tool trực tiếp | Giá trị mặc định |
+| Environment variable | Optional live tool | Default value |
 |---|---|---|
 | `NEON_MDF_UART_BYTE_GAP_MS` | `--byte-gap-ms` | `2` ms |
-| `NEON_MDF_UART_LOG` | `--log-mode` | `full` (từng RX/TX); hoặc `progress` |
+| `NEON_MDF_UART_LOG` | `--log-mode` | `full` (each RX/TX); or `progress` |
 
-Mỗi word 4 byte có 3 khoảng nghỉ. Với image 31.476 byte và gap 2 ms, riêng
-thời gian nghỉ trên PC cộng lại đã khoảng 47 giây, chưa tính truyền UART,
-USB và thao tác Flash của ROMCODE. Đây cũng là cách giãn byte của tool gốc.
+Each 4 byte word has 3 gaps. With 31.476 bytes and 2 ms gap image, the rest time on the PC combined
+was about 47 seconds, not counting UART transmission, USB and Flash operation of ROMCODE. This is
+also how to stretch bytes of the original tool.
 
-Để thử giảm thời gian nghỉ, có thể truyền `NEON_MDF_UART_BYTE_GAP_MS=0` trong
-lệnh CMake, hoặc `--byte-gap-ms 0` khi gọi tool trực tiếp. Khi gap bằng 0,
-tool gửi cả word bằng một lần ghi. Giá trị phù hợp phụ thuộc FIFO/clock và
-board thực tế; nếu xuất hiện retry hoặc CRC không khớp, quay lại gap 2 ms
-đang dùng ổn định. Tốc độ nạp còn phụ thuộc thời gian ghi Flash và ROMCODE
-yêu cầu từng word, nên cần đo thời gian hoàn tất trên board.
+To try to reduce downtime, it is possible to pass `NEON_MDF_UART_BYTE_GAP_MS=0` in CMake command, or
+`--byte-gap-ms 0` when calling the tool directly. When the gap is zero, the tool sends the whole
+word with one write. The appropriate value depends on FIFO/clock and the actual board; if a retry or
+CRC appears that does not match, return to the 2 ms gap in use stably. Flash speed also depends on
+the time of writing Flash and ROMCODE requires each word, so it is necessary to measure the
+completion time on the board.
 
-Từ thư mục ứng dụng, sau khi đã đặt `NEON_MDF_PATH`:
+From the application directory, after having set `NEON_MDF_PATH`:
 
 ```sh
 python3 "$NEON_MDF_PATH/tools/neon_mdf.py" \
   -t FU2 -p /dev/ttyUSB0 -b 19200 flash-uart-fu2
 ```
 
-CLI gọi cùng target CMake; có thể nối thêm action `monitor` và
-`--monitor-baud 19200` trước danh sách action.
+CLI calls the same CMake target; can append `monitor` and `--monitor-baud 19200` actions before the
+action list.
 
-## Các boot mode và image XIP
+## Boot modes and XIP images
 
-| Boot mode | Hoạt động của ROMCODE | Vai trò của tool UART 1.0 |
+| Boot mode | ROMCODE Activity | The role of the UART 1.0 tool |
 |---|---|---|
-| `000` | Kiểm tra và chạy image đã có trong Internal Flash | Không có dịch vụ nhận image UART |
-| `100` | Nhận image qua UART và ghi Internal Flash | Nạp image profile `normal` |
-| `101` | Đọc image từ nguồn QSPI ngoài và cập nhật Internal Flash | Cần chuẩn bị nguồn QSPI bằng công cụ tương ứng |
-| `111` | Kiểm tra và chạy image tại vùng QSPI XIP | Cần nạp Flash ngoài bằng programmer hoặc loader UART–QSPI |
+| `000` | Check and run image already in Internal Flash | No UART image receiving service |
+| `100` | Get image via UART and record Internal Flash | flash image profile `normal` |
+| `101` | Read image from external QSPI source and update Internal Flash | Need to prepare QSPI source by corresponding tool |
+| `111` | Check and run image in QSPI XIP area | Need flash External Flash by programmer or loader UART–QSPI |
 
-Image XIP có base `0x30000000`, khác image Internal Flash có base
-`0x00020000`. Tool kiểm tra được cả hai profile bằng `--check-only`, nhưng
-sẽ từ chối truyền image XIP bằng dịch vụ USART update trước khi mở cổng UART.
-Thay `--boot-mode` chỉ mô tả chế độ yêu cầu, không điều khiển chân boot và
-không bổ sung dịch vụ ghi QSPI cho ROMCODE.
+The XIP image has a base `0x30000000`, while the Internal Flash image has a base `0x00020000`. The
+tool can check both profiles with `--check-only`, but will refuse to transmit the XIP image using
+USART update service before opening UART port. Replacing `--boot-mode` only describes the required
+mode, does not control the boot pin and does not add QSPI recording service to ROMCODE.
 
-## Sử dụng extension VS Code
+## Using extension VS Code
 
-1. Chọn target **FU2**, transport **UART** và cổng serial của board.
-2. Đặt `neonMdf.fu2FlashBaudRate` khớp baud ROMCODE; mặc định của setting là
-   19200. `neonMdf.baudRate` là baud ứng dụng, độc lập với baud nạp; khi chưa
-   đặt, monitor FU2 dùng 19200.
-3. Chọn **NEON-MDF: Flash** hoặc **Build + Flash + Log**. Extension đóng
-   monitor đang mở, truyền port/baud lúc chạy CMake và hiển thị tool trong terminal.
-4. Chọn boot mode 100, chờ thông báo UART sẵn sàng rồi nhấn RESET.
-5. Với **Build + Flash + Log**, monitor ứng dụng được mở sau khi nạp thành công.
+1. Select target FU2, transport UART and the serial port of your board.
+2. Set `neonMdf.fu2FlashBaudRate` to ROMCODE baud matching; default of setting is
+   19200. `neonMdf.baudRate` is the application baud, independent of flash baud; when not set, monitor FU2
+   uses 19200.
+3. Select NEON-MDF: Flash or Build + Flash + Log. The extension closes the open monitor, passes
+   port/baud when CMake is running and displays the tool in terminal.
+4. Select boot mode 100, wait for the UART message to appear, and then press RESET.
+5. With Build + Flash + Log, the app monitor is opened after a successful flash.
 
-Luồng FU2 không sử dụng các thao tác B0/PB2 hoặc reset qua SWD của STM32.
+FU2 stream does not use B0/PB2 operations or reset via SWD of STM32.
 
-## Xử lý lỗi
+## Troubleshooting
 
-| Hiện tượng | Kiểm tra |
+| Phenomenon | Inspection |
 |---|---|
-| Thiếu port/baud | Truyền `NEON_MDF_SERIAL_PORT` và `NEON_MDF_SERIAL_BAUD` trong lệnh nạp |
-| Không mở được cổng | Tên cổng, quyền truy cập và chương trình Serial Monitor khác |
-| Chờ Reset nhưng chưa có dữ liệu | Boot mode 100, kết nối TX/RX/GND, baud và thao tác Reset |
-| `[RETRY]` | ROMCODE yêu cầu gửi lại; nếu kéo dài, kiểm tra kết nối, baud và khoảng cách giữa byte |
-| Timeout sau header | ROMCODE có thể đang chuẩn bị Flash hoặc đã từ chối image; kiểm tra timeout và cấu hình Flash |
-| Truyền đủ byte nhưng không có `[PASS]` | ROMCODE chưa xác nhận hoàn tất; kiểm tra CRC, chữ ký, NVR policy và kết nối |
-| Image XIP bị từ chối | Dùng đường nạp Flash QSPI ngoài; USART update chỉ ghi Internal Flash |
+| Missing port/baud | Transmit `NEON_MDF_SERIAL_PORT` and `NEON_MDF_SERIAL_BAUD` in flash command |
+| Cannot open port | Port Name, Access and Other Serial Monitor Programs |
+| Waiting for Reset but no data | Boot mode 100, connect TX/RX/GND, baud and Reset operation |
+| `[RETRY]` | ROMCODE asks for resubmission; if prolonged, check connection, baud and byte spacing |
+| Timeout after header | ROMCODE may be preparing Flash or has rejected image; check Flash timeout and configuration |
+| Full byte transmission but no `[PASS]` | ROMCODE not confirmed complete; check CRC, signature, NVR policy and connection |
+| Image XIP rejected | Use external QSPI Flash path; USART update only write Internal Flash |
 
-ROMCODE không gửi NACK/mã lỗi chi tiết. Tool sẽ báo timeout, không suy diễn
-nguyên nhân bảo mật cụ thể hoặc báo thành công chỉ dựa trên phần trăm truyền.
+ROMCODE does not send NACK/error codes only. Tool will report timeout, not deduce specific security
+reasons or report success based on transmission percentage only.

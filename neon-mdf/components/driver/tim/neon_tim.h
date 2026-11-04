@@ -2,13 +2,13 @@
  * @file neon_tim.h
  * @brief Public declarations for timer.
  * @details
- * * NEON TIM - HAL timer dùng cho FU2.
+ * * NEON find - HAL timer for FU2.
  *
- * Mỗi TIM0..TIM7 chứa hai kênh đếm độc lập CH0/CH1. Mỗi kênh có bốn
- * thanh ghi compare, một thanh ghi điều khiển, ngắt và trạng thái riêng.
- * Driver chỉ công khai chức năng đã được FU2 LL xác nhận; hai mode PWM thô
- * vẫn giữ tên để tương thích source nhưng neon_tim_init() trả
- * NEON_NOT_SUPPORTED vì LL chưa mô tả route output, polarity và quy tắc duty.
+ * Each TIM0..TIM7 contains two independent counting channels CH0/CH1. Each channel has four compare
+ * registers, a control register, interrupt and its own state. The driver only publicly functions
+ * that have been validated by FU2 LL; the two raw PWM modes retain names for source compatibility
+ * but neon_tim_init() returns NEON_NOT_SUPPORTED because LL has not yet described route output,
+ * polarity and duty rules.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.
@@ -45,7 +45,7 @@ typedef enum {
 typedef enum {
     NEON_TIM_MODE_DISABLE = 0,
     NEON_TIM_MODE_NORMAL = 1,
-    /* Chỉ là mã mode thô của phần cứng; config hiện trả NEON_NOT_SUPPORTED. */
+    /* Only the raw hardware mode code; config now returns NEON_NOT_SUPPORTED. */
     NEON_TIM_MODE_PWM0 = 2,
     NEON_TIM_MODE_PWM1 = 3,
 } neon_tim_mode_t;
@@ -94,24 +94,24 @@ typedef enum {
 } neon_tim_failed_command_t;
 
 typedef struct {
-    /* Tick timer = clock TIMx / (prescaler + 1), theo DTI Timer User Guide. */
+    /* Tick timer = clock TIMx / (prescaler + 1), according to DTI Timer User Guide. */
     uint32_t prescaler;
-    uint32_t auto_reload;                 /* Giá trị CHL_CHx 32-bit. */
-    neon_tim_mode_t mode;                 /* Disable hoặc normal. */
-    neon_tim_counter_mode_t counter_mode; /* Đếm lên hoặc xuống. */
-    /* Bit AUTO_RELOAD điều khiển reload CNT từ CHL; đây không phải shadow
-   * register/preload như timer STM32. */
+    uint32_t auto_reload;                 /* 32-bit CHL_CHx value. */
+    neon_tim_mode_t mode;                 /* Disable or normal. */
+    neon_tim_counter_mode_t counter_mode; /* Count up or down. */
+    /* AUTO_RELOAD bit controls CNT reload from CHL; this is not the register/preload shadow like the STM32
+   * timer. */
     neon_tim_auto_reload_t auto_reload_mode;
     neon_tim_one_pulse_mode_t one_pulse_mode;
     neon_tim_center_aligned_mode_t center_aligned_mode;
-    uint32_t interrupts; /* Tổ hợp NEON_TIM_INTERRUPT_*. */
+    uint32_t interrupts; /* Complex NEON_TIM_INTERRUPT_*. */
 } neon_tim_config_t;
 
 typedef struct {
     neon_field8_t clock_failure;
-    /* Chỉ có nghĩa khi clock_failure=1. */
+    /* It only makes sense when clock_failure=1. */
     neon_tim_failed_command_t failed_command;
-    neon_field16_t failure_address; /* CLKS.ADDR_FAILURE[9:1], đã dịch về bit 0. */
+    neon_field16_t failure_address; /* CLKS.ADDR_FAILURE[9:1], translated to bit 0. */
 } neon_tim_clock_status_t;
 
 /*==================================================================================================
@@ -121,8 +121,8 @@ typedef struct {
  * @brief Fill the default configuration for timer.
  * @param[out] config Module configuration.
  * @details
- * Mặc định theo reset của FU2: prescaler=0, reload=0, timer dừng,
- * đếm lên, auto-reload/one-pulse/center-aligned/ngắt đều tắt.
+ * Default according to FU2's reset: prescaler=0, reload=0, timer stop, count up,
+ * auto-reload/one-pulse/center-aligned/interrupt are all off.
  */
 void neon_tim_get_default_config(neon_tim_config_t *config);
 
@@ -133,8 +133,8 @@ void neon_tim_get_default_config(neon_tim_config_t *config);
  * @param[in] init Initialization settings.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * config tự bật clock và nhả reset của instance nhưng không pulse reset toàn
- * peripheral, vì một lần reset TIMx sẽ làm mất cấu hình của cả CH0 và CH1.
+ * config turns on the clock itself and releases instance resets but does not pulse full peripheral
+ * resets, as a single TIMx reset will cause the configuration of both CH0 and CH1 to be lost.
  */
 neon_status_t neon_tim_init(TIM_TypeDef *instance, uint8_t channel, const neon_tim_config_t *init);
 
@@ -144,8 +144,8 @@ neon_status_t neon_tim_init(TIM_TypeDef *instance, uint8_t channel, const neon_t
  * @param[in] channel channel.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * DeInit chỉ đưa kênh được chọn về reset value, không tắt clock và không ảnh
- * hưởng kênh còn lại trong cùng instance.
+ * DeInit only returns the selected channel to reset value, does not turn off the clock and does not
+ * affect the other channel in the same instance.
  */
 neon_status_t neon_tim_deinit(TIM_TypeDef *instance, uint8_t channel);
 
@@ -392,9 +392,8 @@ neon_status_t neon_tim_is_compare_channel_enabled(TIM_TypeDef *instance, uint8_t
  * @param[in] interrupts interrupt-source bitmask.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Các API dưới chỉ điều khiển INTR_EN_CHx. Ứng dụng vẫn phải bật đúng IRQ
- * trong NVIC; FU2 v8 dùng IRQ riêng cho TIM0/TIM1 và ba IRQ dùng chung cho
- * các cặp TIM2/3, TIM4/5, TIM6/7.
+ * The below APIs only control INTR_EN_CHx. The application must still enable the correct IRQ in NVIC;
+ * FU2 v8 uses a separate IRQ for TIM0/TIM1 and three common IRQs for pairs TIM2/3, TIM4/5, TIM6/7.
  */
 neon_status_t neon_tim_enable_interrupt(TIM_TypeDef *instance, uint8_t channel, uint32_t interrupts);
 /**
@@ -423,10 +422,10 @@ neon_status_t neon_tim_is_interrupt_enabled(TIM_TypeDef *instance, uint8_t chann
  * @param[out] flags Status-flag bitmask.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * STT_CH0/1 trên FPGA là trạng thái sự kiện hiện tại, không chốt cờ.
- * GetActiveFlags/IsActiveFlag chỉ đọc, không xóa cờ hoặc acknowledge IRQ.
- * UPDATE tự hạ khi counter rời điểm reload ở tick kế tiếp. Chọn prescaler
- * đủ lớn để ISR kịp đọc cờ; chờ cờ hạ trước khi thoát nếu IRQ là level.
+ * STT_CH0/1 on FPGA is the current event state, no flag latching. GetActiveFlags/IsActiveFlag reads
+ * only, does not erase flag or acknowledge IRQ. UPDATE automatically drops when counter leaves
+ * reload point at next tick. Select prescaler large enough for ISR to read flag; wait for flag to
+ * drop before exiting if IRQ is level.
  */
 neon_status_t neon_tim_get_active_flags(TIM_TypeDef *instance, uint8_t channel, uint32_t *flags);
 /**
@@ -445,8 +444,8 @@ neon_status_t neon_tim_is_active_flag(TIM_TypeDef *instance, uint8_t channel, ui
  * @param[in] flags Status-flag bitmask.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Giữ API để tương thích source; FU2 trả NEON_NOT_SUPPORTED vì STT không
- * có lệnh clear bằng phần mềm. Không ghi STT: FPGA có thể báo lỗi bus.
+ * Keep API for source compatibility; FU2 returns NEON_NOT_SUPPORTED because STT does not have a clear
+ * command by software. Do not write STT: FPGA can report bus errors.
  */
 neon_status_t neon_tim_clear_flag(TIM_TypeDef *instance, uint8_t channel, uint32_t flags);
 
@@ -456,8 +455,8 @@ neon_status_t neon_tim_clear_flag(TIM_TypeDef *instance, uint8_t channel, uint32
  * @param[out] status Destination for the status snapshot.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * CLKS dùng chung cho hai kênh. Hàm chỉ đọc register đúng một lần để các cờ
- * vẫn nhất quán nếu phần cứng có side effect khi đọc.
+ * CLKS is shared for two channels. The function only read registers correctly once so that the flags
+ * remain consistent if hardware has side effects when reading.
  */
 neon_status_t neon_tim_get_clock_status(TIM_TypeDef *instance, neon_tim_clock_status_t *status);
 

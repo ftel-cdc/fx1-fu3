@@ -2,14 +2,14 @@
  * @file neon_gpio.c
  * @brief Implementation for GPIO.
  * @details
- * * platform/stm32f103/neon_gpio.c - GPIO driver cho STM32F103.
+ * * platform/stm32f103/neon_gpio.c - GPIO driver for STM32F103.
  *
- * STM32F1 dung CRL/CRH (4 bit cho moi pin), khac GPIO MODER cua STM32F4:
- *   0x2 = CNF=00, MODE=10: general-purpose output push-pull, toi da 2 MHz
+ * STM32F1 uses CRL/CRH (4 bits per pin), other than GPIO MODER of STM32F4:
+ *   0x2 = CNF=00, MODE=10: general-purpose push-pull output, up to 2 MHz
  *   0x4 = CNF=01, MODE=00: floating input
  *
- * Tham chieu: RM0008 muc 7.3.7 (RCC_APB2ENR), muc 9.2.1/9.2.2 va
- * Table 20 (cau hinh GPIO), muc 9.2.3-9.2.5 (IDR/ODR/BSRR).
+ * RM0008 section 7.3.7 (RCC_APB2ENR), section 9.2.1/9.2.2 and Table 20 (configuration GPIO), section
+ * 9.2.3-9.2.5 (IDR/ODR/BSRR).
  */
 
 /*==================================================================================================
@@ -124,8 +124,8 @@ neon_status_t neon_gpio_init(GPIO_TypeDef *instance, const neon_gpio_config_t *i
         return NEON_INVALID_PARAM;
     }
 
-    /* Các thuộc tính mở rộng chưa được port cho backend này. Không được âm
-   * thầm báo OK nếu phần cứng chưa nhận cấu hình mà ứng dụng yêu cầu. */
+    /* Extended attributes are not yet ported to this backend. Do not silently say OK if hardware hasn't
+   * received the configuration requested by the application. */
     if ((init->pull != NEON_GPIO_PULL_NONE) || (init->speed != NEON_GPIO_SPEED_LOW) ||
         (init->schmitt != NEON_GPIO_SCHMITT_DISABLE) || (init->slew_rate != NEON_GPIO_SLEW_SLOW) ||
         (init->input_sync != NEON_GPIO_INPUT_SYNC_DIRECT) || (init->interrupt != NEON_GPIO_INTERRUPT_DISABLE) ||
@@ -143,7 +143,7 @@ neon_status_t neon_gpio_init(GPIO_TypeDef *instance, const neon_gpio_config_t *i
 
     selected_pins = init->pin & GPIO_STM32F103_GPIO_PIN_MASK;
 
-    /* BSRR nạp mức output trước khi đổi CRL/CRH sang output để tránh glitch. */
+    /* BSRR flashes the output level before converting CRL/CRH to output to avoid glitch. */
     if (init->mode == NEON_GPIO_MODE_OUTPUT) {
         instance->BSRR = (init->initial_state == NEON_GPIO_PIN_SET) ? selected_pins : (selected_pins << 16U);
     }
@@ -205,6 +205,6 @@ void neon_gpio_toggle_pin(GPIO_TypeDef *instance, uint32_t pin_mask) {
     pins_to_reset = output_state & pin_mask;
     pins_to_set = (~output_state) & pin_mask;
 
-    /* Mot lan ghi BSRR: pin dang 0 duoc set, pin dang 1 duoc reset. */
+    /* once write BSRR: pin is 0 set, pin is 1 reset. */
     instance->BSRR = pins_to_set | (pins_to_reset << 16U);
 }

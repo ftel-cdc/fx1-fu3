@@ -2,25 +2,23 @@
  * @file neon_flash.c
  * @brief Implementation for Flash.
  * @details
- * * platform/ch32v003/neon_flash.c - implementation THAT cho CH32V003 FLASH controller
- * (RM chuong 16 "Flash Memory and User Option Bytes", V1.9 - KHONG doan).
+ * * platform/ch32v003/neon_flash.c - real implementation for CH32V003 FLASH controller (RM chapter 16
+ * "Flash Memory and User Option Bytes", V1.9 - no guessing).
  *
- * KHAC BIET QUAN TRONG voi platform/weact_f412/neon_flash.c (STM32F4):
- *   - Erase: 16KB flash = 16 sector 1KB DEU NHAU (RM 16.2.2: "write-protected
- *     in 1K byte (16 pages) units") - KHONG co bang sector khong deu nhau
- *     nhu STM32F4, chi can vong lap don gian theo boi so 1KB.
- *   - Program: "Standard programming" ghi TUNG 2-BYTE (halfword) 1 lan (RM
- *     16.2.1: "CPU performs programming in single 2-byte mode") - KHAC
- *     STM32F4 ghi duoc ca 32-bit/lan (PSIZE=word) - neon_flash_program_word()
- *     van giu API ghi 1 word 32-bit ben ngoai (khong doi contract chung),
- *     nhung BEN TRONG tach thanh 2 lan ghi 16-bit.
- *   - Thanh ghi/bit KHAC dia chi voi STM32F4: STATR.BUSY=bit0 (khong phai
- *     SR.BSY=bit16), STATR.EOP=bit5 (khong phai SR.EOP=bit0), CTLR.LOCK=bit7
- *     (khong phai CR.LOCK=bit31), CTLR.PER=bit1 (erase 1 sector 1KB),
- *     CTLR.STRT=bit6, CTLR.PG=bit0 - dung ADDR (offset 0x14) de chi dinh
- *     dia chi erase/program (KHONG dung so hieu sector nhu STM32F4's SNB).
- *   - KEY1/KEY2 unlock GIONG HET STM32 (0x45670123/0xCDEF89AB - RM 16.3.2,
- *     xac nhan trung, khong phai trung hop ngau nhien - cung IP goc).
+ * other know IMPORTANT with platform/weact_f412/neon_flash.c(STM32F4):
+ *   - Erase: 16KB flash consists of 16 equal 1KB sectors (RM 16.2.2: "write-protected
+ *     in 1K bytes (16 pages) units") - not equal to irregular sectors like STM32F4, just loop spaced by
+ *     the number of 1KB.
+ *   - Program: "Standard programming" write each 2-BYTE (halfword) 1 time (RM
+ *     16.2.1: "CPU performs programming in single 2-byte mode") - unlike STM32F4 which writes both
+ *     32 bits per operation (PSIZE=word). neon_flash_program_word() retains the public 32-bit API, but
+ *     internally splits each word into two 16-bit writes.
+ *   - Register addresses and bits differ from STM32F4: STATR.BUSY=bit0 rather than SR.BSY=bit16, and STATR.EOP=bit5 rather than
+ *     SR.EOP=bit0), CTLR.LOCK=bit7 (not CR.LOCK=bit31), CTLR.PER=bit1 (erase 1 sector 1KB),
+ *     CTLR.STRT=bit6, CTLR.PG=bit0 - use ADDR (offset 0x14) to specify address erase/program (do
+ *     does not use sector-number encoding like STM32F4 SNB).
+ *   - KEY1/KEY2 unlocking matches STM32: 0x45670123/0xCDEF89AB (RM 16.3.2,
+ *     confirms the middle, not the middle of the spectrum - same underlying IP).
  */
 
 /*==================================================================================================
@@ -81,8 +79,8 @@ neon_status_t neon_flash_program_word(uint32_t address, uint32_t data) {
 
     FLASH->CTLR |= FLASH_CTLR_PG;
 
-    /* THAT: standard programming CHI ghi duoc 2-byte/lan (RM 16.2.1) - tach
-   * 1 word 32-bit thanh 2 lan ghi halfword, doi BUSY giua 2 lan. */
+    /* Standard programming writes 2 bytes per operation (RM 16.2.1), so split a 32-bit word into two writes
+   * halfword, change BUSY between 2 times. */
     *((volatile uint16_t *)address) = (uint16_t)(data & 0xFFFFU);
     flash_wait_busy();
     *((volatile uint16_t *)(address + 2U)) = (uint16_t)(data >> 16);
@@ -113,12 +111,12 @@ static void flash_erase_sector(uint32_t sector_addr) {
     flash_wait_busy();
     flash_unlock();
 
-    FLASH->STATR = FLASH_STATR_EOP; /* clear co EOP cu (ghi 1 de clear) */
+    FLASH->STATR = FLASH_STATR_EOP; /* clear has old EOP (write 1 to clear) */
     FLASH->CTLR |= FLASH_CTLR_PER;
     FLASH->ADDR = sector_addr;
     FLASH->CTLR |= FLASH_CTLR_STRT;
     flash_wait_busy();
     FLASH->CTLR &= ~FLASH_CTLR_PER;
-    /* KHONG lock lai FLASH->CTLR o day - cung ly do voi ban STM32F4 (erase
-   * nhieu sector lien tiep / ghi word tiep theo can CTLR mo khoa san). */
+    /* Do not relock FLASH->CTLR here. Like STM32F4, callers may erase multiple sectors or write
+   * next word that requires CTLR to open journal). */
 }

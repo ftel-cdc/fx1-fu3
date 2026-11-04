@@ -22,11 +22,11 @@ extern "C" {
 *                                       FUNCTION PROTOTYPES
 ==================================================================================================*/
 /**
- * @brief  Thuc thi testcase 5P1 - PWM_Output (TIM0_CH0).
- * @details Testcase khoi tao PWM o tan so dinh truoc, cung cap menu tuong tac
- *          qua UART de thay doi Duty Cycle (0%, 25%, 50%, 75%, 100%),
- *          kiem tra phan ung Stop va kiem chứng thong so qua Hardware Readback.
- * @param  uart Pointer toi cấu trúc handle UART dùng đẻ trao đổi dữ liệu terminal.
+ * @brief Execute testcase 5P1 - PWM_Output (TIM0_CH0).
+ * @details Testcase initialize PWM at predefined frequency, same level interactive menu via UART to
+ *          see change Duty Cycle (0%, 25%, 50%, 75%, 100%), check Stop cancer section and verify
+ *          parameters via Hardware Readback.
+ * @param uart Pointer uses the UART handle structure for exchanging terminal data.
  */
 void pwm_output_run(neon_uart_handle_t *uart);
 

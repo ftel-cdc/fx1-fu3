@@ -1,7 +1,6 @@
-// esbuild.js - build script cho neon-mdf-tools extension. `serialport` la
-// native binding (.node binary) - KHONG bundle duoc, phai de nguyen trong
-// node_modules va ship kem trong .vsix (xem package.json "vsix" script +
-// kiem tra bang `vsce ls` truoc khi coi la xong).
+// esbuild.js - build script for neon-mdf-tools extension. `serialport` is native binding (.node
+// binary) - cannot bundle, must be left in node_modules and ship included in .vsix (see
+// package.json "vsix" script + check with `vsce ls` before deemed complete).
 const esbuild = require("esbuild");
 
 const production = process.argv.includes("--production");

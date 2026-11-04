@@ -1,14 +1,13 @@
-# flashmap.csv - partition table CUA RIENG app nay (khong phai cua device -
-# xem neon-mdf/cmake/flashmap.cmake). Thu tu dong = thu tu tren flash,
-# offset TU TINH tuan tu tu NEON_MDF_APP_BASE (ngay sau bootloader).
+# flashmap.csv - partition table owns this app (not device's - see neon-mdf/cmake/flashmap.cmake).
+# row order = flash order, sequential offsets from NEON_MDF_APP_BASE (right after
+# bootloader).
 #
 # name,     type, subtype, size
 #
-# Thu tu dong KHONG bat buoc partition nao phai dung truoc (2026-08-10) -
-# flash_jtag/flash_uart_stm32 (flash_targets.cmake) doc THAT dia chi
-# NEON_MDF_FLASHMAP_APP_BASE sinh ra tu file nay de biet ghi "app" (factory)
-# vao dau, khong con gia dinh vi tri co dinh. Yeu cau DUY NHAT: co dung 1
-# partition ten "app" (type=app, subtype=factory).
+# No particular partition must appear first in the CSV (2026-08-10) -
+# flash_jtag/flash_uart_stm32 (flash_targets.cmake) read real address NEON_MDF_FLASHMAP_APP_BASE
+# generated from this file to know write "app" (factory) at the beginning, no longer assume
+# specified value. only required: use 1 partition name "app" (type=app, subtype=factory).
 app,        app,  factory, 0x8000     # sector 2+3 (16+16KB) = 0x08008000..0x08010000
-otadata,    data, ota,     0x10000    # sector 4 (64KB, du du - can nguyen 1 sector, sector nho nhat con lai) = 0x08010000..0x08020000
-app_ota,    app,  ota,     0x60000    # sector 5+6+7 (128*3KB) = 0x08020000..0x08080000 (het flash)
+otadata,    data, ota,     0x10000    # sector 4 (64KB; reserve a complete sector, the smallest remaining one) = 0x08010000..0x08020000
+app_ota,    app,  ota,     0x60000    # sector 5+6+7 (128*3KB) = 0x08020000..0x08080000 (end of flash)

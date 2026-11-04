@@ -1,22 +1,19 @@
-// debug.ts - bat phien debug GDB THAT (cortex-debug qua OpenOCD) cho
-// executable dang co trong build dir cua target dang chon. KHONG hardcode
-// ten executable (blinky/bootloader/...) rieng cho tung project - tu doc
-// qua CMake File API (../cmakeFileApi.ts) sau khi dam bao da configure
-// (../configure.ts). Day la thay the cho .vscode/launch.json - khong con
-// can khai bao cau hinh debug rieng cho tung project nua.
+// debug.ts - enable real GDB debug (cortex-debug via OpenOCD) for existing executables in the dir
+// build of the selected target. do not hardcode specific executable name (blinky/bootloader/...)
+// for each project - from read through CMake File API (../cmakeFileApi.ts) after configured
+// ensured by ../configure.ts. This replaces per-app .vscode/launch.json configuration
+// specific configuration debug for each old project.
 //
-// openocd cfg + svd file suy ra THEO QUY UOC da dung xuyen suot repo (xem
+// Infer the OpenOCD .cfg and SVD paths from repository conventions; see
 // flash_targets.cmake):
 //   openocd cfg: <SDK root>/cmake/openocd/<target>_openocd.cfg (file DUY
-//                NHAT, khong con ban sao rieng trong tung app tu 2026-08-10 -
-//                xem cmake/openocd/WEACT_F412_openocd.cfg)
+//                most, no child separate copy in each app from 2026-08-10 - see cmake/openocd/WEACT_F412_openocd.cfg)
 //   svd file:    <SDK root>/mcu-description/generated/<target>.svd
-// "SDK root" qua resolveSdkPathUri() (../sdkPath.ts) - dung setting
-// neonMdf.sdkPath NEU nguoi dung da chon rieng, khong thi quy uoc duong dan
-// TUONG DOI tu workspaceFolder (2 cap: <App>/ -> examples/ -> goc ->
-// neon-mdf/). KHONG doc tu bien moi truong ${env:NEON_MDF_PATH} - da
-// xac nhan bang thuc te bien nay RONG khi VS Code mo tu Finder/Dock (khong
-// ke thua .zshrc cua shell).
+// "SDK root" via resolveSdkPathUri() (../sdkPath.ts) - use setting neonMdf.sdkPath if the user has
+// selected it separately, otherwise the dan convention varies from workspaceFolder (2 levels:
+// <App>/ -> examples/ -> root -> neon-mdf/). not read from each field variable ${env:NEON_MDF_PATH}
+// - verified that this environment variable is unset when VS Code starts from Finder/Dock without inheriting
+// .zshrc of the shell).
 import * as vscode from "vscode";
 import { NeonMdfState } from "../state";
 import { ensureConfigured, buildDirFor } from "../configure";
@@ -40,12 +37,12 @@ interface DebugTargetsManifest {
   ota: Set<string>;
 }
 
-// Doc "<builddir>/neon_mdf_debug_targets.txt" - ghi boi
+// read "<builddir>/neon_mdf_debug_targets.txt" - write by
 // cmake/flash_targets.cmake's neon_mdf_add_flash_targets()/
-// neon_mdf_add_ota_flash_target(), dinh dang 1 dong "key=value" moi cap
-// (bootloader=<ten>, factory=<ten>, ota=<ten> - co the co nhieu dong "ota="
-// trong tuong lai neu 1 app co nhieu slot OTA, gom het vao 1 Set). Tra ve
-// null neu file chua ton tai (app khong co bootloader:, xem debugCommand()).
+// neon_mdf_add_ota_flash_target(), specifies a "key=value" dynamic per level (bootloader=<name>,
+// factory=<name>, ota=<name> - may have multiple "ota=" dynamics in the future if an app has
+// multiple OTA executables use a Set). Return null if the manifest is absent, for apps without a
+// bootloader:, see debugCommand()).
 async function readDebugTargetsManifest(buildDir: vscode.Uri): Promise<DebugTargetsManifest | null> {
   const manifestUri = vscode.Uri.joinPath(buildDir, "neon_mdf_debug_targets.txt");
   if (!(await fileExists(manifestUri))) {
@@ -79,19 +76,19 @@ async function readDebugTargetsManifest(buildDir: vscode.Uri): Promise<DebugTarg
 export async function debugCommand(state: NeonMdfState): Promise<void> {
   const folder = vscode.workspace.workspaceFolders?.[0];
   if (!folder) {
-    vscode.window.showWarningMessage("NEON-MDF: chua mo workspace folder nao.");
+    vscode.window.showWarningMessage("NEON-MDF: no workspace folder opened.");
     return;
   }
   if (!state.target) {
     vscode.window.showWarningMessage(
-      'NEON-MDF: chua chon target - bam vao "chon target" tren status bar truoc.'
+      'NEON-MDF: No target selected. Use Select Target in the status bar first.'
     );
     return;
   }
 
   const configOk = await ensureConfigured(folder.uri, state.target);
   if (!configOk) {
-    vscode.window.showErrorMessage(`NEON-MDF: configure that bai (target ${state.target}) - xem terminal.`);
+    vscode.window.showErrorMessage(`NEON-MDF: configure failed (target ${state.target}) - see terminal.`);
     return;
   }
 
@@ -99,7 +96,7 @@ export async function debugCommand(state: NeonMdfState): Promise<void> {
   const executables = await readExecutables(buildDir);
   if (executables.length === 0) {
     vscode.window.showWarningMessage(
-      `NEON-MDF: khong tim thay executable nao trong build dir cua target ${state.target} (da configure nhung CMake File API khong tra ve target EXECUTABLE nao).`
+      `NEON-MDF: No executable found for target ${state.target}. Configuration completed, but the CMake File API returned no EXECUTABLE target.`
     );
     return;
   }
@@ -110,7 +107,7 @@ export async function debugCommand(state: NeonMdfState): Promise<void> {
   } else {
     const picked = await vscode.window.showQuickPick(
       executables.map((e) => ({ label: e.name, exe: e })),
-      { placeHolder: "Chon executable de debug" }
+      { placeHolder: "select executable to debug" }
     );
     if (!picked) {
       return;
@@ -125,7 +122,7 @@ export async function debugCommand(state: NeonMdfState): Promise<void> {
     `${state.target}_openocd.cfg`
   );
   if (!(await fileExists(openocdCfg))) {
-    vscode.window.showErrorMessage(`NEON-MDF: khong tim thay file openocd cfg: ${openocdCfg.fsPath}`);
+    vscode.window.showErrorMessage(`NEON-MDF: could not find openocd cfg file: ${openocdCfg.fsPath}`);
     return;
   }
 
@@ -137,37 +134,31 @@ export async function debugCommand(state: NeonMdfState): Promise<void> {
   );
   const hasSvd = await fileExists(svdFile);
 
-  // Flash TRUOC qua dung target CMake (flash_jtag/flash_ota) - KHONG de
-  // cortex-debug tu flash bang lenh `load` goc cua GDB. Ly do (bug that gap
-  // + verify tren phan cung): `load` chi ghi dung noi dung ELF (vector
-  // table+code, bat dau tu <partition>_VECTOR_BASE) - nhung header
-  // image_header_t (magic/size/CRC, 512 byte NGAY TRUOC vector table) nam
-  // CHUNG 1 sector flash voi code, KHONG phai 1 phan cua ELF (do
-  // build_full_image.py/build_ota_image.py tu ghep them khi build blob de
-  // flash that, xem cmake/flash_targets.cmake) - ghi flash bat buoc xoa ca
-  // sector truoc, `load` xoa mat header ma khong ghi lai (khong biet no ton
-  // tai) -> header thanh 0xFFFFFFFF -> bootloader reset xong thay header
-  // khong hop le -> KHONG dam nhay vao app -> CPU ket qua o bootloader,
-  // breakpoint tam cua runToEntryPoint (dat theo symbol cua app.elf) khong
-  // bao gio khop -> "chay nhung khong dung o main" + step bao loi "Cannot
-  // find bounds of current function" (dang debug nham code bootloader bang
-  // symbol table cua app.elf). Da xac nhan THAT: doc lai 0x08008000 sau khi
-  // GDB `load` cho ra toan 0xFFFFFFFF (truoc do, tu flash_jtag, la header
-  // hop le).
+  // Flash first via CMake target (flash_jtag/flash_ota) - not to cortex-debug from flash using GDB's
+  // original GDB `load` command.
+  // + verify on hardware): `load` write only using ELF (vector table+code, starting from
+  // <partition>_VECTOR_BASE) - but header image_header_t (magic/size/CRC, 512 bytes RIGHT before
+  // vector table) contains 1 flash sector with code, not part of ELF (that's
+  // build_full_image.py/build_ota_image.py from ghep add when build blob to real flash, see
+  // cmake/flash_targets.cmake) - write flash requires erase the entire sector first, `load` erase
+  // lose header without rewriting (doesn't know no exists) -> header into 0xFFFFFFFF -> bootloader
+  // reset and found mismatched header -> can't guarantee jumping app -> CPU connected in
+  // bootloader. A runToEntryPoint breakpoint based on app.elf symbols does not
+  // indicate matching time -> "running but not used in main" + step error "Cannot find bounds of
+  // current function" (is debugging wrong bootloader code using symbol table of app.elf). true
+  // confirmation: read again 0x08008000 after GDB `load` output all 0xFFFFFFFF (previously, from
+  // flash_jtag, was mismatched header).
   //
-  // Chon flash_ota/flash_jtag: doc manifest THAT
-  // "<builddir>/neon_mdf_debug_targets.txt" (ghi boi
-  // cmake/flash_targets.cmake, dinh dang "factory=<ten>"/"ota=<ten>"/
-  // "bootloader=<ten>") thay vi DOAN qua ten executable co ket thuc "_ota"
-  // hay khong - bug that da gap: examples/OTA_Demo co executable
-  // "ota_demo_ota_bad" (dung de test rollback) dung CHUNG linker script/slot
-  // voi "ota_demo_ota" nhung ten KHONG ket thuc "_ota" -> heuristic cu chon
-  // nham flash_jtag (flash "ota_demo" factory) roi van attach debugger voi
-  // symbol/entry point cua "ota_demo_ota_bad" -> breakpoint sai dia chi.
-  // Executable khong khop ten nao trong manifest (dung nhu ota_demo_ota_bad)
-  // KHONG co duong flash tu dong that su (xem comment trong
-  // examples/OTA_Demo/CMakeLists.txt - phai tu sua CMake tay de test) -
-  // bao loi ro rang thay vi flash nham roi debug sai chuong trinh.
+  // select flash_ota/flash_jtag: read real manifest "<builddir>/neon_mdf_debug_targets.txt" (write by
+  // cmake/flash_targets.cmake, intending "factory=<name>"/"ota=<name>"/ "bootloader=<name>") see
+  // because guessed executable name has executable "_ota" not true - real bug gap:
+  // examples/OTA_Demo has executable "ota_demo_ota_bad" (used for test rollback) share linker
+  // script/slot with "ota_demo_ota" but not executable name "_ota" -> old heuristic mistakenly
+  // selected flash_jtag (flash "ota_demo" factory) and still attach debugger with symbol/entry
+  // entry point for ota_demo_ota_bad, causing incorrect breakpoints. An executable absent from the
+  // manifest (same as ota_demo_ota_bad) no real automatic flash path (see comment in
+  // examples/OTA_Demo/CMakeLists.txt - must be from CMake manual to test) - clear error seen
+  // because mistaken flash and debug wrong process.
   const manifest = await readDebugTargetsManifest(buildDir);
   let flashTargetName: string;
   if (manifest) {
@@ -177,42 +168,41 @@ export async function debugCommand(state: NeonMdfState): Promise<void> {
       flashTargetName = "flash_jtag";
     } else {
       vscode.window.showErrorMessage(
-        `NEON-MDF: executable "${chosen.name}" khong duoc gan flash target tu dong nao ` +
-          `(khong phai bootloader/factory/OTA theo CMakeLists.txt cua app nay) - khong the ` +
-          `debug qua "NEON-MDF: Debug" vi khong biet phai flash gi truoc. Xem CMakeLists.txt ` +
-          `cua app de flash/test thu cong (vd ban "_bad" cua examples/OTA_Demo dung de test ` +
-          `rollback, can sua CMake tam thoi - xem comment trong file do).`
+        `NEON-MDF: executable "${chosen.name}" not assigned flash target automatically ` +
+          `(not bootloader/factory/OTA according to CMakeLists.txt of this app) - cannot ` +
+          `debug via "NEON-MDF: Debug" because I don't know what to flash first. See CMakeLists.txt ` +
+          `of app to flash/test curved message (e.g. the "_bad" version of examples/OTA_Demo used for testing ` +
+          `rollback, need to fix CMake temporarily - see comment in that file).`
       );
       return;
     }
   } else {
-    // Khong co manifest (vd target khong co bootloader: nhu FU2 - khong goi
-    // neon_mdf_add_flash_targets() nen chua tung co flash_jtag/flash_ota) -
-    // giu nguyen heuristic cu de khong regress: flash_jtag se tu bao loi ro
-    // rang qua runCMakeTarget() ben duoi neu target CMake do khong ton tai.
+    // no manifest (e.g. target has no bootloader: as FU2 - does not call neon_mdf_add_flash_targets() so
+    // there is never flash_jtag/flash_ota) - keeps the same old heuristic to not regress:
+    // flash_jtag produces a clear error from runCMakeTarget() below if that CMake
+    // target does not exist.
     flashTargetName = chosen.name.endsWith("_ota") ? "flash_ota" : "flash_jtag";
   }
   const flashExitCode = await runCMakeTarget({
-    taskName: `NEON-MDF: flash truoc khi Debug (${flashTargetName})`,
+    taskName: `NEON-MDF: flash before Debug (${flashTargetName})`,
     preset: state.target,
     cmakeTarget: flashTargetName,
     cwd: folder.uri,
   });
   if (flashExitCode !== 0) {
     vscode.window.showErrorMessage(
-      `NEON-MDF: flash truoc khi Debug that bai (target CMake "${flashTargetName}") - xem terminal. Debug bi huy.`
+      `NEON-MDF: flash before debug fails (target CMake "${flashTargetName}") - see terminal. Debug aborted.`
     );
     return;
   }
 
-  // TAM THOI hardcode "cortex-m" - CA FU2 lan WEACT_F412 hien tai deu la
-  // Cortex-M, chua co target RISC-V nao that su ton tai trong
-  // mcu-description de doc arch: that (xem TODO chi tiet trong
-  // debugArch.ts's resolveDebugArchProfile()). Khi them target RISC-V dau
-  // tien: sua dong nay thanh doc arch that (vd tu 1 manifest JSON moi do
-  // generate.py sinh, hoac extension tu parse device YAML) - CHUA lam
-  // truoc vi chua biet toolchain/debug protocol that se dung (xem trao doi
-  // 2026-08-10 ve CH32V003F4P6).
+  // TAM time hardcode "cortex-m" - both FU2 times the current WEACT_F412 are Cortex-M, no real RISC-V
+  // target used in mcu-description to read arch: true (see TODO only tiet in debugArch.ts's
+  // resolveDebugArchProfile()). when adding the first RISC-V target: modify this action to read
+  // arch: true (e.g. from 1 JSON manifest each created by generate.py, or extension from YAML
+  // device description). Do not guess a RISC-V setup before its toolchain and debug protocol are verified; see
+  // exchange
+  // 2026-08-10 for CH32V003F4P6).
   const archProfile = resolveDebugArchProfile("cortex-m");
 
   const config: vscode.DebugConfiguration = {
@@ -225,15 +215,14 @@ export async function debugCommand(state: NeonMdfState): Promise<void> {
     configFiles: [openocdCfg.fsPath],
     device: state.target,
     runToEntryPoint: "main",
-    // [] (KHONG PHAI false - da doc source cortex-debug: false van chay
-    // `target-download` binh thuong, CHI mang []/list rong moi thuc su bo
-    // qua buoc download) - da flash dung cach o tren roi (flash_jtag/
-    // flash_ota, giu nguyen header), KHONG de cortex-debug flash lai lan
-    // nua bang `load` goc (se xoa mat header, xem giai thich o tren). Day
-    // la hanh vi CHUNG cho moi kien truc (van de header/flashmap cua chinh
-    // SDK nay, khong phai dac thu ARM) - khong nam trong debugArch.ts.
+    // [] (not false - read source cortex-debug: false still running normal `target-download`, only empty
+    // network []/list per instance ignoring download) - already flashed using the above method
+    // (flash_jtag/ flash_ota, keep header intact), do not let cortex-debug flash again old time
+    // using GDB load, which would erase the image header; see above. This behavior applies to all
+    // each live kien (still leaves header/flashmap of this SDK itself, not ARM letter dac) - not
+    // male in debugArch.ts.
     loadFiles: [],
-    // Lenh workaround reset DAC THU THEO KIEN TRUC - xem debugArch.ts.
+    // workaround command reset DAC mail BY KIEN live - see debugArch.ts.
     preLaunchCommands: archProfile.preLaunchCommands,
     postLaunchCommands: archProfile.postLaunchCommands,
   };
@@ -244,7 +233,7 @@ export async function debugCommand(state: NeonMdfState): Promise<void> {
   const started = await vscode.debug.startDebugging(folder, config);
   if (!started) {
     vscode.window.showErrorMessage(
-      "NEON-MDF: khong khoi dong duoc phien debug - kiem tra extension \"cortex-debug\" (marus25.cortex-debug) da cai chua."
+      "NEON-MDF: Could not start the debug session. Check that cortex-debug (marus25.cortex-debug) is enabled."
     );
   }
 }

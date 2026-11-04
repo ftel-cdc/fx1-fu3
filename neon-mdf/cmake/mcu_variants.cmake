@@ -1,11 +1,9 @@
-# Đăng ký các MCU target (giống khái niệm IDF_TARGET của ESP-IDF: esp32,
-# esp32c3...) mà neon-mdf hỗ trợ. Thêm target mới = thêm 1 file
-# mcu-description/devices/<DEVICE>.yaml + 2 dòng đăng ký ở đây (arch phải khớp
-# đúng field `arch` trong file .yaml đó).
+# Registration of target MCUs (same as ESP-IDF concept IDF_TARGET: esp32, esp32c3...) that neon-mdf
+# supports. Add new target = add 1 file mcu-description/devices/<DEVICE>.yaml + 2 lines of
+# registration here (arch must match field `arch` in that .yaml file).
 #
-# Yêu cầu: biến NEON_MDF_PATH phải được set trước khi include file này (xem
-# tools/cmake/project.cmake) - đây là thư mục gốc của neon-mdf, không phải
-# CMAKE_SOURCE_DIR của app đang include project.cmake.
+# Required: variable NEON_MDF_PATH must be set before include file (see tools/cmake/project.cmake) -
+# this is the root of neon-mdf, not the app's CMAKE_SOURCE_DIR that includes project.cmake.
 
 set(NEON_MDF_KNOWN_TARGETS FU2 STM32F103CB WEACT_F412 CH32V003F4P6)
 
@@ -15,49 +13,46 @@ set(NEON_MDF_TARGET_FU2_FAMILY FU2)
 set(NEON_MDF_TARGET_STM32F103CB_ARCH   cortex-m3)
 set(NEON_MDF_TARGET_STM32F103CB_FAMILY STM32F103)
 
-# WEACT_F412 KHÔNG PHẢI FU2 - STM32F412RET6 thật trên board WeAct Studio
-# STM32F4 Core Board (board THẬT user đang có), test rig phần cứng THẬT
-# trong lúc chờ TRM FU2 (xem cảnh báo đầu mcu-description/devices/
-# WEACT_F412.yaml). KHÔNG CÓ debugger on-board (khác Nucleo) - PHẢI dùng
-# probe SWD rời. Lõi CPU là cortex-m4 (Cortex-M4F, CÓ FPU thật) - chip
-# Cortex-M4 ĐẦU TIÊN trong SDK, cần cờ FPU riêng (xem biến _FPU dưới).
+# WEACT_F412 NOT FU2 - True STM32F412RET6 on WeAct Studio STM32F4 Core Board (real user board), real
+# hardware test rig while waiting for TRM FU2 (see early warning mcu-description/devices/
+# WEACT_F412.yaml). NO on-board debugger (other than Nucleo) - MUST use removable SWD probe. CPU
+# core is cortex-m4 (Cortex-M4F, has real FPU) - FIRST Cortex-M4 chip in the SDK, needs its own FPU
+# flag (see _FPU variable below).
 set(NEON_MDF_TARGET_WEACT_F412_ARCH   cortex-m4)
 set(NEON_MDF_TARGET_WEACT_F412_FAMILY WEACT_F412)
 set(NEON_MDF_TARGET_WEACT_F412_FPU    ON)
 
-# CH32V003F4P6 - WCH, target RISC-V DAU TIEN cua SDK (QingKe V2A, RV32EC) -
-# board dev THAT user dang co (WCH-LinkE probe). _VENDOR can rieng (khac
-# Cortex-M) vi duong dan output la arch/RISCV/Device/<Vendor>/<Family>/ (xem
-# generate_riscv() trong mcu-description/tools/generate.py va
-# arch/RISCV/README.md - quy uoc 2 cap Vendor/Family, khac 1 cap cua
-# CortexM/CMSIS/Device/<Family> vi RISC-V khong co "CMSIS" chung 1 kieu dat
-# ten struct nhu ARM). _ABI (ilp32e) can rieng vi khong the tu doan tu _ARCH
-# (isa "rv32ec" khong tu suy ra ABI 1-1, xem cmake/arch/riscv.cmake).
+# CH32V003F4P6 - WCH, the first RISC-V target of SDK (QingKe V2A, RV32EC) - real user dev board
+# (WCH-LinkE probe). _VENDOR needs its own (other than Cortex-M) output path
+# arch/RISCV/Device/<Vendor>/<Family>/ (see generate_riscv() in mcu-description/tools/generate.py
+# and arch/RISCV/README.md - two-level convention Vendor/Family, different from one level of
+# CortexM/CMSIS/Device/<Family> RISC-V does not have a common "CMSIS" and has a common ARM-like
+# struct name). _ABI (ilp32e) needs its own because it cannot be guessed from _ARCH (isa "rv32ec"
+# does not deduce an ABI 1-1, see cmake/arch/riscv.cmake).
 set(NEON_MDF_TARGET_CH32V003F4P6_ARCH   riscv-rv32ec)
 set(NEON_MDF_TARGET_CH32V003F4P6_FAMILY CH32V003)
 set(NEON_MDF_TARGET_CH32V003F4P6_VENDOR WCH)
 set(NEON_MDF_TARGET_CH32V003F4P6_ABI    ilp32e)
 
 # neon_mdf_configure_target(<TARGET_NAME>)
-#   - Chạy mcu-description generator để đảm bảo header/linker/startup mới nhất
-#     theo mcu-description/devices/<TARGET_NAME>.yaml hiện tại.
-#   - Tạo target tĩnh `neon_mdf_device_<TARGET_NAME>` chứa system_<TARGET_NAME>.c + startup.
-#   - Set biến ra ngoài (PARENT_SCOPE):
-#       NEON_MDF_DEVICE_TARGET   - tên CMake target để target_link_libraries
-#       NEON_MDF_LINKER_SCRIPT   - path linker script để -T
+#   - Run mcu-description generator to ensure the latest header/linker/startup according to current
+#     mcu-description/devices/<TARGET_NAME>.yaml.
+#   - Create static target `neon_mdf_device_<TARGET_NAME>` containing system_<TARGET_NAME>.c + startup.
+#   - Set external variables (PARENT_SCOPE): NEON_MDF_DEVICE_TARGET - name CMake target to
+#       target_link_libraries NEON_MDF_LINKER_SCRIPT - path linker script to -T
 #
-# Lưu ý: generator chạy 1 lần lúc CMake configure (execute_process), không
-# phải build-time custom command - sau khi sửa file .yaml phải re-run cmake
-# configure để header được sinh lại. Đơn giản, đủ dùng ở giai đoạn hiện tại.
+# Note: the generator runs once at CMake configure (execute_process), not build-time custom command -
+# after editing the .yaml file, re-run cmake configure for the header to be created again. Simple
+# enough to use at the current stage.
 function(neon_mdf_configure_target TARGET_NAME)
   if(NOT NEON_MDF_PATH)
-    message(FATAL_ERROR "NEON_MDF_PATH chua duoc set truoc khi include cmake/mcu_variants.cmake")
+    message(FATAL_ERROR "NEON_MDF_PATH not set before include cmake/mcu_variants.cmake")
   endif()
 
   set(_arch   ${NEON_MDF_TARGET_${TARGET_NAME}_ARCH})
   set(_family ${NEON_MDF_TARGET_${TARGET_NAME}_FAMILY})
   if(NOT _arch)
-    message(FATAL_ERROR "Target '${TARGET_NAME}' chua duoc dang ky trong cmake/mcu_variants.cmake")
+    message(FATAL_ERROR "Target '${TARGET_NAME}' has not been periodized in cmake/mcu_variants.cmake")
   endif()
 
   # Lowercase device IDs use lowercase artifact names; keep legacy paths.
@@ -82,7 +77,7 @@ function(neon_mdf_configure_target TARGET_NAME)
   )
   message(STATUS "[mcu-description] ${_gen_output}")
   if(NOT _gen_result EQUAL 0)
-    message(FATAL_ERROR "Sinh code cho target '${TARGET_NAME}' that bai:\n${_gen_output}${_gen_error}")
+    message(FATAL_ERROR "generate code for target '${TARGET_NAME}' failed:\n${_gen_output}${_gen_error}")
   endif()
 
   if(_arch MATCHES "^cortex-m")
@@ -117,31 +112,30 @@ function(neon_mdf_configure_target TARGET_NAME)
     set(NEON_MDF_LINKER_SCRIPT ${_cmsis_device_root}/Source/gcc/linker/${_linker_FLASH} PARENT_SCOPE)
     set(NEON_MDF_TARGET_ARCH ${_arch} PARENT_SCOPE)
 
-    # bootloader: TUY CHON (xem mcu-description/schema/common.schema.yaml).
-    # generate.py CHI sinh mcu-description/generated/<TARGET>_bootloader.cmake
-    # khi device YAML co khai `bootloader:` - day la cach DUY NHAT CMake biet
-    # duoc device nay co bootloader hay khong (YAML chi duoc doc boi Python,
-    # xem loader.py) - cung pattern voi cmake/kconfig.cmake (Python sinh
-    # fragment, CMake chi include()).
+    # bootloader: optional (see mcu-description/schema/common.schema.yaml). generate.py only creates
+    # mcu-description/generated/<TARGET>_bootloader.cmake when the YAML device has a `bootloader:`
+    # declaration. This is how CMake determines whether the device has a bootloader; the YAML is read
+    # only by Python, see loader.py) - same pattern as cmake/kconfig.cmake (Python fragment
+    # generator, CMake only include()).
     set(NEON_MDF_BOOTLOADER_ENABLED OFF)
     set(_bootloader_cmake_fragment ${NEON_MDF_PATH}/mcu-description/generated/${TARGET_NAME}_bootloader.cmake)
     if(EXISTS ${_bootloader_cmake_fragment})
       include(${_bootloader_cmake_fragment})
       set(NEON_MDF_BOOTLOADER_LINKER_SCRIPT ${_cmsis_device_root}/Source/gcc/linker/${_linker_BOOTLOADER} PARENT_SCOPE)
       set(NEON_MDF_APP_LINKER_SCRIPT ${_cmsis_device_root}/Source/gcc/linker/${_linker_APP} PARENT_SCOPE)
-      # include() o tren chi set() cac bien nay trong SCOPE CUA HAM NAY (CMake
-      # moi function() la 1 scope rieng) - PHAI truyen tiep PARENT_SCOPE thi
-      # CMakeLists.txt goi neon_mdf_add_flash_targets() moi thay duoc, neu
-      # khong 3 bien nay se RONG o do (da xac nhan bang test that: truoc khi
-      # sua, message(STATUS "${NEON_MDF_IMAGE_HEADER_SIZE}") ngay sau
-      # neon_mdf_add_flash_targets() trong CMakeLists.txt in ra chuoi rong).
+      # include() above refers to set() these variables in the SCOPE of this function (CMake each function()
+      # is a separate scope) - must be inline PARENT_SCOPE then CMakeLists.txt call
+      # neon_mdf_add_flash_targets() each visible, otherwise these 3 variables will be empty there
+      # (confirmed by real test: before fixing, message(STATUS "${NEON_MDF_IMAGE_HEADER_SIZE}")
+      # right after neon_mdf_add_flash_targets() in CMakeLists.txt prints an empty string).
       set(NEON_MDF_BOOTLOADER_SIZE ${NEON_MDF_BOOTLOADER_SIZE} PARENT_SCOPE)
       set(NEON_MDF_IMAGE_HEADER_SIZE ${NEON_MDF_IMAGE_HEADER_SIZE} PARENT_SCOPE)
       set(NEON_MDF_APP_BASE ${NEON_MDF_APP_BASE} PARENT_SCOPE)
-      # RAM_BASE/RAM_SIZE/ERASE_SECTORS - chi can cho tools/gen_flashmap.py
-      # (xem cmake/flashmap.cmake) - cung PARENT_SCOPE 2 tang nhu 3 bien tren,
-      # bai hoc CMake giong het (da xac nhan that: thieu dong nay se lam
-      # gen_flashmap.py nhan --ram-base RONG, lech het cac tham so sau no).
+      # RAM_BASE/RAM_SIZE/ERASE_SECTORS - just for tools/gen_flashmap.py (see cmake/flashmap.cmake) - same
+      # Propagate through both scopes with PARENT_SCOPE, like the three variables above. Otherwise
+      # gen_flashmap.py receives an empty --ram-base and subsequent arguments shift; confirmed
+      # during validation.
+      # after no).
       set(NEON_MDF_RAM_BASE ${NEON_MDF_RAM_BASE} PARENT_SCOPE)
       set(NEON_MDF_RAM_SIZE ${NEON_MDF_RAM_SIZE} PARENT_SCOPE)
       set(NEON_MDF_ERASE_SECTORS ${NEON_MDF_ERASE_SECTORS} PARENT_SCOPE)
@@ -154,13 +148,13 @@ function(neon_mdf_configure_target TARGET_NAME)
     set(_vendor ${NEON_MDF_TARGET_${TARGET_NAME}_VENDOR})
     set(_abi    ${NEON_MDF_TARGET_${TARGET_NAME}_ABI})
     if(NOT _vendor)
-      message(FATAL_ERROR "Target RISC-V '${TARGET_NAME}' thieu NEON_MDF_TARGET_${TARGET_NAME}_VENDOR trong cmake/mcu_variants.cmake")
+      message(FATAL_ERROR "Target RISC-V '${TARGET_NAME}' missing NEON_MDF_TARGET_${TARGET_NAME}_VENDOR in cmake/mcu_variants.cmake")
     endif()
     if(NOT _abi)
-      message(FATAL_ERROR "Target RISC-V '${TARGET_NAME}' thieu NEON_MDF_TARGET_${TARGET_NAME}_ABI trong cmake/mcu_variants.cmake")
+      message(FATAL_ERROR "Target RISC-V '${TARGET_NAME}' missing NEON_MDF_TARGET_${TARGET_NAME}_ABI in cmake/mcu_variants.cmake")
     endif()
 
-    # isa = _arch tru tien to "riscv-" (vd "riscv-rv32ec" -> "rv32ec").
+    # isa = _arch minus first to "riscv-" (e.g. "riscv-rv32ec" -> "rv32ec").
     string(REPLACE "riscv-" "" _isa ${_arch})
 
     set(_riscv_device_root ${NEON_MDF_PATH}/arch/RISCV/Device/${_vendor}/${_family})
@@ -178,25 +172,23 @@ function(neon_mdf_configure_target TARGET_NAME)
       ${_riscv_core_include}
       ${_port_root}/Inc
     )
-    # NEON_MDF_ARCH_RISCV - macro chung cho MOI target RISC-V (khong rieng
-    # CH32V003F4P6) - dung boi components/bootloader/neon_bootloader_main.c
-    # de bop lai DUNG phan ARM-specific (SysTick/jump_to_app/system reset,
-    # xem comment dau file do) ma khong dung toi nhanh Cortex-M hien co.
+    # NEON_MDF_ARCH_RISCV - generic macro for each RISC-V target (not CH32V003F4P6) - used by
+    # components/bootloader/neon_bootloader_main.c to bop back to ARM-specific
+    # (SysTick/jump_to_app/system reset, see comment at the beginning of that file) without using
+    # existing Cortex-M.
     target_compile_definitions(neon_mdf_device_${TARGET_NAME} PUBLIC ${TARGET_NAME} NEON_MDF_ARCH_RISCV)
     neon_mdf_apply_riscv_arch(neon_mdf_device_${TARGET_NAME} ${_isa} ${_abi})
-    # __udivsi3/__umodsi3/__mulsi3 - TU CUNG CAP (arch/RISCV/Core/Src/riscv_soft_math.c,
-    # da them vao SOURCES o tren) - KHONG dung -lgcc he thong (toolchain
-    # Homebrew nay khong co multilib khop ilp32e, xem giai thich day du
-    # trong riscv_soft_math.c).
+    # __udivsi3/__umodsi3/__mulsi3 - from the same level (arch/RISCV/Core/Src/riscv_soft_math.c, added
+    # SOURCES above) - do not use -lgcc he flux (this Homebrew toolchain does not have multilib
+    # match ilp32e, see full stage in riscv_soft_math.c).
 
     set(NEON_MDF_DEVICE_TARGET neon_mdf_device_${TARGET_NAME} PARENT_SCOPE)
     set(NEON_MDF_LINKER_SCRIPT ${_riscv_device_root}/Source/gcc/linker/${_linker_FLASH} PARENT_SCOPE)
     set(NEON_MDF_TARGET_ARCH ${_arch} PARENT_SCOPE)
 
-    # bootloader: TUY CHON, cung pattern voi nhanh cortex-m o tren (Python
-    # sinh fragment, CMake chi include()) - CH32V003F4P6.yaml gio DA khai
-    # `bootloader:` (Phase 6, xem plan RISC-V) nen nhanh nay THAT SU chay
-    # toi, khac luc Phase 3 (khi con la OFF cung).
+    # bootloader: optional, same pattern as the cortex-m accelerator above (Python creates fragments,
+    # CMake only include()) - CH32V003F4P6.yaml has now declared `bootloader:` (Phase 6, see RISC-V
+    # plan) so this accelerator is essentially dead, unlike Phase 3 (when child is OFF together).
     set(NEON_MDF_BOOTLOADER_ENABLED OFF)
     set(_bootloader_cmake_fragment ${NEON_MDF_PATH}/mcu-description/generated/${TARGET_NAME}_bootloader.cmake)
     if(EXISTS ${_bootloader_cmake_fragment})
@@ -213,6 +205,6 @@ function(neon_mdf_configure_target TARGET_NAME)
     endif()
     set(NEON_MDF_BOOTLOADER_ENABLED ${NEON_MDF_BOOTLOADER_ENABLED} PARENT_SCOPE)
   else()
-    message(FATAL_ERROR "Arch '${_arch}' khong duoc nhan dien cho target ${TARGET_NAME}")
+    message(FATAL_ERROR "Arch '${_arch}' is not received for target ${TARGET_NAME}")
   endif()
 endfunction()

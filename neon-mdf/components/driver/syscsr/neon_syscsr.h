@@ -2,11 +2,11 @@
  * @file neon_syscsr.h
  * @brief Public declarations for SYSCSR.
  * @details
- * * NEON_SYSCSR - HAL cho khối System control and Status của FU2.
+ * * NEON_SYSCSR - HAL for FU2's System control and Status block.
  *
- * SYSCSR là một khối duy nhất trong SoC nên API không nhận con trỏ instance.
- * Pinmux/PAD không được public ở đây: đó là chi tiết backend được GPIO/UART/
- * SPI/I2C/PWM/QSPI dùng qua neon_syscsr_internal.h.
+ * SYSCSR is a single block in SoC so the API doesn't accept pointer instances. Pinmux/PAD isn't public
+ * here: it's only the backend that is used by GPIO/UART/ SPI/I2C/PWM/QSPI via
+ * neon_syscsr_internal.h.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.
@@ -40,7 +40,7 @@ typedef struct {
     neon_field8_t mode1_pin;
     neon_field8_t test_mode_pin;
     neon_field8_t test_mode_select_pin;
-    neon_field8_t mode; /* Giá trị gộp: bit0=MODE_0, bit1=MODE_1. */
+    neon_field8_t mode; /* Gross value: bit0=MODE_0, bit1=MODE_1. */
     uint32_t raw_value;
 } neon_syscsr_boot_config_t;
 
@@ -75,7 +75,7 @@ typedef struct {
  * @param[in,out] version Version.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Đọc thông tin nhận dạng và trạng thái hệ thống.
+ * read identification information and system status.
  */
 neon_status_t neon_syscsr_get_version(neon_syscsr_version_t *version);
 /**
@@ -93,7 +93,7 @@ neon_status_t neon_syscsr_get_cpu_status(neon_syscsr_cpu_status_t *status);
 
 /**
  * @brief Set SYSCSR sys tick calibration.
- * @param[in] ten_ms_ticks Ten ms ticks.
+ * @param[in] ten_ms_ticks name ms ticks.
  * @return NEON_OK on success, or a module error/status code.
  * @details
  * FU2 v8 stores the 10-ms SysTick calibration value in CPU_SYSTICK.TENMS.
@@ -110,7 +110,7 @@ uint32_t neon_syscsr_get_sys_tick_calibration(void);
  * @param[in] enable Nonzero to enable, zero to disable.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Điều khiển các field RW của CPU_CTRL. enable/hold chỉ nhận 0 hoặc 1.
+ * Control the RW fields of CPU_CTRL. enable/hold only receive 0 or 1.
  */
 neon_status_t neon_syscsr_set_debug_watchdog_freeze(uint8_t enable);
 /**
@@ -131,7 +131,7 @@ neon_status_t neon_syscsr_set_sleep_hold(uint8_t hold);
  * @param[in] control control.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Các thanh ghi v11 có field/mask đã được FU2 v8 công bố.
+ * The v11 register with field/mask has been published by FU2 v8.
  */
 neon_status_t neon_syscsr_set_oscillator_pad_control(uint8_t control);
 /**
@@ -158,8 +158,8 @@ uint8_t neon_syscsr_get_rom_control(void);
  * @param[in] value Value.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * FU2 v8 chỉ công bố PAD_CTRL5..7 là RW[23:0] và IO_CFG_EXT là
- * RW[15:0], không có tên field. API raw tránh gán sai ý nghĩa bit.
+ * FU2 v8 only publishes PAD_CTRL5..7 as RW[23:0] and IO_CFG_EXT as RW[15:0], without field names. API
+ * raw avoids mislabeling bit meanings.
  */
 neon_status_t neon_syscsr_set_extended_pad_control(neon_syscsr_edge_t edge, uint8_t control_index, uint32_t value);
 /**
@@ -190,8 +190,8 @@ neon_status_t neon_syscsr_get_extended_io_config(neon_syscsr_edge_t edge, uint16
  * @param[in] enable Nonzero to enable, zero to disable.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * JTAGMUX_SEL[8] và JTAGMUX_BLOCK[12] đều là bit RW thường trong
- * model FU2 v8. BlockJTAGMux là helper tương thích ghi BLOCK=1.
+ * JTAGMUX_SEL[8] and JTAGMUX_BLOCK[12] are both common RW bits in the FU2 v8 model. BlockJTAGMux is a
+ * write BLOCK=1 compatible helper.
  */
 neon_status_t neon_syscsr_set_jtag_mux(uint8_t enable);
 /**
@@ -220,8 +220,8 @@ neon_status_t neon_syscsr_block_jtag_mux(void);
  * @brief Reset the subsystem and reinitialize Flash from SRAM.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Subsystem reset không reset CPU nhưng có reset FLASHC. Hàm được đặt
- * trong SRAM, che interrupt, phát request, INIT lại FLASHC rồi mới return.
+ * Subsystem reset does not reset the CPU but FLASHC resets. Functions are set in SRAM, cover
+ * interrupt, play request, INIT FLASHC and then return.
  */
 neon_status_t neon_syscsr_request_subsystem_reset(void);
 /**
@@ -233,7 +233,7 @@ neon_status_t neon_syscsr_request_software_reset(void);
 /**
  * @brief Request a global system reset; this function does not return.
  * @details
- * Global reset phải reset cả CPU nên không trả về.
+ * Global reset has to reset the CPU too, so it wo n't return.
  */
 __NO_RETURN void neon_syscsr_request_global_reset(void);
 

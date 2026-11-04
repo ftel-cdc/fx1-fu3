@@ -1,13 +1,7 @@
-// state.ts - noi duy nhat luu trang thai lua chon (target/transport/port).
-// statusBar.ts va cac command deu doc/ghi qua day va lang nghe onDidChange -
-// tranh moi UI surface tu giu 1 ban sao trang thai rieng roi lech nhau.
-//
-// target/transport = vscode.workspace settings ("neonMdf.target"/"neonMdf.transport",
-// xem package.json contributes.configuration) - y nghia du an, dang commit
-// duoc vao .vscode/settings.json cho ca team, giong cach cmake.sourceDirectory
-// da lam trong cac vi du hien co.
-// port = workspaceState (Memento) - dac thu MAY (cong USB nao tren MAY nay),
-// KHONG nen commit chung voi settings.json vi may khac se co ten cong khac.
+// Shared selection state for target, transport and serial port. All views and
+// commands use onDidChange rather than maintaining independent copies.
+// Target/transport are workspace configuration; the machine-specific port is
+// stored in workspaceState instead of committed settings.json.
 import * as vscode from "vscode";
 
 export type Transport = "uart" | "jtag";

@@ -1,24 +1,22 @@
-# Kconfig CUA RIENG app __APP_NAME__ - TUY CHON, xoa file nay neu app khong
-# can option rieng gi (khong loi gi ca neu thieu file - xem
-# neon-mdf/Kconfig + cmake/kconfig.cmake, dong osource "optional source").
+# Kconfig app's own __APP_NAME__ - option, erase this file if the app does not need its own option (no
+# error at all for missing files - see neon-mdf/Kconfig + cmake/kconfig.cmake, dynamic osource
+# "optional source").
 #
-# Cac option khai bao o day se hien CUNG 1 menuconfig, gop chung 1
-# sdkconfig/sdkconfig.h voi cac option cua SDK (components/driver) - mo qua
-# CMake target `menuconfig` (VS Code: lenh "NEON-MDF: Menuconfig", CLI:
-# neon_mdf.py menuconfig). Doc gia tri trong code C qua
-# `#include "sdkconfig.h"` + macro CONFIG_<TEN>.
+# options declared here share one menuconfig and sdkconfig/sdkconfig.h with
+# SDK options (components/driver) - open via CMake target `menuconfig` (VS Code: command "NEON-MDF:
+# Menuconfig", CLI: neon_mdf.py menuconfig). read value in code C via `#include "sdkconfig.h"` +
+# macro CONFIG_<name>.
 #
-# Vi du (bo comment de dung - xoa doan nay neu khong can):
+# Micro enough (comment set to use - erase this guess if not needed):
 #
 # menu "__APP_NAME__"
 #
 # config APP_EXAMPLE_OPTION
-#     bool "Vi du 1 option bat/tat rieng cua app nay"
+#     bool "Example app-specific boolean option"
 #     default y
 #     help
-#         Doc qua CONFIG_APP_EXAMPLE_OPTION trong Src/main.c (#include
-#         "sdkconfig.h") - xem Projects/Examples/Blinky/Kconfig +
-#         Src/main.c (CONFIG_BLINKY_DELAY_LOOPS) de xem 1 vi du THAT da
-#         chay tren phan cung.
+#         read through CONFIG_APP_EXAMPLE_OPTION in Src/main.c (#include "sdkconfig.h") - see
+#         Projects/Examples/Blinky/Kconfig + Src/main.c (CONFIG_BLINKY_DELAY_LOOPS) to see 1 micro
+#         true enough already running on hardware.
 #
 # endmenu

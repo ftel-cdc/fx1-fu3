@@ -1,22 +1,22 @@
-# UART_ECHO_Polling — FU2 UART0 echo có log
+# UART_ECHO_Polling — FU2 UART0 echo with log
 
-Nhận một byte bằng polling, in log dữ liệu người dùng gửi, rồi gửi lại byte
-đó và in log phía FPGA. Mặc định **UART0, 19200 baud, 8N1, FIFO bật**, clock
-FPGA **10 MHz**. Không dùng interrupt, DMA hoặc FreeRTOS.
+Receive a byte in polling, print the log of the data sent by the user, then send it back and print
+the log on the FPGA side. Defaults to UART0, 19200 baud, 8N1, FIFO enabled, 10 MHz FPGA clock. No
+interrupt, DMA or FreeRTOS.
 
-Gõ `A` trên terminal sẽ thấy:
+Type `A` on terminal will see:
 
 ```text
 [USER -> FPGA] 'A' (0x41)
 [FPGA -> USER] A (0x41)
 ```
 
-Ký tự `A` sau nhãn FPGA được gửi bằng `neon_uart_transmit()`. Các nhãn/mã hex
-được in bằng printf. Mỗi byte được xử lý ngay, không cần Enter hoặc buffer dòng.
-Với byte không in được, dòng USER hiển thị `.` và mã hex; byte echo vẫn giữ
-nguyên nên CR/LF hoặc ký tự điều khiển có thể làm thay đổi vị trí con trỏ.
+The `A` character after the FPGA label is sent by `neon_uart_transmit()`. The hex labels/codes are
+printed by printf. Each byte is processed immediately, no Enter or line buffer is required. For
+non-printable bytes, the USER line displays `.` and hex codes; the echo byte remains the same so
+CR/LF or the control character can make the pointer position change visible.
 
-## Build và cấu hình
+## Build and configuration
 
 ```sh
 cd /home/quang-hoang/merge_neon_mdf/CDC_NEON_MDF_merged/examples/UART_ECHO_Polling
@@ -24,68 +24,65 @@ cmake --preset FU2
 cmake --build --preset FU2
 ```
 
-Mở menuconfig:
+Open menuconfig:
 
 ```sh
 cmake --build --preset FU2 --target menuconfig
 ```
 
-Giữ `components/driver → Biên dịch UART driver` bật. Menu `UART_ECHO_Polling`
-cho chỉnh baud, fixed FPGA clock và RX/TX timeout. Clock phải khớp board;
-timeout tính bằng vòng poll, không phải mili-giây. Lưu bằng `S`, thoát bằng `Q`,
-rồi chạy lại configure và build như trên.
+Keep `components/driver → Compile UART driver` enabled. Menu `UART_ECHO_Polling` for baud
+correction, fixed FPGA clock and RX/TX timeout. Clock must match board; timeout is in poll rings,
+not milliseconds. Save with `S`, exit with `Q`, then re-run configure and build as above.
 
-## Nạp và chạy
+## flash and run
 
-Nạp PDI phần cứng phù hợp vào FPGA trước. UART0 TX/PC0 và RX/PC1 theo mapping
-FU2 được route tới FTDI theo PDI; dùng đúng serial port đó. Nếu nối USB-UART
-ngoài, nối TX ↔ RX và GND chung, xác nhận điện áp theo board map.
+Appropriate PDI hardware flashes into the FPGA first. UART0 TX/PC0 and RX/PC1 according to FU2
+mapping are routed to FTDI according to PDI; use the correct serial port. If USB-UART is connected
+externally, connect TX ↔ RX and generic GND, confirm voltage according to board map.
 
-File boot là `build/FU2/uart_echo_polling_image.bin` (header ROM v5 128-byte +
-payload). File `uart_echo_polling.bin` chỉ là payload raw. Xem [FU2.md](../../guide/FU2.md).
+The boot file is `build/FU2/uart_echo_polling_image.bin` (header ROM v5 128-byte + payload). File
+`uart_echo_polling.bin` is only raw payload. See [FU2.md](../../guide/FU2.md).
 
-Trên máy nối FPGA, thay đường dẫn/cổng tương ứng rồi nạp:
+On an FPGA connector, see the corresponding path/port and flash:
 
 ```sh
 python3 /home/quang-hoang/fu2_fpga/uart_boot_loader.py --port /dev/serial/by-id/usb-Xilinx_VEK280_262502175696-if02-port0 --image /home/quang-hoang/merge_neon_mdf/CDC_NEON_MDF_merged/examples/UART_ECHO_Polling/build/FU2/uart_echo_polling_image.bin --baud 9600 --byte-gap-ms 2 --no-monitor
 ```
 
-Chạy loader trước rồi giữ SW5 khoảng 2 giây theo guideline. Baud BootROM 9600
-ở lệnh trên độc lập với baud app 19200; đổi nếu PDI đang dùng có cấu hình khác.
+Run the loader first and hold SW5 for about 2 seconds according to the guideline. Baud BootROM 9600
+in the above command is independent of baud app 19200; change if the PDI in use has a different
+configuration.
 
-Sau khi loader hoàn tất và đóng cổng:
+After the loader is complete and the port is closed:
 
 ```sh
 python3 -m serial.tools.miniterm /dev/serial/by-id/usb-Xilinx_VEK280_262502175696-if02-port0 19200 --raw
 ```
 
-Không thêm `--echo` để tắt local echo. Gõ từng ký tự hoặc chuỗi ngắn và quan
-sát hai nhãn USER/FPGA. Thoát bằng `Ctrl+]`. Banner có thể đã đi qua trước khi
-monitor mở; log hai chiều vẫn xuất hiện khi gõ.
+Do not add `--echo` to disable local echo. Type each character or short string and observe two
+labels USER/FPGA. Exit with `Ctrl+]`. Banners may have passed before the monitor opens; two-way logs
+still appear when typing.
 
-Log làm tăng số byte TX, nên gõ chậm và tránh gửi burst dài gây đầy RX FIFO.
-Luồng trả về có cả byte echo và log, không dùng để so sánh raw toàn bộ stream.
+Log increases the number of TX bytes, so type slowly and avoid sending long bursts that fill up RX
+FIFO. Return stream has both echo and log bytes, not for comparing whole stream raw.
 
-## Trạng thái
+## The status
 
-`g_uart_echo_stats` trong debugger giữ các bộ đếm byte RX/echo TX thành công,
-RX/TX timeout, lỗi và mã lỗi gần nhất. Không tính byte log printf vào `tx_bytes`.
-TX thành công nghĩa là byte đã được ghi vào THR; UART có thể vẫn đang phát
-byte đó. Driver TX chỉ chờ LSR[5] THRF=0, không chờ LSR[6] TEMT.
-RX timeout khi chưa có dữ liệu chỉ tăng bộ đếm rồi tiếp tục polling, không in
-log liên tục. RX lỗi và TX lỗi được in với nhãn `[ERROR]`.
+`g_uart_echo_stats` in the debugger holds the counter bytes RX/echo TX success, RX/TX timeout, error
+and last error code. Do not count printf log bytes to `tx_bytes`. TX success means that the byte has
+been written to THR; UART may still be playing that byte. Driver TX only waits for LSR[5] THRF=0,
+does not wait for LSR[6] TEMT. RX timeout without data only increases the counter then resumes
+polling, does not print log continuously. RX error and TX error are printed with label `[ERROR]`.
 
-Chỉ include `<stdio.h>` để dùng printf; không gọi `neon_console_attach_uart()`.
-Log khởi động đầu tiên tự khởi tạo console UART0 ở 19200 baud. App đợi
-LSR[6] TEMT để banner truyền xong trước khi reset UART; đây là bước chuẩn bị
-cho đổi cấu hình, không nằm trong đường truyền TX polling. Sau đó app
-cấu hình lại UART0 theo menuconfig và bật FIFO; echo và log tiếp theo dùng
-chung cấu hình phần cứng này. Nếu đổi baud app, log khởi động đầu tiên vẫn
-ở 19200 baud, còn banner ready và log RX/TX ở baud app đã chọn.
-Log là chẩn đoán best-effort; các bộ đếm TX theo dõi byte echo chính, không
-theo dõi lỗi in từng phần của log. Không tự gửi lại dữ liệu sau TX timeout:
-với một buffer nhiều byte, các byte trước đó có thể đã được ghi vào THR.
+Only include `<stdio.h>` to use printf; do not call `neon_console_attach_uart()`. The first boot log
+initializes the UART0 console at 19200 baud. The app waits for LSR[6] TEMT for the banner to finish
+transferring before resetting the UART; this is the preparatory step for changing configuration,
+which is not included in the TX polling line. Then the app reconfigures UART0 according to the
+menuconfig and enables FIFO; the next echo and log share this hardware configuration. If the baud
+app is changed, the first boot log remains at 19200 baud, while the banner ready and log RX/TX are
+at the selected baud app. Log is the best-effort diagnostic; the counter TX monitors the main echo
+byte, not the print error of each part of the log. Do not manually re-send data after the TX
+timeout: with a multibyte buffer, previous bytes may have been written to the THR.
 
-Buffer một byte sở hữu trọn word `uint32_t`, phù hợp SRAM word-only của FU2.
-Build kiểm tra driver archive và ELF để từ chối truy cập byte/halfword. Chưa
-kiểm chứng truyền nhận trên FPGA thật.
+Buffer a `uint32_t` full-word owner byte, compliant with FU2 word-only SRAM. Build checks driver
+archive and ELF to deny access to byte/halfword. Unverified transmission on real FPGA.

@@ -2,17 +2,15 @@
  * @file main.c
  * @brief Implementation for templates.
  * @details
- * * Diem bat dau TOI GIAN: khong dung GPIO/LED gi ca, chi in ten app lap lai
- * qua printf() - proof-of-life de xac nhan pipeline mcu-description ->
- * CMSIS/RISC-V header/linker/startup -> firmware chay duoc end-to-end.
- * Xoa/sua/them code tuy y - day chi la diem bat dau, khong phai code bat
- * buoc giu lai.
+ * * Minimal starting point: no GPIO/LED demo, just periodically print the app name through printf() -
+ * proof-of-life to confirm pipeline mcu-description -> CMSIS/RISC-V header/linker/startup ->
+ * firmware runs end to end. Edit, remove or add code freely; this is only a starting point, not a
+ * mandatory code retained.
  *
- * WEACT_F412 khong con retarget printf() sang UART; cac lenh printf()
- * tren target nay dung stub newlib/nosys. CH32V003F4P6 (RISC-V) KHONG dung duoc
- * printf() (toolchain bare-metal khong co libc that, xem
- * arch/RISCV/README.md) - #include <stdio.h> PHAI bao dieu kien (khong chi
- * cac lenh goi ham) neu khong se loi ngay o buoc preprocess.
+ * WEACT_F412 does not retarget printf() to UART; printf() commands on this target use the stub
+ * newlib/nosys. CH32V003F4P6 (RISC-V) do not work printf() (toolchain bare-metal without real libc,
+ * see arch/RISCV/README.md) - #include <stdio.h> must be checked (not just function calls)
+ * otherwise it will fail at the preprocess step.
  */
 
 /*==================================================================================================
@@ -42,7 +40,7 @@ static void templates_delay_busy(volatile uint32_t count);
 int main(void) {
     for (;;) {
 #if defined(FU2) || defined(WEACT_F412)
-        printf("__APP_NAME__ dang chay\n");
+        printf("__APP_NAME__ is running\n");
 #endif
         templates_delay_busy(2000000U);
     }

@@ -3361,7 +3361,7 @@ peripherals:
         reset: 0x00000000
         description: "GPIO Output Enable Register bit[7:0] EN"
         fields:
-          - {name: EN, bit_offset: 0, bit_width: 8, description: "Output enable cho GPIO[7:0]: 0=input, 1=output"}
+          - {name: EN, bit_offset: 0, bit_width: 8, description: "Output enable for GPIO[7:0]: 0=input, 1=output"}
           - {name: RESERVED, bit_offset: 8, bit_width: 24, description: "Reserved in bits [31:8]"}
       - name: OUT
         offset: 0x014

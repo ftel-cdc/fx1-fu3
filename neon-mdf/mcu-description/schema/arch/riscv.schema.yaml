@@ -1,35 +1,29 @@
-# riscv.schema.yaml — field cpu.* dành riêng cho arch bắt đầu bằng "riscv"
-# (đọc vào model.Cpu.extra, xem mcu_desc/loader.py - KHÔNG cần sửa
-# model.py/loader.py, field arch-specific đã tự động rơi vào `extra` dict).
+# riscv.schema.yaml — field cpu.* reserved for arch starting with "riscv" (read to model.Cpu.extra,
+# see mcu_desc/loader.py - NO edit required model.py/loader.py, field arch-specific already
+# automatically falls into `extra` dict).
 #
-# ĐÃ TRIỂN KHAI THẬT (2026-08-10, target CH32V003F4P6 - xem
-# devices/CH32V003F4P6.yaml) - không còn RESERVED. Field thật đang dùng:
+# REALLY DEployed (2026-08-10, target CH32V003F4P6 - see devices/CH32V003F4P6.yaml) - no longer
+# RESERVED. Real field in use:
 #   cpu.isa                  vd "rv32ec" (WCH QingKe V2A - Embedded+Compressed,
-#                             KHÔNG có M/A/F, khác "rv32imac" từng dự kiến ban
-#                             đầu trước khi có chip thật để xác nhận).
-#   cpu.mtvec_mode            "vectored-address" - giá trị VENDOR-SPECIFIC của
-#                             WCH (mtvec[1:0]=3, "Address" mode theo RM chương
-#                             1: mỗi entry là 1 con trỏ hàm, entry 0 là LỆNH `j`
-#                             chứ không phải địa chỉ) - KHÔNG phải "direct"/
-#                             "vectored" chuẩn RISC-V cơ bản (mtvec[1:0]=0/1).
-#                             Core RISC-V khác (không phải QingKe/PFIC) có thể
-#                             cần thêm giá trị khác cho field này khi gặp thật.
+#                             NO M/A/F, other than "rv32imac" which was originally expected before the actual chip was available
+#                             for validation. cpu.mtvec_mode "vectored-address" - WCH's
+#                             VENDOR-SPECIFIC value (mtvec[1:0]=3, RM chapter 1 "Address" mode: each
+#                             entry is a function pointer, entry 0 is COMMAND `j` and not address) -
+#                             NOT standard RISC-V "direct"/ "vectored" (mtvec[1:0]=0/1). Core RISC-V
+#                             that is different (not QingKe/PFIC) may need another value for this
+#                             field when encountered in real time.
 #   cpu.interrupt_controller  "pfic" (WCH Programmable Fast Interrupt
-#                             Controller, vendor-specific - KHÔNG PHẢI CLINT/
-#                             PLIC chuẩn RISC-V, đúng như cảnh báo ban đầu của
-#                             chính sách RESERVED cũ) - core-private, KHÔNG
-#                             xuất hiện trong `peripherals:` (giống NVIC của
-#                             Cortex-M) - địa chỉ hardcode trong
+#                             Controller, vendor-specific - NOT CLINT/ RISC-V standard PLIC, as warned in the early versions of
+#                             the old RESERVED policy) - core-private, NOT present in `peripherals:`
+#                             (similar to Cortex-M's NVIC) - hardcode address in
 #                             mcu-description/tools/backends/riscv/gen_startup.py
-#                             + arch/RISCV/Port/ (0xE000E000, xem RM chương 6).
-#   cpu.hart_count            1 (đơn hart trên CH32V003 - QingKe V2A).
+#                             + arch/RISCV/Port/ (0xE000E000, see RM chapter 6). cpu.hart_count 1 ( hart single on CH32V003 - QingKe
+#   V2A).
 #
-# Không có peripheral/register nào khác biệt giữa Cortex-M và RISC-V ở
-# schema/common — phần đó (UART/SPI/GPIO/...) dùng chung, đã xác nhận qua
-# CH32V003F4P6.yaml (GPIO layout kiểu STM32F1, dùng đúng model.Peripheral/
-# Register như mọi device khác, không cần field mới nào ở đó).
+# There is no peripheral/register difference between Cortex-M and RISC-V in the shared schema/common —
+# section (UART/SPI/GPIO/...), confirmed via CH32V003F4P6.yaml (GPIO layout STM32F1, uses the same
+# model.Peripheral/ Register as any other device, no new field required there).
 #
-# Nguồn: CH32V003RM.PDF V1.9 (WCH chính thức) + đối chiếu
-# basilhussain/ch32v003-startup (mã nguồn thực đã chạy trên silicon thật)
-# cho phần lõi/CSR mà Reference Manual không đủ chi tiết (tự nói phần lõi
-# nằm ở tài liệu riêng "QingKeV2_Processor_Manual", chưa tải).
+# Source: CH32V003RM.PDF V1.9 (official WCH) + compare basilhussain/ch32v003-startup (real source code
+# running on real silicon) for the core/CSR section that the Reference Manual does not specify
+# enough (it says the core is in its own document "QingKeV2_Processor_Manual", unloaded).

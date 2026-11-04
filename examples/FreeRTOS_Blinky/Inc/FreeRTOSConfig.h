@@ -2,31 +2,28 @@
  * @file FreeRTOSConfig.h
  * @brief Public declarations for freertosconfig.
  * @details
- * * FreeRTOSConfig.h - cấu hình cho ví dụ FreeRTOS_Blinky - dùng chung cho CẢ
- * FU2 (Cortex-M0, port ARM_CM0), WEACT_F412 (Cortex-M4F, port ARM_CM4F) VÀ
+ * * FreeRTOSConfig.h configures FreeRTOS_Blinky for FU2 (Cortex-M0, ARM_CM0), WEACT_F412 (Cortex-M4F,
+ * ARM_CM4F) and
  * CH32V003F4P6 (RISC-V QingKe V2A, port GCC_RISC_V_GENERIC + chip extension
- * "RISCV_no_extensions" - thêm 2026-08-10) - xem #if defined(...) dưới,
- * target nào dùng macro nào do cmake/freertos.cmake chọn FREERTOS_PORT
- * tương ứng.
+ * "RISCV_no_extensions", added 2026-08-10). See the #if defined(...) branches below;
+ * cmake/freertos.cmake selects FREERTOS_PORT for each target.
  *
- * File này thuộc về VÍ DỤ (app-level), không phải SDK - mỗi app tự có
- * FreeRTOSConfig.h riêng (stack/heap/priority tuỳ app). Xem
+ * This configuration belongs to the example application. Each app has its own FreeRTOSConfig.h and
+ * chooses its stack, heap and priority settings. See
  * rtos/README.md.
  *
- * Lưu ý về port ARM_CM0 (FU2, portable/GCC/ARM_CM0/port.c trong
- * FreeRTOS-Kernel submodule): port này set priority của PendSV/SysTick bằng
- * hằng số portMIN_INTERRUPT_PRIORITY=0xFF (thấp nhất có thể, bất kể số bit
- * priority NVIC thật implement bao nhiêu) - nên KHÔNG cần configPRIO_BITS /
- * configKERNEL_INTERRUPT_PRIORITY. Đã verify bằng cách đọc trực tiếp port.c
+ * The ARM_CM0 port (FU2, portable/GCC/ARM_CM0/port.c in FreeRTOS-Kernel) sets the PendSV/SysTick
+ * priority to portMIN_INTERRUPT_PRIORITY=0xFF, the lowest priority regardless of the implemented
+ * NVIC priority width. It therefore does not require configPRIO_BITS or
+ * configKERNEL_INTERRUPT_PRIORITY. Verified by reading the upstream port.c
  * vendor.
  *
- * Port ARM_CM4F (WEACT_F412, portable/GCC/ARM_CM4F/port.c) thì NGƯỢC LẠI -
- * CẦN configMAX_SYSCALL_INTERRUPT_PRIORITY (port.c dùng trực tiếp trong
- * portmacro.h de tinh BASEPRI) va configPRIO_BITS phai khop
- * __NVIC_PRIO_BITS that (=4, xem WEACT_F412.yaml cpu.nvic_priority_bits) -
- * gia tri chuan theo demo FreeRTOS chinh thuc cho STM32F4 (5 << (8-4) = 0x50,
- * de lai 4 muc priority cao nhat 0-4 cho ISR "khong kernel-aware", con lai
- * 5-15 duoc phep goi FreeRTOS API tu ISR).
+ * The ARM_CM4F port (WEACT_F412, portable/GCC/ARM_CM4F/port.c) requires
+ * configMAX_SYSCALL_INTERRUPT_PRIORITY, which portmacro.h uses to calculate BASEPRI.
+ * configPRIO_BITS must match __NVIC_PRIO_BITS (=4; see WEACT_F412.yaml cpu.nvic_priority_bits).
+ * These settings follow the official STM32F4 FreeRTOS demo: 5 << (8-4) = 0x50. Priorities 0-4 are
+ * reserved for ISRs that do not call the kernel; priorities 5-15 may call FreeRTOS APIs from an
+ * ISR.
  */
 
 #ifndef FREERTOS_CONFIG_H
@@ -47,21 +44,19 @@
 #define configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY 5
 #define configKERNEL_INTERRUPT_PRIORITY (configLIBRARY_LOWEST_INTERRUPT_PRIORITY << (8 - configPRIO_BITS))
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY (configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS))
-/* "Indirect Routing" (xem comment o Src/main.c): vector table generic sinh
- * tu mcu-description luon dat ten SVC_Handler/PendSV_Handler/SysTick_Handler
- * (khong phai vPortSVCHandler/xPortPendSVHandler ma port CM4F mong doi) -
- * cac ham do nhay `b` sang dung ham FreeRTOS luc chay, nhung xPortStartScheduler()
- * tu kiem tra TINH (dia chi trong vector table == dia chi vPortSVCHandler)
- * chu khong kiem tra hanh vi - kiem tra nay CHI danh cho "Direct Routing",
- * phai tat bang macro nay (xem port.c dong 322-325) neu khong se treo vinh
- * vien tai configASSERT that bai (da xac nhan that bang debug SWD). */
+/* "Indirect Routing" (see Src/main.c): mcu-description generates
+ * SVC_Handler/PendSV_Handler/SysTick_Handler names rather than the
+ * vPortSVCHandler/xPortPendSVHandler names expected by the CM4F port. Wrappers branch with `b` to
+ * the FreeRTOS handlers at runtime. However, xPortStartScheduler() checks static vector addresses
+ * (the SVC vector must equal vPortSVCHandler), not runtime behavior. This check supports "Direct
+ * Routing" only and must be disabled with this macro (port.c lines 322-325), or configASSERT fails
+ * and hangs permanently. Confirmed with SWD debugging. */
 #define configCHECK_HANDLER_INSTALLATION 0
 #endif
 
-/* SystemCoreClock cập nhật bởi SystemCoreClockUpdate() - xem system_FU2.c.
- * Hiện đang chạy ở tần số mặc định sau reset (CRM thật chưa cấu hình, xem
- * TODO trong system_FU2.c) - configTICK_RATE_HZ vẫn đúng vì tính theo
- * SystemCoreClock động, không hardcode số Hz. */
+/* SystemCoreClock is updated by SystemCoreClockUpdate(); see system_FU2.c. The clock currently remains
+ * at its reset frequency because CRM setup is unfinished. configTICK_RATE_HZ remains correct
+ * because it uses the current SystemCoreClock rather than a hardcoded frequency. */
 extern uint32_t SystemCoreClock;
 #define configCPU_CLOCK_HZ (SystemCoreClock)
 
@@ -70,7 +65,7 @@ extern uint32_t SystemCoreClock;
 
 #define configUSE_PREEMPTION 1
 #define configUSE_TIME_SLICING 1
-#define configUSE_PORT_OPTIMISED_TASK_SELECTION 0 /* Cortex-M0 không có lệnh CLZ */
+#define configUSE_PORT_OPTIMISED_TASK_SELECTION 0 /* Cortex-M0 has no CLZ instruction */
 #define configUSE_TICKLESS_IDLE 0
 
 #define configMAX_PRIORITIES 4
@@ -115,8 +110,7 @@ extern uint32_t SystemCoreClock;
 #define configHEAP_CLEAR_MEMORY_ON_FREE 1
 #define configUSE_NEWLIB_REENTRANT 0
 
-/* Port ARM_CM0 dùng MPU_WRAPPERS_V2 optional - FU2 (Cortex-M0 thuần) không
- * có MPU nên tắt hẳn. */
+/* The ARM_CM0 port optionally supports MPU_WRAPPERS_V2. FU2 has no MPU, so disable it. */
 #define configENABLE_MPU 0
 
 #define configASSERT(x)                                                                                                \
@@ -143,52 +137,43 @@ extern uint32_t SystemCoreClock;
 #define INCLUDE_xTaskResumeFromISR 1
 
 #if defined(CH32V003F4P6)
-/* QingKe V2A (CH32V003) KHONG co CLINT (Core Local Interrupter chuan cua
- * RISC-V ma FreeRTOS RISC-V port mac dinh gia dinh) - da xac nhan THAT qua
- * QingKeV2 Processor Manual V1.0 (WCH chinh thuc, tai truc tiep tu
- * ch405-labs.com luc lam viec nay - "MIE"/mcause/mtvec[1:0] direct mode deu
- * duoc doi chieu that, khong doan). PFIC (Programmable Fast interrupt
- * Controller) rieng cua WCH quan ly ngat thay CLINT. Port RISC-V cua
- * FreeRTOS-Kernel HO TRO SAN cau hinh "khong CLINT" nay (KHONG phai tu
- * improvise) qua bien the chip_specific_extensions "RISCV_no_extensions" -
- * xem cmake/freertos.cmake (chon FREERTOS_PORT=GCC_RISC_V_GENERIC +
- * FREERTOS_RISCV_EXTENSION=RISCV_no_extensions) va Src/main.c (noi setup
- * that: mtvec Direct mode + STK (SysTick that cua QingKe, dia chi/bit KHAC
- * han CLINT mtime) sinh ngat tick, PFIC IENR bat IRQ qua SDK_IRQ_Enable()).
+/* QingKe V2A (CH32V003) has no CLINT (the standard RISC-V Core Local Interrupter assumed by the
+ * default FreeRTOS RISC-V port). Verified against the official QingKeV2 Processor Manual V1.0 from
+ * ch405-labs.com, including MIE, mcause and mtvec[1:0] direct mode. WCH uses its own PFIC
+ * (Programmable Fast Interrupt Controller). FreeRTOS-Kernel already supports this configuration
+ * through chip_specific_extensions "RISCV_no_extensions"; see cmake/freertos.cmake
+ * (FREERTOS_PORT=GCC_RISC_V_GENERIC +
+ * FREERTOS_RISCV_EXTENSION=RISCV_no_extensions) and Src/main.c (which implements the
+ * implementation: mtvec Direct mode and QingKe STK generate the tick interrupt. STK addresses/bits
+ * differ from CLINT mtime; PFIC IENR enables the IRQ through SDK_IRQ_Enable()).
  *
- * configMTIME_BASE_ADDRESS/configMTIMECMP_BASE_ADDRESS = 0 bao port.c biet
- * KHONG co thanh ghi mtime/mtimecmp that o dia chi nao ca - port se KHONG
- * tu dong cau hinh tick timer (vPortSetupTimerInterrupt() mac dinh la ham
- * rong "weak" - ta tu ghi de that trong Src/main.c). */
+ * configMTIME_BASE_ADDRESS/configMTIMECMP_BASE_ADDRESS = 0 tells port.c that no mtime/mtimecmp
+ * registers exist. The port therefore does not configure the tick timer automatically. Its default
+ * vPortSetupTimerInterrupt() is an empty weak function, overridden by the application in
+ * Src/main.c. */
 #define configMTIME_BASE_ADDRESS 0
 #define configMTIMECMP_BASE_ADDRESS 0
 
-/* ISR dung stack TINH RIENG (mang static, xem port.c) - tranh phai sua
- * linker script sinh tu mcu-description them 1 symbol rieng
- * (__freertos_irq_stack_top) chi cho rieng FreeRTOS. */
+/* The ISR uses its own statically allocated stack (see port.c), avoiding a FreeRTOS-only
+ * __freertos_irq_stack_top symbol in the linker script generated by mcu-description. */
 #define configISR_STACK_SIZE_WORDS 32
 
-/* CH32V003F4P6 chi co 2KB RAM tong (xem CH32V003F4P6.yaml) - ngan sach CHAT
- * hon han FU2 (64KB RAM_USR)/WEACT_F412 (256KB) rat nhieu, nen PHAI giam
- * stack/heap va TAT timer service task (demo nay khong dung xTimerCreate)
- * so voi gia tri dung chung o tren (128 words/8KB, tinh cho RAM lon). Da
- * tinh so bo: 3 task (idle+led0+led1, KHONG co timer task) x (TCB ~60-90B +
- * configMINIMAL_STACK_SIZE*4B) + ISR stack phai vua trong ngan sach - CHUA
- * verify that tren board (board RISC-V dat shopee chua ve, xem memory FU2
- * hardware status) - so lieu duoi day la uoc luong ban dau, se chinh lai
- * theo bao cao `size` that luc build/link (linker se BAO LOI cung neu RAM
- * vuot region 2KB, khong bao gio am tham sai) khi co ket qua build that. */
+/* CH32V003F4P6 has only 2KB total RAM (CH32V003F4P6.yaml), much less than FU2 (64KB RAM_USR) or
+ * WEACT_F412 (256KB). Reduce the stack and heap and disable the unused timer service task. The
+ * common defaults above are 128 words per stack and an 8KB heap. Initial sizing includes three
+ * tasks (idle+led0+led1, no timer task), each with a roughly 60-90B TCB plus
+ * configMINIMAL_STACK_SIZE*4B, and the ISR stack. Hardware verification was pending when this was
+ * written. Adjust these estimates using actual build/link size reports; the linker reports an error
+ * if RAM exceeds the 2KB region. */
 #undef configUSE_TIMERS
 #define configUSE_TIMERS 0
 #undef configMINIMAL_STACK_SIZE
-#define configMINIMAL_STACK_SIZE 64 /* words = 256B/task, thay vi 128 */
+#define configMINIMAL_STACK_SIZE 64 /* words = 256B/task, instead of 128 */
 #undef configTOTAL_HEAP_SIZE
-/* Uoc luong ban dau 1280B (1.25KB) da OVERFLOW RAM that 160 byte (xac nhan
- * qua bao loi that cua linker: "region RAM overflowed by 160 bytes", build
- * CH32V003F4P6 - KHONG phai doan) - giam xuong 1024B (tru them margin an
- * toan vi CHUA co board de verify stack/heap thuc te co du hay khong, xem
- * comment tren). */
-#define configTOTAL_HEAP_SIZE (1024) /* 1KB, thay vi 8KB */
+/* The initial 1280B (1.25KB) heap overflowed physical RAM by 160 bytes, confirmed by the linker error
+ * "region RAM overflowed by 160 bytes" for CH32V003F4P6. Reduce it to 1024B to leave additional
+ * margin while hardware stack/heap verification remains pending; see above. */
+#define configTOTAL_HEAP_SIZE (1024) /* 1KB instead of 8KB */
 #endif                               /* CH32V003F4P6 */
 
 #endif /* FREERTOS_CONFIG_H */

@@ -102,14 +102,14 @@ typedef enum
   TIM6_7_IRQn                = 31,     /*!< TIM6 & TIM7 Shared Interrupt                           */
 } IRQn_Type;
 
-/* =========================== Core config (cần trước khi include core_cm0.h) ======== */
+/* ========================= Core config (need before include core_cm0.h) ======== */
 #define __CM0_REV                0x0000U
 #define __MPU_PRESENT             0U
 #define __VTOR_PRESENT            0U
 #define __NVIC_PRIO_BITS          2U
 #define __Vendor_SysTickConfig    0U
 
-#include "core_cm0.h"          /* CMSIS-Core ARM, xem arch/CortexM/CMSIS/Core */
+#include "core_cm0.h"          /* CMSIS-Core ARM, see arch/CortexM/CMSIS/Core */
 #include "system_FU2.h"
 
 /* =========================== Peripheral register structures ======================== */
@@ -786,8 +786,8 @@ typedef struct {
   __I  uint32_t CLKS;             /*!< offset 0x3C, Clock status register (Read-to-Clear) bit[0] CLK_FAILURE | bit[8:1] ADDR_FAILURE | bit[9] CMD_FAILURE; read-to-clear */
 } RTC_TypeDef;
 
-/* =========================== Định nghĩa bit thanh ghi ngoại vi ===================== */
-/* Các trường của SYSCSR_VERSION */
+/* =========================== Definition of peripheral register bits ===================== */
+/* Fields of SYSCSR_VERSION */
 #define SYSCSR_VERSION_MINOR_Pos                 (0U)  /*!< Minor version number in bits [15:0] */
 #define SYSCSR_VERSION_MINOR_Msk                 (0xFFFFUL << SYSCSR_VERSION_MINOR_Pos)
 #define SYSCSR_VERSION_MINOR                     SYSCSR_VERSION_MINOR_Msk
@@ -795,27 +795,27 @@ typedef struct {
 #define SYSCSR_VERSION_MAJOR_Msk                 (0xFFFFUL << SYSCSR_VERSION_MAJOR_Pos)
 #define SYSCSR_VERSION_MAJOR                     SYSCSR_VERSION_MAJOR_Msk
 
-/* Các trường của SYSCSR_LEFT_IO_CFG */
+/* Fields of SYSCSR_LEFT_IO_CFG */
 #define SYSCSR_LEFT_IO_CFG_MODE_Pos              (0U)  /*!< Sixteen 2-bit mux fields; field n is located at 2*n */
 #define SYSCSR_LEFT_IO_CFG_MODE_Msk              (0xFFFFFFFFUL << SYSCSR_LEFT_IO_CFG_MODE_Pos)
 #define SYSCSR_LEFT_IO_CFG_MODE                  SYSCSR_LEFT_IO_CFG_MODE_Msk
 
-/* Các trường của SYSCSR_BOT_IO_CFG */
+/* Fields of SYSCSR_BOT_IO_CFG */
 #define SYSCSR_BOT_IO_CFG_MODE_Pos               (0U)  /*!< Sixteen 2-bit mux fields; field n is located at 2*n */
 #define SYSCSR_BOT_IO_CFG_MODE_Msk               (0xFFFFFFFFUL << SYSCSR_BOT_IO_CFG_MODE_Pos)
 #define SYSCSR_BOT_IO_CFG_MODE                   SYSCSR_BOT_IO_CFG_MODE_Msk
 
-/* Các trường của SYSCSR_RIGHT_IO_CFG */
+/* Fields of SYSCSR_RIGHT_IO_CFG */
 #define SYSCSR_RIGHT_IO_CFG_MODE_Pos             (0U)  /*!< Sixteen 2-bit mux fields; field n is located at 2*n */
 #define SYSCSR_RIGHT_IO_CFG_MODE_Msk             (0xFFFFFFFFUL << SYSCSR_RIGHT_IO_CFG_MODE_Pos)
 #define SYSCSR_RIGHT_IO_CFG_MODE                 SYSCSR_RIGHT_IO_CFG_MODE_Msk
 
-/* Các trường của SYSCSR_TOP_IO_CFG */
+/* Fields of SYSCSR_TOP_IO_CFG */
 #define SYSCSR_TOP_IO_CFG_MODE_Pos               (0U)  /*!< Sixteen 2-bit mux fields; field n is located at 2*n */
 #define SYSCSR_TOP_IO_CFG_MODE_Msk               (0xFFFFFFFFUL << SYSCSR_TOP_IO_CFG_MODE_Pos)
 #define SYSCSR_TOP_IO_CFG_MODE                   SYSCSR_TOP_IO_CFG_MODE_Msk
 
-/* Các trường của SYSCSR_LEFT_PAD_CTRL0 */
+/* Fields of SYSCSR_LEFT_PAD_CTRL0 */
 #define SYSCSR_LEFT_PAD_CTRL0_IE_Pos             (0U)  /*!< Enable the digital input path, one bit per pad */
 #define SYSCSR_LEFT_PAD_CTRL0_IE_Msk             (0xFFFUL << SYSCSR_LEFT_PAD_CTRL0_IE_Pos)
 #define SYSCSR_LEFT_PAD_CTRL0_IE                 SYSCSR_LEFT_PAD_CTRL0_IE_Msk
@@ -823,12 +823,12 @@ typedef struct {
 #define SYSCSR_LEFT_PAD_CTRL0_PE_Msk             (0xFFFUL << SYSCSR_LEFT_PAD_CTRL0_PE_Pos)
 #define SYSCSR_LEFT_PAD_CTRL0_PE                 SYSCSR_LEFT_PAD_CTRL0_PE_Msk
 
-/* Các trường của SYSCSR_LEFT_PAD_CTRL1 */
+/* Fields of SYSCSR_LEFT_PAD_CTRL1 */
 #define SYSCSR_LEFT_PAD_CTRL1_DS_Pos             (0U)  /*!< Coarse drive strength: 0=low, 1=high */
 #define SYSCSR_LEFT_PAD_CTRL1_DS_Msk             (0xFFFUL << SYSCSR_LEFT_PAD_CTRL1_DS_Pos)
 #define SYSCSR_LEFT_PAD_CTRL1_DS                 SYSCSR_LEFT_PAD_CTRL1_DS_Msk
 
-/* Các trường của SYSCSR_LEFT_PAD_CTRL2 */
+/* Fields of SYSCSR_LEFT_PAD_CTRL2 */
 #define SYSCSR_LEFT_PAD_CTRL2_SL_Pos             (0U)  /*!< Slew rate: 0=slow, 1=fast */
 #define SYSCSR_LEFT_PAD_CTRL2_SL_Msk             (0xFFFUL << SYSCSR_LEFT_PAD_CTRL2_SL_Pos)
 #define SYSCSR_LEFT_PAD_CTRL2_SL                 SYSCSR_LEFT_PAD_CTRL2_SL_Msk
@@ -836,7 +836,7 @@ typedef struct {
 #define SYSCSR_LEFT_PAD_CTRL2_CS_Msk             (0xFFFUL << SYSCSR_LEFT_PAD_CTRL2_CS_Pos)
 #define SYSCSR_LEFT_PAD_CTRL2_CS                 SYSCSR_LEFT_PAD_CTRL2_CS_Msk
 
-/* Các trường của SYSCSR_LEFT_PAD_CTRL3 */
+/* Fields of SYSCSR_LEFT_PAD_CTRL3 */
 #define SYSCSR_LEFT_PAD_CTRL3_PD_Pos             (0U)  /*!< Select pull-down, one bit per pad */
 #define SYSCSR_LEFT_PAD_CTRL3_PD_Msk             (0xFFFUL << SYSCSR_LEFT_PAD_CTRL3_PD_Pos)
 #define SYSCSR_LEFT_PAD_CTRL3_PD                 SYSCSR_LEFT_PAD_CTRL3_PD_Msk
@@ -844,12 +844,12 @@ typedef struct {
 #define SYSCSR_LEFT_PAD_CTRL3_PU_Msk             (0xFFFUL << SYSCSR_LEFT_PAD_CTRL3_PU_Pos)
 #define SYSCSR_LEFT_PAD_CTRL3_PU                 SYSCSR_LEFT_PAD_CTRL3_PU_Msk
 
-/* Các trường của SYSCSR_LEFT_PAD_CTRL4 */
+/* Fields of SYSCSR_LEFT_PAD_CTRL4 */
 #define SYSCSR_LEFT_PAD_CTRL4_PDRV_Pos           (0U)  /*!< 2-bit drive-current fields: 00=2mA, 01=4mA, 10=8mA, 11=12mA */
 #define SYSCSR_LEFT_PAD_CTRL4_PDRV_Msk           (0xFFFFFFUL << SYSCSR_LEFT_PAD_CTRL4_PDRV_Pos)
 #define SYSCSR_LEFT_PAD_CTRL4_PDRV               SYSCSR_LEFT_PAD_CTRL4_PDRV_Msk
 
-/* Các trường của SYSCSR_BOT_PAD_CTRL0 */
+/* Fields of SYSCSR_BOT_PAD_CTRL0 */
 #define SYSCSR_BOT_PAD_CTRL0_IE_Pos              (0U)  /*!< Enable the digital input path, one bit per pad */
 #define SYSCSR_BOT_PAD_CTRL0_IE_Msk              (0xFFFUL << SYSCSR_BOT_PAD_CTRL0_IE_Pos)
 #define SYSCSR_BOT_PAD_CTRL0_IE                  SYSCSR_BOT_PAD_CTRL0_IE_Msk
@@ -857,12 +857,12 @@ typedef struct {
 #define SYSCSR_BOT_PAD_CTRL0_PE_Msk              (0xFFFUL << SYSCSR_BOT_PAD_CTRL0_PE_Pos)
 #define SYSCSR_BOT_PAD_CTRL0_PE                  SYSCSR_BOT_PAD_CTRL0_PE_Msk
 
-/* Các trường của SYSCSR_BOT_PAD_CTRL1 */
+/* Fields of SYSCSR_BOT_PAD_CTRL1 */
 #define SYSCSR_BOT_PAD_CTRL1_DS_Pos              (0U)  /*!< Coarse drive strength: 0=low, 1=high */
 #define SYSCSR_BOT_PAD_CTRL1_DS_Msk              (0xFFFUL << SYSCSR_BOT_PAD_CTRL1_DS_Pos)
 #define SYSCSR_BOT_PAD_CTRL1_DS                  SYSCSR_BOT_PAD_CTRL1_DS_Msk
 
-/* Các trường của SYSCSR_BOT_PAD_CTRL2 */
+/* Fields of SYSCSR_BOT_PAD_CTRL2 */
 #define SYSCSR_BOT_PAD_CTRL2_SL_Pos              (0U)  /*!< Slew rate: 0=slow, 1=fast */
 #define SYSCSR_BOT_PAD_CTRL2_SL_Msk              (0xFFFUL << SYSCSR_BOT_PAD_CTRL2_SL_Pos)
 #define SYSCSR_BOT_PAD_CTRL2_SL                  SYSCSR_BOT_PAD_CTRL2_SL_Msk
@@ -870,7 +870,7 @@ typedef struct {
 #define SYSCSR_BOT_PAD_CTRL2_CS_Msk              (0xFFFUL << SYSCSR_BOT_PAD_CTRL2_CS_Pos)
 #define SYSCSR_BOT_PAD_CTRL2_CS                  SYSCSR_BOT_PAD_CTRL2_CS_Msk
 
-/* Các trường của SYSCSR_BOT_PAD_CTRL3 */
+/* Fields of SYSCSR_BOT_PAD_CTRL3 */
 #define SYSCSR_BOT_PAD_CTRL3_PD_Pos              (0U)  /*!< Select pull-down, one bit per pad */
 #define SYSCSR_BOT_PAD_CTRL3_PD_Msk              (0xFFFUL << SYSCSR_BOT_PAD_CTRL3_PD_Pos)
 #define SYSCSR_BOT_PAD_CTRL3_PD                  SYSCSR_BOT_PAD_CTRL3_PD_Msk
@@ -878,12 +878,12 @@ typedef struct {
 #define SYSCSR_BOT_PAD_CTRL3_PU_Msk              (0xFFFUL << SYSCSR_BOT_PAD_CTRL3_PU_Pos)
 #define SYSCSR_BOT_PAD_CTRL3_PU                  SYSCSR_BOT_PAD_CTRL3_PU_Msk
 
-/* Các trường của SYSCSR_BOT_PAD_CTRL4 */
+/* Fields of SYSCSR_BOT_PAD_CTRL4 */
 #define SYSCSR_BOT_PAD_CTRL4_PDRV_Pos            (0U)  /*!< 2-bit drive-current fields: 00=2mA, 01=4mA, 10=8mA, 11=12mA */
 #define SYSCSR_BOT_PAD_CTRL4_PDRV_Msk            (0xFFFFFFUL << SYSCSR_BOT_PAD_CTRL4_PDRV_Pos)
 #define SYSCSR_BOT_PAD_CTRL4_PDRV                SYSCSR_BOT_PAD_CTRL4_PDRV_Msk
 
-/* Các trường của SYSCSR_RIGHT_PAD_CTRL0 */
+/* Fields of SYSCSR_RIGHT_PAD_CTRL0 */
 #define SYSCSR_RIGHT_PAD_CTRL0_IE_Pos            (0U)  /*!< Enable the digital input path, one bit per pad */
 #define SYSCSR_RIGHT_PAD_CTRL0_IE_Msk            (0xFFFUL << SYSCSR_RIGHT_PAD_CTRL0_IE_Pos)
 #define SYSCSR_RIGHT_PAD_CTRL0_IE                SYSCSR_RIGHT_PAD_CTRL0_IE_Msk
@@ -891,12 +891,12 @@ typedef struct {
 #define SYSCSR_RIGHT_PAD_CTRL0_PE_Msk            (0xFFFUL << SYSCSR_RIGHT_PAD_CTRL0_PE_Pos)
 #define SYSCSR_RIGHT_PAD_CTRL0_PE                SYSCSR_RIGHT_PAD_CTRL0_PE_Msk
 
-/* Các trường của SYSCSR_RIGHT_PAD_CTRL1 */
+/* Fields of SYSCSR_RIGHT_PAD_CTRL1 */
 #define SYSCSR_RIGHT_PAD_CTRL1_DS_Pos            (0U)  /*!< Coarse drive strength: 0=low, 1=high */
 #define SYSCSR_RIGHT_PAD_CTRL1_DS_Msk            (0xFFFUL << SYSCSR_RIGHT_PAD_CTRL1_DS_Pos)
 #define SYSCSR_RIGHT_PAD_CTRL1_DS                SYSCSR_RIGHT_PAD_CTRL1_DS_Msk
 
-/* Các trường của SYSCSR_RIGHT_PAD_CTRL2 */
+/* Fields of SYSCSR_RIGHT_PAD_CTRL2 */
 #define SYSCSR_RIGHT_PAD_CTRL2_SL_Pos            (0U)  /*!< Slew rate: 0=slow, 1=fast */
 #define SYSCSR_RIGHT_PAD_CTRL2_SL_Msk            (0xFFFUL << SYSCSR_RIGHT_PAD_CTRL2_SL_Pos)
 #define SYSCSR_RIGHT_PAD_CTRL2_SL                SYSCSR_RIGHT_PAD_CTRL2_SL_Msk
@@ -904,7 +904,7 @@ typedef struct {
 #define SYSCSR_RIGHT_PAD_CTRL2_CS_Msk            (0xFFFUL << SYSCSR_RIGHT_PAD_CTRL2_CS_Pos)
 #define SYSCSR_RIGHT_PAD_CTRL2_CS                SYSCSR_RIGHT_PAD_CTRL2_CS_Msk
 
-/* Các trường của SYSCSR_RIGHT_PAD_CTRL3 */
+/* Fields of SYSCSR_RIGHT_PAD_CTRL3 */
 #define SYSCSR_RIGHT_PAD_CTRL3_PD_Pos            (0U)  /*!< Select pull-down, one bit per pad */
 #define SYSCSR_RIGHT_PAD_CTRL3_PD_Msk            (0xFFFUL << SYSCSR_RIGHT_PAD_CTRL3_PD_Pos)
 #define SYSCSR_RIGHT_PAD_CTRL3_PD                SYSCSR_RIGHT_PAD_CTRL3_PD_Msk
@@ -912,12 +912,12 @@ typedef struct {
 #define SYSCSR_RIGHT_PAD_CTRL3_PU_Msk            (0xFFFUL << SYSCSR_RIGHT_PAD_CTRL3_PU_Pos)
 #define SYSCSR_RIGHT_PAD_CTRL3_PU                SYSCSR_RIGHT_PAD_CTRL3_PU_Msk
 
-/* Các trường của SYSCSR_RIGHT_PAD_CTRL4 */
+/* Fields of SYSCSR_RIGHT_PAD_CTRL4 */
 #define SYSCSR_RIGHT_PAD_CTRL4_PDRV_Pos          (0U)  /*!< 2-bit drive-current fields: 00=2mA, 01=4mA, 10=8mA, 11=12mA */
 #define SYSCSR_RIGHT_PAD_CTRL4_PDRV_Msk          (0xFFFFFFUL << SYSCSR_RIGHT_PAD_CTRL4_PDRV_Pos)
 #define SYSCSR_RIGHT_PAD_CTRL4_PDRV              SYSCSR_RIGHT_PAD_CTRL4_PDRV_Msk
 
-/* Các trường của SYSCSR_TOP_PAD_CTRL0 */
+/* Fields of SYSCSR_TOP_PAD_CTRL0 */
 #define SYSCSR_TOP_PAD_CTRL0_IE_Pos              (0U)  /*!< Enable the digital input path, one bit per pad */
 #define SYSCSR_TOP_PAD_CTRL0_IE_Msk              (0xFFFUL << SYSCSR_TOP_PAD_CTRL0_IE_Pos)
 #define SYSCSR_TOP_PAD_CTRL0_IE                  SYSCSR_TOP_PAD_CTRL0_IE_Msk
@@ -925,12 +925,12 @@ typedef struct {
 #define SYSCSR_TOP_PAD_CTRL0_PE_Msk              (0xFFFUL << SYSCSR_TOP_PAD_CTRL0_PE_Pos)
 #define SYSCSR_TOP_PAD_CTRL0_PE                  SYSCSR_TOP_PAD_CTRL0_PE_Msk
 
-/* Các trường của SYSCSR_TOP_PAD_CTRL1 */
+/* Fields of SYSCSR_TOP_PAD_CTRL1 */
 #define SYSCSR_TOP_PAD_CTRL1_DS_Pos              (0U)  /*!< Coarse drive strength: 0=low, 1=high */
 #define SYSCSR_TOP_PAD_CTRL1_DS_Msk              (0xFFFUL << SYSCSR_TOP_PAD_CTRL1_DS_Pos)
 #define SYSCSR_TOP_PAD_CTRL1_DS                  SYSCSR_TOP_PAD_CTRL1_DS_Msk
 
-/* Các trường của SYSCSR_TOP_PAD_CTRL2 */
+/* Fields of SYSCSR_TOP_PAD_CTRL2 */
 #define SYSCSR_TOP_PAD_CTRL2_SL_Pos              (0U)  /*!< Slew rate: 0=slow, 1=fast */
 #define SYSCSR_TOP_PAD_CTRL2_SL_Msk              (0xFFFUL << SYSCSR_TOP_PAD_CTRL2_SL_Pos)
 #define SYSCSR_TOP_PAD_CTRL2_SL                  SYSCSR_TOP_PAD_CTRL2_SL_Msk
@@ -938,7 +938,7 @@ typedef struct {
 #define SYSCSR_TOP_PAD_CTRL2_CS_Msk              (0xFFFUL << SYSCSR_TOP_PAD_CTRL2_CS_Pos)
 #define SYSCSR_TOP_PAD_CTRL2_CS                  SYSCSR_TOP_PAD_CTRL2_CS_Msk
 
-/* Các trường của SYSCSR_TOP_PAD_CTRL3 */
+/* Fields of SYSCSR_TOP_PAD_CTRL3 */
 #define SYSCSR_TOP_PAD_CTRL3_PD_Pos              (0U)  /*!< Select pull-down, one bit per pad */
 #define SYSCSR_TOP_PAD_CTRL3_PD_Msk              (0xFFFUL << SYSCSR_TOP_PAD_CTRL3_PD_Pos)
 #define SYSCSR_TOP_PAD_CTRL3_PD                  SYSCSR_TOP_PAD_CTRL3_PD_Msk
@@ -946,12 +946,12 @@ typedef struct {
 #define SYSCSR_TOP_PAD_CTRL3_PU_Msk              (0xFFFUL << SYSCSR_TOP_PAD_CTRL3_PU_Pos)
 #define SYSCSR_TOP_PAD_CTRL3_PU                  SYSCSR_TOP_PAD_CTRL3_PU_Msk
 
-/* Các trường của SYSCSR_TOP_PAD_CTRL4 */
+/* Fields of SYSCSR_TOP_PAD_CTRL4 */
 #define SYSCSR_TOP_PAD_CTRL4_PDRV_Pos            (0U)  /*!< 2-bit drive-current fields: 00=2mA, 01=4mA, 10=8mA, 11=12mA */
 #define SYSCSR_TOP_PAD_CTRL4_PDRV_Msk            (0xFFFFFFUL << SYSCSR_TOP_PAD_CTRL4_PDRV_Pos)
 #define SYSCSR_TOP_PAD_CTRL4_PDRV                SYSCSR_TOP_PAD_CTRL4_PDRV_Msk
 
-/* Các trường của SYSCSR_STATUS */
+/* Fields of SYSCSR_STATUS */
 #define SYSCSR_STATUS_BOOT_Pos                   (0U)  /*!< Sampled BOOT pin value */
 #define SYSCSR_STATUS_BOOT_Msk                   (0x1UL << SYSCSR_STATUS_BOOT_Pos)
 #define SYSCSR_STATUS_BOOT                       SYSCSR_STATUS_BOOT_Msk
@@ -968,7 +968,7 @@ typedef struct {
 #define SYSCSR_STATUS_TEST_MODE_SEL_Msk          (0x1UL << SYSCSR_STATUS_TEST_MODE_SEL_Pos)
 #define SYSCSR_STATUS_TEST_MODE_SEL              SYSCSR_STATUS_TEST_MODE_SEL_Msk
 
-/* Các trường của SYSCSR_SYS_CTRL */
+/* Fields of SYSCSR_SYS_CTRL */
 #define SYSCSR_SYS_CTRL_SW_RESET_REQ_Pos         (0U)  /*!< Send a software-reset request to the CRM */
 #define SYSCSR_SYS_CTRL_SW_RESET_REQ_Msk         (0x1UL << SYSCSR_SYS_CTRL_SW_RESET_REQ_Pos)
 #define SYSCSR_SYS_CTRL_SW_RESET_REQ             SYSCSR_SYS_CTRL_SW_RESET_REQ_Msk
@@ -982,7 +982,7 @@ typedef struct {
 #define SYSCSR_SYS_CTRL_JTAGMUX_BLOCK_Msk        (0x1UL << SYSCSR_SYS_CTRL_JTAGMUX_BLOCK_Pos)
 #define SYSCSR_SYS_CTRL_JTAGMUX_BLOCK            SYSCSR_SYS_CTRL_JTAGMUX_BLOCK_Msk
 
-/* Các trường của SYSCSR_CPU_CTRL */
+/* Fields of SYSCSR_CPU_CTRL */
 #define SYSCSR_CPU_CTRL_CPU_DEBUG_Pos            (0U)  /*!< Suppress watchdog reset/interrupt in debug mode */
 #define SYSCSR_CPU_CTRL_CPU_DEBUG_Msk            (0x1UL << SYSCSR_CPU_CTRL_CPU_DEBUG_Pos)
 #define SYSCSR_CPU_CTRL_CPU_DEBUG                SYSCSR_CPU_CTRL_CPU_DEBUG_Msk
@@ -1020,107 +1020,107 @@ typedef struct {
 #define SYSCSR_CPU_CTRL_LOCKUP_Msk               (0x1UL << SYSCSR_CPU_CTRL_LOCKUP_Pos)
 #define SYSCSR_CPU_CTRL_LOCKUP                   SYSCSR_CPU_CTRL_LOCKUP_Msk
 
-/* Các trường của SYSCSR_CPU_SYSTICK */
+/* Fields of SYSCSR_CPU_SYSTICK */
 #define SYSCSR_CPU_SYSTICK_TENMS_Pos             (0U)  /*!< Number of core-clock ticks in 10 ms */
 #define SYSCSR_CPU_SYSTICK_TENMS_Msk             (0xFFFFFFUL << SYSCSR_CPU_SYSTICK_TENMS_Pos)
 #define SYSCSR_CPU_SYSTICK_TENMS                 SYSCSR_CPU_SYSTICK_TENMS_Msk
 
-/* Các trường của SYSCSR_OSC_PAD_CTRL */
+/* Fields of SYSCSR_OSC_PAD_CTRL */
 #define SYSCSR_OSC_PAD_CTRL_CONTROL_Pos          (0U)  /*!< Raw oscillator pad control */
 #define SYSCSR_OSC_PAD_CTRL_CONTROL_Msk          (0x3FUL << SYSCSR_OSC_PAD_CTRL_CONTROL_Pos)
 #define SYSCSR_OSC_PAD_CTRL_CONTROL              SYSCSR_OSC_PAD_CTRL_CONTROL_Msk
 
-/* Các trường của SYSCSR_ROM_CTRL */
+/* Fields of SYSCSR_ROM_CTRL */
 #define SYSCSR_ROM_CTRL_ENABLE_Pos               (0U)  /*!< ROM control enable */
 #define SYSCSR_ROM_CTRL_ENABLE_Msk               (0x1UL << SYSCSR_ROM_CTRL_ENABLE_Pos)
 #define SYSCSR_ROM_CTRL_ENABLE                   SYSCSR_ROM_CTRL_ENABLE_Msk
 
-/* Các trường của SYSCSR_LEFT_PAD_CTRL5 */
+/* Fields of SYSCSR_LEFT_PAD_CTRL5 */
 #define SYSCSR_LEFT_PAD_CTRL5_VALUE_Pos          (0U)  /*!< Raw v11 field */
 #define SYSCSR_LEFT_PAD_CTRL5_VALUE_Msk          (0xFFFFFFUL << SYSCSR_LEFT_PAD_CTRL5_VALUE_Pos)
 #define SYSCSR_LEFT_PAD_CTRL5_VALUE              SYSCSR_LEFT_PAD_CTRL5_VALUE_Msk
 
-/* Các trường của SYSCSR_LEFT_PAD_CTRL6 */
+/* Fields of SYSCSR_LEFT_PAD_CTRL6 */
 #define SYSCSR_LEFT_PAD_CTRL6_VALUE_Pos          (0U)  /*!< Raw v11 field */
 #define SYSCSR_LEFT_PAD_CTRL6_VALUE_Msk          (0xFFFFFFUL << SYSCSR_LEFT_PAD_CTRL6_VALUE_Pos)
 #define SYSCSR_LEFT_PAD_CTRL6_VALUE              SYSCSR_LEFT_PAD_CTRL6_VALUE_Msk
 
-/* Các trường của SYSCSR_LEFT_PAD_CTRL7 */
+/* Fields of SYSCSR_LEFT_PAD_CTRL7 */
 #define SYSCSR_LEFT_PAD_CTRL7_VALUE_Pos          (0U)  /*!< Raw v11 field */
 #define SYSCSR_LEFT_PAD_CTRL7_VALUE_Msk          (0xFFFFFFUL << SYSCSR_LEFT_PAD_CTRL7_VALUE_Pos)
 #define SYSCSR_LEFT_PAD_CTRL7_VALUE              SYSCSR_LEFT_PAD_CTRL7_VALUE_Msk
 
-/* Các trường của SYSCSR_BOT_PAD_CTRL5 */
+/* Fields of SYSCSR_BOT_PAD_CTRL5 */
 #define SYSCSR_BOT_PAD_CTRL5_VALUE_Pos           (0U)  /*!< Raw v11 field */
 #define SYSCSR_BOT_PAD_CTRL5_VALUE_Msk           (0xFFFFFFUL << SYSCSR_BOT_PAD_CTRL5_VALUE_Pos)
 #define SYSCSR_BOT_PAD_CTRL5_VALUE               SYSCSR_BOT_PAD_CTRL5_VALUE_Msk
 
-/* Các trường của SYSCSR_BOT_PAD_CTRL6 */
+/* Fields of SYSCSR_BOT_PAD_CTRL6 */
 #define SYSCSR_BOT_PAD_CTRL6_VALUE_Pos           (0U)  /*!< Raw v11 field */
 #define SYSCSR_BOT_PAD_CTRL6_VALUE_Msk           (0xFFFFFFUL << SYSCSR_BOT_PAD_CTRL6_VALUE_Pos)
 #define SYSCSR_BOT_PAD_CTRL6_VALUE               SYSCSR_BOT_PAD_CTRL6_VALUE_Msk
 
-/* Các trường của SYSCSR_BOT_PAD_CTRL7 */
+/* Fields of SYSCSR_BOT_PAD_CTRL7 */
 #define SYSCSR_BOT_PAD_CTRL7_VALUE_Pos           (0U)  /*!< Raw v11 field */
 #define SYSCSR_BOT_PAD_CTRL7_VALUE_Msk           (0xFFFFFFUL << SYSCSR_BOT_PAD_CTRL7_VALUE_Pos)
 #define SYSCSR_BOT_PAD_CTRL7_VALUE               SYSCSR_BOT_PAD_CTRL7_VALUE_Msk
 
-/* Các trường của SYSCSR_RIGHT_PAD_CTRL5 */
+/* Fields of SYSCSR_RIGHT_PAD_CTRL5 */
 #define SYSCSR_RIGHT_PAD_CTRL5_VALUE_Pos         (0U)  /*!< Raw v11 field */
 #define SYSCSR_RIGHT_PAD_CTRL5_VALUE_Msk         (0xFFFFFFUL << SYSCSR_RIGHT_PAD_CTRL5_VALUE_Pos)
 #define SYSCSR_RIGHT_PAD_CTRL5_VALUE             SYSCSR_RIGHT_PAD_CTRL5_VALUE_Msk
 
-/* Các trường của SYSCSR_RIGHT_PAD_CTRL6 */
+/* Fields of SYSCSR_RIGHT_PAD_CTRL6 */
 #define SYSCSR_RIGHT_PAD_CTRL6_VALUE_Pos         (0U)  /*!< Raw v11 field */
 #define SYSCSR_RIGHT_PAD_CTRL6_VALUE_Msk         (0xFFFFFFUL << SYSCSR_RIGHT_PAD_CTRL6_VALUE_Pos)
 #define SYSCSR_RIGHT_PAD_CTRL6_VALUE             SYSCSR_RIGHT_PAD_CTRL6_VALUE_Msk
 
-/* Các trường của SYSCSR_RIGHT_PAD_CTRL7 */
+/* Fields of SYSCSR_RIGHT_PAD_CTRL7 */
 #define SYSCSR_RIGHT_PAD_CTRL7_VALUE_Pos         (0U)  /*!< Raw v11 field */
 #define SYSCSR_RIGHT_PAD_CTRL7_VALUE_Msk         (0xFFFFFFUL << SYSCSR_RIGHT_PAD_CTRL7_VALUE_Pos)
 #define SYSCSR_RIGHT_PAD_CTRL7_VALUE             SYSCSR_RIGHT_PAD_CTRL7_VALUE_Msk
 
-/* Các trường của SYSCSR_TOP_PAD_CTRL5 */
+/* Fields of SYSCSR_TOP_PAD_CTRL5 */
 #define SYSCSR_TOP_PAD_CTRL5_VALUE_Pos           (0U)  /*!< Raw v11 field */
 #define SYSCSR_TOP_PAD_CTRL5_VALUE_Msk           (0xFFFFFFUL << SYSCSR_TOP_PAD_CTRL5_VALUE_Pos)
 #define SYSCSR_TOP_PAD_CTRL5_VALUE               SYSCSR_TOP_PAD_CTRL5_VALUE_Msk
 
-/* Các trường của SYSCSR_TOP_PAD_CTRL6 */
+/* Fields of SYSCSR_TOP_PAD_CTRL6 */
 #define SYSCSR_TOP_PAD_CTRL6_VALUE_Pos           (0U)  /*!< Raw v11 field */
 #define SYSCSR_TOP_PAD_CTRL6_VALUE_Msk           (0xFFFFFFUL << SYSCSR_TOP_PAD_CTRL6_VALUE_Pos)
 #define SYSCSR_TOP_PAD_CTRL6_VALUE               SYSCSR_TOP_PAD_CTRL6_VALUE_Msk
 
-/* Các trường của SYSCSR_TOP_PAD_CTRL7 */
+/* Fields of SYSCSR_TOP_PAD_CTRL7 */
 #define SYSCSR_TOP_PAD_CTRL7_VALUE_Pos           (0U)  /*!< Raw v11 field */
 #define SYSCSR_TOP_PAD_CTRL7_VALUE_Msk           (0xFFFFFFUL << SYSCSR_TOP_PAD_CTRL7_VALUE_Pos)
 #define SYSCSR_TOP_PAD_CTRL7_VALUE               SYSCSR_TOP_PAD_CTRL7_VALUE_Msk
 
-/* Các trường của SYSCSR_LEFT_IO_CFG_EXT */
+/* Fields of SYSCSR_LEFT_IO_CFG_EXT */
 #define SYSCSR_LEFT_IO_CFG_EXT_VALUE_Pos         (0U)  /*!< Eight 2-bit mux selectors */
 #define SYSCSR_LEFT_IO_CFG_EXT_VALUE_Msk         (0xFFFFUL << SYSCSR_LEFT_IO_CFG_EXT_VALUE_Pos)
 #define SYSCSR_LEFT_IO_CFG_EXT_VALUE             SYSCSR_LEFT_IO_CFG_EXT_VALUE_Msk
 
-/* Các trường của SYSCSR_BOT_IO_CFG_EXT */
+/* Fields of SYSCSR_BOT_IO_CFG_EXT */
 #define SYSCSR_BOT_IO_CFG_EXT_VALUE_Pos          (0U)  /*!< Eight 2-bit mux selectors */
 #define SYSCSR_BOT_IO_CFG_EXT_VALUE_Msk          (0xFFFFUL << SYSCSR_BOT_IO_CFG_EXT_VALUE_Pos)
 #define SYSCSR_BOT_IO_CFG_EXT_VALUE              SYSCSR_BOT_IO_CFG_EXT_VALUE_Msk
 
-/* Các trường của SYSCSR_RIGHT_IO_CFG_EXT */
+/* Fields of SYSCSR_RIGHT_IO_CFG_EXT */
 #define SYSCSR_RIGHT_IO_CFG_EXT_VALUE_Pos        (0U)  /*!< Eight 2-bit mux selectors */
 #define SYSCSR_RIGHT_IO_CFG_EXT_VALUE_Msk        (0xFFFFUL << SYSCSR_RIGHT_IO_CFG_EXT_VALUE_Pos)
 #define SYSCSR_RIGHT_IO_CFG_EXT_VALUE            SYSCSR_RIGHT_IO_CFG_EXT_VALUE_Msk
 
-/* Các trường của SYSCSR_TOP_IO_CFG_EXT */
+/* Fields of SYSCSR_TOP_IO_CFG_EXT */
 #define SYSCSR_TOP_IO_CFG_EXT_VALUE_Pos          (0U)  /*!< Eight 2-bit mux selectors */
 #define SYSCSR_TOP_IO_CFG_EXT_VALUE_Msk          (0xFFFFUL << SYSCSR_TOP_IO_CFG_EXT_VALUE_Pos)
 #define SYSCSR_TOP_IO_CFG_EXT_VALUE              SYSCSR_TOP_IO_CFG_EXT_VALUE_Msk
 
-/* Các trường của DMA_CH0_CMD_TRANSFER_SIZE */
+/* Fields of DMA_CH0_CMD_TRANSFER_SIZE */
 #define DMA_CH0_CMD_TRANSFER_SIZE_SIZE_Pos               (0U)  /*!< Transfer size */
 #define DMA_CH0_CMD_TRANSFER_SIZE_SIZE_Msk               (0x3FFUL << DMA_CH0_CMD_TRANSFER_SIZE_SIZE_Pos)
 #define DMA_CH0_CMD_TRANSFER_SIZE_SIZE                   DMA_CH0_CMD_TRANSFER_SIZE_SIZE_Msk
 
-/* Các trường của DMA_CH0_READ_CONFIG */
+/* Fields of DMA_CH0_READ_CONFIG */
 #define DMA_CH0_READ_CONFIG_BURST_SIZE_Pos               (0U)  /*!< Burst size in bytes */
 #define DMA_CH0_READ_CONFIG_BURST_SIZE_Msk               (0x7FUL << DMA_CH0_READ_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH0_READ_CONFIG_BURST_SIZE                   DMA_CH0_READ_CONFIG_BURST_SIZE_Msk
@@ -1137,7 +1137,7 @@ typedef struct {
 #define DMA_CH0_READ_CONFIG_ADDR_INC_Msk                 (0x1UL << DMA_CH0_READ_CONFIG_ADDR_INC_Pos)
 #define DMA_CH0_READ_CONFIG_ADDR_INC                     DMA_CH0_READ_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH0_WRITE_CONFIG */
+/* Fields of DMA_CH0_WRITE_CONFIG */
 #define DMA_CH0_WRITE_CONFIG_BURST_SIZE_Pos              (0U)  /*!< Burst size in bytes */
 #define DMA_CH0_WRITE_CONFIG_BURST_SIZE_Msk              (0x7FUL << DMA_CH0_WRITE_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH0_WRITE_CONFIG_BURST_SIZE                  DMA_CH0_WRITE_CONFIG_BURST_SIZE_Msk
@@ -1154,12 +1154,12 @@ typedef struct {
 #define DMA_CH0_WRITE_CONFIG_ADDR_INC_Msk                (0x1UL << DMA_CH0_WRITE_CONFIG_ADDR_INC_Pos)
 #define DMA_CH0_WRITE_CONFIG_ADDR_INC                    DMA_CH0_WRITE_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH0_MODE_CONFIG */
+/* Fields of DMA_CH0_MODE_CONFIG */
 #define DMA_CH0_MODE_CONFIG_END_SWAP_Pos                 (28U)  /*!< Endianness swap mode */
 #define DMA_CH0_MODE_CONFIG_END_SWAP_Msk                 (0x3UL << DMA_CH0_MODE_CONFIG_END_SWAP_Pos)
 #define DMA_CH0_MODE_CONFIG_END_SWAP                     DMA_CH0_MODE_CONFIG_END_SWAP_Msk
 
-/* Các trường của DMA_CH0_PERIPHERAL_CONFIG */
+/* Fields of DMA_CH0_PERIPHERAL_CONFIG */
 #define DMA_CH0_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos      (0U)  /*!< Read peripheral ID */
 #define DMA_CH0_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk      (0x1FUL << DMA_CH0_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos)
 #define DMA_CH0_PERIPHERAL_CONFIG_RD_PERIPH_NUM          DMA_CH0_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk
@@ -1173,7 +1173,7 @@ typedef struct {
 #define DMA_CH0_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk    (0x7UL << DMA_CH0_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Pos)
 #define DMA_CH0_PERIPHERAL_CONFIG_WR_PERIPH_DELAY        DMA_CH0_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk
 
-/* Các trường của DMA_CH0_AXI_ATTR */
+/* Fields of DMA_CH0_AXI_ATTR */
 #define DMA_CH0_AXI_ATTR_RD_CACHE_Pos                    (0U)  /*!< Read cache attribute */
 #define DMA_CH0_AXI_ATTR_RD_CACHE_Msk                    (0xFUL << DMA_CH0_AXI_ATTR_RD_CACHE_Pos)
 #define DMA_CH0_AXI_ATTR_RD_CACHE                        DMA_CH0_AXI_ATTR_RD_CACHE_Msk
@@ -1193,17 +1193,17 @@ typedef struct {
 #define DMA_CH0_AXI_ATTR_WR_OVERRIDE_EN_Msk              (0x1UL << DMA_CH0_AXI_ATTR_WR_OVERRIDE_EN_Pos)
 #define DMA_CH0_AXI_ATTR_WR_OVERRIDE_EN                  DMA_CH0_AXI_ATTR_WR_OVERRIDE_EN_Msk
 
-/* Các trường của DMA_CH0_ENABLE */
+/* Fields of DMA_CH0_ENABLE */
 #define DMA_CH0_ENABLE_EN_Pos                            (0U)  /*!< Enable channel */
 #define DMA_CH0_ENABLE_EN_Msk                            (0x1UL << DMA_CH0_ENABLE_EN_Pos)
 #define DMA_CH0_ENABLE_EN                                DMA_CH0_ENABLE_EN_Msk
 
-/* Các trường của DMA_CH0_START */
+/* Fields of DMA_CH0_START */
 #define DMA_CH0_START_START_Pos                          (0U)  /*!< Start pulse */
 #define DMA_CH0_START_START_Msk                          (0x1UL << DMA_CH0_START_START_Pos)
 #define DMA_CH0_START_START                              DMA_CH0_START_START_Msk
 
-/* Các trường của DMA_CH0_ACTIVE_STATUS */
+/* Fields of DMA_CH0_ACTIVE_STATUS */
 #define DMA_CH0_ACTIVE_STATUS_READ_ACTIVE_Pos            (0U)  /*!< Read side active */
 #define DMA_CH0_ACTIVE_STATUS_READ_ACTIVE_Msk            (0x1UL << DMA_CH0_ACTIVE_STATUS_READ_ACTIVE_Pos)
 #define DMA_CH0_ACTIVE_STATUS_READ_ACTIVE                DMA_CH0_ACTIVE_STATUS_READ_ACTIVE_Msk
@@ -1211,7 +1211,7 @@ typedef struct {
 #define DMA_CH0_ACTIVE_STATUS_WRITE_ACTIVE_Msk           (0x1UL << DMA_CH0_ACTIVE_STATUS_WRITE_ACTIVE_Pos)
 #define DMA_CH0_ACTIVE_STATUS_WRITE_ACTIVE               DMA_CH0_ACTIVE_STATUS_WRITE_ACTIVE_Msk
 
-/* Các trường của DMA_CH0_TRANSFER_COUNT */
+/* Fields of DMA_CH0_TRANSFER_COUNT */
 #define DMA_CH0_TRANSFER_COUNT_COMMAND_COUNT_Pos         (0U)  /*!< Completed commands */
 #define DMA_CH0_TRANSFER_COUNT_COMMAND_COUNT_Msk         (0xFFFUL << DMA_CH0_TRANSFER_COUNT_COMMAND_COUNT_Pos)
 #define DMA_CH0_TRANSFER_COUNT_COMMAND_COUNT             DMA_CH0_TRANSFER_COUNT_COMMAND_COUNT_Msk
@@ -1219,7 +1219,7 @@ typedef struct {
 #define DMA_CH0_TRANSFER_COUNT_PENDING_COUNT_Msk         (0xFUL << DMA_CH0_TRANSFER_COUNT_PENDING_COUNT_Pos)
 #define DMA_CH0_TRANSFER_COUNT_PENDING_COUNT             DMA_CH0_TRANSFER_COUNT_PENDING_COUNT_Msk
 
-/* Các trường của DMA_CH0_INT_RAW_STATUS */
+/* Fields of DMA_CH0_INT_RAW_STATUS */
 #define DMA_CH0_INT_RAW_STATUS_CMD_DONE_Pos              (0U)  /*!< Command complete */
 #define DMA_CH0_INT_RAW_STATUS_CMD_DONE_Msk              (0x1UL << DMA_CH0_INT_RAW_STATUS_CMD_DONE_Pos)
 #define DMA_CH0_INT_RAW_STATUS_CMD_DONE                  DMA_CH0_INT_RAW_STATUS_CMD_DONE_Msk
@@ -1260,7 +1260,7 @@ typedef struct {
 #define DMA_CH0_INT_RAW_STATUS_WATCHDOG_Msk              (0x1UL << DMA_CH0_INT_RAW_STATUS_WATCHDOG_Pos)
 #define DMA_CH0_INT_RAW_STATUS_WATCHDOG                  DMA_CH0_INT_RAW_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH0_INT_CLEAR */
+/* Fields of DMA_CH0_INT_CLEAR */
 #define DMA_CH0_INT_CLEAR_CMD_DONE_Pos                   (0U)  /*!< Command complete */
 #define DMA_CH0_INT_CLEAR_CMD_DONE_Msk                   (0x1UL << DMA_CH0_INT_CLEAR_CMD_DONE_Pos)
 #define DMA_CH0_INT_CLEAR_CMD_DONE                       DMA_CH0_INT_CLEAR_CMD_DONE_Msk
@@ -1301,7 +1301,7 @@ typedef struct {
 #define DMA_CH0_INT_CLEAR_WATCHDOG_Msk                   (0x1UL << DMA_CH0_INT_CLEAR_WATCHDOG_Pos)
 #define DMA_CH0_INT_CLEAR_WATCHDOG                       DMA_CH0_INT_CLEAR_WATCHDOG_Msk
 
-/* Các trường của DMA_CH0_INT_ENABLE */
+/* Fields of DMA_CH0_INT_ENABLE */
 #define DMA_CH0_INT_ENABLE_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH0_INT_ENABLE_CMD_DONE_Msk                  (0x1UL << DMA_CH0_INT_ENABLE_CMD_DONE_Pos)
 #define DMA_CH0_INT_ENABLE_CMD_DONE                      DMA_CH0_INT_ENABLE_CMD_DONE_Msk
@@ -1342,7 +1342,7 @@ typedef struct {
 #define DMA_CH0_INT_ENABLE_WATCHDOG_Msk                  (0x1UL << DMA_CH0_INT_ENABLE_WATCHDOG_Pos)
 #define DMA_CH0_INT_ENABLE_WATCHDOG                      DMA_CH0_INT_ENABLE_WATCHDOG_Msk
 
-/* Các trường của DMA_CH0_INT_STATUS */
+/* Fields of DMA_CH0_INT_STATUS */
 #define DMA_CH0_INT_STATUS_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH0_INT_STATUS_CMD_DONE_Msk                  (0x1UL << DMA_CH0_INT_STATUS_CMD_DONE_Pos)
 #define DMA_CH0_INT_STATUS_CMD_DONE                      DMA_CH0_INT_STATUS_CMD_DONE_Msk
@@ -1383,12 +1383,12 @@ typedef struct {
 #define DMA_CH0_INT_STATUS_WATCHDOG_Msk                  (0x1UL << DMA_CH0_INT_STATUS_WATCHDOG_Pos)
 #define DMA_CH0_INT_STATUS_WATCHDOG                      DMA_CH0_INT_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH1_CMD_TRANSFER_SIZE */
+/* Fields of DMA_CH1_CMD_TRANSFER_SIZE */
 #define DMA_CH1_CMD_TRANSFER_SIZE_SIZE_Pos               (0U)  /*!< Transfer size */
 #define DMA_CH1_CMD_TRANSFER_SIZE_SIZE_Msk               (0x3FFUL << DMA_CH1_CMD_TRANSFER_SIZE_SIZE_Pos)
 #define DMA_CH1_CMD_TRANSFER_SIZE_SIZE                   DMA_CH1_CMD_TRANSFER_SIZE_SIZE_Msk
 
-/* Các trường của DMA_CH1_READ_CONFIG */
+/* Fields of DMA_CH1_READ_CONFIG */
 #define DMA_CH1_READ_CONFIG_BURST_SIZE_Pos               (0U)  /*!< Burst size in bytes */
 #define DMA_CH1_READ_CONFIG_BURST_SIZE_Msk               (0x7FUL << DMA_CH1_READ_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH1_READ_CONFIG_BURST_SIZE                   DMA_CH1_READ_CONFIG_BURST_SIZE_Msk
@@ -1405,7 +1405,7 @@ typedef struct {
 #define DMA_CH1_READ_CONFIG_ADDR_INC_Msk                 (0x1UL << DMA_CH1_READ_CONFIG_ADDR_INC_Pos)
 #define DMA_CH1_READ_CONFIG_ADDR_INC                     DMA_CH1_READ_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH1_WRITE_CONFIG */
+/* Fields of DMA_CH1_WRITE_CONFIG */
 #define DMA_CH1_WRITE_CONFIG_BURST_SIZE_Pos              (0U)  /*!< Burst size in bytes */
 #define DMA_CH1_WRITE_CONFIG_BURST_SIZE_Msk              (0x7FUL << DMA_CH1_WRITE_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH1_WRITE_CONFIG_BURST_SIZE                  DMA_CH1_WRITE_CONFIG_BURST_SIZE_Msk
@@ -1422,12 +1422,12 @@ typedef struct {
 #define DMA_CH1_WRITE_CONFIG_ADDR_INC_Msk                (0x1UL << DMA_CH1_WRITE_CONFIG_ADDR_INC_Pos)
 #define DMA_CH1_WRITE_CONFIG_ADDR_INC                    DMA_CH1_WRITE_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH1_MODE_CONFIG */
+/* Fields of DMA_CH1_MODE_CONFIG */
 #define DMA_CH1_MODE_CONFIG_END_SWAP_Pos                 (28U)  /*!< Endianness swap mode */
 #define DMA_CH1_MODE_CONFIG_END_SWAP_Msk                 (0x3UL << DMA_CH1_MODE_CONFIG_END_SWAP_Pos)
 #define DMA_CH1_MODE_CONFIG_END_SWAP                     DMA_CH1_MODE_CONFIG_END_SWAP_Msk
 
-/* Các trường của DMA_CH1_PERIPHERAL_CONFIG */
+/* Fields of DMA_CH1_PERIPHERAL_CONFIG */
 #define DMA_CH1_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos      (0U)  /*!< Read peripheral ID */
 #define DMA_CH1_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk      (0x1FUL << DMA_CH1_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos)
 #define DMA_CH1_PERIPHERAL_CONFIG_RD_PERIPH_NUM          DMA_CH1_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk
@@ -1441,7 +1441,7 @@ typedef struct {
 #define DMA_CH1_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk    (0x7UL << DMA_CH1_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Pos)
 #define DMA_CH1_PERIPHERAL_CONFIG_WR_PERIPH_DELAY        DMA_CH1_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk
 
-/* Các trường của DMA_CH1_AXI_ATTR */
+/* Fields of DMA_CH1_AXI_ATTR */
 #define DMA_CH1_AXI_ATTR_RD_CACHE_Pos                    (0U)  /*!< Read cache attribute */
 #define DMA_CH1_AXI_ATTR_RD_CACHE_Msk                    (0xFUL << DMA_CH1_AXI_ATTR_RD_CACHE_Pos)
 #define DMA_CH1_AXI_ATTR_RD_CACHE                        DMA_CH1_AXI_ATTR_RD_CACHE_Msk
@@ -1461,17 +1461,17 @@ typedef struct {
 #define DMA_CH1_AXI_ATTR_WR_OVERRIDE_EN_Msk              (0x1UL << DMA_CH1_AXI_ATTR_WR_OVERRIDE_EN_Pos)
 #define DMA_CH1_AXI_ATTR_WR_OVERRIDE_EN                  DMA_CH1_AXI_ATTR_WR_OVERRIDE_EN_Msk
 
-/* Các trường của DMA_CH1_ENABLE */
+/* Fields of DMA_CH1_ENABLE */
 #define DMA_CH1_ENABLE_EN_Pos                            (0U)  /*!< Enable channel */
 #define DMA_CH1_ENABLE_EN_Msk                            (0x1UL << DMA_CH1_ENABLE_EN_Pos)
 #define DMA_CH1_ENABLE_EN                                DMA_CH1_ENABLE_EN_Msk
 
-/* Các trường của DMA_CH1_START */
+/* Fields of DMA_CH1_START */
 #define DMA_CH1_START_START_Pos                          (0U)  /*!< Start pulse */
 #define DMA_CH1_START_START_Msk                          (0x1UL << DMA_CH1_START_START_Pos)
 #define DMA_CH1_START_START                              DMA_CH1_START_START_Msk
 
-/* Các trường của DMA_CH1_ACTIVE_STATUS */
+/* Fields of DMA_CH1_ACTIVE_STATUS */
 #define DMA_CH1_ACTIVE_STATUS_READ_ACTIVE_Pos            (0U)  /*!< Read side active */
 #define DMA_CH1_ACTIVE_STATUS_READ_ACTIVE_Msk            (0x1UL << DMA_CH1_ACTIVE_STATUS_READ_ACTIVE_Pos)
 #define DMA_CH1_ACTIVE_STATUS_READ_ACTIVE                DMA_CH1_ACTIVE_STATUS_READ_ACTIVE_Msk
@@ -1479,7 +1479,7 @@ typedef struct {
 #define DMA_CH1_ACTIVE_STATUS_WRITE_ACTIVE_Msk           (0x1UL << DMA_CH1_ACTIVE_STATUS_WRITE_ACTIVE_Pos)
 #define DMA_CH1_ACTIVE_STATUS_WRITE_ACTIVE               DMA_CH1_ACTIVE_STATUS_WRITE_ACTIVE_Msk
 
-/* Các trường của DMA_CH1_TRANSFER_COUNT */
+/* Fields of DMA_CH1_TRANSFER_COUNT */
 #define DMA_CH1_TRANSFER_COUNT_COMMAND_COUNT_Pos         (0U)  /*!< Completed commands */
 #define DMA_CH1_TRANSFER_COUNT_COMMAND_COUNT_Msk         (0xFFFUL << DMA_CH1_TRANSFER_COUNT_COMMAND_COUNT_Pos)
 #define DMA_CH1_TRANSFER_COUNT_COMMAND_COUNT             DMA_CH1_TRANSFER_COUNT_COMMAND_COUNT_Msk
@@ -1487,7 +1487,7 @@ typedef struct {
 #define DMA_CH1_TRANSFER_COUNT_PENDING_COUNT_Msk         (0xFUL << DMA_CH1_TRANSFER_COUNT_PENDING_COUNT_Pos)
 #define DMA_CH1_TRANSFER_COUNT_PENDING_COUNT             DMA_CH1_TRANSFER_COUNT_PENDING_COUNT_Msk
 
-/* Các trường của DMA_CH1_INT_RAW_STATUS */
+/* Fields of DMA_CH1_INT_RAW_STATUS */
 #define DMA_CH1_INT_RAW_STATUS_CMD_DONE_Pos              (0U)  /*!< Command complete */
 #define DMA_CH1_INT_RAW_STATUS_CMD_DONE_Msk              (0x1UL << DMA_CH1_INT_RAW_STATUS_CMD_DONE_Pos)
 #define DMA_CH1_INT_RAW_STATUS_CMD_DONE                  DMA_CH1_INT_RAW_STATUS_CMD_DONE_Msk
@@ -1528,7 +1528,7 @@ typedef struct {
 #define DMA_CH1_INT_RAW_STATUS_WATCHDOG_Msk              (0x1UL << DMA_CH1_INT_RAW_STATUS_WATCHDOG_Pos)
 #define DMA_CH1_INT_RAW_STATUS_WATCHDOG                  DMA_CH1_INT_RAW_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH1_INT_CLEAR */
+/* Fields of DMA_CH1_INT_CLEAR */
 #define DMA_CH1_INT_CLEAR_CMD_DONE_Pos                   (0U)  /*!< Command complete */
 #define DMA_CH1_INT_CLEAR_CMD_DONE_Msk                   (0x1UL << DMA_CH1_INT_CLEAR_CMD_DONE_Pos)
 #define DMA_CH1_INT_CLEAR_CMD_DONE                       DMA_CH1_INT_CLEAR_CMD_DONE_Msk
@@ -1569,7 +1569,7 @@ typedef struct {
 #define DMA_CH1_INT_CLEAR_WATCHDOG_Msk                   (0x1UL << DMA_CH1_INT_CLEAR_WATCHDOG_Pos)
 #define DMA_CH1_INT_CLEAR_WATCHDOG                       DMA_CH1_INT_CLEAR_WATCHDOG_Msk
 
-/* Các trường của DMA_CH1_INT_ENABLE */
+/* Fields of DMA_CH1_INT_ENABLE */
 #define DMA_CH1_INT_ENABLE_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH1_INT_ENABLE_CMD_DONE_Msk                  (0x1UL << DMA_CH1_INT_ENABLE_CMD_DONE_Pos)
 #define DMA_CH1_INT_ENABLE_CMD_DONE                      DMA_CH1_INT_ENABLE_CMD_DONE_Msk
@@ -1610,7 +1610,7 @@ typedef struct {
 #define DMA_CH1_INT_ENABLE_WATCHDOG_Msk                  (0x1UL << DMA_CH1_INT_ENABLE_WATCHDOG_Pos)
 #define DMA_CH1_INT_ENABLE_WATCHDOG                      DMA_CH1_INT_ENABLE_WATCHDOG_Msk
 
-/* Các trường của DMA_CH1_INT_STATUS */
+/* Fields of DMA_CH1_INT_STATUS */
 #define DMA_CH1_INT_STATUS_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH1_INT_STATUS_CMD_DONE_Msk                  (0x1UL << DMA_CH1_INT_STATUS_CMD_DONE_Pos)
 #define DMA_CH1_INT_STATUS_CMD_DONE                      DMA_CH1_INT_STATUS_CMD_DONE_Msk
@@ -1651,12 +1651,12 @@ typedef struct {
 #define DMA_CH1_INT_STATUS_WATCHDOG_Msk                  (0x1UL << DMA_CH1_INT_STATUS_WATCHDOG_Pos)
 #define DMA_CH1_INT_STATUS_WATCHDOG                      DMA_CH1_INT_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH2_CMD_TRANSFER_SIZE */
+/* Fields of DMA_CH2_CMD_TRANSFER_SIZE */
 #define DMA_CH2_CMD_TRANSFER_SIZE_SIZE_Pos               (0U)  /*!< Transfer size */
 #define DMA_CH2_CMD_TRANSFER_SIZE_SIZE_Msk               (0x3FFUL << DMA_CH2_CMD_TRANSFER_SIZE_SIZE_Pos)
 #define DMA_CH2_CMD_TRANSFER_SIZE_SIZE                   DMA_CH2_CMD_TRANSFER_SIZE_SIZE_Msk
 
-/* Các trường của DMA_CH2_READ_CONFIG */
+/* Fields of DMA_CH2_READ_CONFIG */
 #define DMA_CH2_READ_CONFIG_BURST_SIZE_Pos               (0U)  /*!< Burst size in bytes */
 #define DMA_CH2_READ_CONFIG_BURST_SIZE_Msk               (0x7FUL << DMA_CH2_READ_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH2_READ_CONFIG_BURST_SIZE                   DMA_CH2_READ_CONFIG_BURST_SIZE_Msk
@@ -1673,7 +1673,7 @@ typedef struct {
 #define DMA_CH2_READ_CONFIG_ADDR_INC_Msk                 (0x1UL << DMA_CH2_READ_CONFIG_ADDR_INC_Pos)
 #define DMA_CH2_READ_CONFIG_ADDR_INC                     DMA_CH2_READ_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH2_WRITE_CONFIG */
+/* Fields of DMA_CH2_WRITE_CONFIG */
 #define DMA_CH2_WRITE_CONFIG_BURST_SIZE_Pos              (0U)  /*!< Burst size in bytes */
 #define DMA_CH2_WRITE_CONFIG_BURST_SIZE_Msk              (0x7FUL << DMA_CH2_WRITE_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH2_WRITE_CONFIG_BURST_SIZE                  DMA_CH2_WRITE_CONFIG_BURST_SIZE_Msk
@@ -1690,12 +1690,12 @@ typedef struct {
 #define DMA_CH2_WRITE_CONFIG_ADDR_INC_Msk                (0x1UL << DMA_CH2_WRITE_CONFIG_ADDR_INC_Pos)
 #define DMA_CH2_WRITE_CONFIG_ADDR_INC                    DMA_CH2_WRITE_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH2_MODE_CONFIG */
+/* Fields of DMA_CH2_MODE_CONFIG */
 #define DMA_CH2_MODE_CONFIG_END_SWAP_Pos                 (28U)  /*!< Endianness swap mode */
 #define DMA_CH2_MODE_CONFIG_END_SWAP_Msk                 (0x3UL << DMA_CH2_MODE_CONFIG_END_SWAP_Pos)
 #define DMA_CH2_MODE_CONFIG_END_SWAP                     DMA_CH2_MODE_CONFIG_END_SWAP_Msk
 
-/* Các trường của DMA_CH2_PERIPHERAL_CONFIG */
+/* Fields of DMA_CH2_PERIPHERAL_CONFIG */
 #define DMA_CH2_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos      (0U)  /*!< Read peripheral ID */
 #define DMA_CH2_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk      (0x1FUL << DMA_CH2_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos)
 #define DMA_CH2_PERIPHERAL_CONFIG_RD_PERIPH_NUM          DMA_CH2_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk
@@ -1709,7 +1709,7 @@ typedef struct {
 #define DMA_CH2_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk    (0x7UL << DMA_CH2_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Pos)
 #define DMA_CH2_PERIPHERAL_CONFIG_WR_PERIPH_DELAY        DMA_CH2_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk
 
-/* Các trường của DMA_CH2_AXI_ATTR */
+/* Fields of DMA_CH2_AXI_ATTR */
 #define DMA_CH2_AXI_ATTR_RD_CACHE_Pos                    (0U)  /*!< Read cache attribute */
 #define DMA_CH2_AXI_ATTR_RD_CACHE_Msk                    (0xFUL << DMA_CH2_AXI_ATTR_RD_CACHE_Pos)
 #define DMA_CH2_AXI_ATTR_RD_CACHE                        DMA_CH2_AXI_ATTR_RD_CACHE_Msk
@@ -1729,17 +1729,17 @@ typedef struct {
 #define DMA_CH2_AXI_ATTR_WR_OVERRIDE_EN_Msk              (0x1UL << DMA_CH2_AXI_ATTR_WR_OVERRIDE_EN_Pos)
 #define DMA_CH2_AXI_ATTR_WR_OVERRIDE_EN                  DMA_CH2_AXI_ATTR_WR_OVERRIDE_EN_Msk
 
-/* Các trường của DMA_CH2_ENABLE */
+/* Fields of DMA_CH2_ENABLE */
 #define DMA_CH2_ENABLE_EN_Pos                            (0U)  /*!< Enable channel */
 #define DMA_CH2_ENABLE_EN_Msk                            (0x1UL << DMA_CH2_ENABLE_EN_Pos)
 #define DMA_CH2_ENABLE_EN                                DMA_CH2_ENABLE_EN_Msk
 
-/* Các trường của DMA_CH2_START */
+/* Fields of DMA_CH2_START */
 #define DMA_CH2_START_START_Pos                          (0U)  /*!< Start pulse */
 #define DMA_CH2_START_START_Msk                          (0x1UL << DMA_CH2_START_START_Pos)
 #define DMA_CH2_START_START                              DMA_CH2_START_START_Msk
 
-/* Các trường của DMA_CH2_ACTIVE_STATUS */
+/* Fields of DMA_CH2_ACTIVE_STATUS */
 #define DMA_CH2_ACTIVE_STATUS_READ_ACTIVE_Pos            (0U)  /*!< Read side active */
 #define DMA_CH2_ACTIVE_STATUS_READ_ACTIVE_Msk            (0x1UL << DMA_CH2_ACTIVE_STATUS_READ_ACTIVE_Pos)
 #define DMA_CH2_ACTIVE_STATUS_READ_ACTIVE                DMA_CH2_ACTIVE_STATUS_READ_ACTIVE_Msk
@@ -1747,7 +1747,7 @@ typedef struct {
 #define DMA_CH2_ACTIVE_STATUS_WRITE_ACTIVE_Msk           (0x1UL << DMA_CH2_ACTIVE_STATUS_WRITE_ACTIVE_Pos)
 #define DMA_CH2_ACTIVE_STATUS_WRITE_ACTIVE               DMA_CH2_ACTIVE_STATUS_WRITE_ACTIVE_Msk
 
-/* Các trường của DMA_CH2_TRANSFER_COUNT */
+/* Fields of DMA_CH2_TRANSFER_COUNT */
 #define DMA_CH2_TRANSFER_COUNT_COMMAND_COUNT_Pos         (0U)  /*!< Completed commands */
 #define DMA_CH2_TRANSFER_COUNT_COMMAND_COUNT_Msk         (0xFFFUL << DMA_CH2_TRANSFER_COUNT_COMMAND_COUNT_Pos)
 #define DMA_CH2_TRANSFER_COUNT_COMMAND_COUNT             DMA_CH2_TRANSFER_COUNT_COMMAND_COUNT_Msk
@@ -1755,7 +1755,7 @@ typedef struct {
 #define DMA_CH2_TRANSFER_COUNT_PENDING_COUNT_Msk         (0xFUL << DMA_CH2_TRANSFER_COUNT_PENDING_COUNT_Pos)
 #define DMA_CH2_TRANSFER_COUNT_PENDING_COUNT             DMA_CH2_TRANSFER_COUNT_PENDING_COUNT_Msk
 
-/* Các trường của DMA_CH2_INT_RAW_STATUS */
+/* Fields of DMA_CH2_INT_RAW_STATUS */
 #define DMA_CH2_INT_RAW_STATUS_CMD_DONE_Pos              (0U)  /*!< Command complete */
 #define DMA_CH2_INT_RAW_STATUS_CMD_DONE_Msk              (0x1UL << DMA_CH2_INT_RAW_STATUS_CMD_DONE_Pos)
 #define DMA_CH2_INT_RAW_STATUS_CMD_DONE                  DMA_CH2_INT_RAW_STATUS_CMD_DONE_Msk
@@ -1796,7 +1796,7 @@ typedef struct {
 #define DMA_CH2_INT_RAW_STATUS_WATCHDOG_Msk              (0x1UL << DMA_CH2_INT_RAW_STATUS_WATCHDOG_Pos)
 #define DMA_CH2_INT_RAW_STATUS_WATCHDOG                  DMA_CH2_INT_RAW_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH2_INT_CLEAR */
+/* Fields of DMA_CH2_INT_CLEAR */
 #define DMA_CH2_INT_CLEAR_CMD_DONE_Pos                   (0U)  /*!< Command complete */
 #define DMA_CH2_INT_CLEAR_CMD_DONE_Msk                   (0x1UL << DMA_CH2_INT_CLEAR_CMD_DONE_Pos)
 #define DMA_CH2_INT_CLEAR_CMD_DONE                       DMA_CH2_INT_CLEAR_CMD_DONE_Msk
@@ -1837,7 +1837,7 @@ typedef struct {
 #define DMA_CH2_INT_CLEAR_WATCHDOG_Msk                   (0x1UL << DMA_CH2_INT_CLEAR_WATCHDOG_Pos)
 #define DMA_CH2_INT_CLEAR_WATCHDOG                       DMA_CH2_INT_CLEAR_WATCHDOG_Msk
 
-/* Các trường của DMA_CH2_INT_ENABLE */
+/* Fields of DMA_CH2_INT_ENABLE */
 #define DMA_CH2_INT_ENABLE_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH2_INT_ENABLE_CMD_DONE_Msk                  (0x1UL << DMA_CH2_INT_ENABLE_CMD_DONE_Pos)
 #define DMA_CH2_INT_ENABLE_CMD_DONE                      DMA_CH2_INT_ENABLE_CMD_DONE_Msk
@@ -1878,7 +1878,7 @@ typedef struct {
 #define DMA_CH2_INT_ENABLE_WATCHDOG_Msk                  (0x1UL << DMA_CH2_INT_ENABLE_WATCHDOG_Pos)
 #define DMA_CH2_INT_ENABLE_WATCHDOG                      DMA_CH2_INT_ENABLE_WATCHDOG_Msk
 
-/* Các trường của DMA_CH2_INT_STATUS */
+/* Fields of DMA_CH2_INT_STATUS */
 #define DMA_CH2_INT_STATUS_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH2_INT_STATUS_CMD_DONE_Msk                  (0x1UL << DMA_CH2_INT_STATUS_CMD_DONE_Pos)
 #define DMA_CH2_INT_STATUS_CMD_DONE                      DMA_CH2_INT_STATUS_CMD_DONE_Msk
@@ -1919,12 +1919,12 @@ typedef struct {
 #define DMA_CH2_INT_STATUS_WATCHDOG_Msk                  (0x1UL << DMA_CH2_INT_STATUS_WATCHDOG_Pos)
 #define DMA_CH2_INT_STATUS_WATCHDOG                      DMA_CH2_INT_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH3_CMD_TRANSFER_SIZE */
+/* Fields of DMA_CH3_CMD_TRANSFER_SIZE */
 #define DMA_CH3_CMD_TRANSFER_SIZE_SIZE_Pos               (0U)  /*!< Transfer size */
 #define DMA_CH3_CMD_TRANSFER_SIZE_SIZE_Msk               (0x3FFUL << DMA_CH3_CMD_TRANSFER_SIZE_SIZE_Pos)
 #define DMA_CH3_CMD_TRANSFER_SIZE_SIZE                   DMA_CH3_CMD_TRANSFER_SIZE_SIZE_Msk
 
-/* Các trường của DMA_CH3_READ_CONFIG */
+/* Fields of DMA_CH3_READ_CONFIG */
 #define DMA_CH3_READ_CONFIG_BURST_SIZE_Pos               (0U)  /*!< Burst size in bytes */
 #define DMA_CH3_READ_CONFIG_BURST_SIZE_Msk               (0x7FUL << DMA_CH3_READ_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH3_READ_CONFIG_BURST_SIZE                   DMA_CH3_READ_CONFIG_BURST_SIZE_Msk
@@ -1941,7 +1941,7 @@ typedef struct {
 #define DMA_CH3_READ_CONFIG_ADDR_INC_Msk                 (0x1UL << DMA_CH3_READ_CONFIG_ADDR_INC_Pos)
 #define DMA_CH3_READ_CONFIG_ADDR_INC                     DMA_CH3_READ_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH3_WRITE_CONFIG */
+/* Fields of DMA_CH3_WRITE_CONFIG */
 #define DMA_CH3_WRITE_CONFIG_BURST_SIZE_Pos              (0U)  /*!< Burst size in bytes */
 #define DMA_CH3_WRITE_CONFIG_BURST_SIZE_Msk              (0x7FUL << DMA_CH3_WRITE_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH3_WRITE_CONFIG_BURST_SIZE                  DMA_CH3_WRITE_CONFIG_BURST_SIZE_Msk
@@ -1958,12 +1958,12 @@ typedef struct {
 #define DMA_CH3_WRITE_CONFIG_ADDR_INC_Msk                (0x1UL << DMA_CH3_WRITE_CONFIG_ADDR_INC_Pos)
 #define DMA_CH3_WRITE_CONFIG_ADDR_INC                    DMA_CH3_WRITE_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH3_MODE_CONFIG */
+/* Fields of DMA_CH3_MODE_CONFIG */
 #define DMA_CH3_MODE_CONFIG_END_SWAP_Pos                 (28U)  /*!< Endianness swap mode */
 #define DMA_CH3_MODE_CONFIG_END_SWAP_Msk                 (0x3UL << DMA_CH3_MODE_CONFIG_END_SWAP_Pos)
 #define DMA_CH3_MODE_CONFIG_END_SWAP                     DMA_CH3_MODE_CONFIG_END_SWAP_Msk
 
-/* Các trường của DMA_CH3_PERIPHERAL_CONFIG */
+/* Fields of DMA_CH3_PERIPHERAL_CONFIG */
 #define DMA_CH3_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos      (0U)  /*!< Read peripheral ID */
 #define DMA_CH3_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk      (0x1FUL << DMA_CH3_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos)
 #define DMA_CH3_PERIPHERAL_CONFIG_RD_PERIPH_NUM          DMA_CH3_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk
@@ -1977,7 +1977,7 @@ typedef struct {
 #define DMA_CH3_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk    (0x7UL << DMA_CH3_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Pos)
 #define DMA_CH3_PERIPHERAL_CONFIG_WR_PERIPH_DELAY        DMA_CH3_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk
 
-/* Các trường của DMA_CH3_AXI_ATTR */
+/* Fields of DMA_CH3_AXI_ATTR */
 #define DMA_CH3_AXI_ATTR_RD_CACHE_Pos                    (0U)  /*!< Read cache attribute */
 #define DMA_CH3_AXI_ATTR_RD_CACHE_Msk                    (0xFUL << DMA_CH3_AXI_ATTR_RD_CACHE_Pos)
 #define DMA_CH3_AXI_ATTR_RD_CACHE                        DMA_CH3_AXI_ATTR_RD_CACHE_Msk
@@ -1997,17 +1997,17 @@ typedef struct {
 #define DMA_CH3_AXI_ATTR_WR_OVERRIDE_EN_Msk              (0x1UL << DMA_CH3_AXI_ATTR_WR_OVERRIDE_EN_Pos)
 #define DMA_CH3_AXI_ATTR_WR_OVERRIDE_EN                  DMA_CH3_AXI_ATTR_WR_OVERRIDE_EN_Msk
 
-/* Các trường của DMA_CH3_ENABLE */
+/* Fields of DMA_CH3_ENABLE */
 #define DMA_CH3_ENABLE_EN_Pos                            (0U)  /*!< Enable channel */
 #define DMA_CH3_ENABLE_EN_Msk                            (0x1UL << DMA_CH3_ENABLE_EN_Pos)
 #define DMA_CH3_ENABLE_EN                                DMA_CH3_ENABLE_EN_Msk
 
-/* Các trường của DMA_CH3_START */
+/* Fields of DMA_CH3_START */
 #define DMA_CH3_START_START_Pos                          (0U)  /*!< Start pulse */
 #define DMA_CH3_START_START_Msk                          (0x1UL << DMA_CH3_START_START_Pos)
 #define DMA_CH3_START_START                              DMA_CH3_START_START_Msk
 
-/* Các trường của DMA_CH3_ACTIVE_STATUS */
+/* Fields of DMA_CH3_ACTIVE_STATUS */
 #define DMA_CH3_ACTIVE_STATUS_READ_ACTIVE_Pos            (0U)  /*!< Read side active */
 #define DMA_CH3_ACTIVE_STATUS_READ_ACTIVE_Msk            (0x1UL << DMA_CH3_ACTIVE_STATUS_READ_ACTIVE_Pos)
 #define DMA_CH3_ACTIVE_STATUS_READ_ACTIVE                DMA_CH3_ACTIVE_STATUS_READ_ACTIVE_Msk
@@ -2015,7 +2015,7 @@ typedef struct {
 #define DMA_CH3_ACTIVE_STATUS_WRITE_ACTIVE_Msk           (0x1UL << DMA_CH3_ACTIVE_STATUS_WRITE_ACTIVE_Pos)
 #define DMA_CH3_ACTIVE_STATUS_WRITE_ACTIVE               DMA_CH3_ACTIVE_STATUS_WRITE_ACTIVE_Msk
 
-/* Các trường của DMA_CH3_TRANSFER_COUNT */
+/* Fields of DMA_CH3_TRANSFER_COUNT */
 #define DMA_CH3_TRANSFER_COUNT_COMMAND_COUNT_Pos         (0U)  /*!< Completed commands */
 #define DMA_CH3_TRANSFER_COUNT_COMMAND_COUNT_Msk         (0xFFFUL << DMA_CH3_TRANSFER_COUNT_COMMAND_COUNT_Pos)
 #define DMA_CH3_TRANSFER_COUNT_COMMAND_COUNT             DMA_CH3_TRANSFER_COUNT_COMMAND_COUNT_Msk
@@ -2023,7 +2023,7 @@ typedef struct {
 #define DMA_CH3_TRANSFER_COUNT_PENDING_COUNT_Msk         (0xFUL << DMA_CH3_TRANSFER_COUNT_PENDING_COUNT_Pos)
 #define DMA_CH3_TRANSFER_COUNT_PENDING_COUNT             DMA_CH3_TRANSFER_COUNT_PENDING_COUNT_Msk
 
-/* Các trường của DMA_CH3_INT_RAW_STATUS */
+/* Fields of DMA_CH3_INT_RAW_STATUS */
 #define DMA_CH3_INT_RAW_STATUS_CMD_DONE_Pos              (0U)  /*!< Command complete */
 #define DMA_CH3_INT_RAW_STATUS_CMD_DONE_Msk              (0x1UL << DMA_CH3_INT_RAW_STATUS_CMD_DONE_Pos)
 #define DMA_CH3_INT_RAW_STATUS_CMD_DONE                  DMA_CH3_INT_RAW_STATUS_CMD_DONE_Msk
@@ -2064,7 +2064,7 @@ typedef struct {
 #define DMA_CH3_INT_RAW_STATUS_WATCHDOG_Msk              (0x1UL << DMA_CH3_INT_RAW_STATUS_WATCHDOG_Pos)
 #define DMA_CH3_INT_RAW_STATUS_WATCHDOG                  DMA_CH3_INT_RAW_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH3_INT_CLEAR */
+/* Fields of DMA_CH3_INT_CLEAR */
 #define DMA_CH3_INT_CLEAR_CMD_DONE_Pos                   (0U)  /*!< Command complete */
 #define DMA_CH3_INT_CLEAR_CMD_DONE_Msk                   (0x1UL << DMA_CH3_INT_CLEAR_CMD_DONE_Pos)
 #define DMA_CH3_INT_CLEAR_CMD_DONE                       DMA_CH3_INT_CLEAR_CMD_DONE_Msk
@@ -2105,7 +2105,7 @@ typedef struct {
 #define DMA_CH3_INT_CLEAR_WATCHDOG_Msk                   (0x1UL << DMA_CH3_INT_CLEAR_WATCHDOG_Pos)
 #define DMA_CH3_INT_CLEAR_WATCHDOG                       DMA_CH3_INT_CLEAR_WATCHDOG_Msk
 
-/* Các trường của DMA_CH3_INT_ENABLE */
+/* Fields of DMA_CH3_INT_ENABLE */
 #define DMA_CH3_INT_ENABLE_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH3_INT_ENABLE_CMD_DONE_Msk                  (0x1UL << DMA_CH3_INT_ENABLE_CMD_DONE_Pos)
 #define DMA_CH3_INT_ENABLE_CMD_DONE                      DMA_CH3_INT_ENABLE_CMD_DONE_Msk
@@ -2146,7 +2146,7 @@ typedef struct {
 #define DMA_CH3_INT_ENABLE_WATCHDOG_Msk                  (0x1UL << DMA_CH3_INT_ENABLE_WATCHDOG_Pos)
 #define DMA_CH3_INT_ENABLE_WATCHDOG                      DMA_CH3_INT_ENABLE_WATCHDOG_Msk
 
-/* Các trường của DMA_CH3_INT_STATUS */
+/* Fields of DMA_CH3_INT_STATUS */
 #define DMA_CH3_INT_STATUS_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH3_INT_STATUS_CMD_DONE_Msk                  (0x1UL << DMA_CH3_INT_STATUS_CMD_DONE_Pos)
 #define DMA_CH3_INT_STATUS_CMD_DONE                      DMA_CH3_INT_STATUS_CMD_DONE_Msk
@@ -2187,12 +2187,12 @@ typedef struct {
 #define DMA_CH3_INT_STATUS_WATCHDOG_Msk                  (0x1UL << DMA_CH3_INT_STATUS_WATCHDOG_Pos)
 #define DMA_CH3_INT_STATUS_WATCHDOG                      DMA_CH3_INT_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH4_CMD_TRANSFER_SIZE */
+/* Fields of DMA_CH4_CMD_TRANSFER_SIZE */
 #define DMA_CH4_CMD_TRANSFER_SIZE_SIZE_Pos               (0U)  /*!< Transfer size */
 #define DMA_CH4_CMD_TRANSFER_SIZE_SIZE_Msk               (0x3FFUL << DMA_CH4_CMD_TRANSFER_SIZE_SIZE_Pos)
 #define DMA_CH4_CMD_TRANSFER_SIZE_SIZE                   DMA_CH4_CMD_TRANSFER_SIZE_SIZE_Msk
 
-/* Các trường của DMA_CH4_READ_CONFIG */
+/* Fields of DMA_CH4_READ_CONFIG */
 #define DMA_CH4_READ_CONFIG_BURST_SIZE_Pos               (0U)  /*!< Burst size in bytes */
 #define DMA_CH4_READ_CONFIG_BURST_SIZE_Msk               (0x7FUL << DMA_CH4_READ_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH4_READ_CONFIG_BURST_SIZE                   DMA_CH4_READ_CONFIG_BURST_SIZE_Msk
@@ -2209,7 +2209,7 @@ typedef struct {
 #define DMA_CH4_READ_CONFIG_ADDR_INC_Msk                 (0x1UL << DMA_CH4_READ_CONFIG_ADDR_INC_Pos)
 #define DMA_CH4_READ_CONFIG_ADDR_INC                     DMA_CH4_READ_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH4_WRITE_CONFIG */
+/* Fields of DMA_CH4_WRITE_CONFIG */
 #define DMA_CH4_WRITE_CONFIG_BURST_SIZE_Pos              (0U)  /*!< Burst size in bytes */
 #define DMA_CH4_WRITE_CONFIG_BURST_SIZE_Msk              (0x7FUL << DMA_CH4_WRITE_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH4_WRITE_CONFIG_BURST_SIZE                  DMA_CH4_WRITE_CONFIG_BURST_SIZE_Msk
@@ -2226,12 +2226,12 @@ typedef struct {
 #define DMA_CH4_WRITE_CONFIG_ADDR_INC_Msk                (0x1UL << DMA_CH4_WRITE_CONFIG_ADDR_INC_Pos)
 #define DMA_CH4_WRITE_CONFIG_ADDR_INC                    DMA_CH4_WRITE_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH4_MODE_CONFIG */
+/* Fields of DMA_CH4_MODE_CONFIG */
 #define DMA_CH4_MODE_CONFIG_END_SWAP_Pos                 (28U)  /*!< Endianness swap mode */
 #define DMA_CH4_MODE_CONFIG_END_SWAP_Msk                 (0x3UL << DMA_CH4_MODE_CONFIG_END_SWAP_Pos)
 #define DMA_CH4_MODE_CONFIG_END_SWAP                     DMA_CH4_MODE_CONFIG_END_SWAP_Msk
 
-/* Các trường của DMA_CH4_PERIPHERAL_CONFIG */
+/* Fields of DMA_CH4_PERIPHERAL_CONFIG */
 #define DMA_CH4_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos      (0U)  /*!< Read peripheral ID */
 #define DMA_CH4_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk      (0x1FUL << DMA_CH4_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos)
 #define DMA_CH4_PERIPHERAL_CONFIG_RD_PERIPH_NUM          DMA_CH4_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk
@@ -2245,7 +2245,7 @@ typedef struct {
 #define DMA_CH4_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk    (0x7UL << DMA_CH4_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Pos)
 #define DMA_CH4_PERIPHERAL_CONFIG_WR_PERIPH_DELAY        DMA_CH4_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk
 
-/* Các trường của DMA_CH4_AXI_ATTR */
+/* Fields of DMA_CH4_AXI_ATTR */
 #define DMA_CH4_AXI_ATTR_RD_CACHE_Pos                    (0U)  /*!< Read cache attribute */
 #define DMA_CH4_AXI_ATTR_RD_CACHE_Msk                    (0xFUL << DMA_CH4_AXI_ATTR_RD_CACHE_Pos)
 #define DMA_CH4_AXI_ATTR_RD_CACHE                        DMA_CH4_AXI_ATTR_RD_CACHE_Msk
@@ -2265,17 +2265,17 @@ typedef struct {
 #define DMA_CH4_AXI_ATTR_WR_OVERRIDE_EN_Msk              (0x1UL << DMA_CH4_AXI_ATTR_WR_OVERRIDE_EN_Pos)
 #define DMA_CH4_AXI_ATTR_WR_OVERRIDE_EN                  DMA_CH4_AXI_ATTR_WR_OVERRIDE_EN_Msk
 
-/* Các trường của DMA_CH4_ENABLE */
+/* Fields of DMA_CH4_ENABLE */
 #define DMA_CH4_ENABLE_EN_Pos                            (0U)  /*!< Enable channel */
 #define DMA_CH4_ENABLE_EN_Msk                            (0x1UL << DMA_CH4_ENABLE_EN_Pos)
 #define DMA_CH4_ENABLE_EN                                DMA_CH4_ENABLE_EN_Msk
 
-/* Các trường của DMA_CH4_START */
+/* Fields of DMA_CH4_START */
 #define DMA_CH4_START_START_Pos                          (0U)  /*!< Start pulse */
 #define DMA_CH4_START_START_Msk                          (0x1UL << DMA_CH4_START_START_Pos)
 #define DMA_CH4_START_START                              DMA_CH4_START_START_Msk
 
-/* Các trường của DMA_CH4_ACTIVE_STATUS */
+/* Fields of DMA_CH4_ACTIVE_STATUS */
 #define DMA_CH4_ACTIVE_STATUS_READ_ACTIVE_Pos            (0U)  /*!< Read side active */
 #define DMA_CH4_ACTIVE_STATUS_READ_ACTIVE_Msk            (0x1UL << DMA_CH4_ACTIVE_STATUS_READ_ACTIVE_Pos)
 #define DMA_CH4_ACTIVE_STATUS_READ_ACTIVE                DMA_CH4_ACTIVE_STATUS_READ_ACTIVE_Msk
@@ -2283,7 +2283,7 @@ typedef struct {
 #define DMA_CH4_ACTIVE_STATUS_WRITE_ACTIVE_Msk           (0x1UL << DMA_CH4_ACTIVE_STATUS_WRITE_ACTIVE_Pos)
 #define DMA_CH4_ACTIVE_STATUS_WRITE_ACTIVE               DMA_CH4_ACTIVE_STATUS_WRITE_ACTIVE_Msk
 
-/* Các trường của DMA_CH4_TRANSFER_COUNT */
+/* Fields of DMA_CH4_TRANSFER_COUNT */
 #define DMA_CH4_TRANSFER_COUNT_COMMAND_COUNT_Pos         (0U)  /*!< Completed commands */
 #define DMA_CH4_TRANSFER_COUNT_COMMAND_COUNT_Msk         (0xFFFUL << DMA_CH4_TRANSFER_COUNT_COMMAND_COUNT_Pos)
 #define DMA_CH4_TRANSFER_COUNT_COMMAND_COUNT             DMA_CH4_TRANSFER_COUNT_COMMAND_COUNT_Msk
@@ -2291,7 +2291,7 @@ typedef struct {
 #define DMA_CH4_TRANSFER_COUNT_PENDING_COUNT_Msk         (0xFUL << DMA_CH4_TRANSFER_COUNT_PENDING_COUNT_Pos)
 #define DMA_CH4_TRANSFER_COUNT_PENDING_COUNT             DMA_CH4_TRANSFER_COUNT_PENDING_COUNT_Msk
 
-/* Các trường của DMA_CH4_INT_RAW_STATUS */
+/* Fields of DMA_CH4_INT_RAW_STATUS */
 #define DMA_CH4_INT_RAW_STATUS_CMD_DONE_Pos              (0U)  /*!< Command complete */
 #define DMA_CH4_INT_RAW_STATUS_CMD_DONE_Msk              (0x1UL << DMA_CH4_INT_RAW_STATUS_CMD_DONE_Pos)
 #define DMA_CH4_INT_RAW_STATUS_CMD_DONE                  DMA_CH4_INT_RAW_STATUS_CMD_DONE_Msk
@@ -2332,7 +2332,7 @@ typedef struct {
 #define DMA_CH4_INT_RAW_STATUS_WATCHDOG_Msk              (0x1UL << DMA_CH4_INT_RAW_STATUS_WATCHDOG_Pos)
 #define DMA_CH4_INT_RAW_STATUS_WATCHDOG                  DMA_CH4_INT_RAW_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH4_INT_CLEAR */
+/* Fields of DMA_CH4_INT_CLEAR */
 #define DMA_CH4_INT_CLEAR_CMD_DONE_Pos                   (0U)  /*!< Command complete */
 #define DMA_CH4_INT_CLEAR_CMD_DONE_Msk                   (0x1UL << DMA_CH4_INT_CLEAR_CMD_DONE_Pos)
 #define DMA_CH4_INT_CLEAR_CMD_DONE                       DMA_CH4_INT_CLEAR_CMD_DONE_Msk
@@ -2373,7 +2373,7 @@ typedef struct {
 #define DMA_CH4_INT_CLEAR_WATCHDOG_Msk                   (0x1UL << DMA_CH4_INT_CLEAR_WATCHDOG_Pos)
 #define DMA_CH4_INT_CLEAR_WATCHDOG                       DMA_CH4_INT_CLEAR_WATCHDOG_Msk
 
-/* Các trường của DMA_CH4_INT_ENABLE */
+/* Fields of DMA_CH4_INT_ENABLE */
 #define DMA_CH4_INT_ENABLE_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH4_INT_ENABLE_CMD_DONE_Msk                  (0x1UL << DMA_CH4_INT_ENABLE_CMD_DONE_Pos)
 #define DMA_CH4_INT_ENABLE_CMD_DONE                      DMA_CH4_INT_ENABLE_CMD_DONE_Msk
@@ -2414,7 +2414,7 @@ typedef struct {
 #define DMA_CH4_INT_ENABLE_WATCHDOG_Msk                  (0x1UL << DMA_CH4_INT_ENABLE_WATCHDOG_Pos)
 #define DMA_CH4_INT_ENABLE_WATCHDOG                      DMA_CH4_INT_ENABLE_WATCHDOG_Msk
 
-/* Các trường của DMA_CH4_INT_STATUS */
+/* Fields of DMA_CH4_INT_STATUS */
 #define DMA_CH4_INT_STATUS_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH4_INT_STATUS_CMD_DONE_Msk                  (0x1UL << DMA_CH4_INT_STATUS_CMD_DONE_Pos)
 #define DMA_CH4_INT_STATUS_CMD_DONE                      DMA_CH4_INT_STATUS_CMD_DONE_Msk
@@ -2455,12 +2455,12 @@ typedef struct {
 #define DMA_CH4_INT_STATUS_WATCHDOG_Msk                  (0x1UL << DMA_CH4_INT_STATUS_WATCHDOG_Pos)
 #define DMA_CH4_INT_STATUS_WATCHDOG                      DMA_CH4_INT_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH5_CMD_TRANSFER_SIZE */
+/* Fields of DMA_CH5_CMD_TRANSFER_SIZE */
 #define DMA_CH5_CMD_TRANSFER_SIZE_SIZE_Pos               (0U)  /*!< Transfer size */
 #define DMA_CH5_CMD_TRANSFER_SIZE_SIZE_Msk               (0x3FFUL << DMA_CH5_CMD_TRANSFER_SIZE_SIZE_Pos)
 #define DMA_CH5_CMD_TRANSFER_SIZE_SIZE                   DMA_CH5_CMD_TRANSFER_SIZE_SIZE_Msk
 
-/* Các trường của DMA_CH5_READ_CONFIG */
+/* Fields of DMA_CH5_READ_CONFIG */
 #define DMA_CH5_READ_CONFIG_BURST_SIZE_Pos               (0U)  /*!< Burst size in bytes */
 #define DMA_CH5_READ_CONFIG_BURST_SIZE_Msk               (0x7FUL << DMA_CH5_READ_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH5_READ_CONFIG_BURST_SIZE                   DMA_CH5_READ_CONFIG_BURST_SIZE_Msk
@@ -2477,7 +2477,7 @@ typedef struct {
 #define DMA_CH5_READ_CONFIG_ADDR_INC_Msk                 (0x1UL << DMA_CH5_READ_CONFIG_ADDR_INC_Pos)
 #define DMA_CH5_READ_CONFIG_ADDR_INC                     DMA_CH5_READ_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH5_WRITE_CONFIG */
+/* Fields of DMA_CH5_WRITE_CONFIG */
 #define DMA_CH5_WRITE_CONFIG_BURST_SIZE_Pos              (0U)  /*!< Burst size in bytes */
 #define DMA_CH5_WRITE_CONFIG_BURST_SIZE_Msk              (0x7FUL << DMA_CH5_WRITE_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH5_WRITE_CONFIG_BURST_SIZE                  DMA_CH5_WRITE_CONFIG_BURST_SIZE_Msk
@@ -2494,12 +2494,12 @@ typedef struct {
 #define DMA_CH5_WRITE_CONFIG_ADDR_INC_Msk                (0x1UL << DMA_CH5_WRITE_CONFIG_ADDR_INC_Pos)
 #define DMA_CH5_WRITE_CONFIG_ADDR_INC                    DMA_CH5_WRITE_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH5_MODE_CONFIG */
+/* Fields of DMA_CH5_MODE_CONFIG */
 #define DMA_CH5_MODE_CONFIG_END_SWAP_Pos                 (28U)  /*!< Endianness swap mode */
 #define DMA_CH5_MODE_CONFIG_END_SWAP_Msk                 (0x3UL << DMA_CH5_MODE_CONFIG_END_SWAP_Pos)
 #define DMA_CH5_MODE_CONFIG_END_SWAP                     DMA_CH5_MODE_CONFIG_END_SWAP_Msk
 
-/* Các trường của DMA_CH5_PERIPHERAL_CONFIG */
+/* Fields of DMA_CH5_PERIPHERAL_CONFIG */
 #define DMA_CH5_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos      (0U)  /*!< Read peripheral ID */
 #define DMA_CH5_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk      (0x1FUL << DMA_CH5_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos)
 #define DMA_CH5_PERIPHERAL_CONFIG_RD_PERIPH_NUM          DMA_CH5_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk
@@ -2513,7 +2513,7 @@ typedef struct {
 #define DMA_CH5_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk    (0x7UL << DMA_CH5_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Pos)
 #define DMA_CH5_PERIPHERAL_CONFIG_WR_PERIPH_DELAY        DMA_CH5_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk
 
-/* Các trường của DMA_CH5_AXI_ATTR */
+/* Fields of DMA_CH5_AXI_ATTR */
 #define DMA_CH5_AXI_ATTR_RD_CACHE_Pos                    (0U)  /*!< Read cache attribute */
 #define DMA_CH5_AXI_ATTR_RD_CACHE_Msk                    (0xFUL << DMA_CH5_AXI_ATTR_RD_CACHE_Pos)
 #define DMA_CH5_AXI_ATTR_RD_CACHE                        DMA_CH5_AXI_ATTR_RD_CACHE_Msk
@@ -2533,17 +2533,17 @@ typedef struct {
 #define DMA_CH5_AXI_ATTR_WR_OVERRIDE_EN_Msk              (0x1UL << DMA_CH5_AXI_ATTR_WR_OVERRIDE_EN_Pos)
 #define DMA_CH5_AXI_ATTR_WR_OVERRIDE_EN                  DMA_CH5_AXI_ATTR_WR_OVERRIDE_EN_Msk
 
-/* Các trường của DMA_CH5_ENABLE */
+/* Fields of DMA_CH5_ENABLE */
 #define DMA_CH5_ENABLE_EN_Pos                            (0U)  /*!< Enable channel */
 #define DMA_CH5_ENABLE_EN_Msk                            (0x1UL << DMA_CH5_ENABLE_EN_Pos)
 #define DMA_CH5_ENABLE_EN                                DMA_CH5_ENABLE_EN_Msk
 
-/* Các trường của DMA_CH5_START */
+/* Fields of DMA_CH5_START */
 #define DMA_CH5_START_START_Pos                          (0U)  /*!< Start pulse */
 #define DMA_CH5_START_START_Msk                          (0x1UL << DMA_CH5_START_START_Pos)
 #define DMA_CH5_START_START                              DMA_CH5_START_START_Msk
 
-/* Các trường của DMA_CH5_ACTIVE_STATUS */
+/* Fields of DMA_CH5_ACTIVE_STATUS */
 #define DMA_CH5_ACTIVE_STATUS_READ_ACTIVE_Pos            (0U)  /*!< Read side active */
 #define DMA_CH5_ACTIVE_STATUS_READ_ACTIVE_Msk            (0x1UL << DMA_CH5_ACTIVE_STATUS_READ_ACTIVE_Pos)
 #define DMA_CH5_ACTIVE_STATUS_READ_ACTIVE                DMA_CH5_ACTIVE_STATUS_READ_ACTIVE_Msk
@@ -2551,7 +2551,7 @@ typedef struct {
 #define DMA_CH5_ACTIVE_STATUS_WRITE_ACTIVE_Msk           (0x1UL << DMA_CH5_ACTIVE_STATUS_WRITE_ACTIVE_Pos)
 #define DMA_CH5_ACTIVE_STATUS_WRITE_ACTIVE               DMA_CH5_ACTIVE_STATUS_WRITE_ACTIVE_Msk
 
-/* Các trường của DMA_CH5_TRANSFER_COUNT */
+/* Fields of DMA_CH5_TRANSFER_COUNT */
 #define DMA_CH5_TRANSFER_COUNT_COMMAND_COUNT_Pos         (0U)  /*!< Completed commands */
 #define DMA_CH5_TRANSFER_COUNT_COMMAND_COUNT_Msk         (0xFFFUL << DMA_CH5_TRANSFER_COUNT_COMMAND_COUNT_Pos)
 #define DMA_CH5_TRANSFER_COUNT_COMMAND_COUNT             DMA_CH5_TRANSFER_COUNT_COMMAND_COUNT_Msk
@@ -2559,7 +2559,7 @@ typedef struct {
 #define DMA_CH5_TRANSFER_COUNT_PENDING_COUNT_Msk         (0xFUL << DMA_CH5_TRANSFER_COUNT_PENDING_COUNT_Pos)
 #define DMA_CH5_TRANSFER_COUNT_PENDING_COUNT             DMA_CH5_TRANSFER_COUNT_PENDING_COUNT_Msk
 
-/* Các trường của DMA_CH5_INT_RAW_STATUS */
+/* Fields of DMA_CH5_INT_RAW_STATUS */
 #define DMA_CH5_INT_RAW_STATUS_CMD_DONE_Pos              (0U)  /*!< Command complete */
 #define DMA_CH5_INT_RAW_STATUS_CMD_DONE_Msk              (0x1UL << DMA_CH5_INT_RAW_STATUS_CMD_DONE_Pos)
 #define DMA_CH5_INT_RAW_STATUS_CMD_DONE                  DMA_CH5_INT_RAW_STATUS_CMD_DONE_Msk
@@ -2600,7 +2600,7 @@ typedef struct {
 #define DMA_CH5_INT_RAW_STATUS_WATCHDOG_Msk              (0x1UL << DMA_CH5_INT_RAW_STATUS_WATCHDOG_Pos)
 #define DMA_CH5_INT_RAW_STATUS_WATCHDOG                  DMA_CH5_INT_RAW_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH5_INT_CLEAR */
+/* Fields of DMA_CH5_INT_CLEAR */
 #define DMA_CH5_INT_CLEAR_CMD_DONE_Pos                   (0U)  /*!< Command complete */
 #define DMA_CH5_INT_CLEAR_CMD_DONE_Msk                   (0x1UL << DMA_CH5_INT_CLEAR_CMD_DONE_Pos)
 #define DMA_CH5_INT_CLEAR_CMD_DONE                       DMA_CH5_INT_CLEAR_CMD_DONE_Msk
@@ -2641,7 +2641,7 @@ typedef struct {
 #define DMA_CH5_INT_CLEAR_WATCHDOG_Msk                   (0x1UL << DMA_CH5_INT_CLEAR_WATCHDOG_Pos)
 #define DMA_CH5_INT_CLEAR_WATCHDOG                       DMA_CH5_INT_CLEAR_WATCHDOG_Msk
 
-/* Các trường của DMA_CH5_INT_ENABLE */
+/* Fields of DMA_CH5_INT_ENABLE */
 #define DMA_CH5_INT_ENABLE_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH5_INT_ENABLE_CMD_DONE_Msk                  (0x1UL << DMA_CH5_INT_ENABLE_CMD_DONE_Pos)
 #define DMA_CH5_INT_ENABLE_CMD_DONE                      DMA_CH5_INT_ENABLE_CMD_DONE_Msk
@@ -2682,7 +2682,7 @@ typedef struct {
 #define DMA_CH5_INT_ENABLE_WATCHDOG_Msk                  (0x1UL << DMA_CH5_INT_ENABLE_WATCHDOG_Pos)
 #define DMA_CH5_INT_ENABLE_WATCHDOG                      DMA_CH5_INT_ENABLE_WATCHDOG_Msk
 
-/* Các trường của DMA_CH5_INT_STATUS */
+/* Fields of DMA_CH5_INT_STATUS */
 #define DMA_CH5_INT_STATUS_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH5_INT_STATUS_CMD_DONE_Msk                  (0x1UL << DMA_CH5_INT_STATUS_CMD_DONE_Pos)
 #define DMA_CH5_INT_STATUS_CMD_DONE                      DMA_CH5_INT_STATUS_CMD_DONE_Msk
@@ -2723,12 +2723,12 @@ typedef struct {
 #define DMA_CH5_INT_STATUS_WATCHDOG_Msk                  (0x1UL << DMA_CH5_INT_STATUS_WATCHDOG_Pos)
 #define DMA_CH5_INT_STATUS_WATCHDOG                      DMA_CH5_INT_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH6_CMD_TRANSFER_SIZE */
+/* Fields of DMA_CH6_CMD_TRANSFER_SIZE */
 #define DMA_CH6_CMD_TRANSFER_SIZE_SIZE_Pos               (0U)  /*!< Transfer size */
 #define DMA_CH6_CMD_TRANSFER_SIZE_SIZE_Msk               (0x3FFUL << DMA_CH6_CMD_TRANSFER_SIZE_SIZE_Pos)
 #define DMA_CH6_CMD_TRANSFER_SIZE_SIZE                   DMA_CH6_CMD_TRANSFER_SIZE_SIZE_Msk
 
-/* Các trường của DMA_CH6_READ_CONFIG */
+/* Fields of DMA_CH6_READ_CONFIG */
 #define DMA_CH6_READ_CONFIG_BURST_SIZE_Pos               (0U)  /*!< Burst size in bytes */
 #define DMA_CH6_READ_CONFIG_BURST_SIZE_Msk               (0x7FUL << DMA_CH6_READ_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH6_READ_CONFIG_BURST_SIZE                   DMA_CH6_READ_CONFIG_BURST_SIZE_Msk
@@ -2745,7 +2745,7 @@ typedef struct {
 #define DMA_CH6_READ_CONFIG_ADDR_INC_Msk                 (0x1UL << DMA_CH6_READ_CONFIG_ADDR_INC_Pos)
 #define DMA_CH6_READ_CONFIG_ADDR_INC                     DMA_CH6_READ_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH6_WRITE_CONFIG */
+/* Fields of DMA_CH6_WRITE_CONFIG */
 #define DMA_CH6_WRITE_CONFIG_BURST_SIZE_Pos              (0U)  /*!< Burst size in bytes */
 #define DMA_CH6_WRITE_CONFIG_BURST_SIZE_Msk              (0x7FUL << DMA_CH6_WRITE_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH6_WRITE_CONFIG_BURST_SIZE                  DMA_CH6_WRITE_CONFIG_BURST_SIZE_Msk
@@ -2762,12 +2762,12 @@ typedef struct {
 #define DMA_CH6_WRITE_CONFIG_ADDR_INC_Msk                (0x1UL << DMA_CH6_WRITE_CONFIG_ADDR_INC_Pos)
 #define DMA_CH6_WRITE_CONFIG_ADDR_INC                    DMA_CH6_WRITE_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH6_MODE_CONFIG */
+/* Fields of DMA_CH6_MODE_CONFIG */
 #define DMA_CH6_MODE_CONFIG_END_SWAP_Pos                 (28U)  /*!< Endianness swap mode */
 #define DMA_CH6_MODE_CONFIG_END_SWAP_Msk                 (0x3UL << DMA_CH6_MODE_CONFIG_END_SWAP_Pos)
 #define DMA_CH6_MODE_CONFIG_END_SWAP                     DMA_CH6_MODE_CONFIG_END_SWAP_Msk
 
-/* Các trường của DMA_CH6_PERIPHERAL_CONFIG */
+/* Fields of DMA_CH6_PERIPHERAL_CONFIG */
 #define DMA_CH6_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos      (0U)  /*!< Read peripheral ID */
 #define DMA_CH6_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk      (0x1FUL << DMA_CH6_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos)
 #define DMA_CH6_PERIPHERAL_CONFIG_RD_PERIPH_NUM          DMA_CH6_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk
@@ -2781,7 +2781,7 @@ typedef struct {
 #define DMA_CH6_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk    (0x7UL << DMA_CH6_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Pos)
 #define DMA_CH6_PERIPHERAL_CONFIG_WR_PERIPH_DELAY        DMA_CH6_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk
 
-/* Các trường của DMA_CH6_AXI_ATTR */
+/* Fields of DMA_CH6_AXI_ATTR */
 #define DMA_CH6_AXI_ATTR_RD_CACHE_Pos                    (0U)  /*!< Read cache attribute */
 #define DMA_CH6_AXI_ATTR_RD_CACHE_Msk                    (0xFUL << DMA_CH6_AXI_ATTR_RD_CACHE_Pos)
 #define DMA_CH6_AXI_ATTR_RD_CACHE                        DMA_CH6_AXI_ATTR_RD_CACHE_Msk
@@ -2801,17 +2801,17 @@ typedef struct {
 #define DMA_CH6_AXI_ATTR_WR_OVERRIDE_EN_Msk              (0x1UL << DMA_CH6_AXI_ATTR_WR_OVERRIDE_EN_Pos)
 #define DMA_CH6_AXI_ATTR_WR_OVERRIDE_EN                  DMA_CH6_AXI_ATTR_WR_OVERRIDE_EN_Msk
 
-/* Các trường của DMA_CH6_ENABLE */
+/* Fields of DMA_CH6_ENABLE */
 #define DMA_CH6_ENABLE_EN_Pos                            (0U)  /*!< Enable channel */
 #define DMA_CH6_ENABLE_EN_Msk                            (0x1UL << DMA_CH6_ENABLE_EN_Pos)
 #define DMA_CH6_ENABLE_EN                                DMA_CH6_ENABLE_EN_Msk
 
-/* Các trường của DMA_CH6_START */
+/* Fields of DMA_CH6_START */
 #define DMA_CH6_START_START_Pos                          (0U)  /*!< Start pulse */
 #define DMA_CH6_START_START_Msk                          (0x1UL << DMA_CH6_START_START_Pos)
 #define DMA_CH6_START_START                              DMA_CH6_START_START_Msk
 
-/* Các trường của DMA_CH6_ACTIVE_STATUS */
+/* Fields of DMA_CH6_ACTIVE_STATUS */
 #define DMA_CH6_ACTIVE_STATUS_READ_ACTIVE_Pos            (0U)  /*!< Read side active */
 #define DMA_CH6_ACTIVE_STATUS_READ_ACTIVE_Msk            (0x1UL << DMA_CH6_ACTIVE_STATUS_READ_ACTIVE_Pos)
 #define DMA_CH6_ACTIVE_STATUS_READ_ACTIVE                DMA_CH6_ACTIVE_STATUS_READ_ACTIVE_Msk
@@ -2819,7 +2819,7 @@ typedef struct {
 #define DMA_CH6_ACTIVE_STATUS_WRITE_ACTIVE_Msk           (0x1UL << DMA_CH6_ACTIVE_STATUS_WRITE_ACTIVE_Pos)
 #define DMA_CH6_ACTIVE_STATUS_WRITE_ACTIVE               DMA_CH6_ACTIVE_STATUS_WRITE_ACTIVE_Msk
 
-/* Các trường của DMA_CH6_TRANSFER_COUNT */
+/* Fields of DMA_CH6_TRANSFER_COUNT */
 #define DMA_CH6_TRANSFER_COUNT_COMMAND_COUNT_Pos         (0U)  /*!< Completed commands */
 #define DMA_CH6_TRANSFER_COUNT_COMMAND_COUNT_Msk         (0xFFFUL << DMA_CH6_TRANSFER_COUNT_COMMAND_COUNT_Pos)
 #define DMA_CH6_TRANSFER_COUNT_COMMAND_COUNT             DMA_CH6_TRANSFER_COUNT_COMMAND_COUNT_Msk
@@ -2827,7 +2827,7 @@ typedef struct {
 #define DMA_CH6_TRANSFER_COUNT_PENDING_COUNT_Msk         (0xFUL << DMA_CH6_TRANSFER_COUNT_PENDING_COUNT_Pos)
 #define DMA_CH6_TRANSFER_COUNT_PENDING_COUNT             DMA_CH6_TRANSFER_COUNT_PENDING_COUNT_Msk
 
-/* Các trường của DMA_CH6_INT_RAW_STATUS */
+/* Fields of DMA_CH6_INT_RAW_STATUS */
 #define DMA_CH6_INT_RAW_STATUS_CMD_DONE_Pos              (0U)  /*!< Command complete */
 #define DMA_CH6_INT_RAW_STATUS_CMD_DONE_Msk              (0x1UL << DMA_CH6_INT_RAW_STATUS_CMD_DONE_Pos)
 #define DMA_CH6_INT_RAW_STATUS_CMD_DONE                  DMA_CH6_INT_RAW_STATUS_CMD_DONE_Msk
@@ -2868,7 +2868,7 @@ typedef struct {
 #define DMA_CH6_INT_RAW_STATUS_WATCHDOG_Msk              (0x1UL << DMA_CH6_INT_RAW_STATUS_WATCHDOG_Pos)
 #define DMA_CH6_INT_RAW_STATUS_WATCHDOG                  DMA_CH6_INT_RAW_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH6_INT_CLEAR */
+/* Fields of DMA_CH6_INT_CLEAR */
 #define DMA_CH6_INT_CLEAR_CMD_DONE_Pos                   (0U)  /*!< Command complete */
 #define DMA_CH6_INT_CLEAR_CMD_DONE_Msk                   (0x1UL << DMA_CH6_INT_CLEAR_CMD_DONE_Pos)
 #define DMA_CH6_INT_CLEAR_CMD_DONE                       DMA_CH6_INT_CLEAR_CMD_DONE_Msk
@@ -2909,7 +2909,7 @@ typedef struct {
 #define DMA_CH6_INT_CLEAR_WATCHDOG_Msk                   (0x1UL << DMA_CH6_INT_CLEAR_WATCHDOG_Pos)
 #define DMA_CH6_INT_CLEAR_WATCHDOG                       DMA_CH6_INT_CLEAR_WATCHDOG_Msk
 
-/* Các trường của DMA_CH6_INT_ENABLE */
+/* Fields of DMA_CH6_INT_ENABLE */
 #define DMA_CH6_INT_ENABLE_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH6_INT_ENABLE_CMD_DONE_Msk                  (0x1UL << DMA_CH6_INT_ENABLE_CMD_DONE_Pos)
 #define DMA_CH6_INT_ENABLE_CMD_DONE                      DMA_CH6_INT_ENABLE_CMD_DONE_Msk
@@ -2950,7 +2950,7 @@ typedef struct {
 #define DMA_CH6_INT_ENABLE_WATCHDOG_Msk                  (0x1UL << DMA_CH6_INT_ENABLE_WATCHDOG_Pos)
 #define DMA_CH6_INT_ENABLE_WATCHDOG                      DMA_CH6_INT_ENABLE_WATCHDOG_Msk
 
-/* Các trường của DMA_CH6_INT_STATUS */
+/* Fields of DMA_CH6_INT_STATUS */
 #define DMA_CH6_INT_STATUS_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH6_INT_STATUS_CMD_DONE_Msk                  (0x1UL << DMA_CH6_INT_STATUS_CMD_DONE_Pos)
 #define DMA_CH6_INT_STATUS_CMD_DONE                      DMA_CH6_INT_STATUS_CMD_DONE_Msk
@@ -2991,12 +2991,12 @@ typedef struct {
 #define DMA_CH6_INT_STATUS_WATCHDOG_Msk                  (0x1UL << DMA_CH6_INT_STATUS_WATCHDOG_Pos)
 #define DMA_CH6_INT_STATUS_WATCHDOG                      DMA_CH6_INT_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH7_CMD_TRANSFER_SIZE */
+/* Fields of DMA_CH7_CMD_TRANSFER_SIZE */
 #define DMA_CH7_CMD_TRANSFER_SIZE_SIZE_Pos               (0U)  /*!< Transfer size */
 #define DMA_CH7_CMD_TRANSFER_SIZE_SIZE_Msk               (0x3FFUL << DMA_CH7_CMD_TRANSFER_SIZE_SIZE_Pos)
 #define DMA_CH7_CMD_TRANSFER_SIZE_SIZE                   DMA_CH7_CMD_TRANSFER_SIZE_SIZE_Msk
 
-/* Các trường của DMA_CH7_READ_CONFIG */
+/* Fields of DMA_CH7_READ_CONFIG */
 #define DMA_CH7_READ_CONFIG_BURST_SIZE_Pos               (0U)  /*!< Burst size in bytes */
 #define DMA_CH7_READ_CONFIG_BURST_SIZE_Msk               (0x7FUL << DMA_CH7_READ_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH7_READ_CONFIG_BURST_SIZE                   DMA_CH7_READ_CONFIG_BURST_SIZE_Msk
@@ -3013,7 +3013,7 @@ typedef struct {
 #define DMA_CH7_READ_CONFIG_ADDR_INC_Msk                 (0x1UL << DMA_CH7_READ_CONFIG_ADDR_INC_Pos)
 #define DMA_CH7_READ_CONFIG_ADDR_INC                     DMA_CH7_READ_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH7_WRITE_CONFIG */
+/* Fields of DMA_CH7_WRITE_CONFIG */
 #define DMA_CH7_WRITE_CONFIG_BURST_SIZE_Pos              (0U)  /*!< Burst size in bytes */
 #define DMA_CH7_WRITE_CONFIG_BURST_SIZE_Msk              (0x7FUL << DMA_CH7_WRITE_CONFIG_BURST_SIZE_Pos)
 #define DMA_CH7_WRITE_CONFIG_BURST_SIZE                  DMA_CH7_WRITE_CONFIG_BURST_SIZE_Msk
@@ -3030,12 +3030,12 @@ typedef struct {
 #define DMA_CH7_WRITE_CONFIG_ADDR_INC_Msk                (0x1UL << DMA_CH7_WRITE_CONFIG_ADDR_INC_Pos)
 #define DMA_CH7_WRITE_CONFIG_ADDR_INC                    DMA_CH7_WRITE_CONFIG_ADDR_INC_Msk
 
-/* Các trường của DMA_CH7_MODE_CONFIG */
+/* Fields of DMA_CH7_MODE_CONFIG */
 #define DMA_CH7_MODE_CONFIG_END_SWAP_Pos                 (28U)  /*!< Endianness swap mode */
 #define DMA_CH7_MODE_CONFIG_END_SWAP_Msk                 (0x3UL << DMA_CH7_MODE_CONFIG_END_SWAP_Pos)
 #define DMA_CH7_MODE_CONFIG_END_SWAP                     DMA_CH7_MODE_CONFIG_END_SWAP_Msk
 
-/* Các trường của DMA_CH7_PERIPHERAL_CONFIG */
+/* Fields of DMA_CH7_PERIPHERAL_CONFIG */
 #define DMA_CH7_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos      (0U)  /*!< Read peripheral ID */
 #define DMA_CH7_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk      (0x1FUL << DMA_CH7_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Pos)
 #define DMA_CH7_PERIPHERAL_CONFIG_RD_PERIPH_NUM          DMA_CH7_PERIPHERAL_CONFIG_RD_PERIPH_NUM_Msk
@@ -3049,7 +3049,7 @@ typedef struct {
 #define DMA_CH7_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk    (0x7UL << DMA_CH7_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Pos)
 #define DMA_CH7_PERIPHERAL_CONFIG_WR_PERIPH_DELAY        DMA_CH7_PERIPHERAL_CONFIG_WR_PERIPH_DELAY_Msk
 
-/* Các trường của DMA_CH7_AXI_ATTR */
+/* Fields of DMA_CH7_AXI_ATTR */
 #define DMA_CH7_AXI_ATTR_RD_CACHE_Pos                    (0U)  /*!< Read cache attribute */
 #define DMA_CH7_AXI_ATTR_RD_CACHE_Msk                    (0xFUL << DMA_CH7_AXI_ATTR_RD_CACHE_Pos)
 #define DMA_CH7_AXI_ATTR_RD_CACHE                        DMA_CH7_AXI_ATTR_RD_CACHE_Msk
@@ -3069,17 +3069,17 @@ typedef struct {
 #define DMA_CH7_AXI_ATTR_WR_OVERRIDE_EN_Msk              (0x1UL << DMA_CH7_AXI_ATTR_WR_OVERRIDE_EN_Pos)
 #define DMA_CH7_AXI_ATTR_WR_OVERRIDE_EN                  DMA_CH7_AXI_ATTR_WR_OVERRIDE_EN_Msk
 
-/* Các trường của DMA_CH7_ENABLE */
+/* Fields of DMA_CH7_ENABLE */
 #define DMA_CH7_ENABLE_EN_Pos                            (0U)  /*!< Enable channel */
 #define DMA_CH7_ENABLE_EN_Msk                            (0x1UL << DMA_CH7_ENABLE_EN_Pos)
 #define DMA_CH7_ENABLE_EN                                DMA_CH7_ENABLE_EN_Msk
 
-/* Các trường của DMA_CH7_START */
+/* Fields of DMA_CH7_START */
 #define DMA_CH7_START_START_Pos                          (0U)  /*!< Start pulse */
 #define DMA_CH7_START_START_Msk                          (0x1UL << DMA_CH7_START_START_Pos)
 #define DMA_CH7_START_START                              DMA_CH7_START_START_Msk
 
-/* Các trường của DMA_CH7_ACTIVE_STATUS */
+/* Fields of DMA_CH7_ACTIVE_STATUS */
 #define DMA_CH7_ACTIVE_STATUS_READ_ACTIVE_Pos            (0U)  /*!< Read side active */
 #define DMA_CH7_ACTIVE_STATUS_READ_ACTIVE_Msk            (0x1UL << DMA_CH7_ACTIVE_STATUS_READ_ACTIVE_Pos)
 #define DMA_CH7_ACTIVE_STATUS_READ_ACTIVE                DMA_CH7_ACTIVE_STATUS_READ_ACTIVE_Msk
@@ -3087,7 +3087,7 @@ typedef struct {
 #define DMA_CH7_ACTIVE_STATUS_WRITE_ACTIVE_Msk           (0x1UL << DMA_CH7_ACTIVE_STATUS_WRITE_ACTIVE_Pos)
 #define DMA_CH7_ACTIVE_STATUS_WRITE_ACTIVE               DMA_CH7_ACTIVE_STATUS_WRITE_ACTIVE_Msk
 
-/* Các trường của DMA_CH7_TRANSFER_COUNT */
+/* Fields of DMA_CH7_TRANSFER_COUNT */
 #define DMA_CH7_TRANSFER_COUNT_COMMAND_COUNT_Pos         (0U)  /*!< Completed commands */
 #define DMA_CH7_TRANSFER_COUNT_COMMAND_COUNT_Msk         (0xFFFUL << DMA_CH7_TRANSFER_COUNT_COMMAND_COUNT_Pos)
 #define DMA_CH7_TRANSFER_COUNT_COMMAND_COUNT             DMA_CH7_TRANSFER_COUNT_COMMAND_COUNT_Msk
@@ -3095,7 +3095,7 @@ typedef struct {
 #define DMA_CH7_TRANSFER_COUNT_PENDING_COUNT_Msk         (0xFUL << DMA_CH7_TRANSFER_COUNT_PENDING_COUNT_Pos)
 #define DMA_CH7_TRANSFER_COUNT_PENDING_COUNT             DMA_CH7_TRANSFER_COUNT_PENDING_COUNT_Msk
 
-/* Các trường của DMA_CH7_INT_RAW_STATUS */
+/* Fields of DMA_CH7_INT_RAW_STATUS */
 #define DMA_CH7_INT_RAW_STATUS_CMD_DONE_Pos              (0U)  /*!< Command complete */
 #define DMA_CH7_INT_RAW_STATUS_CMD_DONE_Msk              (0x1UL << DMA_CH7_INT_RAW_STATUS_CMD_DONE_Pos)
 #define DMA_CH7_INT_RAW_STATUS_CMD_DONE                  DMA_CH7_INT_RAW_STATUS_CMD_DONE_Msk
@@ -3136,7 +3136,7 @@ typedef struct {
 #define DMA_CH7_INT_RAW_STATUS_WATCHDOG_Msk              (0x1UL << DMA_CH7_INT_RAW_STATUS_WATCHDOG_Pos)
 #define DMA_CH7_INT_RAW_STATUS_WATCHDOG                  DMA_CH7_INT_RAW_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CH7_INT_CLEAR */
+/* Fields of DMA_CH7_INT_CLEAR */
 #define DMA_CH7_INT_CLEAR_CMD_DONE_Pos                   (0U)  /*!< Command complete */
 #define DMA_CH7_INT_CLEAR_CMD_DONE_Msk                   (0x1UL << DMA_CH7_INT_CLEAR_CMD_DONE_Pos)
 #define DMA_CH7_INT_CLEAR_CMD_DONE                       DMA_CH7_INT_CLEAR_CMD_DONE_Msk
@@ -3177,7 +3177,7 @@ typedef struct {
 #define DMA_CH7_INT_CLEAR_WATCHDOG_Msk                   (0x1UL << DMA_CH7_INT_CLEAR_WATCHDOG_Pos)
 #define DMA_CH7_INT_CLEAR_WATCHDOG                       DMA_CH7_INT_CLEAR_WATCHDOG_Msk
 
-/* Các trường của DMA_CH7_INT_ENABLE */
+/* Fields of DMA_CH7_INT_ENABLE */
 #define DMA_CH7_INT_ENABLE_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH7_INT_ENABLE_CMD_DONE_Msk                  (0x1UL << DMA_CH7_INT_ENABLE_CMD_DONE_Pos)
 #define DMA_CH7_INT_ENABLE_CMD_DONE                      DMA_CH7_INT_ENABLE_CMD_DONE_Msk
@@ -3218,7 +3218,7 @@ typedef struct {
 #define DMA_CH7_INT_ENABLE_WATCHDOG_Msk                  (0x1UL << DMA_CH7_INT_ENABLE_WATCHDOG_Pos)
 #define DMA_CH7_INT_ENABLE_WATCHDOG                      DMA_CH7_INT_ENABLE_WATCHDOG_Msk
 
-/* Các trường của DMA_CH7_INT_STATUS */
+/* Fields of DMA_CH7_INT_STATUS */
 #define DMA_CH7_INT_STATUS_CMD_DONE_Pos                  (0U)  /*!< Command complete */
 #define DMA_CH7_INT_STATUS_CMD_DONE_Msk                  (0x1UL << DMA_CH7_INT_STATUS_CMD_DONE_Pos)
 #define DMA_CH7_INT_STATUS_CMD_DONE                      DMA_CH7_INT_STATUS_CMD_DONE_Msk
@@ -3259,7 +3259,7 @@ typedef struct {
 #define DMA_CH7_INT_STATUS_WATCHDOG_Msk                  (0x1UL << DMA_CH7_INT_STATUS_WATCHDOG_Pos)
 #define DMA_CH7_INT_STATUS_WATCHDOG                      DMA_CH7_INT_STATUS_WATCHDOG_Msk
 
-/* Các trường của DMA_CORE_PRIORITY_CONFIG */
+/* Fields of DMA_CORE_PRIORITY_CONFIG */
 #define DMA_CORE_PRIORITY_CONFIG_READ_HIGH_Pos           (4U)  /*!< Read high priority */
 #define DMA_CORE_PRIORITY_CONFIG_READ_HIGH_Msk           (0xFUL << DMA_CORE_PRIORITY_CONFIG_READ_HIGH_Pos)
 #define DMA_CORE_PRIORITY_CONFIG_READ_HIGH               DMA_CORE_PRIORITY_CONFIG_READ_HIGH_Msk
@@ -3267,97 +3267,97 @@ typedef struct {
 #define DMA_CORE_PRIORITY_CONFIG_WRITE_HIGH_Msk          (0xFUL << DMA_CORE_PRIORITY_CONFIG_WRITE_HIGH_Pos)
 #define DMA_CORE_PRIORITY_CONFIG_WRITE_HIGH              DMA_CORE_PRIORITY_CONFIG_WRITE_HIGH_Msk
 
-/* Các trường của DMA_CORE_CHANNEL_START */
+/* Fields of DMA_CORE_CHANNEL_START */
 #define DMA_CORE_CHANNEL_START_CHANNELS_Pos              (0U)  /*!< Channel start mask */
 #define DMA_CORE_CHANNEL_START_CHANNELS_Msk              (0xFFUL << DMA_CORE_CHANNEL_START_CHANNELS_Pos)
 #define DMA_CORE_CHANNEL_START_CHANNELS                  DMA_CORE_CHANNEL_START_CHANNELS_Msk
 
-/* Các trường của DMA_PERIPHERAL_RX_REQUEST */
+/* Fields of DMA_PERIPHERAL_RX_REQUEST */
 #define DMA_PERIPHERAL_RX_REQUEST_REQUEST_Pos            (1U)  /*!< Peripheral IDs 1..31 */
 #define DMA_PERIPHERAL_RX_REQUEST_REQUEST_Msk            (0x7FFFFFFFUL << DMA_PERIPHERAL_RX_REQUEST_REQUEST_Pos)
 #define DMA_PERIPHERAL_RX_REQUEST_REQUEST                DMA_PERIPHERAL_RX_REQUEST_REQUEST_Msk
 
-/* Các trường của DMA_PERIPHERAL_TX_REQUEST */
+/* Fields of DMA_PERIPHERAL_TX_REQUEST */
 #define DMA_PERIPHERAL_TX_REQUEST_REQUEST_Pos            (1U)  /*!< Peripheral IDs 1..31 */
 #define DMA_PERIPHERAL_TX_REQUEST_REQUEST_Msk            (0x7FFFFFFFUL << DMA_PERIPHERAL_TX_REQUEST_REQUEST_Pos)
 #define DMA_PERIPHERAL_TX_REQUEST_REQUEST                DMA_PERIPHERAL_TX_REQUEST_REQUEST_Msk
 
-/* Các trường của DMA_CORE_IDLE_STATUS */
+/* Fields of DMA_CORE_IDLE_STATUS */
 #define DMA_CORE_IDLE_STATUS_IDLE_Pos                    (0U)  /*!< All channels idle */
 #define DMA_CORE_IDLE_STATUS_IDLE_Msk                    (0x1UL << DMA_CORE_IDLE_STATUS_IDLE_Pos)
 #define DMA_CORE_IDLE_STATUS_IDLE                        DMA_CORE_IDLE_STATUS_IDLE_Msk
 
-/* Các trường của TIM_CNT_CH0 */
+/* Fields of TIM_CNT_CH0 */
 #define TIM_CNT_CH0_CNT_VALUE_Pos            (0U)  /*!< 32-bit counter value for channel 0 */
 #define TIM_CNT_CH0_CNT_VALUE_Msk            (0xFFFFFFFFUL << TIM_CNT_CH0_CNT_VALUE_Pos)
 #define TIM_CNT_CH0_CNT_VALUE                TIM_CNT_CH0_CNT_VALUE_Msk
 
-/* Các trường của TIM_CNT_CH1 */
+/* Fields of TIM_CNT_CH1 */
 #define TIM_CNT_CH1_CNT_VALUE_Pos            (0U)  /*!< 32-bit counter value for channel 1 */
 #define TIM_CNT_CH1_CNT_VALUE_Msk            (0xFFFFFFFFUL << TIM_CNT_CH1_CNT_VALUE_Pos)
 #define TIM_CNT_CH1_CNT_VALUE                TIM_CNT_CH1_CNT_VALUE_Msk
 
-/* Các trường của TIM_PRSC_CH0 */
+/* Fields of TIM_PRSC_CH0 */
 #define TIM_PRSC_CH0_PRESCALER_Pos           (0U)  /*!< 32-bit prescaler value for channel 0 */
 #define TIM_PRSC_CH0_PRESCALER_Msk           (0xFFFFFFFFUL << TIM_PRSC_CH0_PRESCALER_Pos)
 #define TIM_PRSC_CH0_PRESCALER               TIM_PRSC_CH0_PRESCALER_Msk
 
-/* Các trường của TIM_PRSC_CH1 */
+/* Fields of TIM_PRSC_CH1 */
 #define TIM_PRSC_CH1_PRESCALER_Pos           (0U)  /*!< 32-bit prescaler value for channel 1 */
 #define TIM_PRSC_CH1_PRESCALER_Msk           (0xFFFFFFFFUL << TIM_PRSC_CH1_PRESCALER_Pos)
 #define TIM_PRSC_CH1_PRESCALER               TIM_PRSC_CH1_PRESCALER_Msk
 
-/* Các trường của TIM_CHL_CH0 */
+/* Fields of TIM_CHL_CH0 */
 #define TIM_CHL_CH0_HOT_RELOAD_Pos           (0U)  /*!< 32-bit counter hot-reload value for channel 0 */
 #define TIM_CHL_CH0_HOT_RELOAD_Msk           (0xFFFFFFFFUL << TIM_CHL_CH0_HOT_RELOAD_Pos)
 #define TIM_CHL_CH0_HOT_RELOAD               TIM_CHL_CH0_HOT_RELOAD_Msk
 
-/* Các trường của TIM_CHL_CH1 */
+/* Fields of TIM_CHL_CH1 */
 #define TIM_CHL_CH1_HOT_RELOAD_Pos           (0U)  /*!< 32-bit counter hot-reload value for channel 1 */
 #define TIM_CHL_CH1_HOT_RELOAD_Msk           (0xFFFFFFFFUL << TIM_CHL_CH1_HOT_RELOAD_Pos)
 #define TIM_CHL_CH1_HOT_RELOAD               TIM_CHL_CH1_HOT_RELOAD_Msk
 
-/* Các trường của TIM_CCR1_CH0 */
+/* Fields of TIM_CCR1_CH0 */
 #define TIM_CCR1_CH0_CC_VALUE_Pos            (0U)  /*!< Capture/compare value 1 for channel 0 */
 #define TIM_CCR1_CH0_CC_VALUE_Msk            (0xFFFFFFFFUL << TIM_CCR1_CH0_CC_VALUE_Pos)
 #define TIM_CCR1_CH0_CC_VALUE                TIM_CCR1_CH0_CC_VALUE_Msk
 
-/* Các trường của TIM_CCR1_CH1 */
+/* Fields of TIM_CCR1_CH1 */
 #define TIM_CCR1_CH1_CC_VALUE_Pos            (0U)  /*!< Capture/compare value 1 for channel 1 */
 #define TIM_CCR1_CH1_CC_VALUE_Msk            (0xFFFFFFFFUL << TIM_CCR1_CH1_CC_VALUE_Pos)
 #define TIM_CCR1_CH1_CC_VALUE                TIM_CCR1_CH1_CC_VALUE_Msk
 
-/* Các trường của TIM_CCR2_CH0 */
+/* Fields of TIM_CCR2_CH0 */
 #define TIM_CCR2_CH0_CC_VALUE_Pos            (0U)  /*!< Capture/compare value 2 for channel 0 */
 #define TIM_CCR2_CH0_CC_VALUE_Msk            (0xFFFFFFFFUL << TIM_CCR2_CH0_CC_VALUE_Pos)
 #define TIM_CCR2_CH0_CC_VALUE                TIM_CCR2_CH0_CC_VALUE_Msk
 
-/* Các trường của TIM_CCR2_CH1 */
+/* Fields of TIM_CCR2_CH1 */
 #define TIM_CCR2_CH1_CC_VALUE_Pos            (0U)  /*!< Capture/compare value 2 for channel 1 */
 #define TIM_CCR2_CH1_CC_VALUE_Msk            (0xFFFFFFFFUL << TIM_CCR2_CH1_CC_VALUE_Pos)
 #define TIM_CCR2_CH1_CC_VALUE                TIM_CCR2_CH1_CC_VALUE_Msk
 
-/* Các trường của TIM_CCR3_CH0 */
+/* Fields of TIM_CCR3_CH0 */
 #define TIM_CCR3_CH0_CC_VALUE_Pos            (0U)  /*!< Capture/compare value 3 for channel 0 */
 #define TIM_CCR3_CH0_CC_VALUE_Msk            (0xFFFFFFFFUL << TIM_CCR3_CH0_CC_VALUE_Pos)
 #define TIM_CCR3_CH0_CC_VALUE                TIM_CCR3_CH0_CC_VALUE_Msk
 
-/* Các trường của TIM_CCR3_CH1 */
+/* Fields of TIM_CCR3_CH1 */
 #define TIM_CCR3_CH1_CC_VALUE_Pos            (0U)  /*!< Capture/compare value 3 for channel 1 */
 #define TIM_CCR3_CH1_CC_VALUE_Msk            (0xFFFFFFFFUL << TIM_CCR3_CH1_CC_VALUE_Pos)
 #define TIM_CCR3_CH1_CC_VALUE                TIM_CCR3_CH1_CC_VALUE_Msk
 
-/* Các trường của TIM_CCR4_CH0 */
+/* Fields of TIM_CCR4_CH0 */
 #define TIM_CCR4_CH0_CC_VALUE_Pos            (0U)  /*!< Capture/compare value 4 for channel 0 */
 #define TIM_CCR4_CH0_CC_VALUE_Msk            (0xFFFFFFFFUL << TIM_CCR4_CH0_CC_VALUE_Pos)
 #define TIM_CCR4_CH0_CC_VALUE                TIM_CCR4_CH0_CC_VALUE_Msk
 
-/* Các trường của TIM_CCR4_CH1 */
+/* Fields of TIM_CCR4_CH1 */
 #define TIM_CCR4_CH1_CC_VALUE_Pos            (0U)  /*!< Capture/compare value 4 for channel 1 */
 #define TIM_CCR4_CH1_CC_VALUE_Msk            (0xFFFFFFFFUL << TIM_CCR4_CH1_CC_VALUE_Pos)
 #define TIM_CCR4_CH1_CC_VALUE                TIM_CCR4_CH1_CC_VALUE_Msk
 
-/* Các trường của TIM_CTRL_CH0 */
+/* Fields of TIM_CTRL_CH0 */
 #define TIM_CTRL_CH0_TIMER_MODE_Pos          (0U)  /*!< Timer mode: 0=disabled, 1=normal counting, 2=PWM0, 3=PWM1 */
 #define TIM_CTRL_CH0_TIMER_MODE_Msk          (0x3UL << TIM_CTRL_CH0_TIMER_MODE_Pos)
 #define TIM_CTRL_CH0_TIMER_MODE              TIM_CTRL_CH0_TIMER_MODE_Msk
@@ -3389,7 +3389,7 @@ typedef struct {
 #define TIM_CTRL_CH0_CENTER_ALIGN_Msk        (0x1UL << TIM_CTRL_CH0_CENTER_ALIGN_Pos)
 #define TIM_CTRL_CH0_CENTER_ALIGN            TIM_CTRL_CH0_CENTER_ALIGN_Msk
 
-/* Các trường của TIM_CTRL_CH1 */
+/* Fields of TIM_CTRL_CH1 */
 #define TIM_CTRL_CH1_TIMER_MODE_Pos          (0U)  /*!< Timer mode: 0=disabled, 1=normal counting, 2=PWM0, 3=PWM1 */
 #define TIM_CTRL_CH1_TIMER_MODE_Msk          (0x3UL << TIM_CTRL_CH1_TIMER_MODE_Pos)
 #define TIM_CTRL_CH1_TIMER_MODE              TIM_CTRL_CH1_TIMER_MODE_Msk
@@ -3421,7 +3421,7 @@ typedef struct {
 #define TIM_CTRL_CH1_CENTER_ALIGN_Msk        (0x1UL << TIM_CTRL_CH1_CENTER_ALIGN_Pos)
 #define TIM_CTRL_CH1_CENTER_ALIGN            TIM_CTRL_CH1_CENTER_ALIGN_Msk
 
-/* Các trường của TIM_CLKS */
+/* Fields of TIM_CLKS */
 #define TIM_CLKS_CLK_FAILURE_Pos             (0U)  /*!< Clock-failure detection flag */
 #define TIM_CLKS_CLK_FAILURE_Msk             (0x1UL << TIM_CLKS_CLK_FAILURE_Pos)
 #define TIM_CLKS_CLK_FAILURE                 TIM_CLKS_CLK_FAILURE_Msk
@@ -3432,7 +3432,7 @@ typedef struct {
 #define TIM_CLKS_CMD_FAILURE_Msk             (0x1UL << TIM_CLKS_CMD_FAILURE_Pos)
 #define TIM_CLKS_CMD_FAILURE                 TIM_CLKS_CMD_FAILURE_Msk
 
-/* Các trường của TIM_INTR_EN_CH0 */
+/* Fields of TIM_INTR_EN_CH0 */
 #define TIM_INTR_EN_CH0_UP_INTR_EN_Pos       (0U)  /*!< Enable update-event interrupt */
 #define TIM_INTR_EN_CH0_UP_INTR_EN_Msk       (0x1UL << TIM_INTR_EN_CH0_UP_INTR_EN_Pos)
 #define TIM_INTR_EN_CH0_UP_INTR_EN           TIM_INTR_EN_CH0_UP_INTR_EN_Msk
@@ -3452,7 +3452,7 @@ typedef struct {
 #define TIM_INTR_EN_CH0_BREAK_INTR_EN_Msk    (0x1UL << TIM_INTR_EN_CH0_BREAK_INTR_EN_Pos)
 #define TIM_INTR_EN_CH0_BREAK_INTR_EN        TIM_INTR_EN_CH0_BREAK_INTR_EN_Msk
 
-/* Các trường của TIM_INTR_EN_CH1 */
+/* Fields of TIM_INTR_EN_CH1 */
 #define TIM_INTR_EN_CH1_UP_INTR_EN_Pos       (0U)  /*!< Enable update-event interrupt */
 #define TIM_INTR_EN_CH1_UP_INTR_EN_Msk       (0x1UL << TIM_INTR_EN_CH1_UP_INTR_EN_Pos)
 #define TIM_INTR_EN_CH1_UP_INTR_EN           TIM_INTR_EN_CH1_UP_INTR_EN_Msk
@@ -3472,7 +3472,7 @@ typedef struct {
 #define TIM_INTR_EN_CH1_BREAK_INTR_EN_Msk    (0x1UL << TIM_INTR_EN_CH1_BREAK_INTR_EN_Pos)
 #define TIM_INTR_EN_CH1_BREAK_INTR_EN        TIM_INTR_EN_CH1_BREAK_INTR_EN_Msk
 
-/* Các trường của TIM_STT_CH0 */
+/* Fields of TIM_STT_CH0 */
 #define TIM_STT_CH0_UP_FLAG_Pos              (0U)  /*!< Update-event flag */
 #define TIM_STT_CH0_UP_FLAG_Msk              (0x1UL << TIM_STT_CH0_UP_FLAG_Pos)
 #define TIM_STT_CH0_UP_FLAG                  TIM_STT_CH0_UP_FLAG_Msk
@@ -3492,7 +3492,7 @@ typedef struct {
 #define TIM_STT_CH0_BREAK_FLAG_Msk           (0x1UL << TIM_STT_CH0_BREAK_FLAG_Pos)
 #define TIM_STT_CH0_BREAK_FLAG               TIM_STT_CH0_BREAK_FLAG_Msk
 
-/* Các trường của TIM_STT_CH1 */
+/* Fields of TIM_STT_CH1 */
 #define TIM_STT_CH1_UP_FLAG_Pos              (0U)  /*!< Update-event flag */
 #define TIM_STT_CH1_UP_FLAG_Msk              (0x1UL << TIM_STT_CH1_UP_FLAG_Pos)
 #define TIM_STT_CH1_UP_FLAG                  TIM_STT_CH1_UP_FLAG_Msk
@@ -3512,12 +3512,12 @@ typedef struct {
 #define TIM_STT_CH1_BREAK_FLAG_Msk           (0x1UL << TIM_STT_CH1_BREAK_FLAG_Pos)
 #define TIM_STT_CH1_BREAK_FLAG               TIM_STT_CH1_BREAK_FLAG_Msk
 
-/* Các trường của SPI_TX */
+/* Fields of SPI_TX */
 #define SPI_TX_DATA_Pos                    (0U)  /*!< Transmit data; the effective width is determined by CMDCONF.LEN in master mode */
 #define SPI_TX_DATA_Msk                    (0xFFFFFFFFUL << SPI_TX_DATA_Pos)
 #define SPI_TX_DATA                        SPI_TX_DATA_Msk
 
-/* Các trường của SPI_CTRL */
+/* Fields of SPI_CTRL */
 #define SPI_CTRL_SPI_MODE_Pos              (0U)  /*!< 00=legacy slave, 01=legacy master, 10=extended DDR master; 11 reserved */
 #define SPI_CTRL_SPI_MODE_Msk              (0x3UL << SPI_CTRL_SPI_MODE_Pos)
 #define SPI_CTRL_SPI_MODE                  SPI_CTRL_SPI_MODE_Msk
@@ -3546,7 +3546,7 @@ typedef struct {
 #define SPI_CTRL_DMA_ENABLE_Msk            (0x1UL << SPI_CTRL_DMA_ENABLE_Pos)
 #define SPI_CTRL_DMA_ENABLE                SPI_CTRL_DMA_ENABLE_Msk
 
-/* Các trường của SPI_CONFCMD */
+/* Fields of SPI_CONFCMD */
 #define SPI_CONFCMD_DDR_Pos                (0U)  /*!< 00=SDR, 01=instruction SDR and remaining phases DDR, 11=DDR */
 #define SPI_CONFCMD_DDR_Msk                (0x3UL << SPI_CONFCMD_DDR_Pos)
 #define SPI_CONFCMD_DDR                    SPI_CONFCMD_DDR_Msk
@@ -3578,22 +3578,22 @@ typedef struct {
 #define SPI_CONFCMD_DATA_EN_Msk            (0x1UL << SPI_CONFCMD_DATA_EN_Pos)
 #define SPI_CONFCMD_DATA_EN                SPI_CONFCMD_DATA_EN_Msk
 
-/* Các trường của SPI_DLR */
+/* Fields of SPI_DLR */
 #define SPI_DLR_DATA_LEN_Pos               (0U)  /*!< Number of data bytes to send or receive */
 #define SPI_DLR_DATA_LEN_Msk               (0xFFFFFFFFUL << SPI_DLR_DATA_LEN_Pos)
 #define SPI_DLR_DATA_LEN                   SPI_DLR_DATA_LEN_Msk
 
-/* Các trường của SPI_AR */
+/* Fields of SPI_AR */
 #define SPI_AR_ADDR_Pos                    (0U)  /*!< Command address */
 #define SPI_AR_ADDR_Msk                    (0xFFFFFFFFUL << SPI_AR_ADDR_Pos)
 #define SPI_AR_ADDR                        SPI_AR_ADDR_Msk
 
-/* Các trường của SPI_ABR */
+/* Fields of SPI_ABR */
 #define SPI_ABR_ALT_BYTE_Pos               (0U)  /*!< Alternate-byte data */
 #define SPI_ABR_ALT_BYTE_Msk               (0xFFFFFFFFUL << SPI_ABR_ALT_BYTE_Pos)
 #define SPI_ABR_ALT_BYTE                   SPI_ABR_ALT_BYTE_Msk
 
-/* Các trường của SPI_FIFO */
+/* Fields of SPI_FIFO */
 #define SPI_FIFO_TXFF_PROG_FLVL_Pos        (0U)  /*!< Programmable TX FIFO full threshold */
 #define SPI_FIFO_TXFF_PROG_FLVL_Msk        (0xFFUL << SPI_FIFO_TXFF_PROG_FLVL_Pos)
 #define SPI_FIFO_TXFF_PROG_FLVL            SPI_FIFO_TXFF_PROG_FLVL_Msk
@@ -3607,12 +3607,12 @@ typedef struct {
 #define SPI_FIFO_RXFF_PROG_ELVL_Msk        (0xFFUL << SPI_FIFO_RXFF_PROG_ELVL_Pos)
 #define SPI_FIFO_RXFF_PROG_ELVL            SPI_FIFO_RXFF_PROG_ELVL_Msk
 
-/* Các trường của SPI_CLK */
+/* Fields of SPI_CLK */
 #define SPI_CLK_DIV_Pos                    (0U)  /*!< SCLK period = 2 x (DIV + 1) x core-clock period */
 #define SPI_CLK_DIV_Msk                    (0xFFFFUL << SPI_CLK_DIV_Pos)
 #define SPI_CLK_DIV                        SPI_CLK_DIV_Msk
 
-/* Các trường của SPI_CMDCONF */
+/* Fields of SPI_CMDCONF */
 #define SPI_CMDCONF_LEN_Pos                (0U)  /*!< Frame length minus 1; only 7/15/23/31 are supported, corresponding to 8/16/24/32 bits */
 #define SPI_CMDCONF_LEN_Msk                (0x1FUL << SPI_CMDCONF_LEN_Pos)
 #define SPI_CMDCONF_LEN                    SPI_CMDCONF_LEN_Msk
@@ -3623,7 +3623,7 @@ typedef struct {
 #define SPI_CMDCONF_SLAVE_EN_Msk           (0xFUL << SPI_CMDCONF_SLAVE_EN_Pos)
 #define SPI_CMDCONF_SLAVE_EN               SPI_CMDCONF_SLAVE_EN_Msk
 
-/* Các trường của SPI_TREG0 */
+/* Fields of SPI_TREG0 */
 #define SPI_TREG0_T_SS2CK_Pos              (0U)  /*!< Number of cycles from SS assertion to SCLK generation */
 #define SPI_TREG0_T_SS2CK_Msk              (0xFFFFUL << SPI_TREG0_T_SS2CK_Pos)
 #define SPI_TREG0_T_SS2CK                  SPI_TREG0_T_SS2CK_Msk
@@ -3631,7 +3631,7 @@ typedef struct {
 #define SPI_TREG0_T_CK2SS_Msk              (0xFFFFUL << SPI_TREG0_T_CK2SS_Pos)
 #define SPI_TREG0_T_CK2SS                  SPI_TREG0_T_CK2SS_Msk
 
-/* Các trường của SPI_TREG1 */
+/* Fields of SPI_TREG1 */
 #define SPI_TREG1_T_B2B_Pos                (0U)  /*!< Delay between data bytes in core-clock cycles, including bytes within a 16/24/32-bit word */
 #define SPI_TREG1_T_B2B_Msk                (0xFFFFUL << SPI_TREG1_T_B2B_Pos)
 #define SPI_TREG1_T_B2B                    SPI_TREG1_T_B2B_Msk
@@ -3639,17 +3639,17 @@ typedef struct {
 #define SPI_TREG1_T_SS_TIMEOUT_Msk         (0xFFFFUL << SPI_TREG1_T_SS_TIMEOUT_Pos)
 #define SPI_TREG1_T_SS_TIMEOUT             SPI_TREG1_T_SS_TIMEOUT_Msk
 
-/* Các trường của SPI_TREG2 */
+/* Fields of SPI_TREG2 */
 #define SPI_TREG2_T_CMD2CMD_Pos            (0U)  /*!< Delay between extended DDR commands in core-clock cycles */
 #define SPI_TREG2_T_CMD2CMD_Msk            (0xFFFFUL << SPI_TREG2_T_CMD2CMD_Pos)
 #define SPI_TREG2_T_CMD2CMD                SPI_TREG2_T_CMD2CMD_Msk
 
-/* Các trường của SPI_RX */
+/* Fields of SPI_RX */
 #define SPI_RX_DATA_Pos                    (0U)  /*!< Receive data; the effective width is determined by CMDCONF.LEN in master mode */
 #define SPI_RX_DATA_Msk                    (0xFFFFFFFFUL << SPI_RX_DATA_Pos)
 #define SPI_RX_DATA                        SPI_RX_DATA_Msk
 
-/* Các trường của SPI_CLKS */
+/* Fields of SPI_CLKS */
 #define SPI_CLKS_CLK_FAILURE_Pos           (0U)  /*!< Core-clock stoppage detected */
 #define SPI_CLKS_CLK_FAILURE_Msk           (0x1UL << SPI_CLKS_CLK_FAILURE_Pos)
 #define SPI_CLKS_CLK_FAILURE               SPI_CLKS_CLK_FAILURE_Msk
@@ -3660,7 +3660,7 @@ typedef struct {
 #define SPI_CLKS_CMD_FAILURE_Msk           (0x1UL << SPI_CLKS_CMD_FAILURE_Pos)
 #define SPI_CLKS_CMD_FAILURE               SPI_CLKS_CMD_FAILURE_Msk
 
-/* Các trường của SPI_STT */
+/* Fields of SPI_STT */
 #define SPI_STT_INT_TXFF_FULL_Pos          (0U)  /*!< TX FIFO full */
 #define SPI_STT_INT_TXFF_FULL_Msk          (0x1UL << SPI_STT_INT_TXFF_FULL_Pos)
 #define SPI_STT_INT_TXFF_FULL              SPI_STT_INT_TXFF_FULL_Msk
@@ -3686,7 +3686,7 @@ typedef struct {
 #define SPI_STT_INT_RXFF_PROG_EMPTY_Msk    (0x1UL << SPI_STT_INT_RXFF_PROG_EMPTY_Pos)
 #define SPI_STT_INT_RXFF_PROG_EMPTY        SPI_STT_INT_RXFF_PROG_EMPTY_Msk
 
-/* Các trường của SPI_STT_DMA */
+/* Fields of SPI_STT_DMA */
 #define SPI_STT_DMA_TRAN_DONE_RX_Pos       (0U)  /*!< DMA RX flag: 0=incomplete, 1=complete */
 #define SPI_STT_DMA_TRAN_DONE_RX_Msk       (0x1UL << SPI_STT_DMA_TRAN_DONE_RX_Pos)
 #define SPI_STT_DMA_TRAN_DONE_RX           SPI_STT_DMA_TRAN_DONE_RX_Msk
@@ -3700,7 +3700,7 @@ typedef struct {
 #define SPI_STT_DMA_DMA_BUSY_TX_Msk        (0x1UL << SPI_STT_DMA_DMA_BUSY_TX_Pos)
 #define SPI_STT_DMA_DMA_BUSY_TX            SPI_STT_DMA_DMA_BUSY_TX_Msk
 
-/* Các trường của SPI_CTRL_RX */
+/* Fields of SPI_CTRL_RX */
 #define SPI_CTRL_RX_ENABLE_Pos             (0U)  /*!< Enable the DMA RX channel */
 #define SPI_CTRL_RX_ENABLE_Msk             (0x1UL << SPI_CTRL_RX_ENABLE_Pos)
 #define SPI_CTRL_RX_ENABLE                 SPI_CTRL_RX_ENABLE_Msk
@@ -3720,7 +3720,7 @@ typedef struct {
 #define SPI_CTRL_RX_CLEAR_Msk              (0x1UL << SPI_CTRL_RX_CLEAR_Pos)
 #define SPI_CTRL_RX_CLEAR                  SPI_CTRL_RX_CLEAR_Msk
 
-/* Các trường của SPI_CTRL_TX */
+/* Fields of SPI_CTRL_TX */
 #define SPI_CTRL_TX_ENABLE_Pos             (0U)  /*!< Enable the DMA TX channel */
 #define SPI_CTRL_TX_ENABLE_Msk             (0x1UL << SPI_CTRL_TX_ENABLE_Pos)
 #define SPI_CTRL_TX_ENABLE                 SPI_CTRL_TX_ENABLE_Msk
@@ -3740,22 +3740,22 @@ typedef struct {
 #define SPI_CTRL_TX_CLEAR_Msk              (0x1UL << SPI_CTRL_TX_CLEAR_Pos)
 #define SPI_CTRL_TX_CLEAR                  SPI_CTRL_TX_CLEAR_Msk
 
-/* Các trường của UART_RBR */
+/* Fields of UART_RBR */
 #define UART_RBR_RDATA_Pos                  (0U)  /*!< 9-bit receive data in bits [8:0] */
 #define UART_RBR_RDATA_Msk                  (0x1FFUL << UART_RBR_RDATA_Pos)
 #define UART_RBR_RDATA                      UART_RBR_RDATA_Msk
 
-/* Các trường của UART_DLL */
+/* Fields of UART_DLL */
 #define UART_DLL_DLSB_Pos                   (0U)  /*!< Low 8 bits of the baud-rate divisor in bits [7:0] */
 #define UART_DLL_DLSB_Msk                   (0xFFUL << UART_DLL_DLSB_Pos)
 #define UART_DLL_DLSB                       UART_DLL_DLSB_Msk
 
-/* Các trường của UART_THR */
+/* Fields of UART_THR */
 #define UART_THR_TDATA_Pos                  (0U)  /*!< 9-bit transmit data in bits [8:0] */
 #define UART_THR_TDATA_Msk                  (0x1FFUL << UART_THR_TDATA_Pos)
 #define UART_THR_TDATA                      UART_THR_TDATA_Msk
 
-/* Các trường của UART_IER */
+/* Fields of UART_IER */
 #define UART_IER_ERBI_Pos                   (0U)  /*!< Enable received-data-available interrupt */
 #define UART_IER_ERBI_Msk                   (0x1UL << UART_IER_ERBI_Pos)
 #define UART_IER_ERBI                       UART_IER_ERBI_Msk
@@ -3772,12 +3772,12 @@ typedef struct {
 #define UART_IER_AUCLR_Msk                  (0x1UL << UART_IER_AUCLR_Pos)
 #define UART_IER_AUCLR                      UART_IER_AUCLR_Msk
 
-/* Các trường của UART_DLM */
+/* Fields of UART_DLM */
 #define UART_DLM_DLSM_Pos                   (0U)  /*!< High 8 bits of the baud-rate divisor in bits [7:0] */
 #define UART_DLM_DLSM_Msk                   (0xFFUL << UART_DLM_DLSM_Pos)
 #define UART_DLM_DLSM                       UART_DLM_DLSM_Msk
 
-/* Các trường của UART_IIR */
+/* Fields of UART_IIR */
 #define UART_IIR_IPEND_Pos                  (0U)  /*!< Interrupt-pending status: 1=pending, 0=none */
 #define UART_IIR_IPEND_Msk                  (0x1UL << UART_IIR_IPEND_Pos)
 #define UART_IIR_IPEND                      UART_IIR_IPEND_Msk
@@ -3785,7 +3785,7 @@ typedef struct {
 #define UART_IIR_INTID_Msk                  (0x7UL << UART_IIR_INTID_Pos)
 #define UART_IIR_INTID                      UART_IIR_INTID_Msk
 
-/* Các trường của UART_FCR */
+/* Fields of UART_FCR */
 #define UART_FCR_FIFOEN_Pos                 (0U)  /*!< FIFO mode disable: 0=FIFOs enabled, 1=non-FIFO mode and counters cleared; clear before programming other FCR bits */
 #define UART_FCR_FIFOEN_Msk                 (0x1UL << UART_FCR_FIFOEN_Pos)
 #define UART_FCR_FIFOEN                     UART_FCR_FIFOEN_Msk
@@ -3796,7 +3796,7 @@ typedef struct {
 #define UART_FCR_TXCLR_Msk                  (0x1UL << UART_FCR_TXCLR_Pos)
 #define UART_FCR_TXCLR                      UART_FCR_TXCLR_Msk
 
-/* Các trường của UART_LCR */
+/* Fields of UART_LCR */
 #define UART_LCR_WLS_Pos                    (0U)  /*!< Select data length: 00=5, 01=6, 10=7, 11=8 bit */
 #define UART_LCR_WLS_Msk                    (0x3UL << UART_LCR_WLS_Pos)
 #define UART_LCR_WLS                        UART_LCR_WLS_Msk
@@ -3819,7 +3819,7 @@ typedef struct {
 #define UART_LCR_DLAB_Msk                   (0x1UL << UART_LCR_DLAB_Pos)
 #define UART_LCR_DLAB                       UART_LCR_DLAB_Msk
 
-/* Các trường của UART_MCR */
+/* Fields of UART_MCR */
 #define UART_MCR_DTR_Pos                    (0U)  /*!< Control Data Terminal Ready */
 #define UART_MCR_DTR_Msk                    (0x1UL << UART_MCR_DTR_Pos)
 #define UART_MCR_DTR                        UART_MCR_DTR_Msk
@@ -3848,7 +3848,7 @@ typedef struct {
 #define UART_MCR_LSB_MSB_Msk                (0x1UL << UART_MCR_LSB_MSB_Pos)
 #define UART_MCR_LSB_MSB                    UART_MCR_LSB_MSB_Msk
 
-/* Các trường của UART_LSR */
+/* Fields of UART_LSR */
 #define UART_LSR_DR_Pos                     (0U)  /*!< Receive data available */
 #define UART_LSR_DR_Msk                     (0x1UL << UART_LSR_DR_Pos)
 #define UART_LSR_DR                         UART_LSR_DR_Msk
@@ -3874,7 +3874,7 @@ typedef struct {
 #define UART_LSR_RXFIFOERR_Msk              (0x1UL << UART_LSR_RXFIFOERR_Pos)
 #define UART_LSR_RXFIFOERR                  UART_LSR_RXFIFOERR_Msk
 
-/* Các trường của UART_MSR */
+/* Fields of UART_MSR */
 #define UART_MSR_DCTS_Pos                   (0U)  /*!< CTS state changed */
 #define UART_MSR_DCTS_Msk                   (0x1UL << UART_MSR_DCTS_Pos)
 #define UART_MSR_DCTS                       UART_MSR_DCTS_Msk
@@ -3900,12 +3900,12 @@ typedef struct {
 #define UART_MSR_DCD_Msk                    (0x1UL << UART_MSR_DCD_Pos)
 #define UART_MSR_DCD                        UART_MSR_DCD_Msk
 
-/* Các trường của UART_SCR */
+/* Fields of UART_SCR */
 #define UART_SCR_SCR_Pos                    (0U)  /*!< 8-bit scratch data; does not affect UART operation */
 #define UART_SCR_SCR_Msk                    (0xFFUL << UART_SCR_SCR_Pos)
 #define UART_SCR_SCR                        UART_SCR_SCR_Msk
 
-/* Các trường của UART_MDR */
+/* Fields of UART_MDR */
 #define UART_MDR_OSM_Pos                    (0U)  /*!< Select oversampling: 0=x16, 1=x8 */
 #define UART_MDR_OSM_Msk                    (0x1UL << UART_MDR_OSM_Pos)
 #define UART_MDR_OSM                        UART_MDR_OSM_Msk
@@ -3913,7 +3913,7 @@ typedef struct {
 #define UART_MDR_RTSN_Msk                   (0x1UL << UART_MDR_RTSN_Pos)
 #define UART_MDR_RTSN                       UART_MDR_RTSN_Msk
 
-/* Các trường của UART_TCR */
+/* Fields of UART_TCR */
 #define UART_TCR_RS485_EN_Pos               (0U)  /*!< Enable RS485 mode */
 #define UART_TCR_RS485_EN_Msk               (0x1UL << UART_TCR_RS485_EN_Pos)
 #define UART_TCR_RS485_EN                   UART_TCR_RS485_EN_Msk
@@ -3933,7 +3933,7 @@ typedef struct {
 #define UART_TCR_RE_EN_Msk                  (0x1UL << UART_TCR_RE_EN_Pos)
 #define UART_TCR_RE_EN                      UART_TCR_RE_EN_Msk
 
-/* Các trường của UART_DET */
+/* Fields of UART_DET */
 #define UART_DET_DE_ASSERTION_TIME_Pos      (0U)  /*!< DE assertion time in bits [7:0] */
 #define UART_DET_DE_ASSERTION_TIME_Msk      (0xFFUL << UART_DET_DE_ASSERTION_TIME_Pos)
 #define UART_DET_DE_ASSERTION_TIME          UART_DET_DE_ASSERTION_TIME_Msk
@@ -3941,7 +3941,7 @@ typedef struct {
 #define UART_DET_DE_DEASSERTION_TIME_Msk    (0xFFUL << UART_DET_DE_DEASSERTION_TIME_Pos)
 #define UART_DET_DE_DEASSERTION_TIME        UART_DET_DE_DEASSERTION_TIME_Msk
 
-/* Các trường của UART_TAT */
+/* Fields of UART_TAT */
 #define UART_TAT_DE_TO_RE_Pos               (0U)  /*!< DE-to-RE transition time in bits [15:0] */
 #define UART_TAT_DE_TO_RE_Msk               (0xFFFFUL << UART_TAT_DE_TO_RE_Pos)
 #define UART_TAT_DE_TO_RE                   UART_TAT_DE_TO_RE_Msk
@@ -3949,22 +3949,22 @@ typedef struct {
 #define UART_TAT_RE_TO_DE_Msk               (0xFFFFUL << UART_TAT_RE_TO_DE_Pos)
 #define UART_TAT_RE_TO_DE                   UART_TAT_RE_TO_DE_Msk
 
-/* Các trường của UART_DLF */
+/* Fields of UART_DLF */
 #define UART_DLF_DLF_Pos                    (0U)  /*!< 4-bit fractional part of the baud-rate divisor in bits [3:0] */
 #define UART_DLF_DLF_Msk                    (0xFUL << UART_DLF_DLF_Pos)
 #define UART_DLF_DLF                        UART_DLF_DLF_Msk
 
-/* Các trường của UART_RAR */
+/* Fields of UART_RAR */
 #define UART_RAR_ADDR_Pos                   (0U)  /*!< Receive address in bits [7:0] */
 #define UART_RAR_ADDR_Msk                   (0xFFUL << UART_RAR_ADDR_Pos)
 #define UART_RAR_ADDR                       UART_RAR_ADDR_Msk
 
-/* Các trường của UART_TAR */
+/* Fields of UART_TAR */
 #define UART_TAR_ADDR_Pos                   (0U)  /*!< Transmit address in bits [7:0] */
 #define UART_TAR_ADDR_Msk                   (0xFFUL << UART_TAR_ADDR_Pos)
 #define UART_TAR_ADDR                       UART_TAR_ADDR_Msk
 
-/* Các trường của UART_LCR_EXT */
+/* Fields of UART_LCR_EXT */
 #define UART_LCR_EXT_DLS_E_Pos              (0U)  /*!< Extend the data length to 9 bits */
 #define UART_LCR_EXT_DLS_E_Msk              (0x1UL << UART_LCR_EXT_DLS_E_Pos)
 #define UART_LCR_EXT_DLS_E                  UART_LCR_EXT_DLS_E_Msk
@@ -3978,7 +3978,7 @@ typedef struct {
 #define UART_LCR_EXT_TRANSMIT_MODE_Msk      (0x1UL << UART_LCR_EXT_TRANSMIT_MODE_Pos)
 #define UART_LCR_EXT_TRANSMIT_MODE          UART_LCR_EXT_TRANSMIT_MODE_Msk
 
-/* Các trường của UART_CLKS */
+/* Fields of UART_CLKS */
 #define UART_CLKS_CLK_FAILURE_Pos           (0U)  /*!< Clock-error flag */
 #define UART_CLKS_CLK_FAILURE_Msk           (0x1UL << UART_CLKS_CLK_FAILURE_Pos)
 #define UART_CLKS_CLK_FAILURE               UART_CLKS_CLK_FAILURE_Msk
@@ -3989,7 +3989,7 @@ typedef struct {
 #define UART_CLKS_CMD_FAILURE_Msk           (0x1UL << UART_CLKS_CMD_FAILURE_Pos)
 #define UART_CLKS_CMD_FAILURE               UART_CLKS_CMD_FAILURE_Msk
 
-/* Các trường của GPIO_VERSION */
+/* Fields of GPIO_VERSION */
 #define GPIO_VERSION_MINOR_Pos       (0U)  /*!< Minor version number in bits [15:0] */
 #define GPIO_VERSION_MINOR_Msk       (0xFFFFUL << GPIO_VERSION_MINOR_Pos)
 #define GPIO_VERSION_MINOR           GPIO_VERSION_MINOR_Msk
@@ -3997,15 +3997,15 @@ typedef struct {
 #define GPIO_VERSION_MAJOR_Msk       (0xFFFFUL << GPIO_VERSION_MAJOR_Pos)
 #define GPIO_VERSION_MAJOR           GPIO_VERSION_MAJOR_Msk
 
-/* Các trường của GPIO_OE */
-#define GPIO_OE_EN_Pos               (0U)  /*!< Output enable cho GPIO[7:0]: 0=input, 1=output */
+/* Fields of GPIO_OE */
+#define GPIO_OE_EN_Pos               (0U)  /*!< Output enable for GPIO[7:0]: 0=input, 1=output */
 #define GPIO_OE_EN_Msk               (0xFFUL << GPIO_OE_EN_Pos)
 #define GPIO_OE_EN                   GPIO_OE_EN_Msk
 #define GPIO_OE_RESERVED_Pos         (8U)  /*!< Reserved in bits [31:8] */
 #define GPIO_OE_RESERVED_Msk         (0xFFFFFFUL << GPIO_OE_RESERVED_Pos)
 #define GPIO_OE_RESERVED             GPIO_OE_RESERVED_Msk
 
-/* Các trường của GPIO_OUT */
+/* Fields of GPIO_OUT */
 #define GPIO_OUT_OUT_Pos             (0U)  /*!< Output data for GPIO[7:0] */
 #define GPIO_OUT_OUT_Msk             (0xFFUL << GPIO_OUT_OUT_Pos)
 #define GPIO_OUT_OUT                 GPIO_OUT_OUT_Msk
@@ -4013,7 +4013,7 @@ typedef struct {
 #define GPIO_OUT_RESERVED_Msk        (0xFFFFFFUL << GPIO_OUT_RESERVED_Pos)
 #define GPIO_OUT_RESERVED            GPIO_OUT_RESERVED_Msk
 
-/* Các trường của GPIO_IN */
+/* Fields of GPIO_IN */
 #define GPIO_IN_IN_Pos               (0U)  /*!< Input data for GPIO[7:0] */
 #define GPIO_IN_IN_Msk               (0xFFUL << GPIO_IN_IN_Pos)
 #define GPIO_IN_IN                   GPIO_IN_IN_Msk
@@ -4021,7 +4021,7 @@ typedef struct {
 #define GPIO_IN_RESERVED_Msk         (0xFFFFFFUL << GPIO_IN_RESERVED_Pos)
 #define GPIO_IN_RESERVED             GPIO_IN_RESERVED_Msk
 
-/* Các trường của GPIO_CTL */
+/* Fields of GPIO_CTL */
 #define GPIO_CTL_SYNC_EN_Pos         (0U)  /*!< Enable the input synchronizer for GPIO[7:0]: 0=direct path, 1=through a synchronizing flip-flop */
 #define GPIO_CTL_SYNC_EN_Msk         (0xFFUL << GPIO_CTL_SYNC_EN_Pos)
 #define GPIO_CTL_SYNC_EN             GPIO_CTL_SYNC_EN_Msk
@@ -4029,7 +4029,7 @@ typedef struct {
 #define GPIO_CTL_RESERVED_Msk        (0xFFFFFFUL << GPIO_CTL_RESERVED_Pos)
 #define GPIO_CTL_RESERVED            GPIO_CTL_RESERVED_Msk
 
-/* Các trường của GPIO_RAW_INT */
+/* Fields of GPIO_RAW_INT */
 #define GPIO_RAW_INT_INTR_A_Pos      (0U)  /*!< Raw GPIO[7:0] interrupt flags; write 1 to clear the corresponding flag */
 #define GPIO_RAW_INT_INTR_A_Msk      (0xFFUL << GPIO_RAW_INT_INTR_A_Pos)
 #define GPIO_RAW_INT_INTR_A          GPIO_RAW_INT_INTR_A_Msk
@@ -4037,7 +4037,7 @@ typedef struct {
 #define GPIO_RAW_INT_RESERVED_Msk    (0xFFFFFFUL << GPIO_RAW_INT_RESERVED_Pos)
 #define GPIO_RAW_INT_RESERVED        GPIO_RAW_INT_RESERVED_Msk
 
-/* Các trường của GPIO_INT_STA */
+/* Fields of GPIO_INT_STA */
 #define GPIO_INT_STA_INTR_A_Pos      (0U)  /*!< Masked interrupt status for GPIO[7:0] */
 #define GPIO_INT_STA_INTR_A_Msk      (0xFFUL << GPIO_INT_STA_INTR_A_Pos)
 #define GPIO_INT_STA_INTR_A          GPIO_INT_STA_INTR_A_Msk
@@ -4045,7 +4045,7 @@ typedef struct {
 #define GPIO_INT_STA_RESERVED_Msk    (0xFFFFFFUL << GPIO_INT_STA_RESERVED_Pos)
 #define GPIO_INT_STA_RESERVED        GPIO_INT_STA_RESERVED_Msk
 
-/* Các trường của GPIO_INT_EN */
+/* Fields of GPIO_INT_EN */
 #define GPIO_INT_EN_INTR_A_Pos       (0U)  /*!< Enable interrupts for GPIO[7:0] */
 #define GPIO_INT_EN_INTR_A_Msk       (0xFFUL << GPIO_INT_EN_INTR_A_Pos)
 #define GPIO_INT_EN_INTR_A           GPIO_INT_EN_INTR_A_Msk
@@ -4053,7 +4053,7 @@ typedef struct {
 #define GPIO_INT_EN_RESERVED_Msk     (0xFFFFFFUL << GPIO_INT_EN_RESERVED_Pos)
 #define GPIO_INT_EN_RESERVED         GPIO_INT_EN_RESERVED_Msk
 
-/* Các trường của GPIO_INT_INJ */
+/* Fields of GPIO_INT_INJ */
 #define GPIO_INT_INJ_INTR_A_Pos      (0U)  /*!< Inject interrupts for GPIO[7:0] */
 #define GPIO_INT_INJ_INTR_A_Msk      (0xFFUL << GPIO_INT_INJ_INTR_A_Pos)
 #define GPIO_INT_INJ_INTR_A          GPIO_INT_INJ_INTR_A_Msk
@@ -4061,7 +4061,7 @@ typedef struct {
 #define GPIO_INT_INJ_RESERVED_Msk    (0xFFFFFFUL << GPIO_INT_INJ_RESERVED_Pos)
 #define GPIO_INT_INJ_RESERVED        GPIO_INT_INJ_RESERVED_Msk
 
-/* Các trường của FLASH_VERSION */
+/* Fields of FLASH_VERSION */
 #define FLASH_VERSION_MINOR_Pos               (0U)  /*!< Minor version */
 #define FLASH_VERSION_MINOR_Msk               (0xFFFFUL << FLASH_VERSION_MINOR_Pos)
 #define FLASH_VERSION_MINOR                   FLASH_VERSION_MINOR_Msk
@@ -4069,7 +4069,7 @@ typedef struct {
 #define FLASH_VERSION_MAJOR_Msk               (0xFFFFUL << FLASH_VERSION_MAJOR_Pos)
 #define FLASH_VERSION_MAJOR                   FLASH_VERSION_MAJOR_Msk
 
-/* Các trường của FLASH_COMMAND */
+/* Fields of FLASH_COMMAND */
 #define FLASH_COMMAND_START_Pos               (0U)  /*!< Start command; hardware clears it on completion */
 #define FLASH_COMMAND_START_Msk               (0x1UL << FLASH_COMMAND_START_Pos)
 #define FLASH_COMMAND_START                   FLASH_COMMAND_START_Msk
@@ -4077,7 +4077,7 @@ typedef struct {
 #define FLASH_COMMAND_CMD_OPCODE_Msk          (0x7UL << FLASH_COMMAND_CMD_OPCODE_Pos)
 #define FLASH_COMMAND_CMD_OPCODE              FLASH_COMMAND_CMD_OPCODE_Msk
 
-/* Các trường của FLASH_SLOT_COMMAND */
+/* Fields of FLASH_SLOT_COMMAND */
 #define FLASH_SLOT_COMMAND_START_Pos          (0U)  /*!< Start slot command */
 #define FLASH_SLOT_COMMAND_START_Msk          (0x1UL << FLASH_SLOT_COMMAND_START_Pos)
 #define FLASH_SLOT_COMMAND_START              FLASH_SLOT_COMMAND_START_Msk
@@ -4091,7 +4091,7 @@ typedef struct {
 #define FLASH_SLOT_COMMAND_SLOT_INDEX_Msk     (0xFUL << FLASH_SLOT_COMMAND_SLOT_INDEX_Pos)
 #define FLASH_SLOT_COMMAND_SLOT_INDEX         FLASH_SLOT_COMMAND_SLOT_INDEX_Msk
 
-/* Các trường của FLASH_STATUS */
+/* Fields of FLASH_STATUS */
 #define FLASH_STATUS_BUSY_Pos                 (0U)  /*!< Command engine busy */
 #define FLASH_STATUS_BUSY_Msk                 (0x1UL << FLASH_STATUS_BUSY_Pos)
 #define FLASH_STATUS_BUSY                     FLASH_STATUS_BUSY_Msk
@@ -4111,7 +4111,7 @@ typedef struct {
 #define FLASH_STATUS_DPSTB_DONE_Msk           (0x1UL << FLASH_STATUS_DPSTB_DONE_Pos)
 #define FLASH_STATUS_DPSTB_DONE               FLASH_STATUS_DPSTB_DONE_Msk
 
-/* Các trường của CRM_VERSION */
+/* Fields of CRM_VERSION */
 #define CRM_VERSION_MINOR_Pos                     (0U)  /*!< Minor version */
 #define CRM_VERSION_MINOR_Msk                     (0xFFFFUL << CRM_VERSION_MINOR_Pos)
 #define CRM_VERSION_MINOR                         CRM_VERSION_MINOR_Msk
@@ -4119,7 +4119,7 @@ typedef struct {
 #define CRM_VERSION_MAJOR_Msk                     (0xFFFFUL << CRM_VERSION_MAJOR_Pos)
 #define CRM_VERSION_MAJOR                         CRM_VERSION_MAJOR_Msk
 
-/* Các trường của CRM_PLL */
+/* Fields of CRM_PLL */
 #define CRM_PLL_OD_Pos                            (0U)  /*!< Output divider */
 #define CRM_PLL_OD_Msk                            (0x3UL << CRM_PLL_OD_Pos)
 #define CRM_PLL_OD                                CRM_PLL_OD_Msk
@@ -4133,7 +4133,7 @@ typedef struct {
 #define CRM_PLL_LOCK_Msk                          (0x1UL << CRM_PLL_LOCK_Pos)
 #define CRM_PLL_LOCK                              CRM_PLL_LOCK_Msk
 
-/* Các trường của CRM_PLL_CTRL */
+/* Fields of CRM_PLL_CTRL */
 #define CRM_PLL_CTRL_POWERDOWN_Pos                (0U)  /*!< Power down PLL */
 #define CRM_PLL_CTRL_POWERDOWN_Msk                (0x1UL << CRM_PLL_CTRL_POWERDOWN_Pos)
 #define CRM_PLL_CTRL_POWERDOWN                    CRM_PLL_CTRL_POWERDOWN_Msk
@@ -4153,22 +4153,22 @@ typedef struct {
 #define CRM_PLL_CTRL_OE_Msk                       (0x1UL << CRM_PLL_CTRL_OE_Pos)
 #define CRM_PLL_CTRL_OE                           CRM_PLL_CTRL_OE_Msk
 
-/* Các trường của CRM_CLK_0 */
+/* Fields of CRM_CLK_0 */
 #define CRM_CLK_0_SEL_Pos                         (0U)  /*!< Clock selection */
 #define CRM_CLK_0_SEL_Msk                         (0x1UL << CRM_CLK_0_SEL_Pos)
 #define CRM_CLK_0_SEL                             CRM_CLK_0_SEL_Msk
 
-/* Các trường của CRM_CLK_1 */
+/* Fields of CRM_CLK_1 */
 #define CRM_CLK_1_SEL_Pos                         (0U)  /*!< Clock selection */
 #define CRM_CLK_1_SEL_Msk                         (0x1UL << CRM_CLK_1_SEL_Pos)
 #define CRM_CLK_1_SEL                             CRM_CLK_1_SEL_Msk
 
-/* Các trường của CRM_CLK */
+/* Fields of CRM_CLK */
 #define CRM_CLK_DIV_Pos                           (0U)  /*!< Clock divisor */
 #define CRM_CLK_DIV_Msk                           (0x3FFUL << CRM_CLK_DIV_Pos)
 #define CRM_CLK_DIV                               CRM_CLK_DIV_Msk
 
-/* Các trường của CRM_CLK_GATE_0 */
+/* Fields of CRM_CLK_GATE_0 */
 #define CRM_CLK_GATE_0_MRV_CLK_EN_Pos             (0U)  /*!< Enable MRV clock */
 #define CRM_CLK_GATE_0_MRV_CLK_EN_Msk             (0x1UL << CRM_CLK_GATE_0_MRV_CLK_EN_Pos)
 #define CRM_CLK_GATE_0_MRV_CLK_EN                 CRM_CLK_GATE_0_MRV_CLK_EN_Msk
@@ -4203,7 +4203,7 @@ typedef struct {
 #define CRM_CLK_GATE_0_ADC_CLK_EN_Msk             (0x1UL << CRM_CLK_GATE_0_ADC_CLK_EN_Pos)
 #define CRM_CLK_GATE_0_ADC_CLK_EN                 CRM_CLK_GATE_0_ADC_CLK_EN_Msk
 
-/* Các trường của CRM_CLK_GATE_1 */
+/* Fields of CRM_CLK_GATE_1 */
 #define CRM_CLK_GATE_1_TIMER0_CLK_EN_Pos          (0U)  /*!< Enable timer 0 clock */
 #define CRM_CLK_GATE_1_TIMER0_CLK_EN_Msk          (0x1UL << CRM_CLK_GATE_1_TIMER0_CLK_EN_Pos)
 #define CRM_CLK_GATE_1_TIMER0_CLK_EN              CRM_CLK_GATE_1_TIMER0_CLK_EN_Msk
@@ -4271,27 +4271,27 @@ typedef struct {
 #define CRM_CLK_GATE_1_GPIO3_OSC_CLK_EN_Msk       (0x1UL << CRM_CLK_GATE_1_GPIO3_OSC_CLK_EN_Pos)
 #define CRM_CLK_GATE_1_GPIO3_OSC_CLK_EN           CRM_CLK_GATE_1_GPIO3_OSC_CLK_EN_Msk
 
-/* Các trường của CRM_FCLK_SW */
+/* Fields of CRM_FCLK_SW */
 #define CRM_FCLK_SW_RST_N_Pos                     (0U)  /*!< Release domain reset */
 #define CRM_FCLK_SW_RST_N_Msk                     (0x1UL << CRM_FCLK_SW_RST_N_Pos)
 #define CRM_FCLK_SW_RST_N                         CRM_FCLK_SW_RST_N_Msk
 
-/* Các trường của CRM_ACLK_SW */
+/* Fields of CRM_ACLK_SW */
 #define CRM_ACLK_SW_RST_N_Pos                     (0U)  /*!< Release domain reset */
 #define CRM_ACLK_SW_RST_N_Msk                     (0x1UL << CRM_ACLK_SW_RST_N_Pos)
 #define CRM_ACLK_SW_RST_N                         CRM_ACLK_SW_RST_N_Msk
 
-/* Các trường của CRM_PCLK_0_SW */
+/* Fields of CRM_PCLK_0_SW */
 #define CRM_PCLK_0_SW_RST_N_Pos                   (0U)  /*!< Release domain reset */
 #define CRM_PCLK_0_SW_RST_N_Msk                   (0x1UL << CRM_PCLK_0_SW_RST_N_Pos)
 #define CRM_PCLK_0_SW_RST_N                       CRM_PCLK_0_SW_RST_N_Msk
 
-/* Các trường của CRM_PCLK_1_SW */
+/* Fields of CRM_PCLK_1_SW */
 #define CRM_PCLK_1_SW_RST_N_Pos                   (0U)  /*!< Release domain reset */
 #define CRM_PCLK_1_SW_RST_N_Msk                   (0x1UL << CRM_PCLK_1_SW_RST_N_Pos)
 #define CRM_PCLK_1_SW_RST_N                       CRM_PCLK_1_SW_RST_N_Msk
 
-/* Các trường của CRM_SW_RST_N_0 */
+/* Fields of CRM_SW_RST_N_0 */
 #define CRM_SW_RST_N_0_MRV_CLK_SWRST_Pos          (0U)  /*!< Release MRV reset */
 #define CRM_SW_RST_N_0_MRV_CLK_SWRST_Msk          (0x1UL << CRM_SW_RST_N_0_MRV_CLK_SWRST_Pos)
 #define CRM_SW_RST_N_0_MRV_CLK_SWRST              CRM_SW_RST_N_0_MRV_CLK_SWRST_Msk
@@ -4323,7 +4323,7 @@ typedef struct {
 #define CRM_SW_RST_N_0_ADC_CLK_SWRST_Msk          (0x1UL << CRM_SW_RST_N_0_ADC_CLK_SWRST_Pos)
 #define CRM_SW_RST_N_0_ADC_CLK_SWRST              CRM_SW_RST_N_0_ADC_CLK_SWRST_Msk
 
-/* Các trường của CRM_SW_RST_N_1 */
+/* Fields of CRM_SW_RST_N_1 */
 #define CRM_SW_RST_N_1_TIMER0_CLK_SWRST_Pos       (0U)  /*!< Release timer 0 reset */
 #define CRM_SW_RST_N_1_TIMER0_CLK_SWRST_Msk       (0x1UL << CRM_SW_RST_N_1_TIMER0_CLK_SWRST_Pos)
 #define CRM_SW_RST_N_1_TIMER0_CLK_SWRST           CRM_SW_RST_N_1_TIMER0_CLK_SWRST_Msk
@@ -4358,7 +4358,7 @@ typedef struct {
 #define CRM_SW_RST_N_1_RTC_CLK_SWRST_Msk          (0x1UL << CRM_SW_RST_N_1_RTC_CLK_SWRST_Pos)
 #define CRM_SW_RST_N_1_RTC_CLK_SWRST              CRM_SW_RST_N_1_RTC_CLK_SWRST_Msk
 
-/* Các trường của CRM_SW_RST_N_2 */
+/* Fields of CRM_SW_RST_N_2 */
 #define CRM_SW_RST_N_2_SPI0_CLK_SWRST_Pos         (0U)  /*!< Release SPI 0 reset */
 #define CRM_SW_RST_N_2_SPI0_CLK_SWRST_Msk         (0x1UL << CRM_SW_RST_N_2_SPI0_CLK_SWRST_Pos)
 #define CRM_SW_RST_N_2_SPI0_CLK_SWRST             CRM_SW_RST_N_2_SPI0_CLK_SWRST_Msk
@@ -4405,17 +4405,17 @@ typedef struct {
 #define CRM_SW_RST_N_2_GPIO3_OSC_CLK_SWRST_Msk    (0x1UL << CRM_SW_RST_N_2_GPIO3_OSC_CLK_SWRST_Pos)
 #define CRM_SW_RST_N_2_GPIO3_OSC_CLK_SWRST        CRM_SW_RST_N_2_GPIO3_OSC_CLK_SWRST_Msk
 
-/* Các trường của CRM_CPU_DEBUG */
+/* Fields of CRM_CPU_DEBUG */
 #define CRM_CPU_DEBUG_RST_N_Pos                   (0U)  /*!< Release CPU debug reset */
 #define CRM_CPU_DEBUG_RST_N_Msk                   (0x1UL << CRM_CPU_DEBUG_RST_N_Pos)
 #define CRM_CPU_DEBUG_RST_N                       CRM_CPU_DEBUG_RST_N_Msk
 
-/* Các trường của CRM_SYSTEM_CLK_SW */
+/* Fields of CRM_SYSTEM_CLK_SW */
 #define CRM_SYSTEM_CLK_SW_RST_N_Pos               (0U)  /*!< Release system clock reset */
 #define CRM_SYSTEM_CLK_SW_RST_N_Msk               (0x1UL << CRM_SYSTEM_CLK_SW_RST_N_Pos)
 #define CRM_SYSTEM_CLK_SW_RST_N                   CRM_SYSTEM_CLK_SW_RST_N_Msk
 
-/* Các trường của CRM_SW_RESET_REQ */
+/* Fields of CRM_SW_RESET_REQ */
 #define CRM_SW_RESET_REQ_GLOBAL_Pos               (0U)  /*!< Global reset request */
 #define CRM_SW_RESET_REQ_GLOBAL_Msk               (0x1UL << CRM_SW_RESET_REQ_GLOBAL_Pos)
 #define CRM_SW_RESET_REQ_GLOBAL                   CRM_SW_RESET_REQ_GLOBAL_Msk
@@ -4429,7 +4429,7 @@ typedef struct {
 #define CRM_SW_RESET_REQ_SYSRESETREQ_Msk          (0x1UL << CRM_SW_RESET_REQ_SYSRESETREQ_Pos)
 #define CRM_SW_RESET_REQ_SYSRESETREQ              CRM_SW_RESET_REQ_SYSRESETREQ_Msk
 
-/* Các trường của CRM_CRM */
+/* Fields of CRM_CRM */
 #define CRM_CRM_INT_RAW_Pos                       (0U)  /*!< Raw interrupt, W1C */
 #define CRM_CRM_INT_RAW_Msk                       (0x1UL << CRM_CRM_INT_RAW_Pos)
 #define CRM_CRM_INT_RAW                           CRM_CRM_INT_RAW_Msk
@@ -4437,12 +4437,12 @@ typedef struct {
 #define CRM_CRM_INT_Msk                           (0x1UL << CRM_CRM_INT_Pos)
 #define CRM_CRM_INT                               CRM_CRM_INT_Msk
 
-/* Các trường của I2C_IER */
+/* Fields of I2C_IER */
 #define I2C_IER_ENABLE_Pos                   (0U)  /*!< Enable the I2C controller */
 #define I2C_IER_ENABLE_Msk                   (0x1UL << I2C_IER_ENABLE_Pos)
 #define I2C_IER_ENABLE                       I2C_IER_ENABLE_Msk
 
-/* Các trường của I2C_ICTLR */
+/* Fields of I2C_ICTLR */
 #define I2C_ICTLR_START_Pos                  (0U)  /*!< Request START generation; hardware clears the bit after accepting the request */
 #define I2C_ICTLR_START_Msk                  (0x1UL << I2C_ICTLR_START_Pos)
 #define I2C_ICTLR_START                      I2C_ICTLR_START_Msk
@@ -4453,7 +4453,7 @@ typedef struct {
 #define I2C_ICTLR_NACK_Msk                   (0x1UL << I2C_ICTLR_NACK_Pos)
 #define I2C_ICTLR_NACK                       I2C_ICTLR_NACK_Msk
 
-/* Các trường của I2C_ICFGR */
+/* Fields of I2C_ICFGR */
 #define I2C_ICFGR_MASTER_SLAVE_Pos           (0U)  /*!< Select role: 0=slave, 1=master */
 #define I2C_ICFGR_MASTER_SLAVE_Msk           (0x1UL << I2C_ICFGR_MASTER_SLAVE_Pos)
 #define I2C_ICFGR_MASTER_SLAVE               I2C_ICFGR_MASTER_SLAVE_Msk
@@ -4473,37 +4473,37 @@ typedef struct {
 #define I2C_ICFGR_STRETCH_EN_Msk             (0x1UL << I2C_ICFGR_STRETCH_EN_Pos)
 #define I2C_ICFGR_STRETCH_EN                 I2C_ICFGR_STRETCH_EN_Msk
 
-/* Các trường của I2C_ITSAR */
+/* Fields of I2C_ITSAR */
 #define I2C_ITSAR_SLAVE_ADDR_Pos             (0U)  /*!< 7- or 10-bit slave address, excluding the R/W bit */
 #define I2C_ITSAR_SLAVE_ADDR_Msk             (0x3FFUL << I2C_ITSAR_SLAVE_ADDR_Pos)
 #define I2C_ITSAR_SLAVE_ADDR                 I2C_ITSAR_SLAVE_ADDR_Msk
 
-/* Các trường của I2C_ISRAR */
+/* Fields of I2C_ISRAR */
 #define I2C_ISRAR_SLAVE_REG_ADDR_Pos         (0U)  /*!< 8-bit register address for a combined memory-read transaction */
 #define I2C_ISRAR_SLAVE_REG_ADDR_Msk         (0xFFUL << I2C_ISRAR_SLAVE_REG_ADDR_Pos)
 #define I2C_ISRAR_SLAVE_REG_ADDR             I2C_ISRAR_SLAVE_REG_ADDR_Msk
 
-/* Các trường của I2C_ITDR */
+/* Fields of I2C_ITDR */
 #define I2C_ITDR_TX_DATA_Pos                 (0U)  /*!< Transmit data; writing the register pushes the TX FIFO */
 #define I2C_ITDR_TX_DATA_Msk                 (0xFFUL << I2C_ITDR_TX_DATA_Pos)
 #define I2C_ITDR_TX_DATA                     I2C_ITDR_TX_DATA_Msk
 
-/* Các trường của I2C_IRDR */
+/* Fields of I2C_IRDR */
 #define I2C_IRDR_RX_DATA_Pos                 (0U)  /*!< Receive data; reading the register pops the RX FIFO */
 #define I2C_IRDR_RX_DATA_Msk                 (0xFFUL << I2C_IRDR_RX_DATA_Pos)
 #define I2C_IRDR_RX_DATA                     I2C_IRDR_RX_DATA_Msk
 
-/* Các trường của I2C_IBCR */
+/* Fields of I2C_IBCR */
 #define I2C_IBCR_BYTE_COUNT_Pos              (0U)  /*!< Number of bytes transmitted/received in the transaction; hardware encoding range 0..255 */
 #define I2C_IBCR_BYTE_COUNT_Msk              (0xFFUL << I2C_IBCR_BYTE_COUNT_Pos)
 #define I2C_IBCR_BYTE_COUNT                  I2C_IBCR_BYTE_COUNT_Msk
 
-/* Các trường của I2C_ISPTR */
+/* Fields of I2C_ISPTR */
 #define I2C_ISPTR_SPIKE_CNT_Pos              (0U)  /*!< Number of i2c_clk cycles used for spike filtering */
 #define I2C_ISPTR_SPIKE_CNT_Msk              (0xFFFFUL << I2C_ISPTR_SPIKE_CNT_Pos)
 #define I2C_ISPTR_SPIKE_CNT                  I2C_ISPTR_SPIKE_CNT_Msk
 
-/* Các trường của I2C_ISLTR */
+/* Fields of I2C_ISLTR */
 #define I2C_ISLTR_SCL_LOW_CNT_Pos            (0U)  /*!< Number of SCL-low cycles for SS/FS/FSP/UFS */
 #define I2C_ISLTR_SCL_LOW_CNT_Msk            (0xFFFFUL << I2C_ISLTR_SCL_LOW_CNT_Pos)
 #define I2C_ISLTR_SCL_LOW_CNT                I2C_ISLTR_SCL_LOW_CNT_Msk
@@ -4511,7 +4511,7 @@ typedef struct {
 #define I2C_ISLTR_SCL_LOW_CNT_HS_Msk         (0xFFFFUL << I2C_ISLTR_SCL_LOW_CNT_HS_Pos)
 #define I2C_ISLTR_SCL_LOW_CNT_HS             I2C_ISLTR_SCL_LOW_CNT_HS_Msk
 
-/* Các trường của I2C_ISHTR */
+/* Fields of I2C_ISHTR */
 #define I2C_ISHTR_SCL_HIGH_CNT_Pos           (0U)  /*!< Programmed SCL-high duration for SS/FS/FSP/UFS */
 #define I2C_ISHTR_SCL_HIGH_CNT_Msk           (0xFFFFUL << I2C_ISHTR_SCL_HIGH_CNT_Pos)
 #define I2C_ISHTR_SCL_HIGH_CNT               I2C_ISHTR_SCL_HIGH_CNT_Msk
@@ -4519,42 +4519,42 @@ typedef struct {
 #define I2C_ISHTR_SCL_HIGH_CNT_HS_Msk        (0xFFFFUL << I2C_ISHTR_SCL_HIGH_CNT_HS_Pos)
 #define I2C_ISHTR_SCL_HIGH_CNT_HS            I2C_ISHTR_SCL_HIGH_CNT_HS_Msk
 
-/* Các trường của I2C_ISSTR */
+/* Fields of I2C_ISSTR */
 #define I2C_ISSTR_START_SETUP_CNT_Pos        (0U)  /*!< Number of START setup cycles */
 #define I2C_ISSTR_START_SETUP_CNT_Msk        (0xFFFFUL << I2C_ISSTR_START_SETUP_CNT_Pos)
 #define I2C_ISSTR_START_SETUP_CNT            I2C_ISSTR_START_SETUP_CNT_Msk
 
-/* Các trường của I2C_ISTHTR */
+/* Fields of I2C_ISTHTR */
 #define I2C_ISTHTR_START_HOLD_CNT_Pos        (0U)  /*!< Number of START hold cycles */
 #define I2C_ISTHTR_START_HOLD_CNT_Msk        (0xFFFFUL << I2C_ISTHTR_START_HOLD_CNT_Pos)
 #define I2C_ISTHTR_START_HOLD_CNT            I2C_ISTHTR_START_HOLD_CNT_Msk
 
-/* Các trường của I2C_ISPSTR */
+/* Fields of I2C_ISPSTR */
 #define I2C_ISPSTR_STOP_SETUP_CNT_Pos        (0U)  /*!< Number of STOP setup cycles */
 #define I2C_ISPSTR_STOP_SETUP_CNT_Msk        (0xFFFFUL << I2C_ISPSTR_STOP_SETUP_CNT_Pos)
 #define I2C_ISPSTR_STOP_SETUP_CNT            I2C_ISPSTR_STOP_SETUP_CNT_Msk
 
-/* Các trường của I2C_ISDHTR */
+/* Fields of I2C_ISDHTR */
 #define I2C_ISDHTR_SDA_HOLD_CNT_Pos          (0U)  /*!< Number of SDA hold cycles */
 #define I2C_ISDHTR_SDA_HOLD_CNT_Msk          (0xFFFFUL << I2C_ISDHTR_SDA_HOLD_CNT_Pos)
 #define I2C_ISDHTR_SDA_HOLD_CNT              I2C_ISDHTR_SDA_HOLD_CNT_Msk
 
-/* Các trường của I2C_ITTR */
+/* Fields of I2C_ITTR */
 #define I2C_ITTR_TBUF_CNT_Pos                (0U)  /*!< Number of bus-free cycles */
 #define I2C_ITTR_TBUF_CNT_Msk                (0xFFFFUL << I2C_ITTR_TBUF_CNT_Pos)
 #define I2C_ITTR_TBUF_CNT                    I2C_ITTR_TBUF_CNT_Msk
 
-/* Các trường của I2C_ISCSLTR */
+/* Fields of I2C_ISCSLTR */
 #define I2C_ISCSLTR_SCL_STUCK_LOW_CNT_Pos    (0U)  /*!< Number of cycles before reporting SCL stuck-low */
 #define I2C_ISCSLTR_SCL_STUCK_LOW_CNT_Msk    (0xFFFFUL << I2C_ISCSLTR_SCL_STUCK_LOW_CNT_Pos)
 #define I2C_ISCSLTR_SCL_STUCK_LOW_CNT        I2C_ISCSLTR_SCL_STUCK_LOW_CNT_Msk
 
-/* Các trường của I2C_ISDSLTR */
+/* Fields of I2C_ISDSLTR */
 #define I2C_ISDSLTR_SDA_STUCK_LOW_CNT_Pos    (0U)  /*!< Number of cycles before reporting SDA stuck-low */
 #define I2C_ISDSLTR_SDA_STUCK_LOW_CNT_Msk    (0xFFFFUL << I2C_ISDSLTR_SDA_STUCK_LOW_CNT_Pos)
 #define I2C_ISDSLTR_SDA_STUCK_LOW_CNT        I2C_ISDSLTR_SDA_STUCK_LOW_CNT_Msk
 
-/* Các trường của I2C_ISR */
+/* Fields of I2C_ISR */
 #define I2C_ISR_BUS_BUSY_Pos                 (0U)  /*!< I2C bus busy */
 #define I2C_ISR_BUS_BUSY_Msk                 (0x1UL << I2C_ISR_BUS_BUSY_Pos)
 #define I2C_ISR_BUS_BUSY                     I2C_ISR_BUS_BUSY_Msk
@@ -4613,7 +4613,7 @@ typedef struct {
 #define I2C_ISR_ADDR_MATCH_Msk               (0x7FUL << I2C_ISR_ADDR_MATCH_Pos)
 #define I2C_ISR_ADDR_MATCH                   I2C_ISR_ADDR_MATCH_Msk
 
-/* Các trường của I2C_IIER */
+/* Fields of I2C_IIER */
 #define I2C_IIER_TRANSFER_DONE_EN_Pos        (0U)  /*!< Enable transfer-done interrupt; when enabled, hardware does not generate STOP automatically */
 #define I2C_IIER_TRANSFER_DONE_EN_Msk        (0x1UL << I2C_IIER_TRANSFER_DONE_EN_Pos)
 #define I2C_IIER_TRANSFER_DONE_EN            I2C_IIER_TRANSFER_DONE_EN_Msk
@@ -4669,7 +4669,7 @@ typedef struct {
 #define I2C_IIER_STOP_DEC_EN_Msk             (0x1UL << I2C_IIER_STOP_DEC_EN_Pos)
 #define I2C_IIER_STOP_DEC_EN                 I2C_IIER_STOP_DEC_EN_Msk
 
-/* Các trường của I2C_IICR */
+/* Fields of I2C_IICR */
 #define I2C_IICR_TRANSFER_DONE_CLR_Pos       (0U)  /*!< Clear the transfer-done */
 #define I2C_IICR_TRANSFER_DONE_CLR_Msk       (0x1UL << I2C_IICR_TRANSFER_DONE_CLR_Pos)
 #define I2C_IICR_TRANSFER_DONE_CLR           I2C_IICR_TRANSFER_DONE_CLR_Msk
@@ -4725,22 +4725,22 @@ typedef struct {
 #define I2C_IICR_STOP_DEC_CLR_Msk            (0x1UL << I2C_IICR_STOP_DEC_CLR_Pos)
 #define I2C_IICR_STOP_DEC_CLR                I2C_IICR_STOP_DEC_CLR_Msk
 
-/* Các trường của I2C_IBCER */
+/* Fields of I2C_IBCER */
 #define I2C_IBCER_BUS_CLR_Pos                (0U)  /*!< Enable the bus-clear procedure */
 #define I2C_IBCER_BUS_CLR_Msk                (0x1UL << I2C_IBCER_BUS_CLR_Pos)
 #define I2C_IBCER_BUS_CLR                    I2C_IBCER_BUS_CLR_Msk
 
-/* Các trường của I2C_IDIER */
+/* Fields of I2C_IDIER */
 #define I2C_IDIER_DEV_ID_Pos                 (0U)  /*!< Enable the Device ID read operation */
 #define I2C_IDIER_DEV_ID_Msk                 (0x1UL << I2C_IDIER_DEV_ID_Pos)
 #define I2C_IDIER_DEV_ID                     I2C_IDIER_DEV_ID_Msk
 
-/* Các trường của I2C_ISRER */
+/* Fields of I2C_ISRER */
 #define I2C_ISRER_SW_RESET_Pos               (0U)  /*!< Enable software reset via general call */
 #define I2C_ISRER_SW_RESET_Msk               (0x1UL << I2C_ISRER_SW_RESET_Pos)
 #define I2C_ISRER_SW_RESET                   I2C_ISRER_SW_RESET_Msk
 
-/* Các trường của I2C_ITFTLR */
+/* Fields of I2C_ITFTLR */
 #define I2C_ITFTLR_PROG_FLVL_Pos             (0U)  /*!< Programmable-full threshold of the TX FIFO */
 #define I2C_ITFTLR_PROG_FLVL_Msk             (0xFUL << I2C_ITFTLR_PROG_FLVL_Pos)
 #define I2C_ITFTLR_PROG_FLVL                 I2C_ITFTLR_PROG_FLVL_Msk
@@ -4748,7 +4748,7 @@ typedef struct {
 #define I2C_ITFTLR_PROG_ELVL_Msk             (0xFUL << I2C_ITFTLR_PROG_ELVL_Pos)
 #define I2C_ITFTLR_PROG_ELVL                 I2C_ITFTLR_PROG_ELVL_Msk
 
-/* Các trường của I2C_IRFTLR */
+/* Fields of I2C_IRFTLR */
 #define I2C_IRFTLR_PROG_FLVL_Pos             (0U)  /*!< Programmable-full threshold of the RX FIFO */
 #define I2C_IRFTLR_PROG_FLVL_Msk             (0xFUL << I2C_IRFTLR_PROG_FLVL_Pos)
 #define I2C_IRFTLR_PROG_FLVL                 I2C_IRFTLR_PROG_FLVL_Msk
@@ -4756,7 +4756,7 @@ typedef struct {
 #define I2C_IRFTLR_PROG_ELVL_Msk             (0xFUL << I2C_IRFTLR_PROG_ELVL_Pos)
 #define I2C_IRFTLR_PROG_ELVL                 I2C_IRFTLR_PROG_ELVL_Msk
 
-/* Các trường của I2C_IDER */
+/* Fields of I2C_IDER */
 #define I2C_IDER_TX_ENABLE_Pos               (0U)  /*!< Enable TX DMA requests */
 #define I2C_IDER_TX_ENABLE_Msk               (0x1UL << I2C_IDER_TX_ENABLE_Pos)
 #define I2C_IDER_TX_ENABLE                   I2C_IDER_TX_ENABLE_Msk
@@ -4764,12 +4764,12 @@ typedef struct {
 #define I2C_IDER_RX_ENABLE_Msk               (0x1UL << I2C_IDER_RX_ENABLE_Pos)
 #define I2C_IDER_RX_ENABLE                   I2C_IDER_RX_ENABLE_Msk
 
-/* Các trường của I2C_ISDIR */
+/* Fields of I2C_ISDIR */
 #define I2C_ISDIR_DEV_ID_Pos                 (0U)  /*!< 24-bit slave Device ID */
 #define I2C_ISDIR_DEV_ID_Msk                 (0xFFFFFFUL << I2C_ISDIR_DEV_ID_Pos)
 #define I2C_ISDIR_DEV_ID                     I2C_ISDIR_DEV_ID_Msk
 
-/* Các trường của I2C_IIOCR */
+/* Fields of I2C_IIOCR */
 #define I2C_IIOCR_ODIS_Pos                   (0U)  /*!< Control output disable of the I2C I/O cell */
 #define I2C_IIOCR_ODIS_Msk                   (0x1UL << I2C_IIOCR_ODIS_Pos)
 #define I2C_IIOCR_ODIS                       I2C_IIOCR_ODIS_Msk
@@ -4780,7 +4780,7 @@ typedef struct {
 #define I2C_IIOCR_PWRDNH_Msk                 (0x1UL << I2C_IIOCR_PWRDNH_Pos)
 #define I2C_IIOCR_PWRDNH                     I2C_IIOCR_PWRDNH_Msk
 
-/* Các trường của I2C_ISMBR */
+/* Fields of I2C_ISMBR */
 #define I2C_ISMBR_SMB_EN_Pos                 (0U)  /*!< Enable SMBus */
 #define I2C_ISMBR_SMB_EN_Msk                 (0x1UL << I2C_ISMBR_SMB_EN_Pos)
 #define I2C_ISMBR_SMB_EN                     I2C_ISMBR_SMB_EN_Msk
@@ -4803,7 +4803,7 @@ typedef struct {
 #define I2C_ISMBR_PEC_ERR_CLR_Msk            (0x1UL << I2C_ISMBR_PEC_ERR_CLR_Pos)
 #define I2C_ISMBR_PEC_ERR_CLR                I2C_ISMBR_PEC_ERR_CLR_Msk
 
-/* Các trường của I2C_ICLFT */
+/* Fields of I2C_ICLFT */
 #define I2C_ICLFT_CLK_FAILURE_Pos            (0U)  /*!< Clock failure detected */
 #define I2C_ICLFT_CLK_FAILURE_Msk            (0x1UL << I2C_ICLFT_CLK_FAILURE_Pos)
 #define I2C_ICLFT_CLK_FAILURE                I2C_ICLFT_CLK_FAILURE_Msk
@@ -4814,7 +4814,7 @@ typedef struct {
 #define I2C_ICLFT_CMD_FAILURE_Msk            (0x1UL << I2C_ICLFT_CMD_FAILURE_Pos)
 #define I2C_ICLFT_CMD_FAILURE                I2C_ICLFT_CMD_FAILURE_Msk
 
-/* Các trường của I2C_IITR */
+/* Fields of I2C_IITR */
 #define I2C_IITR_TRANSFER_DONE_Pos           (0U)  /*!< Interrupt transfer-done active */
 #define I2C_IITR_TRANSFER_DONE_Msk           (0x1UL << I2C_IITR_TRANSFER_DONE_Pos)
 #define I2C_IITR_TRANSFER_DONE               I2C_IITR_TRANSFER_DONE_Msk
@@ -4870,12 +4870,12 @@ typedef struct {
 #define I2C_IITR_STOP_DEC_Msk                (0x1UL << I2C_IITR_STOP_DEC_Pos)
 #define I2C_IITR_STOP_DEC                    I2C_IITR_STOP_DEC_Msk
 
-/* Các trường của ADC_CTRL */
+/* Fields of ADC_CTRL */
 #define ADC_CTRL_ADC_EN_Pos                (0U)  /*!< Enable ADC conversion */
 #define ADC_CTRL_ADC_EN_Msk                (0x1UL << ADC_CTRL_ADC_EN_Pos)
 #define ADC_CTRL_ADC_EN                    ADC_CTRL_ADC_EN_Msk
 
-/* Các trường của ADC_CFG */
+/* Fields of ADC_CFG */
 #define ADC_CFG_CHANNEL_Pos                (0U)  /*!< Input channel */
 #define ADC_CFG_CHANNEL_Msk                (0xFUL << ADC_CFG_CHANNEL_Pos)
 #define ADC_CFG_CHANNEL                    ADC_CFG_CHANNEL_Msk
@@ -4883,7 +4883,7 @@ typedef struct {
 #define ADC_CFG_SAMP_SEL_Msk               (0x1UL << ADC_CFG_SAMP_SEL_Pos)
 #define ADC_CFG_SAMP_SEL                   ADC_CFG_SAMP_SEL_Msk
 
-/* Các trường của ADC_STATUS */
+/* Fields of ADC_STATUS */
 #define ADC_STATUS_DONE_Pos                (0U)  /*!< Conversion complete */
 #define ADC_STATUS_DONE_Msk                (0x1UL << ADC_STATUS_DONE_Pos)
 #define ADC_STATUS_DONE                    ADC_STATUS_DONE_Msk
@@ -4894,7 +4894,7 @@ typedef struct {
 #define ADC_STATUS_BUSY_Msk                (0x1UL << ADC_STATUS_BUSY_Pos)
 #define ADC_STATUS_BUSY                    ADC_STATUS_BUSY_Msk
 
-/* Các trường của ADC_TIMING */
+/* Fields of ADC_TIMING */
 #define ADC_TIMING_SAMPCLK_LOW_Pos         (8U)  /*!< Sample clock low time */
 #define ADC_TIMING_SAMPCLK_LOW_Msk         (0xFFUL << ADC_TIMING_SAMPCLK_LOW_Pos)
 #define ADC_TIMING_SAMPCLK_LOW             ADC_TIMING_SAMPCLK_LOW_Msk
@@ -4905,7 +4905,7 @@ typedef struct {
 #define ADC_TIMING_SETUP_WAIT_Msk          (0xFFUL << ADC_TIMING_SETUP_WAIT_Pos)
 #define ADC_TIMING_SETUP_WAIT              ADC_TIMING_SETUP_WAIT_Msk
 
-/* Các trường của ADC_SAMPLE_CFG */
+/* Fields of ADC_SAMPLE_CFG */
 #define ADC_SAMPLE_CFG_SAMPLE_COUNT_Pos    (0U)  /*!< Number of samples */
 #define ADC_SAMPLE_CFG_SAMPLE_COUNT_Msk    (0x1FUL << ADC_SAMPLE_CFG_SAMPLE_COUNT_Pos)
 #define ADC_SAMPLE_CFG_SAMPLE_COUNT        ADC_SAMPLE_CFG_SAMPLE_COUNT_Msk

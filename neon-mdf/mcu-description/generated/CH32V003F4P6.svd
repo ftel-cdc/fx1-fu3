@@ -2,7 +2,7 @@
 <device schemaVersion="1.1" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="CMSIS-SVD.xsd">
   <vendor>WCH</vendor>
   <name>CH32V003F4P6</name>
-  <description>WCH CH32V003F4P6 - RISC-V QingKe V2A (RV32EC), 16KB Flash/2KB SRAM, gói TSSOP20 (chỉ GPIOA/C/D). Board dev RISC-V đầu tiên của SDK này.</description>
+  <description>WCH CH32V003F4P6 - RISC-V QingKe V2A (RV32EC), 16KB Flash/2KB SRAM, TSSOP20 package (GPIOA/C/D only). The first RISC-V dev board of this SDK.</description>
   <addressUnitBits>8</addressUnitBits>
   <width>32</width>
   <size>32</size>
@@ -12,7 +12,7 @@
   <peripherals>
     <peripheral>
       <name>RCC</name>
-      <description>Reset and Clock Control - RM chuong 3</description>
+      <description>Reset and Clock Control - RM chapter 3</description>
       <baseAddress>0x40021000</baseAddress>
       <addressBlock>
         <offset>0</offset>
@@ -22,7 +22,7 @@
       <registers>
         <register>
           <name>CTLR</name>
-          <description>Clock control register (HSION/HSIRDY/PLLON/...) - RM ghi reset 0x0000xx83, 'xx' la bit factory-trim khong xac dinh - dat 0x00 cho cac bit do (chi field lieu, khong anh huong sinh header)</description>
+          <description>Clock control register (HSION/HSIRDY/PLLON/...): RM reset 0x0000xx83 includes unknown factory-trim bits xx. Use 0x00 only as a descriptive placeholder for those bits.</description>
           <addressOffset>0x0</addressOffset>
           <size>32</size>
           <access>read-write</access>
@@ -70,7 +70,7 @@
         </register>
         <register>
           <name>APB2PCENR</name>
-          <description>PB2 peripheral clock enable register - bit0 AFIOEN, bit2 IOPAEN, bit4 IOPCEN, bit5 IOPDEN (THAT, RM 3.4.7) - dung boi NEON_GPIO_ClockEnable()</description>
+          <description>PB2 peripheral clock enable register - bit0 AFIOEN, bit2 IOPAEN, bit4 IOPCEN, bit5 IOPDEN (true, RM 3.4.7) - used by NEON_GPIO_ClockEnable()</description>
           <addressOffset>0x18</addressOffset>
           <size>32</size>
           <access>read-write</access>
@@ -96,7 +96,7 @@
     </peripheral>
     <peripheral>
       <name>GPIOA</name>
-      <description>GPIOA (PA1-PA2 tren goi TSSOP20) - RM chuong 7</description>
+      <description>GPIOA (PA1-PA2 on call TSSOP20) - RM cabin 7</description>
       <baseAddress>0x40010800</baseAddress>
       <addressBlock>
         <offset>0</offset>
@@ -156,7 +156,7 @@
     </peripheral>
     <peripheral>
       <name>GPIOC</name>
-      <description>GPIOC (PC0-PC7) - RM chuong 7</description>
+      <description>GPIOC (PC0-PC7) - RM chapter 7</description>
       <baseAddress>0x40011000</baseAddress>
       <addressBlock>
         <offset>0</offset>
@@ -216,7 +216,7 @@
     </peripheral>
     <peripheral>
       <name>GPIOD</name>
-      <description>GPIOD (PD0-PD7, PD1 trung SWIO debug + LED onboard tren nhieu board dev) - RM chuong 7</description>
+      <description>GPIOD (PD0-PD7, PD1 middle SWIO debug + LED onboard on multiple dev boards) - RM chapter 7</description>
       <baseAddress>0x40011400</baseAddress>
       <addressBlock>
         <offset>0</offset>
@@ -276,7 +276,7 @@
     </peripheral>
     <peripheral>
       <name>USART1</name>
-      <description>USART1 (mapping mac dinh TX=PD5,RX=PD6) - RM chuong 12</description>
+      <description>USART1 (default mapping TX=PD5,RX=PD6) - RM cage 12</description>
       <baseAddress>0x40013800</baseAddress>
       <addressBlock>
         <offset>0</offset>
@@ -310,7 +310,7 @@
         </register>
         <register>
           <name>CTLR1</name>
-          <description>Control register 1 (UE=bit13,TE=bit3,RE=bit2) - THAT, RM 12.10.4</description>
+          <description>Control register 1 (UE=bit13,TE=bit3,RE=bit2), verified against RM 12.10.4</description>
           <addressOffset>0xC</addressOffset>
           <size>32</size>
           <access>read-write</access>
@@ -344,7 +344,7 @@
     </peripheral>
     <peripheral>
       <name>FLASH</name>
-      <description>Flash memory controller (FPEC) - RM chuong 16</description>
+      <description>Flash memory controller (FPEC) - RM chapter 16</description>
       <baseAddress>0x40022000</baseAddress>
       <addressBlock>
         <offset>0</offset>
@@ -362,7 +362,7 @@
         </register>
         <register>
           <name>KEYR</name>
-          <description>FPEC key register (KEY1=0x45670123,KEY2=0xCDEF89AB de unlock) - THAT, RM 16.3.2</description>
+          <description>FPEC key register: KEY1=0x45670123 and KEY2=0xCDEF89AB unlock it, verified against RM 16.3.2</description>
           <addressOffset>0x4</addressOffset>
           <size>32</size>
           <access>write-only</access>
@@ -394,7 +394,7 @@
         </register>
         <register>
           <name>ADDR</name>
-          <description>Address register (dia chi erase/program) - THAT, RM 16.3.6</description>
+          <description>Address register (dia only erase/program) - real, RM 16.3.6</description>
           <addressOffset>0x14</addressOffset>
           <size>32</size>
           <access>write-only</access>

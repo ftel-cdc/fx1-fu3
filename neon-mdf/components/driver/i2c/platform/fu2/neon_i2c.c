@@ -2,11 +2,11 @@
  * @file neon_i2c.c
  * @brief Implementation for I2C.
  * @details
- * * Backend I2C cho FU2.
+ * * Backend I2C for FU2.
  *
- * Register/POS/MASK lấy từ FU2.h sinh bởi FU2.yaml. Trình tự giao dịch bám
- * fu2_dti_i2c.[ch] và DTI I2C CTRL User Guide; HAL bổ sung quản lý CRM,
- * pinmux, trạng thái handle, timeout_polls dùng chung và kiểm tra lỗi bus.
+ * Register/POS/MASK derives from the FU2.h created by FU2.yaml. The transaction sequence attaches to
+ * fu2_dti_i2c.[ch] and DTI I2C CTRL User Guide; HAL adds CRM management, pinmux, handle status,
+ * shared timeout_polls, and bus error testing.
  */
 
 /*==================================================================================================
@@ -373,8 +373,8 @@ neon_status_t neon_i2c_slave_transmit(neon_i2c_handle_t *hi2c, const uint8_t *da
         }
     }
     if (status == NEON_OK) {
-        /* Slave không dùng byte-count/transfer-done như master. Giao dịch chỉ
-     * kết thúc chắc chắn khi controller bên kia phát STOP. */
+        /* Slave does not use byte-count/transfer-done as master. The transaction only ends when the other
+     * controller plays STOP. */
         status = i2c_wait_stop_detected(hi2c, &timeout_polls);
     }
     i2c_pulse_interrupt_clear(hi2c->instance, I2C_IICR_STOP_DEC_CLR_Msk);
@@ -973,8 +973,8 @@ static neon_status_t i2c_reset_pin_route(void) {
 
 static void i2c_pulse_interrupt_clear(I2C_TypeDef *instance, uint32_t interrupts) {
     uint32_t primask = i2c_enter_critical();
-    /* Toàn bộ bit hợp lệ của IICR đều là xung clear, không có field cấu hình
-   * cần giữ lại. DTI yêu cầu ghi 1 rồi trả về 0. */
+    /* All valid bits of the IICR are clear pulses, with no field configuration to retain. DTI requires
+   * write 1 and returns 0. */
     instance->IICR = interrupts & I2C_INTERRUPT_MASK;
     instance->IICR = 0U;
     i2c_exit_critical(primask);
@@ -1042,8 +1042,8 @@ static neon_status_t i2c_check_transfer_error(neon_i2c_handle_t *hi2c) {
 }
 
 static void i2c_abort_master(neon_i2c_handle_t *hi2c, uint8_t transfer_started) {
-    /* Không phát STOP khi bus bận trước lúc ta START, hoặc sau khi đã mất
-   * arbitration: trong hai trường hợp đó bus đang thuộc controller khác. */
+    /* Do not play STOP when the bus is busy before START, or after arbitration has been lost: in either
+   * case the bus is under another controller. */
     if ((transfer_started != 0U) && ((hi2c->error_code & NEON_I2C_ERROR_ARBITRATION_LOST) == 0U)) {
         hi2c->instance->ICTLR |= I2C_ICTLR_STOP_Msk;
     }
@@ -1190,7 +1190,7 @@ static void i2c_release(neon_i2c_handle_t *hi2c) {
 }
 
 static void i2c_flush_fifos(I2C_TypeDef *instance) {
-    /* DTI quy định tắt controller sẽ reset con trỏ đọc/ghi của cả hai FIFO. */
+    /* DTI specifies that turning off the controller will reset the read/write pointer of both FIFOs. */
     instance->IER &= ~I2C_IER_ENABLE_Msk;
     instance->IER |= I2C_IER_ENABLE_Msk;
 }
@@ -1219,9 +1219,9 @@ static neon_status_t i2c_prepare_master(neon_i2c_handle_t *hi2c, uint32_t addres
     i2c_flush_fifos(hi2c->instance);
     i2c_pulse_interrupt_clear(hi2c->instance, NEON_I2C_INTERRUPT_ALL);
     *saved_interrupts = hi2c->instance->IIER;
-    /* TRANSFER_DONE_EN=1 làm IP giữ SCL thấp thay vì tự tạo STOP. API polling
-   * tạm tắt riêng bit này và khôi phục sau giao dịch. Nếu pec đang bật thì
-   * tạm mở status pec để đường polling cũng phát hiện được lỗi. */
+    /* TRANSFER_DONE_EN=1 makes the IP keep the SCL low because it creates STOP itself. The polling API
+   * temporarily turns off this bit and restores after transactions. If the pec is on, the status
+   * pec is temporarily opened so that the polling path can also detect errors. */
     hi2c->instance->IIER = *saved_interrupts & ~I2C_IIER_TRANSFER_DONE_EN_Msk;
     if ((hi2c->instance->ISMBR & I2C_ISMBR_PEC_EN_Msk) != 0U) {
         hi2c->instance->IIER |= I2C_IIER_PEC_ERR_EN_Msk;
@@ -1252,8 +1252,8 @@ static neon_status_t i2c_finish_polling_transfer(neon_i2c_handle_t *hi2c, uint32
 
     status = i2c_wait_transfer_done(hi2c, timeout_polls);
     if (status == NEON_OK) {
-        /* TRANSFER_DONE_EN đang tắt nên phần cứng đã tự tạo STOP. Kể từ đây
-     * BUS_BUSY có thể thuộc master khác; timeout_polls không được phát thêm STOP. */
+        /* TRANSFER_DONE_EN is off, so hardware has created STOP by itself. From now on BUS_BUSY can be a
+     * different master; timeout_polls cannot play more STOP. */
         *transfer_started = 0U;
         status = i2c_wait_bus_idle(hi2c, timeout_polls, 1U);
     }

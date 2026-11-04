@@ -24,8 +24,8 @@
 #define UART_CONTEXT_PIN_AUTO (1U << 0)
 #define UART_CONTEXT_JTAG_WAS_ENABLED (1U << 1)
 
-/* FVP FU2 dùng tạm MSR[5] làm TXFF và MSR[4] làm RXFE. Trên silicon thật
- * hai bit này vẫn mang nghĩa DSR/CTS và tuyệt đối không được dùng để poll. */
+/* FVP FU2 temporarily uses MSR[5] as TXFF and MSR[4] as RXFE. On real silicon these two bits remain
+ * networked meaning DSR/CTS and are absolutely not used for poll. */
 #define UART_FVP_MSR_RXFE UART_MSR_CTS_Msk
 #define UART_FVP_MSR_TXFF UART_MSR_DSR_Msk
 
@@ -715,8 +715,8 @@ static neon_status_t uart_validate_pin_route(const neon_uart_handle_t *huart, co
         return NEON_OK;
     }
 
-    /* Bảng pinmux LL hiện chỉ mô tả TX/RX, không có route RTS/CTS. Không âm
-   * thầm bật flow-control khi AUTO vì đường handshake có thể chưa ra pin. */
+    /* The pinmux LL table now only describes TX/RX, without the route RTS/CTS. Do not silently enable
+   * flow-control when AUTO because the handshake path may not yet output a battery. */
     if (settings->hardware_flow_control != NEON_UART_HWCONTROL_NONE) {
         return NEON_NOT_MAPPED;
     }
@@ -877,8 +877,7 @@ static neon_status_t uart_set_baud_rate_raw(UART_TypeDef *instance, uint32_t clo
         return NEON_INVALID_PARAM;
     }
 
-    /* RBR/THR/DLL và IER/DLM dùng chung địa chỉ, nên toàn bộ cửa sổ DLAB phải
-   * atomic đối với ISR UART. */
+    /* RBR/THR/DLL and IER/DLM share the same address, so all DLAB windows must be atomic for ISR UART. */
     primask = uart_enter_critical();
     lcr = instance->LCR;
     instance->LCR = lcr | UART_LCR_DLAB_Msk;
@@ -976,7 +975,7 @@ static void uart_update_receive_errors(neon_uart_handle_t *huart, uint32_t line_
         huart->error_code |= NEON_UART_ERROR_RX_FIFO;
     }
 
-    /* Theo LL, đọc CLKS sẽ xóa trạng thái lỗi. */
+    /* Under LL, read CLKS will erase the error state. */
     clock_status = huart->instance->CLKS;
     if ((clock_status & UART_CLKS_CLK_FAILURE_Msk) != 0U) {
         huart->error_code |= NEON_UART_ERROR_CLOCK;
@@ -1045,7 +1044,7 @@ static neon_status_t uart_receive_core(neon_uart_handle_t *huart, uint16_t *word
             line_status = huart->instance->LSR;
             uart_update_receive_errors(huart, line_status);
             if (((line_status & line_error_mask) != 0U) || (huart->error_code != NEON_UART_ERROR_NONE)) {
-                /* Đọc RBR để bỏ phần tử lỗi và nhả FIFO trước khi báo lỗi. */
+                /* read RBR to remove error element and release FIFO before error reporting. */
                 (void)huart->instance->RBR_DLL_THR;
                 uart_release(huart);
                 return NEON_ERROR;

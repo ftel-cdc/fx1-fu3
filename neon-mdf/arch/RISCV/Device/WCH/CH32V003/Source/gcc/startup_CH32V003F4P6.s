@@ -62,7 +62,7 @@ handle_reset:
 
   la    sp, _estack
 
-  /* Copy .data tu FLASH sang RAM */
+  /* Copy .data from FLASH to RAM */
   la    a0, _sidata
   la    a1, _sdata
   la    a2, _edata
@@ -75,7 +75,7 @@ handle_reset:
   bltu  a1, a2, 1b
 2:
 
-  /* Xoa .bss */
+  /* Clear .bss */
   la    a0, _sbss
   la    a1, _ebss
   bgeu  a0, a1, 2f
@@ -85,24 +85,24 @@ handle_reset:
   bltu  a0, a1, 1b
 2:
 
-  /* Bat MPIE trong mstatus - ngat se duoc bat THAT khi mret vao main ben duoi. */
+  /* enabling MPIE in mstatus - interrupt will be enabled when mret is in the lower mainframe. */
   li    t0, 0x80
   csrw  mstatus, t0
 
-  /* CSR 0x804 (INTSYSCR, vendor-specific WCH) = 0x2: bat nesting, TAT HPE
-     (xem docstring dau file gen_startup.py - KHONG dung fast-interrupt ABI
-     rieng cua WCH, chi dung thuoc tinh `interrupt` chuan cua GCC). */
+  /* CSR 0x804 (INTSYSCR, vendor-specific WCH) = 0x2: enable nesting, disable HPE (see docstring at the
+     beginning of file gen_startup.py - does not use WCH's own fast-interrupt ABI, only GCC's
+     `interrupt` property). */
   li    t0, 0x2
   csrw  0x804, t0
 
-  /* mtvec = dia chi vector table (_start) | 3 (mode "Address" vendor-specific cua PFIC). */
+  /* mtvec = dia only vector table (_start) | 3 (mode "Address" vendor-specific of PFIC). */
   la    t0, _start
   ori   t0, t0, 3
   csrw  mtvec, t0
 
   jal   SystemInit
 
-  /* Nhay vao main() bang mepc+mret (xem docstring dau file). */
+  /* jump to main() using mepc+mret (see docstring at the beginning of the file). */
   la    t0, main
   csrw  mepc, t0
   mret
@@ -114,7 +114,7 @@ Default_Handler:
   .size Default_Handler, .-Default_Handler
 
 
-  /* ============ Weak alias mac dinh (override bang cach dinh nghia ham cung ten) ============ */
+  /* ============ Weak default alias (override by defining function with same name) ============ */
   .weak NMI_Handler
   .set  NMI_Handler, Default_Handler
   .weak HardFault_Handler

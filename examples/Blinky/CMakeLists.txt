@@ -1,35 +1,32 @@
 cmake_minimum_required(VERSION 3.21)
 project(blinky C ASM)
 
-# Fallback khi bien moi truong NEON_MDF_PATH khong toi duoc process cmake
-# (vd: VS Code CMake Tools khong luon truyen cmake.environment vao spawn) -
-# tu suy ra vi tri neon-mdf/ tu vi tri tuong doi cua app nay.
+# Fallback when variables for each field NEON_MDF_PATH cannot be processed cmake (e.g. VS Code CMake
+# Tools does not recognize cmake.environment and spawn) - from deriving the value neon-mdf/ from the
+# corresponding value of this app.
 if(NOT DEFINED ENV{NEON_MDF_PATH})
   set(ENV{NEON_MDF_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/../../neon-mdf")
 endif()
 include($ENV{NEON_MDF_PATH}/tools/cmake/project.cmake)
 
-# FU2 CHUA co `bootloader:` trong YAML (NEON_MDF_BOOTLOADER_ENABLED=OFF, xem
-# mcu-description/devices/FU2.yaml) - build payload + header cho RTL BootROM v5, chi 1
-# executable "blinky" duy nhat, KHONG co OTA (khong co bootloader lam nen
-# tang cho flashmap).
+# FU2 does not yet have `bootloader:` in YAML (NEON_MDF_BOOTLOADER_ENABLED=OFF, see
+# mcu-description/devices/FU2.yaml) - build payload + header for RTL BootROM v5, only 1 executable
+# "blinky" only, without OTA because no SDK bootloader provides flashmap support.
 #
-# WEACT_F412 va CH32V003F4P6 (them 2026-08-10, target RISC-V dau tien) DEU
-# CO - build 3 executable: "bootloader" (SDK tu cung main(), xem
+# WEACT_F412 and CH32V003F4P6 (add 2026-08-10, first RISC-V target) both have - build 3 executable:
+# "bootloader" (SDK from the same main(), see
 # components/bootloader/) + "blinky" (factory, slot "app") + "blinky_ota"
-# (slot "app_ota") - CUNG 1 Src/main.c, khac linker script (sinh tu
-# flashmap.<DEVICE>.csv hoac flashmap.csv mac dinh, xem
-# cmake/flashmap.cmake) + macro NEON_OTA_APP_VERSION - xem
-# examples/OTA_Demo/ cho vi du OTA day du (co ban "xau" test rollback).
-# flashmap.csv (mac dinh, cho WEACT_F412) va flashmap.CH32V003F4P6.csv
-# (override rieng, flash 16KB nho hon rat nhieu) canh file nay - 1 app,
-# NHIEU layout partition (moi device 1 kich thuoc flash khac nhau).
+# (slot "app_ota") - same as 1 Src/main.c, different linker script (created from flashmap.<DEVICE>.csv
+# or default flashmap.csv, see cmake/flashmap.cmake) + macro NEON_OTA_APP_VERSION - see
+# examples/OTA_Demo/ for a complete OTA example, including a bad image for rollback testing. flashmap.csv defaults to
+# WEACT_F412) and flashmap.CH32V003F4P6.csv (private override, much smaller 16KB flash) this file
+# scene - 1 app, multiple layout partitions (each device 1 flash size varies).
 if(NEON_MDF_BOOTLOADER_ENABLED)
   neon_mdf_add_bootloader_executable(bootloader)
 
-  # flashmap.csv/flashmap.<DEVICE>.csv xu ly TU DONG boi neon-mdf/CMakeLists.txt
-  # (xem cmake/flashmap.cmake) TRUOC khi toi day - NEON_MDF_FLASHMAP_APP_BASE/
-  # APP_OTA_BASE/OTADATA_BASE... va target neon_mdf_ota da co san.
+  # flashmap.csv/flashmap.<DEVICE>.csv processed automatically by neon-mdf/CMakeLists.txt (see
+  # cmake/flashmap.cmake) before this point: NEON_MDF_FLASHMAP_APP_BASE/
+  # APP_OTA_BASE/OTADATA_BASE and the neon_mdf_ota target are already available.
 
   # The application uses the bootloader UART API directly on WEACT_F412.
   # It no longer supplies a printf/_write retarget for that family.
@@ -51,13 +48,12 @@ if(NEON_MDF_BOOTLOADER_ENABLED)
   _blinky_add_variant(blinky_ota ${_blinky_ld_dir}/app_ota.ld 2)
 
   # flash_bootloader/flash_uart/serial_monitor/flash_all - custom target
-  # DUNG CHUNG (dinh nghia trong neon-mdf, xem cmake/flash_targets.cmake) -
-  # hien thang trong CMake Tools status bar cua VS Code (giong menuconfig),
-  # KHONG can .vscode/tasks.json rieng nua. CH32V003F4P6 CHUA co
-  # flash_jtag/flash_ota tuong duong (dung openocd - qua dac thu ARM/SWD,
-  # CH32V003 can wlink rieng, xem plan RISC-V) - chi WEACT_F412 dung duoc 2
-  # target nay that su, nhung goi ham khong loi cho CH32V003F4P6 (chi la
-  # target CMake se khong flash duoc that tren chip do, cho Phase 4).
+  # shared (defined in neon-mdf, see cmake/flash_targets.cmake) - presents directly in VS Code's CMake
+  # Tools status bar (same as menuconfig), no separate .vscode/tasks.json needed. CH32V003F4P6 does
+  # not yet have a matching flash_jtag/flash_ota (using openocd - via ARM/SWD message, CH32V003
+  # needs its own wlink, see plan RISC-V) - only WEACT_F412 can use this real 2 target, but calls
+  # error-free for CH32V003F4P6 (only the CMake target will not actually flash on that chip, for
+  # Phase 4).
   include(${NEON_MDF_PATH}/cmake/flash_targets.cmake)
   neon_mdf_add_flash_targets(bootloader blinky ${NEON_MDF_PATH}/cmake/openocd/${NEON_MDF_TARGET}_openocd.cfg)
   neon_mdf_add_ota_flash_target(blinky_ota ${NEON_MDF_PATH}/cmake/openocd/${NEON_MDF_TARGET}_openocd.cfg)

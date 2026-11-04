@@ -2,26 +2,21 @@
  * @file riscv_soft_math.c
  * @brief Implementation for riscv soft math.
  * @details
- * * riscv_soft_math.c - tu viet __udivsi3/__umodsi3/__mulsi3 (khong dung
- * libgcc he thong).
+ * * riscv_soft_math.c provides __udivsi3/__umodsi3/__mulsi3 without the system libgcc.
  *
- * LY DO: RV32EC (QingKe V2A cua CH32V003) KHONG co extension M (nhan/chia
- * phan cung) - BAT KY phep nhan/chia 32-bit nao trong C deu can goi ham
- * runtime cua compiler (thuong tu libgcc). Toolchain dang dung
- * (riscv64-elf-gcc qua Homebrew) KHONG co san multilib khop dung
- * `rv32ec_zicsr`/`ilp32e` (verify THAT qua `-print-multi-lib`: chi co
- * rv32i/rv32im/rv32iac/rv32imac/rv32imafc, TOAN BO deu ghep voi ABI
- * `ilp32` chuan 32 thanh ghi, KHONG co bien the `ilp32e` giam con 16 thanh
- * ghi nao ca) - dung `-lgcc` se lay NHAM libgcc cua rv64 mac dinh, gay loi
- * "ELFCLASS64 incompatible with ELFCLASS32" luc link.
+ * RV32EC on CH32V003 QingKe V2A lacks the M extension for hardware multiply/divide, so C operations
+ * require compiler runtime helpers. The Homebrew riscv64-elf-gcc toolchain has no matching
+ * `rv32ec_zicsr`/`ilp32e` multilib. Verified with `-print-multi-lib`:
+ * rv32i/rv32im/rv32iac/rv32imac/rv32imafc all use the 32-register `ilp32` ABI, without a
+ * 16-register `ilp32e` variant. -lgcc selects the default rv64 library and causes
+ * "ELFCLASS64 incompatible with ELFCLASS32" at link time.
  *
- * FIX: tu cung cap 3 ham nay, bien dich CUNG `-march=rv32ec_zicsr
- * -mabi=ilp32e` voi moi file khac (qua neon_mdf_device_<TARGET> - xem
- * cmake/mcu_variants.cmake) - dam bao dung ABI, khong phu thuoc libgcc he
- * thong nao ca. Thuat toan don gian (bit-serial, khong toi uu toc do) - du
- * dung cho cac phep tinh khong-hot-path hien co (vd SystemCoreClock/1000
- * trong bootloader) - neu sau nay can toi uu hon, thay the o day, KHONG
- * doi ten symbol (GCC tu goi dung ten nay theo quy uoc ABI chuan).
+ * Provide these three helpers and compile with the same `-march=rv32ec_zicsr
+ * -mabi=ilp32e` settings as every other file through neon_mdf_device_<TARGET>
+ * (cmake/mcu_variants.cmake). This guarantees the correct ABI without system libgcc. Simple
+ * bit-serial algorithms suffice for current noncritical calculations, such as SystemCoreClock/1000
+ * in the bootloader. Optimize here if needed, retaining the symbol names GCC expects by ABI
+ * convention.
  */
 
 /*==================================================================================================
@@ -112,7 +107,7 @@ uint64_t __umoddi3(uint64_t a, uint64_t b)
 *                                        PRIVATE FUNCTIONS
 ==================================================================================================*/
 
-/* Chia+du (khong dau) chung 1 vong lap - tranh can them __mulsi3 rieng cho
+/* Unsigned division and remainder share one loop, avoiding an extra __mulsi3 call for
  * umodsi3 (num - quot*den). */
 static uint32_t static_riscv_soft_math_udivmod(uint32_t num, uint32_t den, uint32_t *rem_out)
 {
@@ -120,14 +115,13 @@ static uint32_t static_riscv_soft_math_udivmod(uint32_t num, uint32_t den, uint3
     if (rem_out) {
       *rem_out = 0u;
     }
-    return 0u; /* chia cho 0 - hanh vi khong xac dinh theo C, tra ve 0 thay vi treo */
+    return 0u; /* Division by zero is undefined in C; return 0 instead of hanging */
   }
 
   uint32_t quot = 0u;
   uint32_t qbit = 1u;
 
-  /* Dich den len toi khi bit cao nhat cham bit 31 (hoac vuot num, dung
-   * lai) - dong bo qbit cung dich theo. */
+  /* Shift the denominator and qbit together until its highest bit reaches bit 31 or it exceeds num. */
   while ((int32_t)den >= 0 && den <= num) {
     den <<= 1;
     qbit <<= 1;
@@ -148,16 +142,14 @@ static uint32_t static_riscv_soft_math_udivmod(uint32_t num, uint32_t den, uint3
   return quot;
 }
 
-/* __udivdi3/__umoddi3 - chia 64-bit (khong dau) - them 2026-08-10, can boi
+/* __udivdi3/__umoddi3 provide unsigned 64-bit division; added 2026-08-10 for
  * FreeRTOS-Kernel: macro pdMS_TO_TICKS() (rtos/FreeRTOS-Kernel/include/projdefs.h)
- * dung `uint64_t` LAM TRUNG GIAN MOT CACH CO CHU Y (tranh tran so voi
- * configTICK_RATE_HZ lon) NGAY CA KHI gia tri thuc te nho (vd 200ms*1000Hz)
- * - GCC luon sinh lenh chia 64-bit THEO KIEU C cua bieu thuc, khong theo gia
- * tri runtime, nen BAT KY app FreeRTOS nao goi vTaskDelay(pdMS_TO_TICKS(...))
- * (rat pho bien, vd examples/FreeRTOS_Blinky) deu can __udivdi3. Cung 1 ly
- * do/thuat toan bit-serial nhu 32-bit o tren (chi <<,>>,>=,-= tren uint64_t -
- * GCC tu lower thanh cap lenh 32-bit thuong, KHONG goi lai __udivdi3 nen
- * KHONG de quy). */
+ * deliberately uses `uint64_t` intermediate values to prevent overflow at large configTICK_RATE_HZ,
+ * even when actual values are small, e.g. 200ms*1000Hz.
+ * - GCC emits 64-bit division according to the C expression type, regardless of runtime values. FreeRTOS
+ * apps calling vTaskDelay(pdMS_TO_TICKS(...)), such as examples/FreeRTOS_Blinky, therefore require
+ * __udivdi3. The same bit-serial algorithm uses only <<, >>, >= and -= on uint64_t, lowered by GCC
+ * to ordinary paired 32-bit operations. It does not call __udivdi3 recursively. */
 static uint64_t static_riscv_soft_math_udivmod64(uint64_t num, uint64_t den, uint64_t *rem_out)
 {
   if (den == 0u) {
