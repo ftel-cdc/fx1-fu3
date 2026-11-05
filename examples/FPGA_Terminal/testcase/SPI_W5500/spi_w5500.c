@@ -107,27 +107,42 @@ static int w5500_version(void) {
     return version == 0x04U;
 }
 
-static int w5500_init_chip(void) {
+static int w5500_soft_reset(void) {
     uint32_t mr = 0U;
-    printf("[INIT] Wait 560 ms for module power-on/reset circuitry.\n");
-    if (!spi_w5500_delay_ms(560U) || !w5500_version() ||
-        !w5500_access8(W5500_MR, 1U, 0x80U, &mr)) {
+    printf("[RESET] W5500 software reset via SPI, MR=0x80.\n");
+    /* Reset SPI0 first to release CS and clear its FIFOs. Keep the selected timing. */
+    neon_status_t status = neon_spi_init(SPI0, &g_spi_config);
+    if (status != NEON_OK) {
+        printf("[RESET] [FAIL] SPI0 init status=%lu.\n", (unsigned long)status);
+        return 0;
+    }
+    /* Explicit reset can be attempted even when a previous VERSIONR read failed. */
+    if (!w5500_access8(W5500_MR, 1U, 0x80U, &mr)) {
         return 0;
     }
     for (uint32_t poll = 0U; poll < 20U; ++poll) {
-        if (!w5500_access8(W5500_MR, 0U, 0U, &mr)) {
+        if (!spi_w5500_delay_ms(1U) || !w5500_access8(W5500_MR, 0U, 0U, &mr)) {
             return 0;
         }
         if (mr == 0U) {
-            printf("[INIT] W5500 soft reset [PASS]\n");
-            return w5500_version();
-        }
-        if (!spi_w5500_delay_ms(1U)) {
-            return 0;
+            if (!w5500_version()) {
+                printf("[RESET] [FAIL] Reset not confirmed; check SPI or reset the module via RSTn.\n");
+                return 0;
+            }
+            printf("[RESET] MR=0x00, VERSIONR=0x04 [PASS]\n");
+            return 1;
         }
     }
-    printf("[FAIL] W5500 soft reset did not complete.\n");
+    printf("[RESET] [FAIL] MR did not clear, MR=0x%02lX.\n", (unsigned long)mr);
     return 0;
+}
+
+static int w5500_init_chip(void) {
+    printf("[INIT] Wait 560 ms for module power-on/reset circuitry.\n");
+    if (!spi_w5500_delay_ms(560U) || !w5500_version()) {
+        return 0;
+    }
+    return w5500_soft_reset();
 }
 
 static void w5500_info(void) {
@@ -364,6 +379,7 @@ static void w5500_diagnose(void) {
 
 static void spi_w5500_help(void) {
     printf("\n i: init/reset W5500 | t: info | p: SPI write/read/restore RCR\n");
+    printf(" s: software reset W5500 via SPI (no VERSION precheck, auto OFF)\n");
     printf(" r: read 32 SRAM bytes | d: read-only diagnostics | h/?: help\n");
     printf(" b: read-only B2B 10..0, modes 0/3, SCK 1/3/5/10 MHz (exact only, auto OFF)\n");
     printf(" 0..4: mode 0 at 100/500/1000/2500/5000 kHz\n");
@@ -416,6 +432,12 @@ void spi_w5500_run(neon_uart_handle_t *uart) {
                 switch (key) {
                     case 'i':
                         if (w5500_init_chip()) { w5500_info(); }
+                        last = spi_w5500_ticks();
+                        break;
+                    case 's':
+                        automatic = 0U;
+                        printf("[AUTO] OFF.\n");
+                        w5500_soft_reset();
                         last = spi_w5500_ticks();
                         break;
                     case 't': w5500_info(); break;

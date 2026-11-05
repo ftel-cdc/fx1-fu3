@@ -139,12 +139,14 @@ entry and log printing.
 
 Enter `spi_w5500` and then Enter. Default mode 3, MSB first, SCK 1 MHz, hardware SS0; at system
 clock 10 MHz, divider by 4. Testcase wait for 560 ms for circuit reset module, read `VERSIONR` (must
-be equal to `0x04`), write MR=`0x80` to soft reset and wait for MR to return to `0x00`. Only reset or test writes to RCR
-RCR after reading correct ID. After `[READY]`, press each key, do not need Enter:
+be equal to `0x04`), write MR=`0x80` to soft reset and wait for MR to return to `0x00`. Reset passes
+only after VERSIONR is also read back as `0x04`. RCR test writes require a correct ID.
+After `[READY]`, press each key, no Enter needed:
 
 | Keys | Operations |
 |---|---|
 | `i` | Running again waiting for boot and soft reset W5500 |
+| `s` | Stop auto, reinitialize SPI0 and attempt W5500 software reset without a VERSIONR precheck |
 | `t` | Read VERSIONR, MR, PHYCFGR, RTR, RCR and LINK status |
 | `p` | Save RCR; write/read `0x55`, `0xAA`; rewrite and check the original value |
 | `r` | Continuous reading 32 bytes socket 0 TX SRAM at offset `0x0000` |
@@ -160,6 +162,12 @@ Auto default OFF. Select a preset `0`–`9` that will run ping/pong immediately 
 `CONFIG_SPI_W5500_SCK_HZ` set initial speed; divider rounds up so the real SCK does not exceed the
 required value. `CONFIG_SPI_W5500_TIMEOUT_POLLS` is the number of wait rings per transaction, not
 milliseconds.
+
+The `s` command keeps the selected SPI mode, speed and timing, resets the SPI0 controller to release
+CS and clear its FIFOs, then writes W5500 MR=`0x80`. It polls for MR=`0x00` and checks VERSIONR=`0x04`
+before reporting `[PASS]`. Unlike startup/`i`, it attempts the reset even if the previous ID read
+failed. This is a software reset over SPI, so it still needs a working SPI connection. This example
+does not configure a GPIO for RSTn; hardware reset requires the module's reset circuit or a power cycle.
 
 Driver FU2 defaults to 10 SCK cycles between bytes, including bytes in 32-bit word. Adjust
 `NEON_SPI_FU2_B2B_SCK_CYCLES` in `spi/neon_spi.h` and rebuild to change the default. Driver
