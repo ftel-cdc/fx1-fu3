@@ -2,17 +2,16 @@
  * @file sdk_irq.c
  * @brief Implementation for IRQ.
  * @details
- * * sdk_irq.c - implementation THAT cho WCH PFIC (Programmable Fast
- * interrupt Controller) - vendor-specific, KHONG PHAI CLINT/PLIC chuan
- * RISC-V (dung dung nhu chinh sach RESERVED cu da canh bao, xem
- * arch/RISCV/README.md) - dia chi thanh ghi THAT tu CH32V003RM.PDF V1.9
- * chuong 6.5 "Register Description":
+ * * sdk_irq.c - real implementation for WCH PFIC (Programmable Fast interrupt Controller) -
+ * vendor-specific, not CLINT/PLIC RISC-V (use exactly as the old RESERVED key warned, see
+ * arch/RISCV/README.md) - dia only real register from CH32V003RM.PDF V1.9
+ * chapter 6.5, "Register Description":
  *   IENR1/IENR2 (enable set)   0xE000E100 / 0xE000E104
  *   IRER1/IRER2 (enable clear) 0xE000E180 / 0xE000E184
  *   IPRIORx (priority, 1 byte/IRQ) 0xE000E400 + irqn
- * PFIC la core-private peripheral (giong NVIC cua Cortex-M) - KHONG khai
- * trong mcu-description/devices/CH32V003F4P6.yaml's `peripherals:` (xem
- * comment dau file YAML do), truy cap thang bang dia chi cung o day.
+ * PFIC is core-private peripheral (similar to Cortex-M's NVIC) - not declared in
+ * mcu-description/devices/CH32V003F4P6.yaml's `peripherals:` (see comment at the beginning of that
+ * YAML file), accessed directly at the documented address.
  */
 
 /*==================================================================================================
@@ -38,7 +37,7 @@
 /** @copydoc SDK_IRQ_Enable */
 void SDK_IRQ_Enable(int32_t irqn) {
     if (irqn < 0) {
-        return; /* NMI/HardFault (entry 2/3) khong qua PFIC enable - luon bat */
+        return; /* NMI/HardFault (entries 2/3) bypass PFIC enable and are always enabled */
     }
     if (irqn < 32) {
         PFIC_IENR1 = (1U << irqn);

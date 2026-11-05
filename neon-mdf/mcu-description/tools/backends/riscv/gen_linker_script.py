@@ -1,22 +1,20 @@
-"""Sinh GNU ld linker script cho RISC-V (riscv64-elf-gcc nham -march=rv32ec
--mabi=ilp32e) tu model.Device.
+"""create GNU ld linker script for RISC-V (riscv64-elf-gcc mistaken -march=rv32ec
+-mabi=ilp32e) from model.Device.
 
-_pick_flash()/_pick_ram() IMPORT TRUC TIEP tu backends.cortex_m (thuan tuy
-generic, khong phu thuoc kien truc - chi chon vung flash/ram theo quy uoc
-chung cua ca SDK, xem docstring goc).
+_pick_flash()/_pick_ram() IMPORT directly from backends.cortex_m (generic depending, not direct
+dependent - only select flash/ram regions according to the common conventions of both SDKs, see
+original docstring).
 
-Khac ARM ve noi dung SECTIONS:
-  - KHONG co .ARM.extab/.ARM.exidx (dac thu ARM EHABI).
-  - ENTRY la `_start` (quy uoc RISC-V bare-metal), khong phai `Reset_Handler`.
-  - Section vector table ten `.init` (khop voi gen_startup.py, khong phai
-    `.isr_vector` nhu Cortex-M - ten section tuy chon, chi can khop giua
-    linker script va startup file TU SINH RA CUNG NHAU nen khong bat buoc
-    trung ten voi ARM).
-  - THEM `__global_pointer$` (RISC-V gp-relative addressing - startup.S goi
-    `la gp, __global_pointer$`, XEM ch32v003-startup that da doi chieu o
-    gen_startup.py - dat o giua vung .data/.bss vi RAM cua CH32V003 chi
-    2KB, offset 0x800 (nam trong tam voi cua lenh gp-relative 12-bit) la du
-    phu toan bo RAM, khong can tach .sdata rieng.
+Other ARM About Us SECTIONS:
+  - without .ARM.extab/.ARM.exidx (an ARM EHABI letterhead).
+  - ENTRY is `_start` (RiSC-V bare-metal convention), not `Reset_Handler`.
+  - Section vector table name `.init` (matches gen_startup.py, not `.isr_vector` like Cortex-M -
+    optional section name, just matches linker script and startup file from generated with each other so
+    no ARM middle name required).
+  - add `__global_pointer$` (RISC-V gp-relative addressing - startup.S calls `la gp, __global_pointer$`,
+    VIEW ch32v003-startup actually collated in gen_startup.py - put in the middle of .data/.bss
+    micro RAM region of CH32V003 only 2KB, offset 0x800 (male in triangle with 12-bit gp-relative
+    command) is enough to supplement the entire RAM, do not need separate .sdata.
 """
 import os
 import sys
@@ -76,9 +74,9 @@ SECTIONS
   {{
     . = ALIGN(4);
     _sdata = .;
-    /* __global_pointer$ - xem docstring dau file (gp-relative addressing,
-       startup.S `la gp, __global_pointer$` truoc khi .data/.bss dung duoc -
-       PHAI dinh nghia truoc khi startup dung toi, khong thi link loi
+    /* __global_pointer$ - view docstring at the beginning of file (gp-relative addressing, startup.S `la
+       gp, __global_pointer$` before .data/.bss is used - must be defined before startup uses me,
+       otherwise error link
        "undefined symbol"). */
     PROVIDE(__global_pointer$ = . + 0x800);
     *(.sdata)
@@ -112,10 +110,9 @@ SECTIONS
     . = ALIGN(8);
   }} > RAM
 
-  /* KHONG co /DISCARD/ libc.a/libm.a/libgcc.a nhu ban ARM - riscv64-elf-gcc
-     (Homebrew) la compiler THUAN TUY, KHONG kem newlib (khac
-     arm-none-eabi-gcc dung nano.specs/nosys.specs) - build hoan toan
-     bare-metal (-nostdlib -ffreestanding), khong co libc.a de discard. */
+  /* there is no /DISCARD/ libc.a/libm.a/libgcc.a as ARM - riscv64-elf-gcc (Homebrew) compiler is
+     optional, does not include newlib (other arm-none-eabi-gcc uses nano.specs/nosys.specs) -
+     bare-metal safe build (-nostdlib -ffreestanding), there is no libc.a to discard. */
 }}
 """
 
@@ -137,8 +134,8 @@ def generate(device, out_path: str):
 
 
 def generate_bootloader_partitions(device, bootloader_out_path: str, app_out_path: str):
-    """Mirror gen_linker_script.py (Cortex-M) - danh cho Phase 6 (bootloader/OTA),
-    CHUA duoc goi trong Phase 2/3 (device chua khai `bootloader:`)."""
+    """Mirror gen_linker_script.py (Cortex - M) – name for Phase 6 (bootloader/OTA), not called in Phase
+    2/3 (unclaimed device `bootloader:`)."""
     flash = _pick_flash(device)
     ram = _pick_ram(device)
     bootloader = device.bootloader

@@ -1,16 +1,16 @@
-# OTA_Demo trên STM32F103CB Blue Pill
+# ⁇  OTA_Demo on STM32F103CB Blue Pill
 
-## Kết nối
+## Connectivity
 
 - ST-Link: `SWDIO`, `SWCLK`, `GND`, `3V3`.
-- USB-UART để xem log: `PA9 (TX) -> RX`, `PA10 (RX) -> TX`, GND chung,
+- USB-UART to view log: `PA9 (TX) -> RX`, `PA10 (RX) -> TX`, General GND,
   `115200 8N1`.
-- LED onboard PC13 thể hiện firmware đang chạy; log UART cho biết chính xác
+- LED onboard PC13 shows firmware running; UART log indicates correct
   version 1/2/3.
 
-## Build và nạp factory v1
+## Build and flash factory v1
 
-Chạy từ thư mục `examples/OTA_Demo`:
+Run from folder `examples/OTA_Demo`:
 
 ```sh
 cmake --preset STM32F103CB
@@ -18,51 +18,50 @@ cmake --build --preset STM32F103CB
 cmake --build --preset STM32F103CB --target flash_jtag
 ```
 
-`flash_jtag` ghi bootloader, factory v1 và đặt `otadata` về factory. Sau reset,
-bootloader chờ UART 3 giây rồi LED PC13 nháy và USART1 in `OTA_Demo v1`.
+`flash_jtag` write bootloader, factory v1 and put `otadata` to factory. After reset, bootloader wait
+UART 3 seconds then LED PC13 flash and USART1 in `OTA_Demo v1`.
 
-## Nạp OTA v2 hợp lệ
+## flash OTA v2 valid
 
 ```sh
 cmake --build --preset STM32F103CB --target flash_ota
 ```
 
-Target chỉ ghi slot `app_ota` và `otadata`, sau đó reset. V2 gọi
-`neon_ota_confirm_valid()` sau 10 vòng lặp; những lần reset sau tiếp tục chạy v2.
+Target only records slot `app_ota` and `otadata`, then resets. V2 calls `neon_ota_confirm_valid()`
+after 10 iterations; subsequent resets continue to run v2.
 
-## Kiểm tra rollback bằng v3
+## Test rollback by v3
 
 ```sh
 cmake --build --preset STM32F103CB --target flash_ota_bad
 ```
 
-V3 cố ý không confirm. Lần boot ngay sau flash là attempt 1; reset thêm ba lần
-để attempt kế tiếp vượt ngưỡng 3. Bootloader sẽ chọn lại factory và log trở về
+V3 intentionally does not confirm. The next boot after flash is attempt 1; reset three more times to
+the next attempt exceeds threshold 3. Bootloader will re-select factory and log back
 `OTA_Demo v1`.
 
-Mở log trên Linux, ví dụ:
+Open log on Linux, for example:
 
 ```sh
 python3 -m serial.tools.miniterm /dev/ttyUSB0 115200
 ```
 
-`flash_ota`/`flash_ota_bad` là cách giả lập OTA qua SWD. Giao thức cập nhật UART
-`0x55` dùng hai target sau (cổng mặc định `/dev/ttyACM0`):
+`flash_ota`/`flash_ota_bad` is an OTA emulator via SWD. UART `0x55` update protocol uses the
+following two targets (default port `/dev/ttyACM0`):
 
 ```sh
-# OTA v2 hop le
+# OTA v2 Relay
 cmake --build --preset STM32F103CB --target flash_ota_uart
 
-# OTA v3 khong confirm, dung test rollback
+# OTA v3 does not confirm, use test rollback
 cmake --build --preset STM32F103CB --target flash_ota_uart_bad
 ```
 
-Sau khi client in `Dang cho bootloader`, reset board để byte SYNC `0x55` rơi
-vào cửa sổ 3 giây của bootloader. Phải đóng Serial Monitor trước khi chạy.
-Cần bấm nút `RESET/NRST`, không rút nguồn hay rút cáp USB. `/dev/ttyACM0` phải
-là USB-UART/ST-Link VCP nối với `PA9/PA10`; cổng USB trực tiếp của Blue Pill
-không mang giao thức USART1 này.
-Có thể đổi cổng mà không configure lại:
+after client print `is for bootloader`, reset the board so that SYNC byte `0x55` falls into windows
+3 seconds of bootloader. Must close Serial Monitor before running. Need to press button
+`RESET/NRST`, do not unplug power please unplug USB cable. `/dev/ttyACM0` must be USB-UART/ST-Link
+VCP connected to `PA9/PA10`; direct USB port of Blue Pill does not network this USART1 protocol. Can
+change the port without reconfiguring:
 
 ```sh
 NEON_MDF_SERIAL_PORT=/dev/ttyUSB0 \

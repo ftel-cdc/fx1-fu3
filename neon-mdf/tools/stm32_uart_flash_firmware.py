@@ -1,30 +1,28 @@
 #!/usr/bin/env python3
 """
-stm32_uart_flash_firmware.py - client TU VIET cho protocol UART cua System
-Memory Bootloader THAT cua STM32 (ROM, AN3155/AN4221 cua ST - KHONG PHAI
-protocol tu viet cua SDK trong components/bootloader/neon_bootloader_main.c).
-Thay the stm32flash - cong
-cu chuan nhung xac nhan KHONG DANG TIN CAY tren combo board/driver macOS cu
-the nay: no chi thu bat tay (gui byte 0x7F) DUNG 1 LAN, trong khi thuc te
-can retry (thu nhieu lan) moi bat duoc dung luc bootloader san sang - da xac
-nhan qua test tay (Python retry loop luon thanh cong, stm32flash luon that
-bai "Failed to init device").
+stm32_uart_flash_firmware.py implements the STM32 ROM System Memory Bootloader UART protocol (ST
+AN3155/AN4221), rather than the SDK protocol in
+components/bootloader/neon_bootloader_main.c). Replace the stm32flash - tool with a long
+previously. It was unreliable with the tested board/macOS driver combination: it sent
+synchronization byte 0x7F once, although synchronization should be retried until the bootloader is
+run through a manual test (Python retry loop creates a tool, stm32flash creates that "Failed
+to init device").
 
-Yeu cau BOOT0=1 VA BOOT1=0 luc reset. Voi STM32F103CB, UART cua ROM
-bootloader la USART1: PA9=TX, PA10=RX. Voi board WeAct STM32F412, BOOT1
-(PB2, trung voi chan LED) bi tha noi nen phai noi PB2->GND tam thoi.
+Requires BOOT0=1 and BOOT1=0 at reset. On STM32F103CB, the ROM bootloader UART is USART1:
+PA9=TX, PA10=RX. On the WeAct STM32F412 board, BOOT1/PB2 is shared with the LED and can float, so
+connect PB2 temporarily to GND.
 
-Script doc danh sach command bang GET (0x00) va tu chon lenh xoa:
-  - Erase 0x43 cho bootloader cu nhu STM32F103 medium-density USART V2.2.
-  - Extended Erase 0x44 cho bootloader moi nhu STM32F412.
+Script read the command list using GET (0x00) and select erase command:
+  - Erase 0x43 for old bootloader like STM32F103 medium-density USART V2.2.
+  - Extended Erase 0x44 for each bootloader as STM32F412.
 
-Dung: stm32_uart_flash_firmware.py <serial_port> <file1.bin> <addr1_hex> [<file2.bin> <addr2_hex> ...]
+Use: stm32_uart_flash_firmware.py <serial_port> <file1.bin> <addr1_hex> [<file2.bin> <addr2_hex>...]
 
-Ghi NHIEU vung KHONG LIEN TUC trong CUNG 1 phien (1 lan dong bo + 1 lan mass
-erase, nhieu vong ghi Write Memory noi tiep) - THAY vi ghep tat ca thanh 1
-file .bin lien tuc gia dinh cac vung nam sat nhau (bo di 2026 - dia chi tung
-vung lay THAT tu flashmap.csv qua cmake/flash_targets.cmake, khong con gia
-dinh "app nam ngay sau bootloader"). Vi du that (2 vung: bootloader + app):
+write multiple discontiguous regions in one session: synchronize once, mass erase once, then issue
+consecutive Write Memory operations, instead of combining both regions into one contiguous .bin file
+assume adjacent regions. Removed in 2026: each region address now comes directly from flashmap.csv
+through cmake/flash_targets.cmake, not children assume "app male right after bootloader"). Vi true
+enough (2 regions: bootloader + app):
   stm32_uart_flash_firmware.py /dev/tty.usbmodemXXXX \\
       bootloader.bin 0x08000000 blinky_blob.bin 0x08008000
 """
@@ -45,8 +43,8 @@ CMD_WRITE_MEMORY = 0x31
 CMD_GO = 0x21
 
 WRITE_CHUNK_SIZE = 256
-# KHONG con hang so FLASH_BASE co dinh - dia chi tung vung truyen THAT qua
-# tham so dong lenh (xem _parse_args()/main()), lay tu flashmap.csv qua
+# no FLASH_BASE numbers with specified - dia indicating real regions via instruction parameter (see
+# _parse_args()/main()), derived from flashmap.csv via
 # cmake/flash_targets.cmake.
 
 SYNC_RETRY_S = 9.5
@@ -74,19 +72,18 @@ def recv_ack(ser, what: str, timeout_s: float = WRITE_TIMEOUT_S) -> None:
     finally:
         ser.timeout = old_timeout
     if len(b) != 1:
-        raise RuntimeError(f"Timeout doi ACK cho '{what}' (khong nhan duoc gi)")
+        raise RuntimeError(f"Timeout exchanges ACK for '{what}' (received nothing)")
     if b[0] == NACK_BYTE:
-        raise RuntimeError(f"Bootloader tra ve NACK cho '{what}'")
+        raise RuntimeError(f"Bootloader look up NACK for '{what}'")
     if b[0] != ACK_BYTE:
-        raise RuntimeError(f"Byte la (0x{b[0]:02X}) thay vi ACK cho '{what}'")
+        raise RuntimeError(f"Unexpected byte (0x{b[0]:02X}) see because ACK for '{what}'")
 
 
 def sync(ser) -> None:
     """
-    Gui SYNC_BYTE lap lai (nghi SYNC_POLL_S giua moi lan) toi khi nhan duoc
-    BAT KY phan hoi nao - DUNG NGAY khi co phan hoi (dung hay sai), KHONG
-    gui them SYNC sau do (bootloader khong co co che resync, gui thua se
-    lam lech giao thuc - cung bai hoc da gap voi protocol tu viet cua SDK).
+    Repeat SYNC_BYTE with SYNC_POLL_S between attempts until the first response. Stop sending SYNC as
+    soon as a reply arrives: the bootloader has no resynchronization mechanism, and extra SYNC bytes
+    would corrupt the transaction.
     """
     ser.reset_input_buffer()
     old_timeout = ser.timeout
@@ -101,30 +98,26 @@ def sync(ser) -> None:
             if len(r) == 1:
                 b = r[0]
                 if b == ACK_BYTE or b == NACK_BYTE:
-                    # DUNG NGAY khi thay ACK/NACK HOP LE - day moi la phan
-                    # hoi THAT cua bootloader, gui them SYNC sau do se lam
-                    # lech giao thuc (giong bai hoc voi protocol tu viet).
+                    # Return immediately on a valid ACK/NACK. Further SYNC bytes would disrupt the bootloader protocol.
                     resp = b
                     break
-                # Byte LA (khong phai ACK/NACK) - BO QUA, KHONG dung lai:
-                # da xac nhan THAT tren phan cung day la NHIEU THOANG QUA
-                # ngay luc UART/clock moi on dinh sau reset (khac han
-                # protocol tu viet cua SDK, System Bootloader KHONG bi lech
-                # giao thuc khi nhan them SYNC byte - no chi tra loi ACK/NACK
-                # cho tung lenh don le). Tiep tuc gui lai SYNC cho toi khi
-                # thay dung ACK/NACK hoac het gio.
+                # Ignore bytes other than ACK/NACK. Hardware testing showed transient bytes immediately
+                # after UART/clock each on specified after reset (unlike the protocol from the SDK
+                # writing. The System Bootloader remains synchronized when receiving
+                # additional SYNC bytes - no only check error ACK/NACK for each command don le).
+                # retry SYNC until ACK/NACK arrives or the timeout expires.
                 last_unexpected = b
     finally:
         ser.timeout = old_timeout
 
     if resp is None:
-        extra = f" (byte la cuoi cung nhan duoc: 0x{last_unexpected:02X})" if last_unexpected is not None else ""
+        extra = f" (byte is ultimately received: 0x{last_unexpected:02X})" if last_unexpected is not None else ""
         raise RuntimeError(
-            f"Khong nhan duoc ACK/NACK tu System Bootloader trong {SYNC_RETRY_S}s{extra} - "
-            "kiem tra: da noi PB2->GND, giu B0, RESET dung luc chua?"
+            f"not getting ACK/NACK from System Bootloader in {SYNC_RETRY_S}s{extra} - "
+            "test: have we PB2->GND, keep B0, RESET used?"
         )
     if resp != ACK_BYTE:
-        raise RuntimeError(f"Bootloader tra ve NACK (0x{NACK_BYTE:02X}) cho SYNC")
+        raise RuntimeError(f"Bootloader returned NACK (0x{NACK_BYTE:02X}) for SYNC")
 
 
 def get_version(ser) -> int:
@@ -132,24 +125,24 @@ def get_version(ser) -> int:
     recv_ack(ser, "Get Version (cmd)")
     data = ser.read(3)
     if len(data) != 3:
-        raise RuntimeError("Khong doc du 3 byte tra ve tu Get Version")
+        raise RuntimeError("unable to read 3 bytes from Get Version")
     recv_ack(ser, "Get Version (data)")
     return data[0]
 
 
 def get_supported_commands(ser):
-    """Tra ve (bootloader_version, set(command)) tu lenh GET 0x00."""
+    """look up (bootloader_version, set(command)) from GET command 0x00."""
     send_command(ser, CMD_GET)
     recv_ack(ser, "Get (cmd)")
     n = ser.read(1)
     if len(n) != 1:
-        raise RuntimeError("Khong doc duoc do dai danh sach command tu Get")
+        raise RuntimeError("can't read that long command list from Get")
     payload = ser.read(n[0] + 1)
     if len(payload) != n[0] + 1:
-        raise RuntimeError("Khong doc du danh sach command tu Get")
+        raise RuntimeError("cannot read full command list from Get")
     recv_ack(ser, "Get (data)")
     if len(payload) < 2:
-        raise RuntimeError("Payload Get khong co danh sach command hop le")
+        raise RuntimeError("Payload Get has no logical command list")
     return payload[0], set(payload[1:])
 
 
@@ -158,10 +151,10 @@ def get_id(ser) -> int:
     recv_ack(ser, "Get ID (cmd)")
     n = ser.read(1)
     if len(n) != 1:
-        raise RuntimeError("Khong doc duoc do dai tu Get ID")
+        raise RuntimeError("cannot read that long from Get ID")
     pid_bytes = ser.read(n[0] + 1)
     if len(pid_bytes) != n[0] + 1:
-        raise RuntimeError("Khong doc du byte PID tu Get ID")
+        raise RuntimeError("cannot read enough PID bytes from Get ID")
     recv_ack(ser, "Get ID (data)")
     return int.from_bytes(pid_bytes, "big")
 
@@ -178,14 +171,14 @@ def mass_erase(ser, supported_commands) -> int:
     if CMD_ERASE in supported_commands:
         send_command(ser, CMD_ERASE)
         recv_ack(ser, "Erase (cmd)")
-        # AN3155 quy dinh rieng global erase cua command 0x43 la 0xFF, 0x00.
+        # AN3155 separately specifies the global erase of the 0x43 command as 0xFF, 0x00.
         ser.write(bytes([0xFF, 0x00]))
         recv_ack(ser, "Erase (mass erase)", timeout_s=ERASE_TIMEOUT_S)
         return CMD_ERASE
 
     advertised = ", ".join(f"0x{cmd:02X}" for cmd in sorted(supported_commands))
     raise RuntimeError(
-        "System Bootloader khong cong bo Erase 0x43 hoac Extended Erase 0x44 "
+        "System Bootloader does not support Erase 0x43 or Extended Erase 0x44 "
         f"(commands: {advertised})"
     )
 
@@ -207,18 +200,18 @@ def write_memory_chunk(ser, address: int, chunk: bytes) -> None:
 
 def go(ser, address: int) -> None:
     send_command(ser, CMD_GO)
-    recv_ack(ser, "Go (cmd)")
+    recv_ack(ser, "Command")
     addr_bytes = struct.pack(">I", address)
     ser.write(addr_bytes + bytes([checksum_xor(addr_bytes)]))
-    recv_ack(ser, "Go (address)")
+    recv_ack(ser, "Address")
 
 
 def _parse_args(argv):
-    # argv[0] = serial_port, phan con lai la CAP (file, dia_chi_hex) lien
-    # tiep - can >=1 cap, so phan tu con lai PHAI chan.
+    # argv[0] = serial_port, subsection is level (file, dia_chi_hex) in a row - need >=1 level, number of
+    # sections from subsection to foot.
     if len(argv) < 3 or (len(argv) - 1) % 2 != 0:
         print(
-            f"Dung: {sys.argv[0]} <serial_port> <file1.bin> <addr1_hex> [<file2.bin> <addr2_hex> ...]",
+            f"Used: {sys.argv[0]} <serial_port> <file1.bin> <addr1_hex> [<file2.bin> <addr2_hex> ...]",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -230,12 +223,12 @@ def _parse_args(argv):
         try:
             addr = int(addr_hex, 16)
         except ValueError:
-            print(f"Dia chi '{addr_hex}' khong phai so hex hop le", file=sys.stderr)
+            print(f"Dia just '{addr_hex}' is not a hex number", file=sys.stderr)
             sys.exit(1)
         with open(path, "rb") as f:
             data = f.read()
         if len(data) == 0:
-            print(f"File '{path}' rong", file=sys.stderr)
+            print(f"File '{path}' Empty", file=sys.stderr)
             sys.exit(1)
         regions.append((path, addr, data))
     return port, regions
@@ -247,14 +240,14 @@ def main():
     try:
         import serial
     except ImportError:
-        print("Thieu pyserial - chay: pip install pyserial", file=sys.stderr)
+        print("pyserial - run missing: pip install pyserial", file=sys.stderr)
         sys.exit(1)
 
     ser = serial.Serial(port, baudrate=57600, parity=serial.PARITY_EVEN, stopbits=1, bytesize=8, timeout=5.0)
     try:
-        print("Dang dong bo voi System Bootloader (gui 0x7F lap lai)...")
+        print("Synchronizing with System Bootloader by retrying 0x7F...")
         sync(ser)
-        print("Da dong bo (ACK). Dang doc Get + Get Version + Get ID de xac nhan ket noi...")
+        print("ACK has been activated. Read Get + Get Version + Get ID to confirm the connection...")
 
         get_version_value, supported_commands = get_supported_commands(ser)
         command_text = " ".join(f"0x{cmd:02X}" for cmd in sorted(supported_commands))
@@ -270,17 +263,16 @@ def main():
         print(f"  Product ID: 0x{pid:04X}")
 
         total_bytes = sum(len(data) for _, _, data in regions)
-        print(f"{len(regions)} vung, {total_bytes} byte tong. Dang xoa toan bo flash (mass erase, co the mat vai giay)...")
+        print(f"{len(regions)} regions, {total_bytes} total bytes. is erasing the entire flash (mass erase, may take a few seconds)...")
         erase_command = mass_erase(ser, supported_commands)
-        print(f"Da xoa xong bang command 0x{erase_command:02X}.")
+        print(f"Erase completed using command 0x{erase_command:02X}.")
 
-        # Mass erase da xoa TOAN BO chip 1 lan - ghi tung vung THEO DUNG dia
-        # chi that cua no, KHONG can gia dinh cac vung nam sat nhau (khac
-        # het cach lam cu ghep 1 file .bin lien tuc dai dien toan bo flash -
-        # bo di vi buoc do bat cac vung PHAI dung 1 thu tu co dinh trong
-        # flashmap.csv, xem cmake/flash_targets.cmake).
+        # Mass erase has erased the entire chip once - write each region ACCORDING to the real dia of no,
+        # without assuming adjacent regions or combining them into one long
+        # continuous .bin file fills the whole flash - microprocessor step that turns on the regions
+        # must be in the correct order specified in flashmap.csv, see cmake/flash_targets.cmake).
         for path, base_addr, data in regions:
-            print(f"Dang ghi '{path}' ({len(data)} byte) tai 0x{base_addr:08X}...")
+            print(f"writing '{path}' ({len(data)} bytes) at 0x{base_addr:08X}...")
             total_chunks = (len(data) + WRITE_CHUNK_SIZE - 1) // WRITE_CHUNK_SIZE
             offset = 0
             chunk_index = 0
@@ -292,7 +284,7 @@ def main():
                 print(f"  chunk {chunk_index}/{total_chunks} OK", end="\r")
             print()
 
-        print("Ghi xong. THANH CONG - nho THA nut B0 + rut day PB2->GND, roi reset lai de chay app that.")
+        print("Flashing complete. Release B0, disconnect PB2 from GND, then reset to run the app.")
     finally:
         ser.close()
 

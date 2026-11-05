@@ -19,17 +19,16 @@ async function fileExists(uri: vscode.Uri): Promise<boolean> {
   }
 }
 
-// Ca flash_jtag LAN flash_uart_stm32 (xem cmake/flash_targets.cmake) deu can
-// file openocd .cfg - flash_jtag dung ca phien openocd that su, flash_uart_stm32
-// dung openocd rieng cho 1 buoc reset qua SWD (ghi AIRCR) truoc khi giao lai
-// cho client UART tu viet. Truoc day KHONG co check nay o day (khac han
-// debug.ts co san) - thieu file .cfg (vd CH32V003F4P6, chua wire that) se
-// roi thang vao loi CMake/openocd tho trong terminal thay vi 1 thong bao ro
-// rang cap extension nhu debug.ts da lam.
+// both flash_jtag times flash_uart_stm32 (see cmake/flash_targets.cmake) need openocd .cfg file -
+// flash_jtag uses an OpenOCD session; flash_uart_stm32 separately uses OpenOCD to reset through
+// SWD by writing AIRCR before starting the UART client. Without this early check, missing .cfg files
+// such as CH32V003F4P6 fail later
+// straight into error CMake/openocd tho in terminal see because 1 message ro
+// explicitly at extension level, as debug.ts already does.
 async function checkOpenocdCfg(state: NeonMdfState, folder: vscode.Uri): Promise<boolean> {
   const openocdCfg = vscode.Uri.joinPath(resolveSdkPathUri(folder), "cmake", "openocd", `${state.target}_openocd.cfg`);
   if (!(await fileExists(openocdCfg))) {
-    vscode.window.showErrorMessage(`NEON-MDF: khong tim thay file openocd cfg: ${openocdCfg.fsPath}`);
+    vscode.window.showErrorMessage(`NEON-MDF: could not find openocd cfg file: ${openocdCfg.fsPath}`);
     return false;
   }
   return true;
@@ -38,19 +37,19 @@ async function checkOpenocdCfg(state: NeonMdfState, folder: vscode.Uri): Promise
 export async function flashCommand(state: NeonMdfState, monitor: NeonMdfSerialMonitor): Promise<void> {
   const folder = vscode.workspace.workspaceFolders?.[0];
   if (!folder) {
-    vscode.window.showWarningMessage("NEON-MDF: chua mo workspace folder nao.");
+    vscode.window.showWarningMessage("NEON-MDF: no workspace folder opened.");
     return;
   }
   if (!state.target) {
     vscode.window.showWarningMessage(
-      'NEON-MDF: chua chon target - bam vao "chon target" tren status bar truoc.'
+      'NEON-MDF: No target selected. Use Select Target in the status bar first.'
     );
     return;
   }
 
   const configOk = await ensureConfigured(folder.uri, state.target);
   if (!configOk) {
-    vscode.window.showErrorMessage(`NEON-MDF: configure that bai (target ${state.target}) - xem terminal.`);
+    vscode.window.showErrorMessage(`NEON-MDF: configure failed (target ${state.target}) - see terminal.`);
     return;
   }
 
@@ -65,7 +64,7 @@ export async function flashCommand(state: NeonMdfState, monitor: NeonMdfSerialMo
 
 export async function runFlashCombined(state: NeonMdfState, folder: vscode.Uri): Promise<number | undefined> {
   if (state.target === "FU2") {
-    vscode.window.showErrorMessage("NEON-MDF: FU2 OpenOCD chua co cau hinh nap. Hay chon Transport UART de nap qua ROMCODE.");
+    vscode.window.showErrorMessage("NEON-MDF: FU2 OpenOCD does not have a flash configuration. select Transport UART to flash via ROMCODE.");
     return undefined;
   }
   if (!(await checkOpenocdCfg(state, folder))) {
@@ -80,7 +79,7 @@ export async function runFlashCombined(state: NeonMdfState, folder: vscode.Uri):
   });
 
   if (exitCode !== 0) {
-    vscode.window.showErrorMessage(`NEON-MDF: flash qua SWD that bai (target ${state.target}) - xem terminal.`);
+    vscode.window.showErrorMessage(`NEON-MDF: flash via SWD failed (target ${state.target}) - see terminal.`);
   }
   return exitCode;
 }
@@ -90,11 +89,11 @@ export async function runFlashUart(state: NeonMdfState, folder: vscode.Uri): Pro
     return runFlashStm32Bootloader(state, folder);
   }
   if (!state.port) {
-    vscode.window.showWarningMessage("NEON-MDF: Chon cong serial truoc khi nap UART FU2.");
+    vscode.window.showWarningMessage("NEON-MDF: select the serial port before flashing UART FU2.");
     return undefined;
   }
   if (!Number.isInteger(state.flashBaudRate) || state.flashBaudRate <= 0) {
-    vscode.window.showErrorMessage("NEON-MDF: neonMdf.fu2FlashBaudRate phai la so nguyen duong khop ROMCODE.");
+    vscode.window.showErrorMessage("NEON-MDF: neonMdf.fu2FlashBaudRate must be a ROMCODE matching line integer.");
     return undefined;
   }
   const exitCode = await runCMakeTarget({
@@ -108,23 +107,21 @@ export async function runFlashUart(state: NeonMdfState, folder: vscode.Uri): Pro
     },
   });
   if (exitCode !== 0 && exitCode !== undefined) {
-    vscode.window.showErrorMessage("NEON-MDF: Nap UART FU2 that bai; xem terminal. Kiem tra boot mode 100, RESET va baud ROMCODE.");
+    vscode.window.showErrorMessage("NEON-MDF: UART FU2 flash failed; see terminal. test boot mode 100, RESET and baud ROMCODE.");
   }
   return exitCode;
 }
 
 export async function runFlashStm32Bootloader(state: NeonMdfState, folder: vscode.Uri): Promise<number | undefined> {
-  // BAT BUOC co cong serial da chon - target CMake flash_uart_stm32 doc dia
-  // chi that qua bien moi truong $NEON_MDF_SERIAL_PORT (xem
-  // cmake/flash_targets.cmake), KHONG tu suy ra tu state.port neu khong
-  // duoc TRUYEN xuong qua `env` (xem duoi) - thieu buoc nay la bug that da
-  // gap: lenh Flash "thanh cong" nhung ghi vao cong MAC DINH hard-code
-  // trong CMake cache (/dev/cu.usbmodem102, dac thu 1 may dev) thay vi cong
-  // nguoi dung vua chon, hoan toan im lang (khong bao loi neu tinh co may
-  // co dung cong do cam thiet bi khac).
+  // required to have selected serial port - CMake target flash_uart_stm32 read dia only true via
+  // variable $NEON_MDF_SERIAL_PORT (see cmake/flash_targets.cmake), not from derived from
+  // state.port if not TRUYEN down through `env` (see below) - missing this step is a real gap bug:
+  // Flash command "successful" but write the default hard-code port in CMake cache
+  // (/dev/cu.usbmodem102, specific to one development machine) instead of the port selected by the user. It failed silently (no
+  // if it is possible to use that port with other bits).
   if (!state.port) {
     vscode.window.showWarningMessage(
-      'NEON-MDF: chua chon cong serial - bam "NEON-MDF: Chon Cong Serial" truoc khi flash qua UART.'
+      'NEON-MDF: No serial port selected. Use NEON-MDF: Select Serial Port before UART flashing.'
     );
     return undefined;
   }
@@ -133,11 +130,11 @@ export async function runFlashStm32Bootloader(state: NeonMdfState, folder: vscod
   }
 
   const proceed = await vscode.window.showInformationMessage(
-    "NEON-MDF: Flash qua UART can THAO TAC TAY - Noi day PB2 -> GND + GIU nut B0 tren board (KHONG can bam Reset - tu dong reset qua SWD). Giu nguyen ca 2 cho toi khi thay lenh chay xong.",
-    "Da san sang, Tiep tuc",
-    "Huy"
+    "NEON-MDF: UART flashing requires manual preparation: connect PB2 to GND and hold B0 on the board. Reset is automatic through SWD. Keep both in place until flashing finishes.",
+    "leveled, continue",
+    "deactivate"
   );
-  if (proceed !== "Da san sang, Tiep tuc") {
+  if (proceed !== "leveled, continue") {
     return undefined;
   }
 
@@ -146,19 +143,19 @@ export async function runFlashStm32Bootloader(state: NeonMdfState, folder: vscod
     preset: state.target,
     cmakeTarget: "flash_uart_stm32",
     cwd: folder,
-    // Cong THAT nguoi dung da chon - xem comment o dau ham. Thieu dong nay
-    // truoc day (bug that) khien flash_uart_stm32 luon dung gia tri mac
-    // dinh hard-code trong CMake cache, khong phai cong that cua board.
+    // Pass the actual user-selected port; omitting this previously caused a
+    // bug): flash_uart_stm32 always used the hardcoded CMake-cache default instead of the selected board
+    // ports.
     env: { NEON_MDF_SERIAL_PORT: state.port },
   });
 
   if (exitCode !== 0) {
     vscode.window.showErrorMessage(
-      `NEON-MDF: flash qua UART System Bootloader that bai (target ${state.target}) - xem terminal. Kiem tra da noi PB2->GND + giu B0 dung luc reset chua.`
+      `NEON-MDF: flash via UART System Bootloader failed (target ${state.target}) - see terminal. checked that PB2->GND + keep B0 used for reset.`
     );
   } else {
     vscode.window.showInformationMessage(
-      "NEON-MDF: Flash thanh cong - nho THA nut B0 + RUT day PB2->GND, roi reset lai de chay app that."
+      "NEON-MDF: Flashing succeeded. Release B0, disconnect PB2 from GND, then reset to run the app."
     );
   }
   return exitCode;

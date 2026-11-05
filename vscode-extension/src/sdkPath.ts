@@ -1,17 +1,6 @@
-// sdkPath.ts - "neonMdf.sdkPath" giong idf.espIdfPath cua ESP-IDF: duong
-// dan TUYET DOI toi neon-mdf SDK, ghi de quy uoc suy doan-tu-vi-tri-tuong-doi
-// (`${appDir}/../../neon-mdf`) ma toan bo repo (CMakeLists.txt,
-// CMakePresets.json, .vscode/settings.json cua tung app) dang dung mac
-// dinh. De trong (mac dinh) = van dung quy uoc cu nguyen ven - KHONG doi
-// hanh vi hien co cua Blinky/FreeRTOS_Blinky.
-//
-// Quy uoc "2 cap" (<App>/ -> examples/ -> repo root -> neon-mdf/) - doi tu
-// "3 cap" (qua Projects/Examples/) sau khi Projects/Examples/ chuyen thanh
-// examples/ ngay duoi repo root, xoa Projects/ (2026-08-10).
-//
-// Setting nay la GLOBAL (khong phai Workspace nhu neonMdf.target/transport) -
-// giong idf.espIdfPath, 1 may thuong chi dung 1 SDK checkout cho moi
-// workspace, khong phai lua chon rieng tung app.
+// Global SDK path, similar to ESP-IDF idf.espIdfPath. An empty setting uses
+// the app-relative default: <app>/../../neon-mdf. A selected path is passed
+// through NEON_MDF_PATH so existing and generated apps can use another checkout.
 import * as vscode from "vscode";
 import * as path from "path";
 
@@ -30,12 +19,11 @@ export async function setConfiguredSdkPath(sdkPath: string | undefined): Promise
 }
 
 /**
- * Bien moi truong bo sung cho cmake subprocess NEU nguoi dung da chon SDK
- * path rieng - undefined neu dang dung mac dinh (khong can can thiep, de
- * CMakeLists.txt/settings.json cua tung app tu quyet dinh nhu truoc gio).
- * CMakeLists.txt cua moi app deu co guard `if(NOT DEFINED ENV{NEON_MDF_PATH})`
- * nen bien nay, khi co, se GHI DE quy uoc tuong doi cu ma khong can sua file
- * nao ca - ap dung duoc cho ca app cu (Blinky...) lan app moi.
+ * variable for each plugin field for cmake subprocess if the user has chosen a separate SDK path -
+ * undefined if used by default (no thiep required, so that CMakeLists.txt/settings.json of each app
+ * is set as before). CMakeLists.txt of each app has `if(NOT DEFINED ENV{NEON_MDF_PATH})` guard so
+ * this variable, when present, will overwrite the old swap convention without modifying the file at
+ * all - it can be applied to both old apps (Blinky ...) and new ones.
  */
 export function sdkPathEnv(): Record<string, string> | undefined {
   const configured = getConfiguredSdkPath();
@@ -43,10 +31,10 @@ export function sdkPathEnv(): Record<string, string> | undefined {
 }
 
 /**
- * SDK path THAT se ap dung cho 1 thu muc app (anchorDir): duong dan da
- * chon trong setting neu co, khong thi quy uoc cu (2 cap tu anchorDir len
- * neon-mdf/, dung `${CMAKE_CURRENT_SOURCE_DIR}/../../neon-mdf` giong
- * CMakeLists.txt tinh - xem examples/<App>/CMakeLists.txt).
+ * The actual SDK path will be applied to an app directory (anchorDir): the dan path is selected in
+ * settings if available, otherwise the old convention (2 levels from anchorDir to neon-mdf/, using
+ * `${CMAKE_CURRENT_SOURCE_DIR}/../../neon-mdf` as CMakeLists.txt calculates - see
+ * examples/<App>/CMakeLists.txt).
  */
 export function resolveSdkPathUri(anchorDir: vscode.Uri): vscode.Uri {
   const configured = getConfiguredSdkPath();
@@ -57,11 +45,9 @@ export function resolveSdkPathUri(anchorDir: vscode.Uri): vscode.Uri {
 }
 
 /**
- * Duong dan tuong doi kieu POSIX (dung thang duoc trong CMakeLists.txt/
- * CMakePresets.json, khong phu thuoc OS) tu 1 thu muc app toi SDK - dung
- * boi createApp.ts khi sinh project moi (thay the gia dinh co dinh
- * "../../neon-mdf" bang gia tri TINH THAT dua tren vi tri app + SDK
- * dang chon).
+ * POSIX interchange path (available directly in CMakeLists.txt/ CMakePresets.json, OS-independent)
+ * from an app directory to the SDK, used by createApp.ts when generating a project; see the previous
+ * "../../neon-mdf" equals true value dua on the selected app + SDK).
  */
 export function relativePathToSdk(fromDir: vscode.Uri, sdkDir: vscode.Uri): string {
   const rel = path.relative(fromDir.fsPath, sdkDir.fsPath);
@@ -77,7 +63,7 @@ async function fileExists(uri: vscode.Uri): Promise<boolean> {
   }
 }
 
-/** 1 thu muc CO PHAI la checkout neon-mdf SDK THAT hay khong - tim file marker tools/cmake/project.cmake. */
+/** 1 directory is a real SDK neon-mdf checkout please don't - find file marker tools/cmake/project.cmake. */
 export async function looksLikeSdkRoot(dir: vscode.Uri): Promise<boolean> {
   return fileExists(vscode.Uri.joinPath(dir, "tools", "cmake", "project.cmake"));
 }

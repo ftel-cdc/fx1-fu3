@@ -1,5 +1,5 @@
-# Toolchain file cho GCC ARM Embedded (arm-none-eabi-*).
-# Dùng: cmake --preset <variant> (xem CMakePresets.json) hoặc
+# Toolchain file for GCC ARM Embedded (arm-none-eabi-*). Use: cmake --preset <variant> (see
+# CMakePresets.json) or
 #       cmake -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/arm-none-eabi.cmake ..
 
 set(CMAKE_SYSTEM_NAME Generic)
@@ -14,8 +14,8 @@ endif()
 find_program(ARM_GCC_PATH ${TOOLCHAIN_PREFIX}gcc)
 if(NOT ARM_GCC_PATH)
   message(FATAL_ERROR
-    "${TOOLCHAIN_PREFIX}gcc khong tim thay trong PATH. Cai GNU Arm Embedded "
-    "Toolchain (vd `brew install arm-none-eabi-gcc` tren macOS - formula, KHONG PHAI cask - xem SETUP.md) roi thu lai.")
+    "${TOOLCHAIN_PREFIX}gcc not found in PATH. GNU Arm Embedded "
+    "Toolchain (e.g. `brew install arm-none-eabi-gcc` on macOS - formula, not cask - see SETUP.md) and mail back.")
 endif()
 
 set(CMAKE_C_COMPILER   ${TOOLCHAIN_PREFIX}gcc)

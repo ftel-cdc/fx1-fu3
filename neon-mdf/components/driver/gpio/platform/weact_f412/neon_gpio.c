@@ -2,17 +2,15 @@
  * @file neon_gpio.c
  * @brief Implementation for GPIO.
  * @details
- * * platform/weact_f412/neon_gpio.c - implementation THẬT cho STM32F412 GPIO
- * (MODER/BSRR/IDR/ODR - cùng layout thanh ghi với STM32F0/L0, xem
- * mcu-description/devices/WEACT_F412.yaml). Cùng API với
- * platform/fu2/neon_gpio.c/neon_gpio_nucleo_l031k6.c - app code (vd Blinky) gọi
- * giống hệt nhau, không cần biết đang chạy trên chip nào. Xem ARCHITECTURE.md.
+ * * platform/weact_f412/neon_gpio.c - REAL implementation for STM32F412 GPIO (MODER/BSRR/IDR/ODR -
+ * same layout register as STM32F0/L0, see mcu-description/devices/WEACT_F412.yaml). Same API as
+ * platform/fu2/neon_gpio.c/neon_gpio_nucleo_l031k6.c - app code (e.g. Blinky) called identical, no
+ * matter what chip it's running on. See ARCHITECTURE.md.
  *
- * QUAN TRỌNG: neon_gpio_clock_enable() dùng RCC->AHB1ENR (bit GPIOBEN=1) -
- * KHÁC CẢ HAI board trước: không phải RCC->AHBENR (STM32F0) cũng không
- * phải RCC->IOPENR (STM32L0). Xác nhận qua source thật
- * STMicroelectronics/cmsis_device_f4 (RCC_AHB1ENR_GPIOBEN), KHÔNG suy diễn
- * từ 2 dòng STM32 đã làm trước đó.
+ * IMPORTANT: neon_gpio_clock_enable() uses RCC->AHB1ENR (bit GPIOBEN=1) - NOT THE previous two boards:
+ * neither RCC->AHBENR (STM32F0) nor RCC->IOPENR (STM32L0). Confirm via real source
+ * STMicroelectronics/cmsis_device_f4 (RCC_AHB1ENR_GPIOBEN), NOT deduced from the 2 lines STM32 did
+ * earlier.
  */
 
 /*==================================================================================================
@@ -88,8 +86,8 @@ neon_status_t neon_gpio_set_interrupt_injection(GPIO_TypeDef *instance, uint32_t
 
 /** @copydoc neon_gpio_clock_enable */
 neon_status_t neon_gpio_clock_enable(GPIO_TypeDef *instance) {
-    /* Chỉ GPIOB được khai trong WEACT_F412.yaml (đủ cho LED PB2) - chưa có
-   * GPIOA nên chỉ so sánh với GPIOB. */
+    /* Only GPIOB is declared in WEACT_F412.yaml (enough for LED PB2) - no GPIOA yet, so it compares with
+   * GPIOB. */
     if (instance == GPIOB) {
         RCC->AHB1ENR |= (1U << 1); /* bit 1 = GPIOBEN (GPIO port B clock enable) */
         return NEON_OK;
@@ -111,13 +109,13 @@ neon_status_t neon_gpio_init(GPIO_TypeDef *instance, const neon_gpio_config_t *i
         return NEON_NOT_SUPPORTED;
     }
 
-    /* BSRR nạp mức output trước khi MODER bật output để tránh glitch. */
+    /* BSRR flashes the output level before MODER turns on the output to avoid glitch. */
     if (init->mode == NEON_GPIO_MODE_OUTPUT) {
         instance->BSRR = (init->initial_state == NEON_GPIO_PIN_SET) ? init->pin : (init->pin << 16U);
     }
 
-    /* MODER: 2 bit/pin (00=input, 01=output) - phải xử lý từng pin riêng vì
-   * init->pin có thể là bitmask nhiều pin cùng lúc. */
+    /* MODER: 2 bit/pin (00=input, 01=output) - has to handle each battery separately because init->battery
+   * can be bitmask multiple batteries at the same time. */
     for (uint32_t pin = 0; pin < 16U; pin++) {
         if ((init->pin & (1U << pin)) == 0U) {
             continue;
@@ -127,7 +125,7 @@ neon_status_t neon_gpio_init(GPIO_TypeDef *instance, const neon_gpio_config_t *i
         if (init->mode == NEON_GPIO_MODE_OUTPUT) {
             moder |= (1U << (pin * 2U)); /* 01 = general purpose output */
         }
-        /* NEON_GPIO_MODE_INPUT -> 00, khong can set gi them sau khi clear */
+        /* NEON_GPIO_MODE_INPUT -> 00, no need to set anything more after clear */
         instance->MODER = moder;
     }
     return NEON_OK;
@@ -136,9 +134,9 @@ neon_status_t neon_gpio_init(GPIO_TypeDef *instance, const neon_gpio_config_t *i
 /** @copydoc neon_gpio_write_pin */
 void neon_gpio_write_pin(GPIO_TypeDef *instance, uint32_t pin_mask, uint8_t state) {
     if (state) {
-        instance->BSRR = pin_mask; /* bit[15:0] cua BSRR = SET */
+        instance->BSRR = pin_mask; /* bit[15:0] of BSRR = SET */
     } else {
-        instance->BSRR = (pin_mask << 16); /* bit[31:16] cua BSRR = RESET */
+        instance->BSRR = (pin_mask << 16); /* bit[31:16] of BSRR = RESET */
     }
 }
 
@@ -150,8 +148,8 @@ uint8_t neon_gpio_read_pin(GPIO_TypeDef *instance, uint32_t pin_mask) {
 /** @copydoc neon_gpio_toggle_pin */
 void neon_gpio_toggle_pin(GPIO_TypeDef *instance, uint32_t pin_mask) {
     if (instance->ODR & pin_mask) {
-        instance->BSRR = (pin_mask << 16); /* dang muc cao -> RESET */
+        instance->BSRR = (pin_mask << 16); /* high entry -> RESET */
     } else {
-        instance->BSRR = pin_mask; /* dang muc thap -> SET */
+        instance->BSRR = pin_mask; /* item thap -> SET */
     }
 }

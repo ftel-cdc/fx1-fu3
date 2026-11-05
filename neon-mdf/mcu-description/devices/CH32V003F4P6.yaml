@@ -1,38 +1,34 @@
 # CH32V003F4P6.yaml — WCH CH32V003 (QingKe V2A, RISC-V RV32EC).
 #
 # ============================================================================
-# BOARD THẬT user đang có trong tay — target RISC-V ĐẦU TIÊN của SDK này.
+# REAL BOARD user is in hand — target RISC-V FIRST of this SDK.
 # ============================================================================
-# Số liệu dưới đây lấy TRỰC TIẾP từ CH32V003RM.PDF V1.9 (Reference Manual
-# CHÍNH THỨC của WCH, tải qua https://ch32-riscv-ug.github.io/CH32V003/datasheet_en/CH32V003RM.PDF,
-# nguồn gốc wch-ic.com) — KHÔNG phải placeholder/đoán. Riêng phần khởi động lõi
-# (mtvec/PFIC CSR 0x804/vector table "j handle_reset" ở entry 0) đối chiếu
-# thêm với `ch32v003-startup` (basilhussain/ch32v003-startup trên GitHub, bản
-# chỉnh sửa của chính startup gốc WCH phát hành) vì Reference Manual tự nói
-# phần lõi chi tiết nằm ở tài liệu riêng "QingKeV2_Processor_Manual" (CHƯA
-# tải) — xem mcu-description/tools/backends/riscv/gen_startup.py.
+# The figures below are derived LIVE from CH32V003RM.PDF V1.9 (WCH's Official Reference Manual,
+# download via https://ch32-riscv-ug.github.io/CH32V003/datasheet_en/CH32V003RM.PDF, source
+# wch-ic.com) — NOT placeholder/guess. The core startup itself (mtvec/PFIC CSR 0x804/vector table "j
+# handle_reset" at entry 0) is further contrasted with `ch32v003-startup`
+# (basilhussain/ch32v003-startup on GitHub, an edit of the original WCH startup itself) because the
+# Reference Manual itself says the detailed core is in its own document "QingKeV2_Processor_Manual"
+# (NO download) — see mcu-description/tools/backends/riscv/gen_startup.py.
 #
-# PHẠM VI file này (Phase 2, xem plan): CHỈ RCC + GPIOA/C/D — đủ cho driver
-# GPIO + app Blinky bring-up đầu tiên (Phase 3). CHƯA có AFIO/USART/SPI/ADC/
-# FLASH-controller — thêm sau khi cần (FLASH controller thật cần cho
-# bootloader/OTA ở Phase 6, sẽ đọc kỹ Chapter 16 của RM lúc đó, không đoán
-# trước).
+# RANGE OF THIS file (Phase 2, see plan): ONLY RCC + GPIOA/C/D — suffice for the first GPIO driver +
+# Blinky bring-up app (Phase 3). NO AFIO/USART/SPI/ADC/ FLASH-controller — added as needed (The true
+# FLASH controller is required for bootloader/OTA in Phase 6, will read Chapter 16 of RM carefully
+# at that time, unpredictable).
 #
-# LƯU Ý QUAN TRỌNG khác biệt với mọi device Cortex-M hiện có:
-#   - Core RV32EC (Embedded+Compressed) — KHÔNG có M/A/F, khác hẳn
-#     "rv32imac" schema cũ dự kiến ban đầu.
-#   - KHÔNG có GPIOB (chỉ A/C/D — số chân ít, package TSSOP20).
-#   - PFIC (Programmable Fast Interrupt Controller) là bộ điều khiển ngắt
-#     RIÊNG của WCH — KHÔNG map như 1 "peripheral" thường trong schema này
-#     (giống cách NVIC của Cortex-M cũng không xuất hiện trong `peripherals:`
-#     — core-private, được arch/RISCV/Port truy cập trực tiếp bằng địa chỉ
-#     cứng 0xE000E000, xem gen_startup.py/arch/RISCV/Port).
-#   - Toolchain: dùng thuộc tính `interrupt` CHUẨN của GCC RISC-V (KHÔNG
-#     dùng `__attribute__((interrupt("WCH-Interrupt-fast")))` riêng của bản
-#     GCC vá của WCH) — do đó CSR 0x804 (INTSYSCR, vendor-specific) chỉ bật
-#     bit nesting (giá trị 0x2), KHÔNG bật bit HPE (Hardware
-#     Prologue/Epilogue, giá trị bit khác) — bật HPE mà không dùng đúng ABI
-#     "fast interrupt" của WCH sẽ làm sai ngữ cảnh stack lúc vào/ra ngắt.
+# IMPORTANT NOTE differs from every existing Cortex-M device:
+#   - Core RV32EC (Embedded+Compressed) — NO M/A/F, different from the old "rv32imac" schema originally
+#     planned.
+#   - NO GPIOB (only A/C/D — singular pins, TSSOP20 package).
+#   - The PFIC (Programmable Fast Interrupt Controller) is WCH's OPEN interrupt controller — does not map
+#     as a "peripheral" usually in this schema (in the same way that Cortex-M's NVIC does not appear
+#     in `peripherals:` — core-private, accessed directly by arch/RISCV/Port with the hard address
+#     0xE000E000, see gen_startup.py/arch/RISCV/Port).
+#   - Toolchain: use GCC RISC-V's STANDARD `interrupt` attribute (do NOT use WCH's patched GCC specific
+#     `__attribute__((interrupt("WCH-Interrupt-fast")))`) — CSR 0x804 (INTSYSCR, vendor-specific)
+#     only enable nesting bits (0x2 value), DO NOT enable HPE bits (Hardware Prologue/Epilogue,
+#     other bit values) — enabling HPE without using WCH's "fast interrupt" ABI will cause the stack
+#     context to be in/out of an interrupt.
 
 device: CH32V003F4P6
 vendor: WCH
@@ -40,28 +36,29 @@ family: CH32V003
 arch: riscv-rv32ec
 description: >
   WCH CH32V003F4P6 - RISC-V QingKe V2A (RV32EC), 16KB Flash/2KB SRAM,
-  gói TSSOP20 (chỉ GPIOA/C/D). Board dev RISC-V đầu tiên của SDK này.
+  TSSOP20 package (GPIOA/C/D only). The first RISC-V dev board of this SDK.
 
 cpu:
   core: qingke-v2a
-  revision: unknown            # RM khong ghi ro revision - QingKeV2_Processor_Manual (chua tai) co the co
-  max_freq_hz: 48000000        # HSI 24MHz * PLL x2 = 48MHz toi da (xem Figure 1-1 "*2" PLL trong RM chuong 1)
-  isa: rv32ec                  # THAT - "RISC-V core version overview" table, trang dau RM: QingKe V2A -> RV32EC
-  mtvec_mode: vectored-address # THAT - PFIC dung mtvec[1:0]=3 (vendor-specific "Address" mode: entry N (N>=1)
-  # la 1 CON TRO HAM tai dia chi (vector_base + 4*N), entry 0 la LENH `j handle_reset` (khong phai dia chi) -
-  # xem gen_startup.py, doi chieu ch32v003-startup that (KHONG phai "direct"/"vectored" chuan RISC-V co ban).
-  interrupt_controller: pfic   # vendor-specific (WCH Programmable Fast Interrupt Controller), KHONG phai
-  # CLINT/PLIC chuan RISC-V - dung y chinh sach da ghi truoc trong arch/RISCV/README.md ve rui ro doan sai
-  # cai nay - da xac nhan THAT qua RM chuong 6, khong con la doan nua.
+  revision: unknown            # RM does not write ro revision - QingKeV2_Processor_Manual (not yet) possible
+  max_freq_hz: 48000000        # HSI 24MHz * PLL x2=48MHz I got (see Figure 1-1"*2" PLL in RM Cage 1)
+  isa: rv32ec                  # real - "RISC-V core version overview" table, status head RM: QingKe V2A -> RV32EC
+  mtvec_mode: vectored-address # real - PFIC uses mtvec[1:0]=3 (vendor-specific "Address" mode: entry N (N>=1) is a function pointer
+  # at dia only (vector_base + 4*N), entry 0 is `j handle_reset` command (not dia only) - see
+  # gen_startup.py, compare ch32v003-real startup (not "direct"/"vectored" versioned RISC-V).
+  interrupt_controller: pfic   # vendor-specific (WCH Programmable Fast Interrupt Controller), not RISC-V standard CLINT/PLIC - using
+  # the policy written earlier in arch/RISCV/README.md about this risk of mis guessing - confirmed
+  # by RM chapter 6, no longer a guess.
   hart_count: 1
-  num_irq: 39                  # THAT - vector table RM chuong 6.3: entry cao nhat la TIM2 = so 38 -> 39 slot (0..38)
+  num_irq: 39                  # real - vector table RM chapter 6.3: highest entry is TIM2 = number 38 -> 39 slot (0..38)
 
 memory:
-  - name: FLASH_MEM            # KHONG dat "FLASH" - trung ten voi peripheral FLASH controller (0x40022000) o
-    # duoi, generator se sinh trung macro FLASH_BASE cho 2 dia chi khac nhau (giong bai hoc da ghi trong
-    # WEACT_F412.yaml - da xac nhan THAT gap lai loi nay khi build, khong phai gia dinh suong).
+  - name: FLASH_MEM            # do not set "FLASH" - middle name with peripheral FLASH controller (0x40022000) at the bottom,
+    # otherwise the generator would create FLASH_BASE for two different addresses, repeating an earlier
+    # wrote in WEACT_F412.yaml - confirmed true gap again this error when build, not suong
+    # assumption).
     kind: flash
-    address: 0x00000000        # THAT - RM chuong 1.2 Memory Image (Figure 1-2)
+    address: 0x00000000        # Verified against RM chapter 1.2, Memory Image (Figure 1-2)
     size: 0x4000                 # 16KB CodeFlash - THAT, RM 1.2.1 "Built-in 16KB program Flash memory"
   - name: RAM
     kind: ram
@@ -69,34 +66,33 @@ memory:
     size: 0x800                  # 2KB
 
 # --------------------------------------------------------------------------
-# Peripherals — dia chi/offset THAT tu RM (KHONG phai placeholder), chi liet
-# ke RCC + GPIOA/C/D (du cho Blinky Phase 3). Bitfield chi tiet (CNF/MODE
-# encoding cua CFGLR) khong can dua vao schema nay - driver tu ma hoa gia
-# tri, giong cach cac driver Cortex-M hien co lam voi cac register tuong tu.
+# Peripherals — address/offset real from RM (not placeholder), only let RCC + GPIOA/C/D (enough for
+# Blinky Phase 3). Bitfield only tiet (CNF/MODE encoding of CFGLR) no need dua vao this schema -
+# magnetic drivers that flower values, the same way existing Cortex-M drivers are blue with
+# corresponding registers.
 # --------------------------------------------------------------------------
 peripherals:
   - name: RCC
-    base: 0x40021000            # THAT - RM chuong 3.4 "Register Description"
-    description: "Reset and Clock Control - RM chuong 3"
+    base: 0x40021000            # Verified against RM chapter 3.4, "Register Description"
+    description: "Reset and Clock Control - RM chapter 3"
     registers:
-      - {name: CTLR,      offset: 0x00, size: 32, access: rw, reset: 0x00000083, description: "Clock control register (HSION/HSIRDY/PLLON/...) - RM ghi reset 0x0000xx83, 'xx' la bit factory-trim khong xac dinh - dat 0x00 cho cac bit do (chi field lieu, khong anh huong sinh header)"}
+      - {name: CTLR,      offset: 0x00, size: 32, access: rw, reset: 0x00000083, description: "Clock control register (HSION/HSIRDY/PLLON/...): RM reset 0x0000xx83 includes unknown factory-trim bits xx. Use 0x00 only as a descriptive placeholder for those bits."}
       - {name: CFGR0,     offset: 0x04, size: 32, access: rw, reset: 0x00000020, description: "Clock configuration register 0 (SW/HPRE/PLLSRC/...) - THAT, RM 3.4.2"}
       - {name: INTR,      offset: 0x08, size: 32, access: rw, reset: 0x00000000, description: "Clock interrupt register - THAT, RM 3.4.3"}
       - {name: APB2PRSTR, offset: 0x0C, size: 32, access: rw, reset: 0x00000000, description: "PB2 peripheral reset register - THAT, RM 3.4.4"}
       - {name: APB1PRSTR, offset: 0x10, size: 32, access: rw, reset: 0x00000000, description: "PB1 peripheral reset register - THAT, RM 3.4.5"}
       - {name: AHBPCENR,  offset: 0x14, size: 32, access: rw, reset: 0x00000004, description: "HB peripheral clock enable register - THAT, RM 3.4.6"}
-      - {name: APB2PCENR, offset: 0x18, size: 32, access: rw, reset: 0x00000000, description: "PB2 peripheral clock enable register - bit0 AFIOEN, bit2 IOPAEN, bit4 IOPCEN, bit5 IOPDEN (THAT, RM 3.4.7) - dung boi NEON_GPIO_ClockEnable()"}
+      - {name: APB2PCENR, offset: 0x18, size: 32, access: rw, reset: 0x00000000, description: "PB2 peripheral clock enable register - bit0 AFIOEN, bit2 IOPAEN, bit4 IOPCEN, bit5 IOPDEN (true, RM 3.4.7) - used by NEON_GPIO_ClockEnable()"}
       - {name: APB1PCENR, offset: 0x1C, size: 32, access: rw, reset: 0x00000000, description: "PB1 peripheral clock enable register - THAT, RM 3.4.8"}
       - {name: RSTSCKR,   offset: 0x24, size: 32, access: rw, reset: 0x0C000000, description: "Control/status register (reset source flags) - THAT, RM 3.4.9"}
 
-  # GPIOA/C/D dung CHUNG 1 layout (type: GPIO) - THAT, RM chuong 7.3.1, kieu
-  # STM32F1 (CNFy/MODEy 2-bit/pin trong CFGLR, KHONG co CFGHR vi toi da 8
-  # chan/port tren chip nay). loader.py se validate 3 instance nay LUON
-  # giong layout nhau (dung YAML anchor &gpio_regs, khong lap code).
+  # GPIOA/C/D uses COMMON 1 layout (type: GPIO) - THAT, RM 7.3.1, Kieu STM32F1 (CNFy/MODEy 2-bit/pin in
+  # CFGLR, not CFGHR, for the eight pins per port on this chip). loader.py validates all three instances
+  # layouts (using YAML anchor &gpio_regs, no code).
   - name: GPIOA
     base: 0x40010800           # THAT - RM 7.3.1 "R32_GPIOA_CFGLR"
     type: GPIO
-    description: "GPIOA (PA1-PA2 tren goi TSSOP20) - RM chuong 7"
+    description: "GPIOA (PA1-PA2 on call TSSOP20) - RM cabin 7"
     registers: &gpio_regs
       - {name: CFGLR, offset: 0x00, size: 32, access: rw, reset: 0x44444444, description: "Port configuration register low (CNFy/MODEy 2-bit/pin, y=0-7) - THAT, RM 7.3.1.1"}
       - {name: INDR,  offset: 0x08, size: 32, access: ro, reset: 0x00000000, description: "Port input data register - THAT, RM 7.3.1.2"}
@@ -104,63 +100,60 @@ peripherals:
       - {name: BSHR,  offset: 0x10, size: 32, access: wo, reset: 0x00000000, description: "Port set/reset register (bit y set, bit 16+y reset, atomic) - THAT, RM 7.3.1.4"}
       - {name: BCR,   offset: 0x14, size: 32, access: wo, reset: 0x00000000, description: "Port reset register (bit y = clear, atomic) - THAT, RM 7.3.1.5"}
       - {name: LCKR,  offset: 0x18, size: 32, access: rw, reset: 0x00000000, description: "Port configuration lock register - THAT, RM 7.3.1.6"}
-  - {name: GPIOC, base: 0x40011000, type: GPIO, description: "GPIOC (PC0-PC7) - RM chuong 7", registers: *gpio_regs}
-  - {name: GPIOD, base: 0x40011400, type: GPIO, description: "GPIOD (PD0-PD7, PD1 trung SWIO debug + LED onboard tren nhieu board dev) - RM chuong 7", registers: *gpio_regs}
+  - {name: GPIOC, base: 0x40011000, type: GPIO, description: "GPIOC (PC0-PC7) - RM chapter 7", registers: *gpio_regs}
+  - {name: GPIOD, base: 0x40011400, type: GPIO, description: "GPIOD (PD0-PD7, PD1 middle SWIO debug + LED onboard on multiple dev boards) - RM chapter 7", registers: *gpio_regs}
 
-  # USART1 - THAT tu RM chuong 12.10, dung boi components/bootloader/
-  # neon_bootloader_uart_ch32v003.c (mapping mac dinh PD5=TX/PD6=RX, KHONG
-  # remap - xem `bootloader.uart` duoi).
+  # USART1 - real from RM chapter 12.10, used by components/bootloader/ neon_bootloader_uart_ch32v003.c
+  # (default mapping PD5=TX/PD6=RX, not remap - see `bootloader.uart` below).
   - name: USART1
     base: 0x40013800           # THAT - RM 12.10
     type: USART
-    description: "USART1 (mapping mac dinh TX=PD5,RX=PD6) - RM chuong 12"
+    description: "USART1 (default mapping TX=PD5,RX=PD6) - RM cage 12"
     registers:
       - {name: STATR, offset: 0x00, size: 32, access: rw, reset: 0x000000C0, description: "Status register (TXE=bit7,TC=bit6,RXNE=bit5) - THAT, RM 12.10.1"}
       - {name: DATAR, offset: 0x04, size: 32, access: rw, reset: 0x00000000, description: "Data register (DR[8:0]) - THAT, RM 12.10.2"}
       - {name: BRR,   offset: 0x08, size: 32, access: rw, reset: 0x00000000, description: "Baud rate register (DIV_Mantissa[15:4]/DIV_Fraction[3:0]) - THAT, RM 12.10.3"}
-      - {name: CTLR1, offset: 0x0C, size: 32, access: rw, reset: 0x00000000, description: "Control register 1 (UE=bit13,TE=bit3,RE=bit2) - THAT, RM 12.10.4"}
+      - {name: CTLR1, offset: 0x0C, size: 32, access: rw, reset: 0x00000000, description: "Control register 1 (UE=bit13,TE=bit3,RE=bit2), verified against RM 12.10.4"}
       - {name: CTLR2, offset: 0x10, size: 32, access: rw, reset: 0x00000000, description: "Control register 2 - THAT, RM 12.10.5"}
       - {name: CTLR3, offset: 0x14, size: 32, access: rw, reset: 0x00000000, description: "Control register 3 - THAT, RM 12.10.6"}
       - {name: GPR,   offset: 0x18, size: 32, access: rw, reset: 0x00000000, description: "Guard time and prescaler register - THAT, RM 12.10.7"}
 
-  # FLASH controller - THAT tu RM chuong 16.3, dung boi
-  # components/driver/flash/neon_flash_ch32v003.c (can cho bootloader/OTA).
+  # FLASH controller - real from RM chapter 16.3, used by components/driver/flash/neon_flash_ch32v003.c
+  # (need for bootloader/OTA).
   - name: FLASH
     base: 0x40022000           # THAT - RM 16.3
-    description: "Flash memory controller (FPEC) - RM chuong 16"
+    description: "Flash memory controller (FPEC) - RM chapter 16"
     registers:
       - {name: ACTLR,          offset: 0x00, size: 32, access: rw, reset: 0x00000000, description: "Control register (LATENCY) - THAT, RM 16.3.1"}
-      - {name: KEYR,           offset: 0x04, size: 32, access: wo, reset: 0x00000000, description: "FPEC key register (KEY1=0x45670123,KEY2=0xCDEF89AB de unlock) - THAT, RM 16.3.2"}
+      - {name: KEYR,           offset: 0x04, size: 32, access: wo, reset: 0x00000000, description: "FPEC key register: KEY1=0x45670123 and KEY2=0xCDEF89AB unlock it, verified against RM 16.3.2"}
       - {name: OBKEYR,         offset: 0x08, size: 32, access: wo, reset: 0x00000000, description: "Option bytes key register - THAT, RM 16.3.3"}
       - {name: STATR,          offset: 0x0C, size: 32, access: rw, reset: 0x00008000, description: "Status register (BUSY=bit0,EOP=bit5) - THAT, RM 16.3.4"}
       - {name: CTLR,           offset: 0x10, size: 32, access: rw, reset: 0x00008080, description: "Configuration register (PG=bit0,PER=bit1,MER=bit2,STRT=bit6,LOCK=bit7) - THAT, RM 16.3.5"}
-      - {name: ADDR,           offset: 0x14, size: 32, access: wo, reset: 0x00000000, description: "Address register (dia chi erase/program) - THAT, RM 16.3.6"}
+      - {name: ADDR,           offset: 0x14, size: 32, access: wo, reset: 0x00000000, description: "Address register (dia only erase/program) - real, RM 16.3.6"}
       - {name: OBR,            offset: 0x1C, size: 32, access: ro, reset: 0x00000000, description: "Option byte register - THAT, RM 16.3.7"}
       - {name: WPR,            offset: 0x20, size: 32, access: ro, reset: 0xFFFFFFFF, description: "Write protection register - THAT, RM 16.3"}
       - {name: MODEKEYR,       offset: 0x24, size: 32, access: wo, reset: 0x00000000, description: "Extended key register (fast programming) - THAT, RM 16.3"}
       - {name: BOOT_MODEKEYR,  offset: 0x28, size: 32, access: wo, reset: 0x00000000, description: "Unlock BOOT key register - THAT, RM 16.3"}
 
 # --------------------------------------------------------------------------
-# erase_sectors - THAT, RM 16.1: don vi WRITE-PROTECT/ERASE tieu chuan la
-# 1KB (RM 16.2.2 "write-protected in 1K byte (16 pages) units") - dung 1KB
-# lam don vi erase_sectors (khop voi NEON_FLASH_EraseRegion() trong
-# neon_flash_ch32v003.c, DEU NHAU 16 sector, don gian hon nhieu so voi
-# STM32F412 khong deu nhau).
+# erase_sectors: verified against RM 16.1; the standard WRITE-PROTECT/ERASE unit is
+# 1KB (RM 16.2.2 "write-protected in 1K byte (16 pages) units") - uses 1KB as the blue erase_sectors
+# unit (matches that of NEON_FLASH_EraseRegion() in neon_flash_ch32v003.c, which are 16 sectors
+# evenly spaced, don't have more space than many numbers with unequal STM32F412).
 # --------------------------------------------------------------------------
 erase_sectors:
-  - {size: 0x400, count: 16}   # 16 x 1KB = 16KB, THAT khop tong flash
+  - {size: 0x400, count: 16}   # 16 x 1KB = 16KB, matching the physical flash size
 
 # --------------------------------------------------------------------------
-# bootloader - THIET KE (Phase 6, chua verify tren phan cung that, xem plan
-# RISC-V) - size/image_header_size chon de: (1) chia het cho 1KB (khop
-# erase_sectors), (2) thoa man align yeu cau boi loader.py's
-# _check_bootloader_vtor_alignment() (256 byte, tinh tu cpu.num_irq=39 -
-# CHECK NAY VON THIET KE CHO ARM SCB->VTOR, CHUA CHAC CAN THIET cho RISC-V
-# mtvec (khong doi hoi align luy thua 2 nhu VTOR) - nhung van thoa man duoc
-# de khong can sua loader.py, ghi chu lai o day de xem xet lai sau neu can).
+# bootloader design (Phase 6, not yet hardware-verified; see the RISC-V plan) -
+# size/image_header_size selects to: (1) divisible by 1KB (matches erase_sectors), (2) satisfies
+# alignment required by loader.py's _check_bootloader_vtor_alignment() (256 bytes, from
+# cpu.num_irq=39). This alignment check is designed for ARM SCB->VTOR and is not necessarily required for RISC-V mtvec
+# (unchanged alignment losses 2 as VTOR) - but still satisfactory so no correction is needed for
+# loader.py, write the text here again later if necessary).
 #   bootloader.size=0x1000 (4KB) + image_header_size=0x100 (256B) = 0x1100,
-#   0x1100 % 0x100 = 0 -> thoa man.
-# App con lai (16KB - 4KB) = 12KB chia cho flashmap.csv (app+otadata+app_ota).
+#   0x1100 % 0x100 = 0, satisfying the alignment requirement.
+# Subapp (16KB - 4KB) = 12KB divided by flashmap.csv (app+otadata+app_ota).
 # --------------------------------------------------------------------------
 bootloader:
   size: 0x1000
@@ -169,14 +162,14 @@ bootloader:
     peripheral: USART1
     tx_pin: PD5
     rx_pin: PD6
-    af: 0                      # KHONG remap (mapping mac dinh, xem comment peripheral USART1 o tren) - CH32V003 dung AFIO_PCFR1 remap-group, khong phai AF-number kieu STM32F4, af:0 = "khong remap"
+    af: 0                      # not remap (default mapping, see peripheral USART1 comment above) - CH32V003 uses AFIO_PCFR1 remap-group, not AF-number kieu STM32F4, af:0 = "not remap"
     baud: 115200
 
 # --------------------------------------------------------------------------
-# interrupts — nguyen bang vector table THAT tu RM chuong 6.3 "Vector Table
+# interrupts: the complete vector table from RM chapter 6.3, "Vector Table
 # of Interrupts and Exceptions" (39 entry: 0-11 core/reserved, 12-38
-# programmable) - KHONG doan so IRQ nhu tung phai lam voi FU2 (product brief
-# khong co bang that).
+# programmable) - does not guess the IRQ number as it used to be with FU2 (product brief does not have
+# real).
 # --------------------------------------------------------------------------
 interrupts:
   - {number: 12, name: SysTick,     description: "System timer interrupt - THAT, RM 6.3"}

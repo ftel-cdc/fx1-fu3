@@ -2,18 +2,15 @@
  * @file riscv_libc_shim.c
  * @brief Implementation for riscv libc shim.
  * @details
- * * riscv_libc_shim.c - implementation THAT cho libc_shim/string.h (xem file
- * do cho ly do day du: FreeRTOS-Kernel core can memcpy/memset/strlen ma
- * toolchain RISC-V bare-metal (ABI ilp32e, khong multilib khop) khong co
- * libc that de cung cap). Tu viet DON GIAN, AN TOAN cho MOI ISA - chi dung
- * vong lap byte-by-byte (khong dung lenh nao ngoai rv32ec/tao gia dinh ve
- * alignment/word size), giong tinh than riscv_soft_math.c (tu cung cap
- * thay vi doan sai extension phan cung khong co that tren CH32V003F4P6).
+ * * riscv_libc_shim.c implements libc_shim/string.h. FreeRTOS-Kernel needs memcpy/memset/strlen, but
+ * the bare-metal RISC-V ilp32e toolchain has neither libc nor a matching multilib. Simple byte
+ * loops work across supported ISAs without assuming alignment, word size, or instructions beyond
+ * rv32ec. Like riscv_soft_math.c, these helpers avoid assuming hardware extensions absent from
+ * CH32V003F4P6.
  *
- * KHONG toi uu (khong dung lwu/word-copy) - demo FreeRTOS_Blinky chi copy
- * vai chuc byte (TCB/queue item nho) nen hieu nang khong quan trong bang
- * DUNG/AN TOAN. Neu sau nay can toi uu, phai kiem tra ky alignment that
- * (RVE khong co gi dam bao khac RV32I ve alignment) truoc khi doi sang
+ * Intentionally unoptimized: no lwu or word-copy path. FreeRTOS_Blinky copies small TCB/queue items,
+ * so correctness matters more than speed. Any later optimization must verify alignment
+ * requirements; RVE does not relax RV32I alignment rules. Before switching to
  * word-copy.
  */
 

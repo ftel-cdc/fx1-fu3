@@ -11,20 +11,20 @@ export async function selectTransportCommand(state: NeonMdfState): Promise<void>
     {
       label: "$(plug) UART",
       description: state.target === "FU2"
-        ? "ROMCODE USART update: chon boot mode 100, bam RESET khi tool san sang"
-        : "System Memory Bootloader STM32: target flash_uart_stm32, thao tac B0/PB2 theo board",
+        ? "ROMCODE USART update: select boot mode 100 and press RESET when the tool is ready"
+        : "System Memory Bootloader STM32: target flash_uart_stm32, operation B0/PB2 by board",
       value: "uart",
     },
     {
       label: "$(circuit-board) JTAG/SWD",
       description: state.target === "FU2"
-        ? "Chua ho tro: cau hinh OpenOCD FU2 dang la placeholder"
-        : "Nap qua OpenOCD (target flash_jtag)",
+        ? "unsupported: configuration OpenOCD FU2 is a placeholder"
+        : "flash via OpenOCD (target flash_jtag)",
       value: "jtag",
     },
   ];
 
-  const picked = await vscode.window.showQuickPick(items, { placeHolder: "Chon transport" });
+  const picked = await vscode.window.showQuickPick(items, { placeHolder: "select transport" });
   if (!picked) {
     return;
   }

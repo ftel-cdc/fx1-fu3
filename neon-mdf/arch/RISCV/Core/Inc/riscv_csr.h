@@ -2,14 +2,13 @@
  * @file riscv_csr.h
  * @brief Public declarations for riscv csr.
  * @details
- * * riscv_csr.h - macro doc/ghi CSR (Control and Status Register) toi thieu,
- * tuong duong vai tro cua CMSIS-Core (core_cmX.h) ben Cortex-M nhung tu
- * viet (ARM khong cap CMSIS cho RISC-V - cong dong RISC-V thuong dung
- * `riscv-csr-encoding.h`-style macro nhu duoi day, xem
+ * * riscv_csr.h provides minimal CSR (Control and Status Register) read/write macros, serving a role
+ * similar to CMSIS-Core core_cmX.h on Cortex-M. ARM does not provide CMSIS for RISC-V; these GCC
+ * macros follow the community `riscv-csr-encoding.h` style. See
  * arch/RISCV/README.md).
  *
- * CHI can inline asm chuan cua GCC (khong phu thuoc extension nao ngoai
- * Zicsr, da bat qua -march=..._zicsr, xem cmake/arch/riscv.cmake).
+ * Uses standard GCC inline assembly and only the Zicsr extension, enabled through -march=..._zicsr;
+ * see cmake/arch/riscv.cmake.
  */
 
 #ifndef RISCV_CSR_H
@@ -34,14 +33,12 @@
 #define RISCV_CSR_SET(csr, val)   __asm volatile("csrs " #csr ", %0" ::"r"((uint32_t)(val)))
 #define RISCV_CSR_CLEAR(csr, val) __asm volatile("csrc " #csr ", %0" ::"r"((uint32_t)(val)))
 
-/* mstatus.MIE (bit 3) - co bat/tat ngat toan cuc CHUAN cua RISC-V (khong
- * phai vendor-specific, khac PFIC/CSR 0x804 chi dieu khien nesting/HPE) -
- * dung boi arch/RISCV/Port/Src/sdk_irq.c cho EnterCritical/ExitCritical. */
+/* mstatus.MIE (bit 3) is the standard RISC-V global interrupt enable, distinct from vendor PFIC/CSR
+ * 0x804 nesting/HPE controls. arch/RISCV/Port/Src/sdk_irq.c uses it for EnterCritical/ExitCritical. */
 #define RISCV_MSTATUS_MIE (1u << 3)
 
-/* __NOP() - CUNG TEN voi macro CMSIS ben Cortex-M (core_cmX.h) - de code
- * app dung chung (vd Blinky/Src/main.c's delay_busy()) khong can #ifdef
- * rieng theo kien truc chi vi 1 lenh NOP. */
+/* __NOP() matches the CMSIS name in Cortex-M core_cmX.h, allowing shared apps such as
+ * Blinky/Src/main.c delay_busy() to issue NOP without architecture-specific #ifdef branches. */
 #define __NOP() __asm volatile("nop")
 
 #endif /* RISCV_CSR_H */

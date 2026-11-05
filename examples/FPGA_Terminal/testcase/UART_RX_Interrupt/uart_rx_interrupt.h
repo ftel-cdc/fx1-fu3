@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-/* UART0 đã được terminal khởi tạo; Ctrl+C kết thúc ví dụ. */
+/* UART0 has been initialized by terminal; Ctrl+C finishes the example. */
 void uart_rx_interrupt_run(neon_uart_handle_t *uart, uint32_t skip_initial_lf);
 
 #ifdef __cplusplus

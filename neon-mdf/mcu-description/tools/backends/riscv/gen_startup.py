@@ -1,38 +1,33 @@
-"""Sinh startup_<DEVICE>.s (GNU AS, RISC-V) tu model.Device - vector table +
-reset handler cho PFIC (WCH QingKe V2A).
+"""create startup_<DEVICE>.s (GNU AS, RISC-V) from model.Device - vector table + reset handler for PFIC
+(WCH QingKe V2A).
 
-KHAC HAN ARM (gen_startup_vector.py), doi chieu THAT voi
-basilhussain/ch32v003-startup (ban chinh sua tu startup goc WCH phat hanh -
-xem CH32V003F4P6.yaml dau file cho nguon) truoc khi viet, KHONG suy tu
-Reference Manual mot minh (RM tu noi phan loi chi tiet nam o
-QingKeV2_Processor_Manual rieng, chua tai):
+Unlike ARM (gen_startup_vector.py), true comparison with basilhussain/ch32v003-startup (modified
+original from original WCH startup release - see CH32V003F4P6.yaml header file for source) before
+writing, not extrapolating from the Reference Manual a minh (RM from where only tiet nam error
+section in QingKeV2_Processor_Manual separately, yet at):
 
-  - Entry 0 cua vector table la LENH `j handle_reset` (KHONG PHAI dia chi
-    nhu cac entry con lai) - RISC-V khong tu nap PC/SP tu vector[0] nhu ARM,
-    CPU bat dau chay THANG tai dia chi 0 nhu 1 lenh may THAT.
-  - Cac entry con lai (>=1) la CON TRO HAM (.word <ten ham>) - dung
-    mtvec[1:0]=3 ("Address" mode, vendor-specific cua WCH, xem
-    cpu.mtvec_mode trong YAML) - offset entry N = 4*N tinh tu dia chi nap
-    vao mtvec (= dia chi cua _start, da OR voi 3).
-  - `.option norvc`/`.option rvc` bao quanh vung vector table de BAT BUOC
-    moi entry dung 4 byte (tat che do nen 2-byte cua RVC ngay trong vung
-    nay) - can thiet de entry N nam DUNG tai offset 4*N.
-  - RISC-V KHONG tu nap SP tu vector table - startup PHAI tu set `sp` bang
-    tay (`la sp, _estack`) TRUOC khi dung stack.
-  - `la gp, __global_pointer$` (gp-relative addressing) - symbol nay PHAI
-    duoc dinh nghia trong linker script (xem gen_linker_script.py) truoc
-    khi startup dung toi.
-  - CSR 0x804 (INTSYSCR, vendor-specific cua WCH, KHONG phai CSR chuan
-    RISC-V) - gia tri 0x2 = BAT nesting, TAT HPE (Hardware Prologue/
-    Epilogue = "fast interrupt" rieng cua WCH, chi dung duoc voi
-    `__attribute__((interrupt("WCH-Interrupt-fast")))` cua ban GCC vá rieng
-    - SDK nay dung thuoc tinh `interrupt` CHUAN cua GCC RISC-V (xem quyet
-      dinh toolchain trong plan/CH32V003F4P6.yaml), BAT HPE ma khong dung
-      dung ABI fast-interrupt se sai ngu canh stack luc vao/ra ngat).
-  - Vao `main` bang thu thuat `csrw mepc, main` + `mret` (khong phai
-    `call main` binh thuong) - mret DONG THOI xac lap MIE=MPIE (bat ngat
-    toan cuc atomic ngay luc vao main), tranh rang buoc thu tu
-    "bat ngat" + "nhay vao main" phai la 2 lenh rieng.
+  - Entry 0 of the table vector is a `j handle_reset` command (not dia-only like sub-entry) - RISC-V
+    does not flash PC/SP from a vector[0] like ARM, the CPU starts running straight at dia-only 0 as
+    a lucky command.
+  - sub-entry (>=1) is the function pointer (.word <function name>) - uses mtvec[1:0]=3 ("Address" mode,
+    vendor-specific for WCH, see cpu.mtvec_mode in YAML) - offset entry N = 4*N adjective flash only
+    dia on mtvec (= only dia of _start, already OR with 3).
+  - `.option norvc`/`.option rvc` report around the table vector area to force each entry to use 4 bytes
+    (disable mode so 2-bytes of RVC are right in this area) - required for N male entry to be used
+    at offset 4*N.
+  - RISC-V is not from flash SP from vector table - startup must be from set `sp` manually (`la sp,
+    _estack`) before using stack.
+  - `la gp, __global_pointer$` (gp-relative addressing) - this symbol must be defined in the linker
+    script (see gen_linker_script.py) before startup uses it.
+  - CSR 0x804 (INTSYSCR, vendor - specific for WCH, not RISC - V CSR) - value 0x2 = enable nesting,
+    disable HPE (Hardware Prologue/ Epilogue = WCH's own "fast interrupt", only available with GCC
+    patch `__attribute__((interrupt("WCH-Interrupt-fast")))`
+    - This SDK uses the standard `interrupt` attribute of GCC RISC-V (see toolchain regulation in
+      plan/CH32V003F4P6.yaml), enabling HPE without fast-interrupt ABI will cause stack context
+      errors in vao/ra interrupt).
+  - Insert `main` by letter loss `csrw mepc, main` + `mret` (not normal `call main`) - dynamic mret
+    iteration precision MIE=MPIE (enable full atomic interrupt as soon as main), the order of steps
+    "enable interrupt" + "jump to main" must be 2 separate commands.
 """
 
 TEMPLATE_HEADER = """/*
@@ -63,7 +58,7 @@ handle_reset:
 
   la    sp, _estack
 
-  /* Copy .data tu FLASH sang RAM */
+  /* Copy .data from FLASH to RAM */
   la    a0, _sidata
   la    a1, _sdata
   la    a2, _edata
@@ -76,7 +71,7 @@ handle_reset:
   bltu  a1, a2, 1b
 2:
 
-  /* Xoa .bss */
+  /* Clear .bss */
   la    a0, _sbss
   la    a1, _ebss
   bgeu  a0, a1, 2f
@@ -86,24 +81,24 @@ handle_reset:
   bltu  a0, a1, 1b
 2:
 
-  /* Bat MPIE trong mstatus - ngat se duoc bat THAT khi mret vao main ben duoi. */
+  /* enabling MPIE in mstatus - interrupt will be enabled when mret is in the lower mainframe. */
   li    t0, 0x80
   csrw  mstatus, t0
 
-  /* CSR 0x804 (INTSYSCR, vendor-specific WCH) = 0x2: bat nesting, TAT HPE
-     (xem docstring dau file gen_startup.py - KHONG dung fast-interrupt ABI
-     rieng cua WCH, chi dung thuoc tinh `interrupt` chuan cua GCC). */
+  /* CSR 0x804 (INTSYSCR, vendor-specific WCH) = 0x2: enable nesting, disable HPE (see docstring at the
+     beginning of file gen_startup.py - does not use WCH's own fast-interrupt ABI, only GCC's
+     `interrupt` property). */
   li    t0, 0x2
   csrw  0x804, t0
 
-  /* mtvec = dia chi vector table (_start) | 3 (mode "Address" vendor-specific cua PFIC). */
+  /* mtvec = dia only vector table (_start) | 3 (mode "Address" vendor-specific of PFIC). */
   la    t0, _start
   ori   t0, t0, 3
   csrw  mtvec, t0
 
   jal   SystemInit
 
-  /* Nhay vao main() bang mepc+mret (xem docstring dau file). */
+  /* jump to main() using mepc+mret (see docstring at the beginning of the file). */
   la    t0, main
   csrw  mepc, t0
   mret
@@ -122,13 +117,13 @@ def generate(device, out_path: str):
 
     lines = [TEMPLATE_HEADER.format(device=device.device)]
 
-    # Entry 2/3: NMI/HardFault - CO DINH theo kien truc (giong ARM), KHONG
-    # nam trong `interrupts:` cua device YAML (peripheral-only, xem
+    # Entry 2/3: NMI/HardFault - specified by directive (similar to ARM), not male in `interrupts:` of
+    # YAML device (peripheral-only, see
     # CH32V003F4P6.yaml).
     lines.append("  .word NMI_Handler           /* Entry 2 */")
     lines.append("  .word HardFault_Handler     /* Entry 3 */")
 
-    # Entry 4 tro di: dien theo device.interrupts, khe trong = reserved (.word 0).
+    # Entry 4 pointing away: fill according to device.interrupts, slot in = reserved (.word 0).
     for n in range(4, max_irq + 1):
         irq = interrupts_by_number.get(n)
         if irq is not None:
@@ -138,11 +133,10 @@ def generate(device, out_path: str):
 
     lines.append(TEMPLATE_RESET_HANDLER)
 
-    # Weak default (vong lap vo han) cho NMI/HardFault + tung IRQ device -
-    # dung `.weak` + `.set NAME, Default_Handler` (GNU `.set` la DIRECTIVE
-    # CHUNG cho moi kien truc, KHONG phai `.thumb_set` rieng cua ARM/Thumb
-    # ma gen_startup_vector.py dung).
-    lines.append("\n  /* ============ Weak alias mac dinh (override bang cach dinh nghia ham cung ten) ============ */")
+    # Weak default (infinite loop) for NMI/HardFault + each IRQ device - use `.weak` + `.set NAME,
+    # Default_Handler` (GNU `.set` is GENERAL DIRECTIVE for each live stream, not the separate
+    # `.thumb_set` of ARM/Thumb that gen_startup_vector.py uses).
+    lines.append("\n  /* ============ Weak default alias (override by defining function with same name) ============ */")
     lines.append("  .weak NMI_Handler")
     lines.append("  .set  NMI_Handler, Default_Handler")
     lines.append("  .weak HardFault_Handler")

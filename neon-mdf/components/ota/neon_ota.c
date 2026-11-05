@@ -2,12 +2,12 @@
  * @file neon_ota.c
  * @brief Implementation for OTA.
  * @details
- * * neon_ota.c - xem neon_ota.h cho thiet ke tong the. Dung lai
+ * * neon_ota.c - see neon_ota.h for reusable synthetic devices
  * neon_flash_erase_region/ProgramWord (components/driver/flash) +
- * neon_bootloader_crc32 (components/bootloader, tach rieng thanh target
- * neon_mdf_crc32 - xem components/bootloader/CMakeLists.txt - de component
- * nay link duoc ma khong keo theo main() cua bootloader) - KHONG viet lai
- * logic flash/CRC nao ca.
+ * neon_bootloader_crc32 (components/bootloader, separately tailored to target neon_mdf_crc32 - see
+ * components/bootloader/CMakeLists.txt - let component link without glue according to bootloader's
+ * main()) - not rewritten
+ * flash/CRC logic.
  */
 
 /*==================================================================================================
@@ -24,10 +24,9 @@
 /*==================================================================================================
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
-/* __builtin_memcpy (khong #include <string.h>) - toolchain RISC-V cua SDK
- * nay (riscv64-elf-gcc, xem cmake/toolchain/riscv-none-elf.cmake) KHONG kem
- * newlib nen KHONG co <string.h> that - builtin cua GCC luon co san bat ke
- * kien truc/libc, an toan dung chung cho ca Cortex-M (van co newlib) lan
+/* __builtin_memcpy (not #include <string.h>) - the RISC-V toolchain of this SDK (riscv64-elf-gcc, see
+ * cmake/toolchain/riscv-none-elf.cmake) does not include newlib, so no real <string.h> - builtin
+ * GCC provides this independently of architecture/libc, so it works with both Cortex-M/newlib and
  * RISC-V. */
 #define NEON_OTA_DATA_CRC_LENGTH offsetof(neon_ota_data_t, crc32)
 
@@ -75,18 +74,17 @@ int neon_ota_write_data(const neon_ota_data_t *data) {
 void neon_ota_confirm_valid(void) {
     neon_ota_data_t data;
     if (!neon_ota_read_data(&data)) {
-        /* Chua tung co otadata hop le - dang chay factory mac dinh, khong co
-     * gi de xac nhan. */
+        /* unmatched otadata - running default factory, nothing to confirm. */
         return;
     }
     if (data.state == NEON_OTA_STATE_VALID) {
-        /* Da xac nhan roi - khong ghi lai (tranh erase+ghi flash thua). */
+        /* confirmed - do not rewrite (erase+write flash loses). */
         return;
     }
 
     data.state = NEON_OTA_STATE_VALID;
     data.boot_attempts = 0;
-    /* API public hiện giữ kiểu void; lần boot sau vẫn thấy trạng thái cũ nếu
-   * ghi thất bại và cơ chế rollback sẽ xử lý an toàn. */
+    /* The public API currently keeps the void type; next boot will still see the old state if write fails
+   * and the rollback mechanism will handle it safely. */
     (void)neon_ota_write_data(&data);
 }

@@ -4,12 +4,12 @@ menu "PWM Output Testcase Configuration"
         int "PWM Period Ticks (Base resolution)"
         default 1000
         help
-            Dung luong tick chu ky PWM (vi du: 1000 tương đương 100% resolution).
+            use the amount of PWM period ticks (full text: 1000 equivalent to 100% resolution).
 
     config PWM_OUTPUT_TEST_PRESCALER
         int "PWM Clock Prescaler"
         default 15
         help
-            He so chia tan clock cho khoi PWM/TIM.
+            PWM/TIM block clock prescaler.
 
 endmenu

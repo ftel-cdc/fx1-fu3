@@ -15,9 +15,9 @@
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
 /*
- * Bit vị trí/mask THẬT (inc_fu2/fu2_crc.h) - generator mcu-description chỉ
- * sinh field struct + offset, không sinh macro bit riêng, nên khai lại local
- * ở đây (giống cách platform/fu2/neon_gpio.c/system_FU2.c đã làm cho CRM).
+ * REAL location/mask bits (inc_fu2/fu2_crc.h) - generator mcu-description only creates field struct +
+ * offset, does not generate its own bit macro, so re-create local here (same way
+ * platform/fu2/neon_gpio.c/system_FU2.c did for CRM).
  */
 #define CRC_CTRL_DATA_LENGTH_POS 8U
 #define CRC_CTRL_DATA_LENGTH_MASK (0xFFU << CRC_CTRL_DATA_LENGTH_POS)
@@ -43,7 +43,7 @@ neon_status_t neon_crc_calculate(CRC_TypeDef *instance, uint32_t polynomial, con
         return NEON_INVALID_PARAM;
     }
 
-    /* Tắt trước khi cấu hình lại - khớp fu2_crc.c::LL_CRC_Calc */
+    /* Disable before reconfiguring - match fu2_crc.c::LL_CRC_Calc */
     instance->CTRL = 0;
     instance->GEN_POLY = polynomial & CRC_GEN_POLY_VALUE_MASK;
     instance->CTRL = ((length << CRC_CTRL_DATA_LENGTH_POS) & CRC_CTRL_DATA_LENGTH_MASK) | CRC_CTRL_EN;
@@ -68,8 +68,8 @@ neon_status_t neon_crc_calculate(CRC_TypeDef *instance, uint32_t polynomial, con
     const uint32_t result_word = (uint8_t)(instance->RESULT & CRC_RESULT_VALUE_MASK);
     memcpy(p_result, &result_word, 1U);
 
-    instance->INT_RAW = 1U; /* W1C - xoá cờ done */
-    instance->CTRL = 0;     /* tắt engine sau khi xong, khớp bản gốc */
+    instance->INT_RAW = 1U; /* W1C - erase flag done */
+    instance->CTRL = 0;     /* disable engine after finishing, match original */
 
     return NEON_OK;
 }

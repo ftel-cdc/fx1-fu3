@@ -1,11 +1,7 @@
-// ports.ts - liet ke cong serial THAT qua serialport (native N-API
-// binding). Da xac nhan binding nay load duoc duoi Node thuong (thay ST-Link
-// that: vendorId 0483, productId 3752, manufacturer STMicroelectronics) -
-// buoc nay xac nhan lai duoi chinh Extension Development Host (Electron
-// ABI). Tach thanh module rieng, chi lam 1 viec (liet ke cong) - KHONG lam
-// giao thuc SYNC/READY (xem serialMonitor/portProbe.ts o buoc sau), de neu
-// serialport that bai duoi Electron thi chi phai thay module nay (vd goi
-// qua child_process Node he thong) ma khong dung toi commands/UI da viet.
+// List physical serial ports through the serialport native N-API binding.
+// Listing is isolated from SYNC/READY probing so Node/Electron binding issues
+// can be diagnosed without changing commands or UI. Tested with ST-Link VCP
+// vendorId 0483, productId 3752, manufacturer STMicroelectronics.
 import { SerialPort } from "serialport";
 
 export interface PortInfo {

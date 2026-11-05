@@ -11,25 +11,25 @@ import { NeonMdfSerialMonitor } from "../serialMonitor/monitor";
 export async function buildFlashMonitorCommand(state: NeonMdfState, monitor: NeonMdfSerialMonitor): Promise<void> {
   const folder = vscode.workspace.workspaceFolders?.[0];
   if (!folder) {
-    vscode.window.showWarningMessage("NEON-MDF: chua mo workspace folder nao.");
+    vscode.window.showWarningMessage("NEON-MDF: no workspace folder opened.");
     return;
   }
   if (!state.target) {
     vscode.window.showWarningMessage(
-      'NEON-MDF: chua chon target - bam vao "chon target" tren status bar truoc.'
+      'NEON-MDF: No target selected. Use Select Target in the status bar first.'
     );
     return;
   }
 
   const configOk = await ensureConfigured(folder.uri, state.target);
   if (!configOk) {
-    vscode.window.showErrorMessage(`NEON-MDF: configure that bai (target ${state.target}) - xem terminal.`);
+    vscode.window.showErrorMessage(`NEON-MDF: configure failed (target ${state.target}) - see terminal.`);
     return;
   }
 
   if (!state.port) {
     vscode.window.showWarningMessage(
-      'NEON-MDF: chua chon cong serial - can cho ca flash (duong UART) lan serial monitor.'
+      'NEON-MDF: not selected serial port - needed for both flash (UART path) times serial monitor.'
     );
     return;
   }
@@ -42,22 +42,22 @@ export async function buildFlashMonitorCommand(state: NeonMdfState, monitor: Neo
     exitCode = await runFlashUart(state, folder.uri);
     if (exitCode === 0 && state.target !== "FU2") {
       const proceed = await vscode.window.showInformationMessage(
-        "NEON-MDF: Da THA nut B0 + RUT day PB2->GND + reset lai chua? App CHUA CHAY cho toi khi lam xong buoc nay.",
-        "Da xong, Mo Monitor",
-        "Bo qua Monitor"
+        "NEON-MDF: Have you released B0, disconnected PB2 from GND and reset the board? Complete these steps to start the app.",
+        "Done, Open Monitor",
+        "ignore Monitor"
       );
-      if (proceed !== "Da xong, Mo Monitor") {
+      if (proceed !== "Done, Open Monitor") {
         return;
       }
     }
   }
 
   if (exitCode === undefined) {
-    // Nguoi dung tu huy o dialog xac nhan cua buoc flash - khong lam gi them.
+    // You can use the word cancel in the confirmation dialog of the flash step - do not add anything.
     return;
   }
   if (exitCode !== 0) {
-    // Da bao loi ro trong runFlashCombined/runFlashStm32Bootloader roi.
+    // already reported ro error in runFlashCombined/runFlashStm32Bootloader.
     return;
   }
 
@@ -66,16 +66,14 @@ export async function buildFlashMonitorCommand(state: NeonMdfState, monitor: Neo
     return;
   }
 
-  // Dong phien Serial Monitor NATIVE (neu dang mo, xem serialMonitor/monitor.ts)
-  // TRUOC khi mo miniterm qua CMake task o duoi - ca 2 la 2 co che DOC LAP
-  // cung co the giu cung 1 cong serial (bug that da gap: "Could not
-  // exclusively lock port" khi ca 2 cung mo 1 cong). monitor.ts da tu dong
-  // dong phien cu cua CHINH NO truoc khi mo phien moi, nhung KHONG biet gi
-  // ve tien trinh miniterm nen o day phai tu goi close() truoc khi chay
-  // lenh nay. Chieu nguoc lai (dang chay serial_monitor task nay ma nguoi
-  // dung bam "Serial Monitor" native) KHONG duoc xu ly (can theo doi
-  // vscode.TaskExecution rieng, chua lam) - it gap hon vi task nay chiem
-  // terminal panel nguoi dung dang xem.
+  // dynamically run Serial Monitor NATIVE (if open, see serialMonitor/monitor.ts) before opening the
+  // miniterm via CMake task below - both are 2 iterated reads that can hold the same serial ports
+  // (true bug has gap: "Could not exclusively lock port" when both open the same port). monitor.ts
+  // automatically dynamically runs the old version of itself NO before opening each file, but does
+  // does not know about the other monitor, so close it explicitly before starting this
+  // command. The previous task (Serial Monitor, opened by its command)
+  // native) is not processed (needs to change vscode.TaskExecution separately, not yet) - it gap
+  // than this microtask using terminal panel viewing.
   await monitor.close();
 
   const monitorExitCode = await runCMakeTarget({
@@ -88,6 +86,6 @@ export async function buildFlashMonitorCommand(state: NeonMdfState, monitor: Neo
   });
 
   if (monitorExitCode !== 0) {
-    vscode.window.showErrorMessage(`NEON-MDF: mo serial monitor that bai (target ${state.target}) - xem terminal.`);
+    vscode.window.showErrorMessage(`NEON-MDF: Opening serial monitor failed (target ${state.target}) - see terminal.`);
   }
 }

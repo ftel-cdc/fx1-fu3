@@ -31,7 +31,7 @@
     },
     {
       "name": "WEACT_F412",
-      "displayName": "WEACT_F412 (STM32F412RET6 that - test rig, KHONG PHAI FU2)",
+      "displayName": "WEACT_F412 (real STM32F412RET6 - test rig, not FU2)",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/WEACT_F412",
       "cacheVariables": {
@@ -43,7 +43,7 @@
     },
     {
       "name": "CH32V003F4P6",
-      "displayName": "CH32V003F4P6 (WCH QingKe V2A / RV32EC - target RISC-V dau tien)",
+      "displayName": "CH32V003F4P6 (WCH QingKe V2A/RV32EC - first RISC-V target)",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/CH32V003F4P6",
       "cacheVariables": {

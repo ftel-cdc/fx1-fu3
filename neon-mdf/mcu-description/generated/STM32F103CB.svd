@@ -240,7 +240,7 @@
     </peripheral>
     <peripheral>
       <name>GPIOC</name>
-      <description>GPIO port C; STM32F103CB package chi bond mot tap con cac pin</description>
+      <description>GPIO port C; STM32F103CB package only bonds a sub-tap of the batteries</description>
       <baseAddress>0x40011000</baseAddress>
       <addressBlock>
         <offset>0</offset>
@@ -308,7 +308,7 @@
     </peripheral>
     <peripheral>
       <name>GPIOD</name>
-      <description>GPIO port D; STM32F103CB package chi bond PD0/PD1 (OSC_IN/OSC_OUT)</description>
+      <description>GPIO port D; STM32F103CB package only bond PD0/PD1 (OSC_IN/OSC_OUT)</description>
       <baseAddress>0x40011400</baseAddress>
       <addressBlock>
         <offset>0</offset>

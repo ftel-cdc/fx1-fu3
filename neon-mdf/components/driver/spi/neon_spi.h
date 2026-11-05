@@ -2,13 +2,13 @@
  * @file neon_spi.h
  * @brief Public declarations for SPI.
  * @details
- * * NEON SPI - HAL cho bộ điều khiển DTI SPI của FU2.
+ * * NEON SPI - HAL for FU2's DTI SPI controller.
  *
  * Register map follows DTI SPI rev1.1 chapter 9 (including the DDR slots).
  * These transfer APIs implement legacy SPI, not extended DDR commands.
- * API public dùng giá trị logic, không lộ mã bit register của FU2. Backend
- * ánh xạ cấu hình sang CTRL/CMDCONF/FIFO/TREGx và quản lý clock/reset qua
- * CRM. Bộ điều khiển hỗ trợ master 8/16/24/32 bit; slave chỉ hỗ trợ 8 bit.
+ * The public API uses the logical value, does not reveal FU2's bit register. Backend maps
+ * configuration to CTRL/CMDCONF/FIFO/TREGx and manages clock/reset via CRM. The controller supports
+ * 8/16/24/32 bit master; slave only supports 8 bits.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.
@@ -75,7 +75,7 @@ typedef enum {
 } neon_spi_data_width_t;
 
 typedef enum {
-    /* Không điều khiển SS phần cứng; dùng khi board tự điều khiển chip-select. */
+    /* No SS hardware control; used when the board controls the chip-select itself. */
     NEON_SPI_SLAVE_SELECT_NONE = 0,
     NEON_SPI_SLAVE_SELECT_0 = 1,
     NEON_SPI_SLAVE_SELECT_1 = 2,
@@ -84,28 +84,28 @@ typedef enum {
 } neon_spi_slave_select_t;
 
 typedef enum {
-    /* Nhả SS sau mỗi khung dữ liệu. */
+    /* Release SS after each data stub. */
     NEON_SPI_SS_MODE_NORMAL = 0,
-    /* Hành vi SS phụ thuộc Force/LongAccess/timeout_polls. */
+    /* Dependent SS Behavior Force/LongAccess/timeout_polls. */
     NEON_SPI_SS_MODE_MANUAL = 1,
 } neon_spi_slave_select_mode_t;
 
 typedef enum {
-    /* Trong manual mode, giữ SS ở mức active sau mỗi giao dịch. */
+    /* In manual mode, keep SS at active after each transaction. */
     NEON_SPI_SS_FORCE_HOLD = 0,
-    /* Cho phép phần cứng nhả SS khi các điều kiện timing được thỏa mãn. */
+    /* Allow hardware to release SS when timing conditions are satisfied. */
     NEON_SPI_SS_FORCE_RELEASE = 1,
 } neon_spi_slave_select_force_t;
 
 typedef enum {
     NEON_SPI_SS_LONG_DISABLE = 0,
-    /* Giữ SS active tới khi TX FIFO rỗng. */
+    /* Keep SS active until TX FIFO is empty. */
     NEON_SPI_SS_LONG_ENABLE = 1,
 } neon_spi_slave_select_long_t;
 
 typedef enum {
     NEON_SPI_INTERRUPT_DISABLE = 0,
-    /* FU2 chỉ có một bit cho phép chung cho toàn bộ tín hiệu ngắt FIFO. */
+    /* FU2 has only one general permissible bit for the entire FIFO interrupt signal. */
     NEON_SPI_INTERRUPT_ENABLE = 1,
 } neon_spi_interrupt_state_t;
 
@@ -123,7 +123,7 @@ typedef enum {
     NEON_SPI_DMA_BURST_2 = 2,
     NEON_SPI_DMA_BURST_4 = 4,
     NEON_SPI_DMA_BURST_8 = 8,
-    /* Field phần cứng có mã 16 nhưng FU2 tích hợp FIFO sâu 8 nên không dùng được. */
+    /* Field hardware has code 16 but FU2 integrates FIFO depth 8 so it is not usable. */
     NEON_SPI_DMA_BURST_16 = 16,
 } neon_spi_dma_burst_length_t;
 
@@ -183,7 +183,7 @@ typedef struct {
     neon_spi_clock_phase_t clock_phase;
     neon_spi_first_bit_t first_bit;
     neon_spi_data_width_t data_width;
-    /* fSCLK = fCORE / (2 * (clock_divider + 1)), miền 0..65535. */
+    /* fSCLK = fCORE / (2 * (clock_divider + 1)), domain 0..65535. */
     uint32_t clock_divider;
     neon_spi_slave_select_t slave_select;
     neon_spi_slave_select_mode_t slave_select_mode;
@@ -202,7 +202,7 @@ typedef struct {
     neon_spi_dma_state_t state;
     neon_spi_dma_transfer_mode_t transfer_mode;
     neon_spi_dma_burst_length_t burst_length;
-    /* DTI DMA datapath rộng 32 bit: phải khác 0, <=65535 và chia hết cho 4. */
+    /* DTI DMA datapath 32 bit wide: must be nonzero, <=65535 and divisible by 4. */
     uint32_t total_bytes;
 } neon_spi_dma_config_t;
 
@@ -219,8 +219,8 @@ typedef struct {
  * @brief Fill the default configuration for SPI.
  * @param[out] config Module configuration.
  * @details
- * Mặc định bám LL: master, mode 0, MSB, 8 bit, DIV=0, chưa chọn SS,
- * ngưỡng FIFO full=0xFF, các ngưỡng empty=0, ngắt và SS timing tắt.
+ * Default LL: master, mode 0, MSB, 8 bits, DIV=0, SS not selected, threshold FIFO full=0xFF, the
+ * threshold empty=0, interrupt and SS timing off.
  * FU2 B2B defaults to NEON_SPI_FU2_B2B_SCK_CYCLES complete SCK periods.
  */
 void neon_spi_get_default_config(neon_spi_config_t *config);
@@ -231,9 +231,9 @@ void neon_spi_get_default_config(neon_spi_config_t *config);
  * @param[in] init Initialization settings.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * config tự bật clock và pulse reset peripheral qua CRM. AUTO cấu hình
- * pad/mux SCK/MISO/MOSI và SS0 khi dùng; KEEP dùng routing của board.
- * DeInit tắt DMA/ngắt, reset SPI, khôi phục chân AUTO và tắt clock qua CRM.
+ * config automatically turns on clock and pulse reset peripheral via CRM. AUTO configuration pad/mux
+ * SCK/MISO/MOSI and SS0 when used; KEEP uses routing of the board. DeInit turns off DMA/interrupt,
+ * resets SPI, restores AUTO pins and turns off clock via CRM.
  */
 neon_status_t neon_spi_init(SPI_TypeDef *instance, const neon_spi_config_t *init);
 /**
@@ -282,8 +282,8 @@ neon_status_t neon_spi_set_slave_select(SPI_TypeDef *instance, neon_spi_slave_se
  * @param[in] enable Nonzero to enable, zero to disable.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Điều khiển CMDCONF.RD cho luồng DMA/raw: enable=1 lưu MISO vào RX FIFO,
- * enable=0 bỏ qua. Các API polling tự đặt field này theo loại transfer.
+ * CMDCONF.RD control for DMA/raw stream: enable=1 save MISO to RX FIFO, enable=0 ignore. The polling
+ * API sets the field itself by transfer type.
  */
 neon_status_t neon_spi_set_receive_capture(SPI_TypeDef *instance, uint8_t enable);
 /**
@@ -324,16 +324,16 @@ neon_status_t neon_spi_set_timing(SPI_TypeDef *instance, const neon_spi_timing_t
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * timeout_polls là tổng số vòng poll tối đa cho cả lời gọi, không phải mili-giây.
+ * timeout_polls is the maximum total number of poll rings for both calls, not milliseconds.
  * Master calls include a conservative final-frame/SS timing guard because
  * rev1.1 exposes no shifter-BUSY flag. CPU and SPI core use the FU2 system
  * clock. The guard consumes the same polling budget and leaves manual HOLD
  * asserted when requested. Slave TX only observes FIFO consumption.
  * A polling timeout leaves the controller faulted: call Init/DeInit to reset
  * partial frames and stale FIFO data before another transfer/configuration.
- * Polling trả NEON_BUSY khi DMA global bật; gọi DisableDMA trước khi dùng.
- * Buffer byte phải sở hữu trọn các word 32 bit chứa nó (padding hai đầu),
- * theo hợp đồng buffer của runtime FU2. Driver dùng memcpy cho buffer RAM.
+ * Polling returns NEON_BUSY when DMA global is enabled; calls DisableDMA before using it. The byte
+ * buffer must own all the 32-bit words containing it (two-ended padding), according to the FU2
+ * runtime buffer contract. Drivers use memcpy for RAM buffers.
  */
 neon_status_t neon_spi_transmit(SPI_TypeDef *instance, const uint8_t *data, uint16_t size, uint32_t timeout_polls);
 /**
@@ -365,8 +365,8 @@ neon_status_t neon_spi_transmit_receive(SPI_TypeDef *instance, const uint8_t *tx
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * API Word dùng uint32_t cho cả khung 8/16/24/32 bit; driver mask các bit
- * ngoài data_width. ReceiveWords ở master ghi dummy_data để tạo SCLK.
+ * The Word API uses uint32_t for both the 8/16/24/32 bit stub; driver masks the data_width external
+ * bits. ReceiveWords in master write dummy_data to create SCLK.
  * The byte-API completion guard and timeout recovery contract also apply.
  */
 neon_status_t neon_spi_transmit_words(SPI_TypeDef *instance, const uint32_t *data, uint16_t count,
@@ -399,8 +399,8 @@ neon_status_t neon_spi_transmit_receive_words(SPI_TypeDef *instance, const uint3
  * @param[in] instance Peripheral register instance.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * INT_EN chỉ gate tín hiệu ra chân IRQ; các cờ STT vẫn đọc được khi tắt ngắt.
- * Cờ là trạng thái mức của FIFO và tự xóa khi điều kiện không còn, không W1C.
+ * INT_EN gate only outputs IRQ pin signal; STT flags are readable when interrupt is turned off. Flags
+ * are FIFO level state and self-erase when condition no longer exists, no W1C.
  */
 neon_status_t neon_spi_enable_interrupt(SPI_TypeDef *instance);
 /**
@@ -438,7 +438,7 @@ neon_status_t neon_spi_is_active_flag(SPI_TypeDef *instance, uint32_t flags, uin
  * @param[out] status Destination for the status snapshot.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * CLKS được đọc đúng một lần để ba field cùng thuộc một snapshot.
+ * CLKS is read correctly once so that three fields belong to the same snapshot.
  */
 neon_status_t neon_spi_get_clock_status(SPI_TypeDef *instance, neon_spi_clock_status_t *status);
 
@@ -449,18 +449,18 @@ neon_status_t neon_spi_get_clock_status(SPI_TypeDef *instance, neon_spi_clock_st
  * @param[in] config Module configuration.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * ConfigureDMA cấu hình kênh request của SPI và tự bật DMA global khi state
- * là ENABLE; ứng dụng vẫn phải cấu hình DMAC và địa chỉ TX/RX. Với BURST,
- * driver tự đặt ngưỡng FIFO theo UG. Master RX vẫn cần TX tạo clock; trước
- * DMA full-duplex/RX phải gọi SetReceiveCapture(instance, 1).
+ * ConfigureDMA to configure SPI's request channel and enable DMA global when state is ENABLE;
+ * application must still configure DMAC and address TX/RX. For BURST, driver sets threshold FIFO by
+ * UG. Master RX still needs TX to generate clock; before DMA full-duplex/RX must call
+ * SetReceiveCapture(instance, 1).
  * This HAL configures one-shot DMA. Every enable programs the disabled
  * channel, pulses its CLEAR bit, then arms it, clearing stale completion and
  * counters without disturbing the other direction. Circular/DDR registers
  * are described in FU2.h but are not exposed by these legacy transfer APIs.
- * state=DISABLE dừng kênh kể cả khi đang chạy, bỏ qua các field khác và giữ
- * cấu hình kênh/FIFO; tắt DMA global khi cả hai kênh đều đã tắt. Cấu hình
- * FIFO, timing, clock, data width, SS_MODE/SS_LONG và receive capture trả
- * BUSY khi DMA đang bật với ít nhất một kênh enabled. SS_FORCE vẫn đổi được.
+ * state=DISABLE stops the channel while running, ignores other fields and keeps channel
+ * configuration/FIFO; disables DMA global when both channels are disabled. configuration FIFO,
+ * timing, clock, data width, SS_MODE/SS_LONG and receive capture return BUSY when DMA is on with at
+ * least one channel enabled. SS_FORCE remains switchable.
  */
 neon_status_t neon_spi_configure_dma(SPI_TypeDef *instance, neon_spi_dma_direction_t direction,
                                      const neon_spi_dma_config_t *config);
@@ -490,7 +490,7 @@ neon_status_t neon_spi_is_dma_enabled(SPI_TypeDef *instance, uint8_t *enabled);
  * @param[in,out] complete Complete.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Cờ done bằng 1 là hoàn tất theo DTI register table và UVM sequence.
+ * The done flag by 1 is complete according to the DTI register table and UVM sequence.
  */
 neon_status_t neon_spi_is_dma_complete(SPI_TypeDef *instance, neon_spi_dma_direction_t direction, uint8_t *complete);
 

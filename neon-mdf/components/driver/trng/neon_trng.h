@@ -2,16 +2,14 @@
  * @file neon_trng.h
  * @brief Public declarations for TRNG.
  * @details
- * * NEON_TRNG - sinh số ngẫu nhiên thật (True RNG). config/DeInit port THẬT từ
- * src_fu2/fu2_dti_trng.c (team cũ, BuuPQ). neon_trng_get_random_number KHÔNG
- * có trong nguồn team dạng hàm .c (chỉ có inline LL_TRNG_ReadData/IsDataValid
- * trong inc_fu2/fu2_dti_trng.h) - viết mới bằng cách ghép 2 hàm inline thật
- * đó theo đúng khuyến cáo trong header ("data is valid only once VLD is
+ * * NEON_TRNG - generate real random numbers (True RNG). config/DeInit ports REAL from
+ * src_fu2/fu2_dti_trng.c (old team, BuuPQ). neon_trng_get_random_number is NOT in .c team source
+ * (only inline LL_TRNG_ReadData/IsDataValid in inc_fu2/fu2_dti_trng.h) - write new by combining 2
+ * real inline functions as recommended in header ("data is valid only once VLD is
  * asserted").
  *
- * Nguồn: inc_fu2/fu2_dti_trng.h ("DTI_TRNG User Guide Rev 1.0, Dolphin
- * Technology") - IP thứ 3 (Dolphin Technology), xem lưu ý license trong
- * memory dự án trước khi chia sẻ SDK ra ngoài.
+ * Source: inc_fu2/fu2_dti_trng.h ("DTI_TRNG User Guide Rev 1.0, Dolphin Technology") - 3rd IP (Dolphin
+ * Technology), see note license in project memory before sharing SDK out.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.
@@ -33,7 +31,7 @@ extern "C" {
 /*==================================================================================================
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
-#define NEON_TRNG_WARMUP_DEFAULT 0x00AU /* THẬT - LL_TRNG_TWARM_DEFAULT (10 chu kỳ) */
+#define NEON_TRNG_WARMUP_DEFAULT 0x00AU /* REAL - LL_TRNG_TWARM_DEFAULT (10 period) */
 
 /*==================================================================================================
 *                                       FUNCTION PROTOTYPES
@@ -58,7 +56,7 @@ neon_status_t neon_trng_deinit(RNG_TypeDef *instance);
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Blocking - poll VLD tới khi có số mới hoặc hết timeout_polls (số vòng poll).
+ * Blocking - poll VLD until there is a new number or timeout_polls (poll ring number).
  */
 neon_status_t neon_trng_get_random_number(RNG_TypeDef *instance, uint32_t *p_value, uint32_t timeout_polls);
 

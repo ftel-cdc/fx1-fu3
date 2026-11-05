@@ -10,7 +10,7 @@
 #define RX_BUFFER_SIZE CONFIG_UART_RX_INTERRUPT_RING_BUF_SIZE
 #define TX_TIMEOUT CONFIG_UART_RX_INTERRUPT_TX_TIMEOUT_POLLS
 
-/* FU2 lưu mỗi byte trong một word 32-bit. */
+/* FU2 saves each byte in a 32-bit word. */
 static uint32_t g_rx_buffer[RX_BUFFER_SIZE];
 static volatile uint32_t g_rx_head;
 static volatile uint32_t g_rx_tail;
@@ -22,14 +22,14 @@ static neon_uart_handle_t *volatile g_active_uart_handle;
 void USART0_IRQHandler(void) {
     uint32_t value = 0U;
 
-    /* Đọc các byte đang có trong FIFO, không chờ byte mới. */
+    /* Read existing bytes in FIFO, do not wait for new ones. */
     while (neon_uart_try_receive(g_active_uart_handle, &value) == NEON_OK) {
-        if (value == 3U) { /* Ctrl+C vẫn nhận được khi ring đầy. */
+        if (value == 3U) { /* Ctrl+C is still received when the ring is full. */
             g_stop_requested = 1U;
             continue;
         }
 
-        /* Ring đầy thì bỏ byte mới; vẫn tiếp tục đọc FIFO. */
+        /* Full Ring drops new bytes; continue reading FIFO. */
         if (g_stop_requested == 0U && g_rx_count < RX_BUFFER_SIZE) {
             g_rx_buffer[g_rx_head] = value;
             g_rx_head = (g_rx_head + 1U) % RX_BUFFER_SIZE;
@@ -44,7 +44,7 @@ void uart_rx_interrupt_run(neon_uart_handle_t *uart, uint32_t skip_initial_lf) {
     neon_uart_config_t saved_config;
     neon_uart_config_t config;
 
-    /* 1. UART0 đã được terminal khởi tạo. Bật thêm FIFO và ngắt RX. */
+    /* 1. UART0 has been initialized by the terminal. Enable FIFO and interrupt RX. */
     neon_uart_get_config(uart, &saved_config);
     config = saved_config;
     config.fifo_state = NEON_UART_FIFO_ENABLE;
@@ -67,13 +67,13 @@ void uart_rx_interrupt_run(neon_uart_handle_t *uart, uint32_t skip_initial_lf) {
     __enable_irq();
     printf("[READY] UART RX interrupt. Type to echo; Ctrl+C returns.\n");
 
-    /* 2. Main làm việc khác rồi lấy từng byte trong ring ra để echo. */
+    /* 2. Main does something else and then takes every byte out of the ring to echo. */
     while (g_stop_requested == 0U || g_rx_count != 0U) {
-        ++g_main_work; /* Quan sát trong debugger: vẫn tăng khi chưa gửi UART. */
+        ++g_main_work; /* Observation in debugger: still increased without sending UART. */
         uint32_t value = 0U;
         uint32_t has_data = 0U;
 
-        /* ISR và main cùng cập nhật count nên cần bảo vệ đoạn lấy dữ liệu. */
+        /* ISR and main update the count together, so protect the data retrieval segment. */
         uint32_t primask = __get_PRIMASK();
         __disable_irq();
         if (g_rx_count != 0U) {
@@ -90,10 +90,10 @@ void uart_rx_interrupt_run(neon_uart_handle_t *uart, uint32_t skip_initial_lf) {
         if (skip_initial_lf != 0U) {
             skip_initial_lf = 0U;
             if (value == '\n') {
-                continue; /* Bỏ LF còn dư của lệnh terminal kết thúc bằng CRLF. */
+                continue; /* Remove the remaining LF of terminal commands that end in CRLF. */
             }
         }
-        /* Log ở main: byte đã đi từ FIFO qua ring, ISR không in log. */
+        /* Log in main: byte has gone from FIFO to ring, ISR does not print log. */
         int display = (value >= 0x20U && value <= 0x7EU) ? (int)value : '.';
         printf("[PC -> FPGA] '%c' (0x%02X)\n", display, (unsigned int)value);
         printf("[FPGA -> PC]  ");
@@ -101,7 +101,7 @@ void uart_rx_interrupt_run(neon_uart_handle_t *uart, uint32_t skip_initial_lf) {
         printf("  (0x%02X)\n", (unsigned int)value);
     }
 
-    /* 3. Ctrl+C: tắt ngắt RX, khôi phục UART rồi trả về terminal. */
+    /* 3. Ctrl+C: Disable interrupt RX, restore UART and return terminal. */
     NVIC_DisableIRQ(USART0_IRQn);
     neon_uart_disable_interrupt(uart, NEON_UART_INTERRUPT_RX_READY);
     g_active_uart_handle = NULL;

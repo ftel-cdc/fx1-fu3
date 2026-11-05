@@ -1,9 +1,5 @@
-// monitor.ts - Serial Monitor native (khong shell ra `python3 -m
-// serial.tools.miniterm` nua) - mo cong bang serialport (da proven o
-// ports.ts), doc byte stream theo dong, ghi ra 1 OutputChannel dung chung.
-// Chi 1 phien mo tai 1 thoi diem - open() luon dong phien cu truoc, tranh 2
-// tien trinh/handle cung giu 1 cong (dung loi "Could not exclusively lock
-// port" da gap truoc day khi mo miniterm 2 lan).
+// Native serial monitor using serialport and one shared OutputChannel.
+// Close the previous session before opening another to avoid exclusive-lock errors.
 import * as vscode from "vscode";
 import { SerialPort } from "serialport";
 import { NeonMdfState } from "../state";
@@ -21,7 +17,7 @@ export class NeonMdfSerialMonitor implements vscode.Disposable {
   async open(state: NeonMdfState): Promise<void> {
     if (!state.port) {
       vscode.window.showWarningMessage(
-        'NEON-MDF: chua chon cong serial - bam vao "chon cong" tren status bar truoc.'
+        'NEON-MDF: No serial port selected. Use Select Serial Port in the status bar first.'
       );
       return;
     }
@@ -29,19 +25,19 @@ export class NeonMdfSerialMonitor implements vscode.Disposable {
     await this.close();
     this.lineBuf = "";
     this.output.show(true);
-    this.output.appendLine(`--- Mo ${state.port} @ ${state.baudRate} 8N1 ---`);
+    this.output.appendLine(`--- Open ${state.port} @ ${state.baudRate} 8N1 ---`);
 
     const sp = new SerialPort({ path: state.port, baudRate: state.baudRate, autoOpen: false });
     this.port = sp;
 
     sp.on("data", (chunk: Buffer) => this.handleData(chunk));
-    sp.on("error", (err: Error) => this.output.appendLine(`--- Loi serial: ${err.message} ---`));
-    sp.on("close", () => this.output.appendLine("--- Da dong cong ---"));
+    sp.on("error", (err: Error) => this.output.appendLine(`--- Serial error: ${err.message} ---`));
+    sp.on("close", () => this.output.appendLine("--- Port closed ---"));
 
     this.opening = new Promise<void>((resolve) => {
       sp.open((err) => {
         if (err) {
-          this.output.appendLine(`--- Khong mo duoc cong: ${err.message} ---`);
+          this.output.appendLine(`--- Cannot open port: ${err.message} ---`);
           if (this.port === sp) {
             this.port = undefined;
           }

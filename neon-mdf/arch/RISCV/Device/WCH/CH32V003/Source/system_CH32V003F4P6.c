@@ -2,14 +2,13 @@
  * @file system_CH32V003F4P6.c
  * @brief Implementation for system ch32v003f4p6.
  * @details
- * * system_CH32V003F4P6.c - viet tay (khong sinh tu dong), mirror
+ * * system_CH32V003F4P6.c - handwritten (not automatic creation), mirror
  * system_FU2.c/system_WEACT_F412.c.
  *
- * SystemInit() TOI THIEU cho Phase 3 (bring-up dau tien, xem plan) - KHONG
- * cham thanh ghi RCC->CFGR0/PLL (giu nguyen clock mac dinh sau reset: HSI
- * 24MHz noi bo, THAT theo CH32V003RM.PDF chuong 3 "Mac dinh sau reset chay
- * HSI 24MHz noi bo, chua bat PLL") - cau hinh PLL len 48MHz (neu can) la
- * viec sau, khong chan bring-up dau tien.
+ * SystemInit() to missing for Phase 3 (first bring-up, see plan) - no cham register RCC->CFGR0/PLL
+ * (keep the default clock after reset: HSI 24MHz where set, true according to CH32V003RM.PDF
+ * chapter 3 "default after reset run HSI 24MHz where set, not yet enabled PLL") - configuration PLL
+ * to 48MHz can be added later if needed; it is outside the initial bring-up scope.
  */
 
 /*==================================================================================================
@@ -39,8 +38,7 @@ void SystemInit(void) {
 
 /** @copydoc SystemCoreClockUpdate */
 void SystemCoreClockUpdate(void) {
-    /* TODO (sau Phase 3): doc that RCC->CFGR0.SW/SWS de biet dang chay HSI
-   * hay PLL, tinh dung SystemCoreClock - hien gia dinh mac dinh HSI 24MHz
-   * (chua bat PLL trong SystemInit() nay). */
+    /* TODO (after Phase 3): read real RCC->CFGR0.SW/SWS to know running HSI please PLL, use
+   * SystemCoreClock - currently assumes default HSI 24MHz (PLL not enabled in this SystemInit()). */
     SystemCoreClock = CH32V003_HSI_DEFAULT_CLOCK_HZ;
 }

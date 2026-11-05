@@ -1,6 +1,6 @@
-"""Sinh file CMSIS-SVD (.svd) từ model.Device - dùng cho debugger (Cortex-Debug
-trong VSCode, Ozone, pyOCD gdbserver...) hiển thị cây thanh ghi peripheral lúc
-debug. Không cần cho việc build firmware - chỉ để trải nghiệm debug tốt hơn.
+"""create CMSIS-SVD (.svd) file from model.Device - for debugger (Cortex-Debug in VSCode, Ozone, pyOCD
+gdbserver...) display peripheral register tree at debug time. No need for firmware build - just for
+better debug experience.
 """
 from xml.sax.saxutils import escape
 

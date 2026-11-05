@@ -1,13 +1,12 @@
-# Toolchain file cho GCC RISC-V (dung cho CH32V003F4P6, xem
-# arch/RISCV/README.md + plan RISC-V trong .claude/plans/).
+# Toolchain file for GCC RISC-V (used for CH32V003F4P6, see arch/RISCV/README.md + plan RISC-V in
+# .claude/plans/).
 #
-# LUU Y TEN FILE: giu ten "riscv-none-elf.cmake" (quy uoc da ghi truoc trong
-# arch/RISCV/README.md/backends/riscv/README.md tu luc RESERVED) nhung
-# TOOLCHAIN THAT dung la `riscv64-elf-gcc` (Homebrew, KHONG PHAI xPack
-# `riscv-none-elf-gcc`) - da xac nhan THAT `riscv64-elf-gcc` bien dich dung
-# rv32ec/ilp32e binh thuong (toolchain nay ho tro multilib ca 32 va 64-bit,
-# ten "riscv64" chi la ten goi Homebrew, khong co nghia CHI build duoc
-# 64-bit) - dung TOOLCHAIN_PREFIX de doi neu sau nay muon dung ban khac.
+# Note the FILE name: keeps the name "riscv-none-elf.cmake" (convention written before in
+# arch/RISCV/README.md/backends/riscv/README.md from the initial scaffold, but the actual toolchain is
+# `riscv64-elf-gcc` (Homebrew, not xPack `riscv-none-elf-gcc`) - verified true `riscv64-elf-gcc`
+# translator uses normal rv32ec/ilp32e (this toolchain supports multilib both 32 and 64-bit, the
+# name "riscv64" is just a Homebrew name, it does not mean only build to 64-bit) - uses
+# TOOLCHAIN_PREFIX to change if you want to use another one later.
 
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR riscv32)
@@ -22,8 +21,8 @@ endif()
 find_program(RISCV_GCC_PATH ${TOOLCHAIN_PREFIX}gcc)
 if(NOT RISCV_GCC_PATH)
   message(FATAL_ERROR
-    "${TOOLCHAIN_PREFIX}gcc khong tim thay trong PATH. Cai qua Homebrew: "
-    "`brew install riscv64-elf-gcc riscv64-elf-gdb` roi thu lai.")
+    "${TOOLCHAIN_PREFIX}gcc not found in PATH. Passing Homebrew: "
+    "`brew install riscv64-elf-gcc riscv64-elf-gdb` and mail it back.")
 endif()
 
 set(CMAKE_C_COMPILER   ${TOOLCHAIN_PREFIX}gcc)
@@ -35,31 +34,27 @@ set(CMAKE_SIZE         ${TOOLCHAIN_PREFIX}size    CACHE FILEPATH "")
 
 set(CMAKE_EXECUTABLE_SUFFIX ".elf")
 
-# -ffreestanding PHAI o COMPILE flags (khong chi linker flags) - thieu no,
-# <stdint.h> rieng cua GCC (khong kem newlib) lam `include_next <stdint.h>`
-# mong doi tim them 1 stdint.h "he thong" (thuong tu libc, vd newlib) - VOI
-# rieng compiler nay KHONG co libc nao ca nen include_next that bai cung
-# ("stdint.h: No such file or directory") - da xac nhan that qua test bien
-# dich doc lap TRUOC/SAU khi them co nay (loi bien mat ngay khi co
-# -ffreestanding o COMPILE flags, khong phai chi link flags).
+# -ffreestanding must be in COMPILE flags (not just linker flags) - missing no,
+# GCC's own <stdint.h>, without newlib, uses include_next <stdint.h> to look for another
+# stdint.h "common pine" (usually from libc, e.g. newlib) - with this compiler alone there is no
+# libc so include_next fails together ("stdint.h: No such file or directory") - true confirmation
+# via independent variable test before/after adding this one (error disappears as soon as it
+# -ffreestanding in COMPILE flags, not just link flags).
 set(CMAKE_C_FLAGS_INIT   "-ffunction-sections -fdata-sections -Wall -ffreestanding")
 set(CMAKE_CXX_FLAGS_INIT "-ffunction-sections -fdata-sections -Wall -fno-rtti -fno-exceptions -ffreestanding")
 set(CMAKE_ASM_FLAGS_INIT "-x assembler-with-cpp")
 
-# KHONG dung -specs=nano.specs/nosys.specs nhu ban ARM - riscv64-elf-gcc
-# (Homebrew) la compiler THUAN TUY, KHONG kem newlib (da xac nhan that -
-# tim libc.a trong toan bo Cellar, khong thay) - build hoan toan bare-metal.
+# do not use -specs=nano.specs/nosys.specs like ARM - riscv64-elf-gcc (Homebrew) is a custom THUAN
+# compiler, does not include newlib (true verified - find libc.a in all Cellar, not found) -
+# bare-metal safe build.
 #
-# libgcc: rv32ec KHONG co extension M (nhan/chia phan cung) - BAT KY phep
-# chia/nhan 32-bit nao trong C (vd SystemCoreClock/1000 trong
-# neon_bootloader_main.c) deu can ham phan mem cua libgcc (__udivsi3,
-# __umodsi3, __muldi3...) - -nostdlib tat CA thu vien mac dinh (dung, KHONG
-# muon libc/crt0 tu dong) nhung VAN can libgcc rieng (day la runtime helper
-# cua compiler, KHONG PHAI libc). KHONG dat -lgcc o day (CMAKE_EXE_LINKER_FLAGS_INIT
-# duoc CMake dat SOM trong lenh link, TRUOC cac thu vien .a cua chinh SDK -
-# ld chi quet 1 lan, dat som se KHONG resolve duoc symbol can tu cac .a
-# quet SAU - da xac nhan that) - thay vao do link qua
-# target_link_libraries(... PUBLIC gcc) tren target device (xem
-# cmake/mcu_variants.cmake) de CMake tu dat dung vi tri (VA nam trong
-# --start-group/--end-group cua bootloader, xem tools/cmake/project.cmake).
+# libgcc: rv32ec doesn't have extension M (multiply/divide hardware) - enable division/receipt of
+# 32-bits in C (e.g. SystemCoreClock/1000 in neon_bootloader_main.c) all need libgcc's software
+# functions (__udivsi3, __umodsi3, __muldi3...) - -nostdlib all default messages (use, don't want
+# automatic libc/crt0) but still need libgcc separately (this is the compiler runtime helper, not
+# libc). don't set -lgcc here (CMAKE_EXE_LINKER_FLAGS_INIT CMake set SOM in link command, before
+# SDK's own .a messages - ld only quets 1 times, som setting won't resolve symbols needed from the
+# following .a quets - true verified) - see how to link via target_link_libraries(... PUBLIC gcc) on
+# target device (see cmake/mcu_variants.cmake) so CMake can use differential (and male in
+# --start-group/--end-group of the bootloader, see tools/cmake/project.cmake).
 set(CMAKE_EXE_LINKER_FLAGS_INIT "-nostdlib -ffreestanding -Wl,--gc-sections -Wl,--print-memory-usage")

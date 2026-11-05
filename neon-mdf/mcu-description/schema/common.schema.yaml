@@ -1,30 +1,30 @@
 # common.schema.yaml
 #
-# Tài liệu mô tả cấu trúc (shape) mà mọi file trong mcu-description/devices/*.yaml
-# phải tuân theo. Đây là tài liệu tham chiếu cho người viết file mô tả MCU,
-# KHÔNG phải validator (loader.py chỉ kiểm tra field bắt buộc ở mức code, xem
+# The document that describes the structure (shape) that every file in mcu-description/devices/*.yaml
+# must follow. This is a reference for the writer of the MCU description file, NOT validator
+# (loader.py only checks the required field at the code level, see
 # mcu-description/tools/mcu_desc/loader.py).
 #
-# Phần bên dưới là "arch-agnostic": áp dụng cho mọi kiến trúc CPU (Cortex-M,
-# RISC-V, ...). Các field đặc thù theo kiến trúc nằm ở schema/arch/<arch>.schema.yaml.
+# The section below is "arch-agnostic": it applies to all CPU architectures (Cortex-M, RISC-V, ...).
+# Architectural fields are located in schema/arch/<arch>.schema.yaml.
 
-device: string              # tên chip, vd "FU2" — dùng làm tên file header/linker/startup sinh ra
-vendor: string              # tên vendor/team, vd "FPTTelecom" — chỉ để mô tả, KHÔNG dùng để đặt tên
-                             # thư mục (thư mục CMSIS/Device/<family> chỉ theo family, xem field family)
-family: string              # tên họ chip, vd "FU2" (nếu có nhiều variant thì family khác device, vd family FU2, device FU2-LQFP80/FU2-QPN80)
-arch: string                # bắt buộc: "cortex-m0" | "cortex-m0plus" | "cortex-m3" | "cortex-m4" | "riscv-rv32ec" (WCH QingKe V2A, xem CH32V003F4P6.yaml) | ... (tương lai: "riscv-rv32imac" | ...)
-description: string         # mô tả ngắn
+device: string              # chip name, e.g. "FU2" — used as filename header/linker/startup generated
+vendor: string              # name vendor/team, e.g. "FPTTelecom" — only for description, NOT for naming folders (folder
+                             # CMSIS/Device/<family> only by family, see field family)
+family: string              # chip family name, e.g. "FU2" (if there are multiple variants, the family is different device, e.g. family FU2, device FU2-LQFP80/FU2-QPN80)
+arch: string                # Required: "cortex-m0" | "cortex-m0plus" | "cortex-m3" | "cortex-m4" | "riscv-rv32ec" (WCH QingKe V2A, see CH32V003F4P6.yaml) | ... (conversely: "riscv-rv32imac" | ...)
+description: string         # short description
 
-cpu:                        # thông tin lõi CPU — phần chi tiết theo kiến trúc xem schema/arch/<arch>.schema.yaml
+cpu:                        # CPU core information — section details according to architecture see schema/arch/<arch>.schema.yaml
   core: string               # vd "cortex-m0"
-  revision: string           # vd "r0p0" (nếu chưa biết, để "unknown")
+  revision: string           # e.g. "r0p0" (if unknown, to "unknown")
   max_freq_hz: int
 
-memory:                     # danh sách vùng nhớ, dùng để sinh linker script
+memory:                     # memory list, used to create linker scripts
   - name: string              # vd "FLASH", "RAM_USR"
-    kind: flash|rom|ram        # loại vùng nhớ
-    address: hex               # địa chỉ bắt đầu
-    size: hex                  # kích thước (byte)
+    kind: flash|rom|ram        # memory type
+    address: hex               # address starts
+    size: hex                  # size (bytes)
 
 # Optional Cortex-M image profiles. Without this list only normal is supported,
 # using the legacy flash/RAM selection. With a list, only declared profiles exist.
@@ -104,74 +104,73 @@ profile_param:
 # Raw application binaries start at the vector base;
 # packaging must supply the reserved header separately if the image requires it.
 
-peripherals:                 # danh sách peripheral, dùng để sinh CMSIS device header + .svd
-  - name: string                # vd "UART0" — trở thành tên struct/định danh trong header
-    base: hex                   # địa chỉ base
+peripherals:                 # peripheral list, used to create CMSIS device header + .svd
+  - name: string                # e.g. "UART0" — becomes struct/identifier name in header
+    base: hex                   # address base
     description: string
-    registers:                  # danh sách thanh ghi trong peripheral này, offset tính từ base
+    registers:                  # register list in this peripheral, offset from base
       - name: string              # vd "CTRL"
         offset: hex
-        size: 8|16|32              # độ rộng thanh ghi (bit)
+        size: 8|16|32              # register width (bits)
         access: ro|wo|rw
-        reset: hex                  # giá trị reset (mặc định 0x0 nếu không rõ)
+        reset: hex                  # reset value (default 0x0 if unknown)
         description: string
-        fields: []                  # (tuỳ chọn) danh sách bitfield — để trống nếu chưa có tài liệu thanh ghi chi tiết
+        fields: []                  # (optional) — bitfield list left blank if register document is not available
           # - name: string
           #   bit_offset: int
           #   bit_width: int
           #   description: string
-        aliases: []                 # (tuỳ chọn) các view chồng địa chỉ, vd UART RBR/DLL/THR
+        aliases: []                 # (optional) superimposed view addresses, e.g. UART RBR/DLL/THR
           # - name: string
           #   access: ro|wo|rw
           #   reset: hex
           #   description: string
-          #   fields: []            # bitfield riêng của view; được phép chồng với view khác
+          #   fields: [] # private bitfield of view; allowed to overlap with other view
 
-interrupts:                  # bảng ánh xạ IRQ number -> tên, dùng để sinh vector table + IRQn_Type enum
-  - number: int                 # 0..(cpu.num_irq - 1), theo schema/arch/cortex-m.schema.yaml là NVIC IRQ0..IRQ31
-    name: string                 # vd "UART0" -> sinh ra "UART0_IRQn" / "UART0_IRQHandler"
+interrupts:                  # IRQ mapping table number -> name, used to create vector table + IRQn_Type enum
+  - number: int                 # 0..(cpu.num_irq - 1), according to schema/arch/cortex-m.schema.yaml is NVIC IRQ0..IRQ31
+    name: string                 # e.g. "UART0" -> generated "UART0_IRQn" / "UART0_IRQHandler"
     description: string
 
-bootloader:                  # TUỲ CHỌN - chỉ khai khi device này build theo mô hình
-                              # "bootloader + app" (xem components/bootloader/). Khi có,
-                              # generator sinh THÊM <DEVICE>_BOOTLOADER.ld + <DEVICE>_APP.ld
-                              # (ngoài <DEVICE>_FLASH.ld vẫn sinh bình thường cho mọi device)
-                              # + macro NEON_MDF_APP_BASE/APP_VECTOR_BASE/APP_SIZE trong header.
-  size: hex                    # kích thước partition bootloader (byte), tính từ đầu vùng flash
-                                # thấp nhất (kind=flash) - vd 0x8000 (32KB)
-  image_header_size: hex       # kích thước "khe" header trước vector table của app (byte) - PHẢI
-                                # đủ lớn để (flash.address + size + image_header_size) thoả yêu cầu
-                                # align của SCB->VTOR (ARMv7-M: bội số của 2^n >= 4*(16+cpu.num_irq),
-                                # tối thiểu 0x80) - loader.py tự tính và raise lỗi nếu không thoả,
-                                # xem loader.py._check_bootloader_vtor_alignment(). KHÔNG được chỉ
-                                # bằng đúng sizeof(image header struct) thật (thường nhỏ hơn nhiều).
-  uart:                         # UART bootloader dùng để nhận firmware (giao thức nhị phân
-                                # SYNC/READY/ACK/NAK, xem components/bootloader/)
-    peripheral: string           # tên peripherals[].name dùng làm UART, vd "USART1"
+bootloader:                  # OPTIONS - only declared when this device builds according to the "bootloader + app" model (see
+                              # components/bootloader/). when available, generator generates MORE
+                              # <DEVICE>_BOOTLOADER.ld + <DEVICE>_APP.ld (besides <DEVICE>_FLASH.ld
+                              # still generates normally for all devices)
+                              # + macro NEON_MDF_APP_BASE/APP_VECTOR_BASE/APP_SIZE in header.
+  size: hex                    # size partition bootloader (bytes), from the beginning of the lowest flash area (kind=flash) - e.g.
+                                # 0x8000 (32KB)
+  image_header_size: hex       # size "slot" header before app vector table (byte) - MUST be large enough that (flash.address + size
+                                # + image_header_size) satisfies SCB->VTOR alignment requirement
+                                # (ARMv7-M: multiple of 2^n >= 4*(16+cpu.num_irq), minimum 0x80) -
+                                # loader.py manually calculates and raises error if not, see
+                                # loader.py._check_bootloader_vtor_alignment(). MUST NOT equal true
+                                # sizeof(image header struct) (usually much smaller).
+  uart:                         # UART bootloader for receiving firmware (binary protocol SYNC/READY/ACK/NAK, see
+                                # components/bootloader/)
+    peripheral: string           # peripherals[].name used as UART, e.g. "USART1"
     tx_pin: string                # vd "PA9"
     rx_pin: string                # vd "PA10"
-    af: int                       # alternate function number của GPIO cho peripheral trên
+    af: int                       # alternate function number of GPIO for upper peripheral
     baud: int                     # vd 115200
 
-erase_sectors:                # TUỲ CHỌN - bảng erase-sector THẬT của flash, dạng run-length
-                               # (nhóm các sector CÙNG kích thước liên tiếp), LIỆT KÊ THEO ĐÚNG
-                               # thứ tự địa chỉ tăng dần từ đầu vùng flash. Nhiều chip (STM32F4...)
-                               # có sector KHÔNG đều nhau - field `memory:` ở trên không biểu diễn
-                               # được việc này (chỉ có 1 `size` cho cả vùng). Dùng bởi
-                               # tools/gen_flashmap.py để validate flashmap.csv của app (mỗi
-                               # partition phải nằm đúng ranh giới sector - erase 1 partition
-                               # không được phép đụng dữ liệu của partition liền kề). Không khai
-                               # = generator BỎ QUA validate này (app không dùng flashmap.csv thì
-                               # field này không bao giờ được đọc tới - an toàn 100% với pipeline
-                               # hiện có). Tổng (size*count) của mọi nhóm PHẢI khớp CHÍNH XÁC kích
-                               # thước vùng flash thấp nhất trong `memory:` - loader.py raise lỗi
-                               # rõ ràng nếu lệch (bắt lỗi gõ nhầm/thiếu sector sớm).
-  - size: hex                   # kích thước mỗi sector trong nhóm này (byte)
-    count: int                  # số sector liên tiếp có kích thước này
+erase_sectors:                # OPTIONS - REAL flash erase-sector table, run-length format (group of sectors the same size in a
+                               # row), STANDARD DATA address order increasing from the beginning of
+                               # the flash area. Many chips (STM32F4...) have unequal sectors - the
+                               # `memory:` field above does not demonstrate this (there is only 1
+                               # `size` for the entire area). Used by tools/gen_flashmap.py to
+                               # validate the app's flashmap.csv (each partition must be within
+                               # sector boundaries - erase 1 partition must not touch adjacent
+                               # partition data). No declarations
+                               # = generator Ignore this validate (apps that don't use flashmap.csv do not report the time read to -
+                               # 100% secure with existing pipeline). The sum (size*count) of all
+                               # groups MUST match EXACTLY the lowest flash area size in `memory:` -
+                               # loader.py raise clear error if deviated (catches early sector
+                               # mistype/missing).
+  - size: hex                   # size per sector in this group (bytes)
+    count: int                  # consecutive sectors of this size
 
-# LƯU Ý QUAN TRỌNG:
-# Nếu file device .yaml chỉ dựa trên tài liệu product brief (không có register-level
-# Technical Reference Manual), địa chỉ base/offset/reset value là PLACEHOLDER để pipeline
-# chạy được end-to-end — KHÔNG được dùng làm địa chỉ thật để lập trình silicon thật cho tới
-# khi đối chiếu lại với tài liệu thanh ghi chính thức. Xem ghi chú "PLACEHOLDER" trong từng
+# IMPORTANT NOTE: If the .yaml device file is based solely on the product brief (without the
+# register-level Technical Reference Manual), the base/offset/reset address value is PLACEHOLDER so
+# that the pipeline can run end-to-end. — cannot be used as a real address for real silicon
+# programming until compared with the official register document
 # file devices/*.yaml.

@@ -1,15 +1,13 @@
 mainmenu "neon-mdf Configuration"
 
-# Giống Kconfig gốc của ESP-IDF: file này chỉ source Kconfig của từng
-# "component" (ở đây neon-mdf mới có đúng 1 component thật là components/driver) -
-# xem ARCHITECTURE.md mục 11.
+# Like ESP-IDF's original Kconfig: this file specifies the Kconfig source of each "component" (here
+# neon-mdf has exactly one components/driver component) - see ARCHITECTURE.md entry 11.
 rsource "components/driver/Kconfig"
 
-# Kconfig CỦA RIÊNG APP (nếu có) - gộp vào CHUNG 1 menuconfig/1 sdkconfig
-# với các option của SDK ở trên. osource = "optional source" (giống
-# `-include` của Make) - KHÔNG lỗi nếu app không có file Kconfig riêng, hành
-# vi cũ giữ nguyên 100%. $(NEON_MDF_APP_KCONFIG) do cmake/kconfig.cmake tự
-# set = <APP_DIR>/Kconfig - xem comment ở đó. Ví dụ thật:
+# Kconfig OF OWN APP (if any) - merged into GENERAL 1 menuconfig/1 sdkconfig with SDK options above.
+# osource = "optional source" (same as Make's `-include`) - NO error if the app does not have its
+# own Kconfig file, old behavior remains 100%. That $(NEON_MDF_APP_KCONFIG) cmake/kconfig.cmake set
+# itself = <APP_DIR>/Kconfig - see comment there. Real example:
 # Projects/Examples/Blinky/Kconfig.
 osource "$(NEON_MDF_APP_KCONFIG)"
 

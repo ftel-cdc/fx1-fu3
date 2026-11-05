@@ -18515,7 +18515,7 @@ GPIOC : 0x440F0000 - 0x440FFFFF (64 KB)
           <fields>
             <field>
               <name>EN</name>
-              <description>Output enable cho GPIO[7:0]: 0=input, 1=output</description>
+              <description>Output enable for GPIO[7:0]: 0=input, 1=output</description>
               <bitOffset>0</bitOffset>
               <bitWidth>8</bitWidth>
             </field>
@@ -18735,7 +18735,7 @@ GPIOD : 0x44100000 - 0x4410FFFF (64 KB)
           <fields>
             <field>
               <name>EN</name>
-              <description>Output enable cho GPIO[7:0]: 0=input, 1=output</description>
+              <description>Output enable for GPIO[7:0]: 0=input, 1=output</description>
               <bitOffset>0</bitOffset>
               <bitWidth>8</bitWidth>
             </field>
@@ -18954,7 +18954,7 @@ GPIOD : 0x44100000 - 0x4410FFFF (64 KB)
           <fields>
             <field>
               <name>EN</name>
-              <description>Output enable cho GPIO[7:0]: 0=input, 1=output</description>
+              <description>Output enable for GPIO[7:0]: 0=input, 1=output</description>
               <bitOffset>0</bitOffset>
               <bitWidth>8</bitWidth>
             </field>
@@ -19173,7 +19173,7 @@ GPIOD : 0x44100000 - 0x4410FFFF (64 KB)
           <fields>
             <field>
               <name>EN</name>
-              <description>Output enable cho GPIO[7:0]: 0=input, 1=output</description>
+              <description>Output enable for GPIO[7:0]: 0=input, 1=output</description>
               <bitOffset>0</bitOffset>
               <bitWidth>8</bitWidth>
             </field>
@@ -20480,7 +20480,7 @@ GPIOA : 0x50030000 - 0x5003FFFF (64 KB)
           <fields>
             <field>
               <name>EN</name>
-              <description>Output enable cho GPIO[7:0]: 0=input, 1=output</description>
+              <description>Output enable for GPIO[7:0]: 0=input, 1=output</description>
               <bitOffset>0</bitOffset>
               <bitWidth>8</bitWidth>
             </field>
@@ -20700,7 +20700,7 @@ GPIOB : 0x50040000 - 0x5004FFFF (64 KB)
           <fields>
             <field>
               <name>EN</name>
-              <description>Output enable cho GPIO[7:0]: 0=input, 1=output</description>
+              <description>Output enable for GPIO[7:0]: 0=input, 1=output</description>
               <bitOffset>0</bitOffset>
               <bitWidth>8</bitWidth>
             </field>

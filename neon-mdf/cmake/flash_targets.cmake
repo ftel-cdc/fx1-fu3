@@ -1,120 +1,88 @@
-# flash_targets.cmake - custom CMake target de build+nap bootloader/app that
-# len phan cung that qua ST-LINK, DUNG CHUNG cho moi app co bootloader-enabled
-# target (xem NEON_MDF_BOOTLOADER_ENABLED trong cmake/mcu_variants.cmake) -
-# cung 1 pattern voi target `menuconfig` (xem cmake/kconfig.cmake): custom
-# target hien THANG trong CMake Tools cua VS Code (status bar "Build Target"),
-# KHONG can .vscode/tasks.json rieng cho tung app nua - viet 1 lan o day,
-# app nao goi neon_mdf_add_flash_targets() la co du 3 target.
+# flash_targets.cmake provides shared CMake targets for building and flashing bootloader/application
+# images through ST-LINK. Available to apps with NEON_MDF_BOOTLOADER_ENABLED
+# (cmake/mcu_variants.cmake). Like menuconfig (cmake/kconfig.cmake), these targets appear directly
+# in the VS Code CMake Tools Build Target menu. Apps call neon_mdf_add_flash_targets() to register
+# all three targets without separate .vscode/tasks.json files.
 #
 # neon_mdf_add_flash_targets(<bootloader_target> <app_target> <openocd_cfg>)
-#   bootloader_target - ten target executable bootloader (vd "bootloader",
-#                        tao boi neon_mdf_add_bootloader_executable())
-#   app_target         - ten target executable app (vd "blinky", tao boi
+#   bootloader_target: bootloader executable target, e.g. "bootloader", created by
+#   neon_mdf_add_bootloader_executable(). app_target: application executable target, e.g. "blinky",
+#   created by
 #                        neon_mdf_add_app_executable())
-#   openocd_cfg        - duong dan file .cfg openocd (vd
+#   openocd_cfg: OpenOCD .cfg path, e.g.
 #                        ${NEON_MDF_PATH}/cmake/openocd/WEACT_F412_openocd.cfg -
-#                        file DUY NHAT trong SDK, moi app tham chieu THANG toi,
-#                        khong tu copy rieng nua - xem cmake/openocd/)
+#                        the shared SDK configuration file; apps reference it directly instead of making private copies. See
+#                        cmake/openocd/)
 #
-# Sinh ra 3 target (chay duoc qua `cmake --build <dir> --target <ten>` HOAC
-# chon trong CMake Tools status bar cua VS Code - khong can tasks.json).
-# CHI CON DUNG 2 CACH NAP - CA 2 DEU GHI TRON BO [bootloader+header+app]
-# TRONG 1 LAN, khong con cach nao nap RIENG mot phan (khong flash_bootloader/
-# flash_uart/flash_all rieng le nua - du thua/de nham lan, va khong dung voi
-# huong tuong lai cua FU2: kha nang FU2 khong co bootloader tu viet dang chay
-# san de "nap them" app rieng duoc nhu STM32, nen luon phai nap TRON BO tu
-# dau giong het idf.py flash cua ESP-IDF):
-#   flash_jtag       - nap CA bootloader va app (factory) qua SWD trong 1
-#                       PHIEN openocd duy nhat (khong can bootloader dang
-#                       chay, khong qua UART) - giong idf.py flash cua
-#                       ESP-IDF (luon ghi lai toan bo, khong tu "do" xem cho
-#                       nao doi). Ghi THANH 2 LENH `program` RIENG (2026-08-10,
-#                       bo hang gia dinh "app nam ngay sau bootloader" -
-#                       xem CHINH SACH duoi) - bootloader.bin ghi thang tai
-#                       dau vung flash, app dong goi [header+app] qua
-#                       tools/build_ota_image.py roi ghi tai dia chi THAT
-#                       cua no (NEON_MDF_FLASHMAP_APP_BASE neu app co
-#                       flashmap.csv, khong thi NEON_MDF_APP_BASE co dinh) -
-#                       KHONG con phu thuoc thu tu dong trong flashmap.csv.
-#   flash_uart_stm32 - nap CA bootloader va app (factory) qua System
-#                       Memory Bootloader THAT cua chip (ROM, KHONG PHAI
-#                       bootloader tu viet cua SDK) qua UART, dung client TU
-#                       VIET (tools/stm32_uart_flash_firmware.py - KHONG dung
-#                       stm32flash, cong cu chuan nhung xac nhan khong dang
-#                       tin cay tren macOS: chi thu bat tay 1 lan, khong
-#                       retry). CUNG co che 2-vung nhu flash_jtag (1 lan mass
-#                       erase + ghi 2 vung dia chi that trong CUNG 1 phien
-#                       UART, xem client). CAN GIU NUT B0 + NOI DAY PB2->GND
-#                       (thao tac tay), TU RESET qua SWD (khong can bam nut
-#                       Reset - da xac nhan bam tay KHONG on dinh bang SWD).
-#   serial_monitor   - mo serial monitor doc log UART (miniterm).
+# Creates three targets, available through `cmake --build <dir> --target <target>` or CMake Tools.
+#                       Both full-image flash methods write [bootloader+header+app] in one session;
+#                       obsolete partial targets flash_bootloader/flash_uart/flash_all were removed
+#                       to avoid confusion. This also accommodates FU2 without assuming a running
+#                       SDK bootloader can receive an app separately. flash_jtag writes bootloader
+#                       and factory app through SWD in one OpenOCD session, without UART or a
+#                       running bootloader. Since 2026-08-10, two separate `program` commands
+#                       replace the assumption that the app immediately follows the bootloader.
+#                       bootloader.bin goes at the flash base. tools/build_ota_image.py packages
+#                       [header+app], written at NEON_MDF_FLASHMAP_APP_BASE when flashmap.csv
+#                       exists, otherwise NEON_MDF_APP_BASE. This does not depend on CSV row order.
+#                       flash_uart_stm32 writes both images through the chip ROM System Memory
+#                       Bootloader, rather than the
+#                       SDK bootloader, using tools/stm32_uart_flash_firmware.py. stm32flash was unreliable on the tested
+#                       macOS setup because it attempted the handshake only once. The custom client
+#                       retries, performs one mass erase, then writes both address regions in one
+#                       UART session. Connect PB2 to GND and hold B0 manually; SWD triggers reset
+#                       automatically and was more reliable than the physical Reset button in
+#                       hardware testing.
+#   serial_monitor: open the UART log monitor (miniterm).
 #
-# App CO flashmap.csv (xem cmake/flashmap.cmake) co them 1 ham rieng
-# neon_mdf_add_ota_flash_target(<ota_app_target> <openocd_cfg>) sinh target
-# `flash_ota` - GIA LAP OTA qua SWD de test bootloader (xem ham do o duoi,
+# Apps with flashmap.csv (cmake/flashmap.cmake) can call
+# neon_mdf_add_ota_flash_target(<ota_app_target> <openocd_cfg>) to create `flash_ota`, which
+# simulates OTA through SWD for bootloader testing. See below and
 # examples/OTA_Demo/).
 #
-# Client UART cho protocol tu viet cua SDK nam tai tools/send_ota_uart.py;
-# examples/OTA_Demo tao target flash_ota_uart/flash_ota_uart_bad de goi no.
-# Hai ham build_header()/build_app_blob() dung cho cac duong SWD/full-image
-# van nam rieng trong tools/build_full_image.py.
-# Bootloader tu viet cua SDK (components/bootloader/neon_bootloader_main.c)
-# van duoc build va ghi vao flash nhu binh thuong. Sau lan nap factory dau,
-# send_ota_uart.py co the nap RIENG slot app_ota qua bootloader nay.
+# tools/send_ota_uart.py implements the SDK bootloader UART protocol. examples/OTA_Demo defines
+# flash_ota_uart/flash_ota_uart_bad to call it. SWD/full-image packaging helpers
+# build_header()/build_app_blob() remain in tools/build_full_image.py. The SDK bootloader
+# (components/bootloader/neon_bootloader_main.c) is built and flashed normally. After the initial
+# factory flash, send_ota_uart.py can update only the app_ota slot through that bootloader.
 #
 # ============================================================================
-# CHINH SACH BAT BUOC cho MOI target flash-toan-bo (full-image) - hien tai la
-# flash_jtag/flash_uart_stm32, va BAT KY giao thuc flash moi nao them sau nay
-# (vd 1 giao thuc mang that cho FU2): sau khi flash xong, app CO flashmap.csv
-# PHAI luon boot vao FACTORY (khong duoc de otadata cu tro sang mot slot/app
-# KHAC song sot qua lan flash) - "flash lai binh thuong" nen luon co nghia la
-# "gio chay dung ban vua nap", CHI flash_ota (xem duoi) moi duoc dat
-# active_slot=1. Dat duoc bang 1 trong 2 cach, TUY co che ghi:
-#   (a) Co che ghi la MASS ERASE THAT toan chip (vd flash_uart_stm32, lenh
-#       Extended Erase ma dac biet 0xFFFF cua AN3155) - otadata TU DONG bi
-#       xoa ve blank/invalid nhu tac dung phu cua buoc erase, khong can lam
-#       gi them: NEON_OTA_ReadData() doc magic sai -> tra ve 0 (invalid),
-#       boot_flashmap() coi la "chua tung OTA" -> nhay factory mac dinh (xem
-#       components/bootloader/neon_bootloader_main.c). flash_uart_stm32 DA
-#       THOA MAN chinh sach nay san, KHONG can sua gi.
-#   (b) Co che ghi CHI xoa vung/sector cua chinh anh dang ghi (vd flash_jtag
-#       qua `openocd program` - chi erase sector anh de len, KHONG dung toi
-#       otadata vi anh factory theo flashmap dung lai DUNG truoc otadata) -
-#       BAT BUOC tu ghi kem 1 otadata factory (active_slot=0, state=VALID,
-#       boot_attempts=0, dung `tools/build_otadata_image.py 0 0 0 <out>`)
-#       trong CUNG 1 giao dich/phien voi anh chinh, xem cach flash_jtag lam o
-#       duoi (2 lenh `program` cua openocd trong 1 phien).
-# Neu them 1 target flash-toan-bo moi: xac dinh co che ghi cua no roi ap dung
-# (a) hoac (b) - DUNG gia dinh "ghi ca bootloader+app la da xoa het flash",
-# da xac nhan SAI voi flash_jtag (chinh la bug that gap 3 lan trong 1 phien
-# lam viec truoc khi sua o day).
+# REQUIRED POLICY for every full-image flash target, including flash_jtag/flash_uart_stm32 and future
+#       transports: apps with flashmap.csv must boot the newly flashed FACTORY image. Stale otadata
+#       must not select an old app or slot. Only flash_ota may select active_slot=1. There are two
+#       implementations: (a) a whole-chip mass erase, such as flash_uart_stm32 using AN3155 Extended
+#       Erase code 0xFFFF, automatically leaves otadata blank/invalid. No extra work is required:
+#       further work: NEON_OTA_ReadData() reads an invalid magic value and returns 0 (invalid),
+#       boot_flashmap() treats this as no prior OTA and selects factory by default. See
+#       components/bootloader/neon_bootloader_main.c). flash_uart_stm32 already
+#       already satisfies the policy. (b) A writer that erases only the image sectors, such as flash_jtag
+# using `openocd program`, leaves otadata intact because the factory image ends before it. Write
+# factory metadata (active_slot=0, state=VALID, boot_attempts=0, generated with
+# `tools/build_otadata_image.py 0 0 0 <out>`) in the same session as the image. flash_jtag uses two
+# OpenOCD `program` commands in one session. New full-image targets must explicitly implement (a) or
+# (b). Writing both bootloader and app does not imply a whole-chip erase; that assumption caused
+# three observed flash_jtag failures before this fix.
 # ============================================================================
 #
-# NEON_MDF_SERIAL_PORT la CACHE STRING chi dung lam GIA TRI MAC DINH luc
-# configure (vd -DNEON_MDF_SERIAL_PORT=... neu cam lai cap bi doi ten cong
-# co dinh mai). flash_uart_stm32/serial_monitor o duoi doc cong THAT
-# qua BIEN MOI TRUONG shell $NEON_MDF_SERIAL_PORT (fallback ve gia tri cache
-# nay neu bien moi truong chua dat) - KHONG con nhung cung cap luc configure
-# nua, de vscode-extension/ (xem src/commands/flash.ts) co the doi cong moi
-# lan chay targets nay (qua ShellExecution env) ma khong can reconfigure lai
+# NEON_MDF_SERIAL_PORT is a CACHE STRING used only as the configure-time default, e.g.
+# -DNEON_MDF_SERIAL_PORT=.... flash_uart_stm32/serial_monitor read the current shell environment
+# variable $NEON_MDF_SERIAL_PORT at runtime, falling back to the cache when unset. This lets
+# vscode-extension/src/commands/flash.ts select a different port through ShellExecution env on each
+# invocation without reconfiguring
 # CMake.
 set(NEON_MDF_SERIAL_PORT "/dev/cu.usbmodem102" CACHE STRING
-  "Cong serial MAC DINH (fallback) cua ST-Link V2.1 VCP. Ghi de tam thoi qua bien moi truong NEON_MDF_SERIAL_PORT.")
+  "Default ST-Link V2.1 VCP serial port. Override at runtime through NEON_MDF_SERIAL_PORT.")
 
 function(neon_mdf_add_flash_targets bootloader_target app_target openocd_cfg)
   find_program(NEON_MDF_OPENOCD openocd REQUIRED)
   find_program(NEON_MDF_PYTHON3 python3 REQUIRED)
 
-  # Ghi lai CHINH XAC ten bootloader_target/app_target vao 1 file manifest
-  # (dung boi vscode-extension/src/commands/debug.ts) - TRUOC day debug.ts tu
-  # DOAN "executable nao la ban OTA" bang cach kiem tra ten co ket thuc bang
-  # "_ota" khong (vd "freertos_blinky_ota") - bug that: examples/OTA_Demo co
-  # them "ota_demo_ota_bad" (KHONG ket thuc "_ota", ket thuc "_bad") dung de
-  # test rollback, debug.ts doan sai thanh flash_jtag trong khi executable do
-  # thuc ra dung chung linker script/slot voi "ota_demo_ota" - flash 1 anh
-  # nhung debug voi symbol/entry point cua anh KHAC. Ghi that ra file thay vi
-  # doan - "factory"/"bootloader" o day, "ota" duoc neon_mdf_add_ota_flash_target()
-  # APPEND them (goi SAU ham nay trong moi CMakeLists.txt thuc te).
+  # Record the exact bootloader_target/app_target names in a manifest for
+  # vscode-extension/src/commands/debug.ts. Guessing an OTA executable from an _ota suffix failed
+  # for examples/OTA_Demo/ota_demo_ota_bad: it ends in _bad but shares the OTA linker script and
+  # slot with ota_demo_ota. The old heuristic selected flash_jtag, then debugged symbols from a
+  # different image. Write factory/bootloader names here; neon_mdf_add_ota_flash_target() appends
+  # ota later. SDK CMakeLists.txt files call the functions in that order.
   file(WRITE "${CMAKE_BINARY_DIR}/neon_mdf_debug_targets.txt"
     "bootloader=${bootloader_target}\nfactory=${app_target}\n")
 
@@ -123,19 +91,15 @@ function(neon_mdf_add_flash_targets bootloader_target app_target openocd_cfg)
       COMMAND bash -c "${NEON_MDF_PYTHON3} -m serial.tools.miniterm \"\${NEON_MDF_SERIAL_PORT:-${NEON_MDF_SERIAL_PORT}}\" 115200"
       USES_TERMINAL
       VERBATIM
-      COMMENT "Serial Monitor - doc log UART qua bien moi truong NEON_MDF_SERIAL_PORT, mac dinh ${NEON_MDF_SERIAL_PORT} (Ctrl+] de thoat)"
+      COMMENT "Serial Monitor: read UART logs using NEON_MDF_SERIAL_PORT, default ${NEON_MDF_SERIAL_PORT}; Ctrl+] exits"
     )
   endif()
 
-  # Dia chi THAT de ghi bootloader (dau vung flash) va app (factory) - tinh 1
-  # LAN o day, dung chung boi flash_jtag/flash_uart_stm32 ben duoi (2026-08-10,
-  # thay cho cach ghep 1 file .bin lien tuc gia dinh app nam ngay sau
-  # bootloader - gia dinh do bat flashmap.csv PHAI liet ke "app" la dong DAU
-  # TIEN, khac esp-idf partitions.csv that su linh hoat thu tu partition).
-  # App CO flashmap.csv: dia chi app lay THAT tu NEON_MDF_FLASHMAP_APP_BASE
-  # (tinh boi tools/gen_flashmap.py tu dung thu tu THAT trong file, khong
-  # quan trong dong nao dung truoc). App KHONG co flashmap.csv: dung dia chi
-  # co dinh NEON_MDF_APP_BASE (tinh thang tu bootloader.size trong YAML).
+  # Calculate the actual bootloader and factory-app addresses once for flash_jtag/flash_uart_stm32.
+  # Since 2026-08-10, separate regions replace a contiguous image that assumed the app immediately
+  # followed the bootloader and required app to be the first CSV row. With flashmap.csv,
+  # tools/gen_flashmap.py supplies NEON_MDF_FLASHMAP_APP_BASE from the declared partition order.
+  # Otherwise use NEON_MDF_APP_BASE, derived from bootloader.size in YAML.
   math(EXPR NEON_MDF_FLASH_BASE "${NEON_MDF_APP_BASE} - ${NEON_MDF_BOOTLOADER_SIZE}" OUTPUT_FORMAT HEXADECIMAL)
   if(DEFINED NEON_MDF_FLASHMAP_APP_BASE)
     set(_neon_mdf_app_write_base ${NEON_MDF_FLASHMAP_APP_BASE})
@@ -144,26 +108,18 @@ function(neon_mdf_add_flash_targets bootloader_target app_target openocd_cfg)
   endif()
 
   if(NOT TARGET flash_jtag)
-    # Dong goi app thanh [header 16 byte][dem][app.bin] qua
-    # tools/build_ota_image.py (dung LAI ham build_app_blob() - KHONG viet
-    # lai logic dong goi/CRC rieng cho duong nay, xem file do) -
-    # bootloader.bin ghi THANG (da la 1 file .bin hop le tu chinh build cua
-    # no, khong can dong goi gi them) - 2 lenh `program` RIENG cua openocd
-    # trong CUNG 1 phien, KHONG con ghep chung 1 file .bin lien tuc.
+    # Package [16-byte header][padding][app.bin] through tools/build_ota_image.py, reusing
+    # build_app_blob() rather than duplicating packaging/CRC logic. Write bootloader.bin directly
+    # because it is already a valid binary. Use two OpenOCD `program` commands in one session,
+    # rather than joining the regions into a contiguous image.
     if(DEFINED NEON_MDF_FLASHMAP_OTADATA_BASE)
-      # App CO flashmap.csv (OTA) - flash_jtag chi ghi partition "bootloader"
-      # + "app" (factory), KHONG dung toi "app_ota"/"otadata" - nhung bootloader
-      # lai quyet dinh boot vao dau dua tren otadata.active_slot, con sot lai
-      # tu lan test OTA truoc (cua CHINH app nay hoac 1 app KHAC tung dung
-      # chung board that) - neu khong reset, flash_jtag co the "thanh cong"
-      # (Verified OK that) ma board VAN boot vao slot OTA cu, KHONG PHAI ban
-      # factory vua nap - da gap that nhieu lan luc test tren phan cung.
-      # Fix (xem CHINH SACH day du o dau file): LUON ghi kem otadata ve trang
-      # thai factory (active_slot=0, state=VALID, boot_attempts=0) trong CUNG
-      # 1 phien openocd - day la truong hop (b) cua chinh sach (co che ghi
-      # chi xoa sector cua anh, khong tu dung toi otadata). flash_uart_stm32
-      # KHONG can khoi nay - no la truong hop (a), mass erase that cua no da
-      # tu lo otadata roi (xem mass_erase() trong stm32_uart_flash_firmware.py).
+      # With flashmap.csv, flash_jtag writes only the "bootloader" partition and
+      # + "app" (factory), leaving app_ota/otadata intact. The bootloader uses otadata.active_slot, which may
+      # still select an OTA image from an earlier test or another app on the same board. A verified
+      # flash can therefore boot the old OTA image. Always write factory metadata (active_slot=0,
+      # state=VALID, boot_attempts=0) in the same OpenOCD session. This implements policy (b) above.
+      # flash_uart_stm32 implements (a): mass_erase() in stm32_uart_flash_firmware.py already clears
+      # otadata.
       add_custom_target(flash_jtag
         COMMAND ${NEON_MDF_PYTHON3} ${NEON_MDF_PATH}/tools/build_ota_image.py
                 $<TARGET_FILE:${app_target}>.bin
@@ -179,7 +135,7 @@ function(neon_mdf_add_flash_targets bootloader_target app_target openocd_cfg)
         DEPENDS ${bootloader_target} ${app_target}
         USES_TERMINAL
         VERBATIM
-        COMMENT "Nap bootloader + app (factory, dia chi THAT tu flashmap.csv) + RESET otadata ve factory (active_slot=0,state=VALID) trong CUNG 1 phien SWD - dam bao luon boot dung ban vua nap"
+        COMMENT "Flash bootloader and factory app at the flashmap.csv address, and reset otadata to factory (active_slot=0,state=VALID) in one SWD session"
       )
     else()
       add_custom_target(flash_jtag
@@ -193,88 +149,75 @@ function(neon_mdf_add_flash_targets bootloader_target app_target openocd_cfg)
         DEPENDS ${bootloader_target} ${app_target}
         USES_TERMINAL
         VERBATIM
-        COMMENT "Nap CA bootloader lan app qua SWD trong 1 phien openocd (2 lenh program rieng, dia chi that) - giong idf.py flash, khong can UART/bootloader dang chay"
+        COMMENT "Flash bootloader and app through SWD in one OpenOCD session with two program commands; no UART or running bootloader required"
       )
     endif()
   endif()
 
   if(NOT TARGET flash_uart_stm32)
-    # Ghi qua System Memory Bootloader THAT cua chip (ROM cua STM32, KHONG
-    # PHAI bootloader tu viet - xem AN2606/AN3155 cua ST) bang client TU
-    # VIET (tools/stm32_uart_flash_firmware.py) - client nay nhan NHIEU cap
-    # (file, dia chi) va ghi trong CUNG 1 phien UART (1 lan dong bo + 1 lan
-    # mass erase + nhieu vong ghi) - CUNG co che 2-vung nhu flash_jtag,
-    # KHONG con ghep 1 file .bin lien tuc gia dinh app nam sat sau bootloader.
-    # ROM bootloader nay LUON CO SAN bat ke flash dang chua gi (giong ROM
-    # bootloader cua ESP32 ma esptool.py dung) - khong can bootloader tu
-    # viet dang chay/hop tac gi ca.
+    # Use the STM32 ROM System Memory Bootloader (ST AN2606/AN3155), rather than the SDK bootloader.
+    # tools/stm32_uart_flash_firmware.py accepts multiple (file,address) pairs and writes them in
+    # one UART session: synchronize once, mass erase once, then write each region. As with
+    # flash_jtag, this avoids assuming that the app immediately follows the bootloader. The ROM
+    # service is available regardless of flash contents, like the ESP32 ROM bootloader used by
+    # esptool.py; it does not require a cooperating SDK bootloader.
     #
-    # otadata: target nay la truong hop (a) cua CHINH SACH o dau file - client
-    # dung Extended Erase (ma 0xFFFF = mass erase TOAN CHIP that, xem
-    # mass_erase() trong stm32_uart_flash_firmware.py) TRUOC khi ghi anh, nen
-    # otadata TU DONG ve blank/invalid, bootloader mac dinh coi la factory -
-    # KHONG can tu ghi kem otadata nhu flash_jtag lam (truong hop (b)).
+    # This target implements policy (a): Extended Erase code 0xFFFF performs a whole-chip mass erase
+    # before writing (mass_erase() in stm32_uart_flash_firmware.py). otadata becomes blank/invalid
+    # and the bootloader selects factory. No separate metadata write is needed, unlike flash_jtag
+    # policy (b).
     #
-    # KHONG dung `stm32flash` (cong cu chuan cua cong dong) - da xac nhan
-    # THAT tren may nay: no chi thu gui byte dong bo (0x7F) DUNG 1 LAN roi
-    # bao loi ngay ("Failed to init device") neu khong trung dung khoanh
-    # khac bootloader san sang, KHONG retry nhu can thiet. Client tu viet
-    # gui lap lai cho toi khi thanh cong - da test THAT nhieu lan, luon
-    # thanh cong.
+    # Do not use `stm32flash` for this tested workflow: it sends the 0x7F synchronization byte once, then
+    # reports "Failed to init device" if the bootloader is not ready at that instant. The custom
+    # client retries synchronization until success and was verified repeatedly on hardware.
     #
-    # CHI 1 THAO TAC TAY (khong can bam nut Reset nua): NOI DAY NHAY PB2 ->
-    # GND (KHONG PHAI nut bam - la chan tren header GPIO) + GIU NUT B0 TREN
-    # BOARD, roi target nay TU RESET qua SWD (ghi thang AIRCR.SYSRESETREQ -
-    # da xac nhan THAT dang tin cay hon han bam nut Reset vat ly: nut Reset
-    # tay cho ket qua KHONG ON DINH tren board nay, co luc vao dung System
-    # Bootloader co luc khong du voi CUNG 1 quy trinh - reset qua SWD thi
-    # LUON thanh cong qua nhieu lan test).
+    # Manual preparation: connect the PB2 GPIO header pin to GND and hold the board B0 button. Reset is
+    # automatic through SWD by writing AIRCR.SYSRESETREQ. In repeated tests on this board, this was
+    # more reliable than pressing the physical Reset button, which inconsistently entered System
+    # Bootloader mode.
     #
-    # STM32F412 dung CA BOOT0 LAN BOOT1 (=PB2) de chon che do boot (khac
-    # nhieu dong F4 khac chi dung BOOT0) - va PB2 TRUNG voi chan LED tren
-    # board WeAct nay, bi THA NOI theo thiet ke (van de da biet cua dong
-    # board WeAct Blackpill/F4x1, khong phai loi cua SDK nay) - neu khong
-    # noi GND, BOOT1 doc sai gia tri ngau nhien moi lan reset, co luc vao
-    # dung System Bootloader co luc khong.
+    # STM32F412 uses both BOOT0 and BOOT1 (=PB2) to select boot mode. On this WeAct board, PB2 is shared
+    # with the LED and may float by design, a known WeAct Blackpill/F4x1 board issue. Without a GND
+    # connection,
+    # PB2 is grounded, BOOT1 can read a different random value at each reset, entering
+    # the System Bootloader may be entered inconsistently.
     #
-    # Sau khi ghi xong: THA B0 + RUT day PB2->GND (PB2 la chan LED cua app,
-    # de noi GND mai se can LED), roi reset lai de chip chay app that.
+    # After writing, release B0, disconnect PB2 from GND so the app can drive its LED, and reset to run
+    # the app.
     add_custom_target(flash_uart_stm32
       COMMAND ${NEON_MDF_PYTHON3} ${NEON_MDF_PATH}/tools/build_ota_image.py
               $<TARGET_FILE:${app_target}>.bin
               ${NEON_MDF_IMAGE_HEADER_SIZE}
               $<TARGET_FILE_DIR:${app_target}>/${app_target}_blob.bin
-      COMMAND bash -c "echo '=== NOI DAY PB2->GND + GIU NUT B0 TREN BOARD (KHONG CAN BAM NUT RESET - tu dong reset qua SWD) ==='; ${NEON_MDF_OPENOCD} -f ${openocd_cfg} -c init -c \"mww 0xE000ED0C 0x05FA0004\" -c shutdown >/dev/null 2>&1; PORT=\"\${NEON_MDF_SERIAL_PORT:-${NEON_MDF_SERIAL_PORT}}\"; ${NEON_MDF_PYTHON3} ${NEON_MDF_PATH}/tools/stm32_uart_flash_firmware.py \"$PORT\" $<TARGET_FILE:${bootloader_target}>.bin ${NEON_MDF_FLASH_BASE} $<TARGET_FILE_DIR:${app_target}>/${app_target}_blob.bin ${_neon_mdf_app_write_base}"
+      COMMAND bash -c "echo '=== CONNECT PB2->GND + HOLD B0 ON THE BOARD (NO RESET BUTTON NEEDED - automatic SWD reset) ==='; ${NEON_MDF_OPENOCD} -f ${openocd_cfg} -c init -c \"mww 0xE000ED0C 0x05FA0004\" -c shutdown >/dev/null 2>&1; PORT=\"\${NEON_MDF_SERIAL_PORT:-${NEON_MDF_SERIAL_PORT}}\"; ${NEON_MDF_PYTHON3} ${NEON_MDF_PATH}/tools/stm32_uart_flash_firmware.py \"$PORT\" $<TARGET_FILE:${bootloader_target}>.bin ${NEON_MDF_FLASH_BASE} $<TARGET_FILE_DIR:${app_target}>/${app_target}_blob.bin ${_neon_mdf_app_write_base}"
       DEPENDS ${bootloader_target} ${app_target}
       USES_TERMINAL
       VERBATIM
-      COMMENT "Nap CA bootloader lan app qua System Memory Bootloader THAT cua STM32 (UART, KHONG phai bootloader tu viet) - CAN NOI PB2->GND + GIU NUT B0 LUC RESET"
+      COMMENT "Flash bootloader and app through the STM32 ROM System Memory Bootloader over UART; connect PB2 to GND and hold B0 during reset"
     )
   endif()
 endfunction()
 
 # neon_mdf_add_ota_flash_target(<ota_app_target> <openocd_cfg> [flash_target])
-#   ota_app_target - ten target executable link VOI linker script cua
-#                    partition "ota" trong flashmap.csv (vd link
-#                    -T${CMAKE_BINARY_DIR}/flashmap/app_ota.ld) - xem
+#   ota_app_target: executable linked with the OTA partition linker script from flashmap.csv, e.g.
+#                    -T${CMAKE_BINARY_DIR}/flashmap/app_ota.ld); see
 #                    examples/OTA_Demo/CMakeLists.txt.
-#   openocd_cfg    - giong het tham so cung ten trong neon_mdf_add_flash_targets().
-#   flash_target   - tuy chon, mac dinh `flash_ota`; cho phep vi du tao them
-#                    target nhu `flash_ota_bad` ma van dung chung logic dong goi.
+#   openocd_cfg: same as in neon_mdf_add_flash_targets(). flash_target: optional, defaults to
+#                    `flash_ota`; examples can create `flash_ota_bad` using the same packaging
+#                    logic.
 #
-# Sinh target `flash_ota` - GIA LAP OTA qua SWD (chua co duong mang that,
-# xem plan file + memory project_fu2_bootloader_ota_direction) - ghi ANH OTA
-# + OTADATA (danh dau pending, chua xac nhan) trong 1 phien openocd, dung
-# de TEST co che verify/switch/rollback cua bootloader tren phan cung that
-# ma khong can cho toi khi co transport mang thuc su. CHI goi duoc SAU khi
-# app da co flashmap.csv (can NEON_MDF_FLASHMAP_APP_OTA_BASE/OTADATA_BASE,
-# xem cmake/flashmap.cmake) - FATAL_ERROR ro rang neu goi thieu.
+# Create `flash_ota` to simulate OTA through SWD while a network transport is unavailable; see
+# project_fu2_bootloader_ota_direction. Write the OTA image and
+# + OTADATA (pending, unconfirmed) in one OpenOCD session to test bootloader verification, slot
+# switching and rollback on hardware. Call only after
+# the app has processed flashmap.csv, providing NEON_MDF_FLASHMAP_APP_OTA_BASE/OTADATA_BASE,
+# see cmake/flashmap.cmake). Missing prerequisites produce an explicit FATAL_ERROR.
 function(neon_mdf_add_ota_flash_target ota_app_target openocd_cfg)
   find_program(NEON_MDF_OPENOCD openocd REQUIRED)
   find_program(NEON_MDF_PYTHON3 python3 REQUIRED)
 
   if(NOT DEFINED NEON_MDF_FLASHMAP_APP_OTA_BASE OR NOT DEFINED NEON_MDF_FLASHMAP_OTADATA_BASE)
-    message(FATAL_ERROR "neon_mdf_add_ota_flash_target: thieu NEON_MDF_FLASHMAP_APP_OTA_BASE/OTADATA_BASE - goi neon_mdf_process_flashmap() (tu dong qua neon-mdf/CMakeLists.txt khi co flashmap.csv) TRUOC")
+    message(FATAL_ERROR "neon_mdf_add_ota_flash_target: missing NEON_MDF_FLASHMAP_APP_OTA_BASE/OTADATA_BASE; call neon_mdf_process_flashmap() first (automatic through neon-mdf/CMakeLists.txt when flashmap.csv exists)")
   endif()
 
   set(_neon_mdf_ota_flash_target flash_ota)
@@ -282,9 +225,8 @@ function(neon_mdf_add_ota_flash_target ota_app_target openocd_cfg)
     set(_neon_mdf_ota_flash_target ${ARGV2})
   endif()
 
-  # APPEND vao manifest da tao boi neon_mdf_add_flash_targets() (xem comment
-  # o do) - ham nay LUON duoc goi SAU trong moi CMakeLists.txt thuc te cua
-  # SDK (Blinky/FreeRTOS_Blinky/OTA_Demo deu theo dung thu tu nay).
+  # Append to the manifest created by neon_mdf_add_flash_targets(). All SDK apps
+  # (Blinky/FreeRTOS_Blinky/OTA_Demo) call this function afterward.
   if(_neon_mdf_ota_flash_target STREQUAL "flash_ota")
     file(APPEND "${CMAKE_BINARY_DIR}/neon_mdf_debug_targets.txt" "ota=${ota_app_target}\n")
   endif()
@@ -304,7 +246,7 @@ function(neon_mdf_add_ota_flash_target ota_app_target openocd_cfg)
       DEPENDS ${ota_app_target}
       USES_TERMINAL
       VERBATIM
-      COMMENT "GIA LAP OTA qua SWD (${_neon_mdf_ota_flash_target}): ghi [header+${ota_app_target}] vao slot OTA + otadata pending"
+      COMMENT "Simulate OTA through SWD (${_neon_mdf_ota_flash_target}): write [header+${ota_app_target}] to the OTA slot and mark otadata pending"
     )
   endif()
 endfunction()

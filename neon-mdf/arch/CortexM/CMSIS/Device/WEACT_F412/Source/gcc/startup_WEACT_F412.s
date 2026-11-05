@@ -87,7 +87,7 @@ g_pfnVectors:
   .word SysTick_Handler
 
 
-/* ============ Weak aliases (override bằng cách define hàm cùng tên) ============ */
+/* ============ Weak aliases (override by defining functions of the same name) ============== */
   .weak NMI_Handler
   .thumb_set NMI_Handler,Default_Handler
 

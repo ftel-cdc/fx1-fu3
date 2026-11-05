@@ -97,10 +97,10 @@ cmake -E env NEON_MDF_SERIAL_PORT=/dev/ttyUSB0 NEON_MDF_SERIAL_BAUD=19200 \
 
 Select hardware boot mode `100`, wait for `[WAIT] UART is ready`, then press
 RESET. This target programs the normal image into Internal Flash. XIP images
-are rejected before UART is opened. See [Nạp firmware FU2 qua UART](FU2Flashing.md)
+are rejected before UART is opened. See [flash firmware FU2 via UART](FU2Flashing.md)
 for boot modes, runtime parameters, monitoring and troubleshooting.
 For per-mode firmware preparation and boot procedures, see
-[Chế độ khởi động và quy trình chạy firmware FU2](FU2BootModes.md).
+[FU2 boot modes and firmware workflow](FU2BootModes.md).
 
 ## Runtime and peripherals
 

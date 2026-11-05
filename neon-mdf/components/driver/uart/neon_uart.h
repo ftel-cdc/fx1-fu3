@@ -2,12 +2,12 @@
  * @file neon_uart.h
  * @brief Public declarations for UART.
  * @details
- * * NEON_UART - HAL UART dùng chung cho các backend Neon MDF.
+ * * NEON_UART - HAL UART commonly used for Neon MDF backends.
  *
- * Cấu hình public dùng giá trị logic, không lộ mã bit của FU2 LL. Backend
- * chịu trách nhiệm ánh xạ sang register của từng chip. Các field thêm mới
- * đều có giá trị mặc định bằng 0 để code cũ chỉ gán baud_rate vẫn là 8-N-1,
- * oversampling x16, không FIFO và không flow-control.
+ * public configuration uses logical values, without revealing FU2 LL bit code. The backend is
+ * responsible for mapping to the register of each chip. Newly added fields have a default value of
+ * 0 so that old code only assigned baud_rate remains 8-N-1, oversampling x16, no FIFO and no
+ * flow-control.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.
@@ -73,17 +73,17 @@ typedef enum {
 } neon_uart_hardware_flow_control_t;
 
 typedef enum {
-    /* FU2 tự cấu hình pad/mux TX/RX; DeInit khôi phục các bit đã lưu. */
+    /* FU2 manually configures pad/mux TX/RX; DeInit restores saved bits. */
     NEON_UART_PIN_CONFIG_AUTO = 0,
-    /* Giữ nguyên pinmux/PAD do board hoặc boot firmware đã cấu hình. */
+    /* Maintain that pinmux/PAD board or boot firmware configured. */
     NEON_UART_PIN_CONFIG_KEEP = 1,
 } neon_uart_pin_config_t;
 
 typedef enum {
-    /* FU2 DTI: TX chờ LSR.THRF=0; RX chờ LSR.DR=1. */
+    /* FU2 DTI: TX stands for LSR.THRF=0; RX stands for LSR.DR=1. */
     NEON_UART_STATUS_SOURCE_HARDWARE = 0,
-    /* Legacy compatibility shim: firmware/VP cũ từng dùng MSR như PL011 FR
-   * với RXFE tại bit 4. Không dùng mode này cho FU2 VP hiện tại. */
+    /* Legacy compatibility shim: The old firmware/VP used to use MSR like PL011 FR with RXFE at bit 4. Do
+   * not use this mode for the current FU2 VP. */
     NEON_UART_STATUS_SOURCE_FVP_MSR = 1,
 } neon_uart_status_source_t;
 
@@ -139,8 +139,8 @@ typedef enum {
 
 typedef struct {
     uint32_t baud_rate;
-    /* 0: backend lấy clock hiện tại từ CRM/CMSIS. Giá trị khác 0 là clock
-   * đầu vào UART theo Hz do board cung cấp. */
+    /* 0: backend takes the current clock from CRM/CMSIS. The non-zero value is the UART input clock in Hz
+   * that the board is of the same level. */
     uint32_t clock_frequency_hz;
     neon_uart_word_length_t word_length;
     neon_uart_stop_bits_t stop_bits;
@@ -150,8 +150,8 @@ typedef struct {
     /* FU2 rev1p3 does not define threshold bits: only the default is supported. */
     neon_uart_fifo_threshold_t fifo_threshold;
     neon_uart_hardware_flow_control_t hardware_flow_control;
-    /* FU2 chưa có mapping RTS/CTS trong bảng SYSCSR LL: nếu dùng hardware
-   * flow-control phải chọn KEEP và cấu hình các chân handshake ở board. */
+    /* FU2 does not have RTS/CTS mapping in SYSCSR LL table: hardware flow-control must select KEEP and
+   * configure the handshake pins on board. */
     neon_uart_pin_config_t pin_config;
     neon_uart_status_source_t status_source;
 } neon_uart_config_t;
@@ -165,7 +165,7 @@ typedef struct neon_uart_handle_s {
    * CLKS is read-to-clear; this snapshot remains until the next receive/init
    * or ClearError. address/command fields are metadata, not error flags. */
     volatile uint32_t clock_status;
-    uint32_t private_context; /* Backend sử dụng; ứng dụng không sửa field này. */
+    uint32_t private_context; /* Backend used; application does not fix this field. */
 } neon_uart_handle_t;
 
 /*==================================================================================================
@@ -175,7 +175,7 @@ typedef struct neon_uart_handle_s {
  * @brief Fill the default configuration for UART.
  * @param[out] config Module configuration.
  * @details
- * Điền cấu hình mặc định 115200, 8-N-1, x16, FIFO tắt, tự cấu hình pin.
+ * Fill default configuration 115200, 8-N-1, x16, FIFO off, manual pin configuration.
  */
 void neon_uart_get_default_config(neon_uart_config_t *config);
 
@@ -238,7 +238,7 @@ neon_status_t neon_uart_set_baud_rate(neon_uart_handle_t *huart, uint32_t baud_r
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * timeout_polls là tổng số vòng poll tối đa cho cả lời gọi, không phải mili-giây.
+ * timeout_polls is the maximum total number of poll rings for both calls, not milliseconds.
  * FU2 TX returns after enqueueing all data through THR using LSR[5] THRF=0;
  * it does not wait for the last byte to finish on the wire (LSR[6] TEMT).
  * Drain TEMT before resetting/reconfiguring the UART or changing its pins.
@@ -286,7 +286,7 @@ neon_status_t neon_uart_wait_tx_complete(neon_uart_handle_t *huart, uint32_t tim
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * API 9-bit. Mỗi phần tử chỉ dùng 9 bit thấp.
+ * 9-bit API. Each element uses only 9 low bits.
  */
 neon_status_t neon_uart_transmit_words(neon_uart_handle_t *huart, const uint16_t *data, uint16_t size,
                                        uint32_t timeout_polls);
@@ -328,8 +328,8 @@ neon_status_t neon_uart_get_interrupt_id(const neon_uart_handle_t *huart, neon_u
  * @return NEON_OK on success, or a module error/status code.
  */
 neon_status_t neon_uart_is_interrupt_pending(const neon_uart_handle_t *huart, uint8_t *pending);
-/* Các API trên chỉ điều khiển IER/IIR của UART; ứng dụng vẫn bật NVIC bằng
- * NVIC_EnableIRQ(USARTx_IRQn) và tự cung cấp ISR/callback phù hợp.
+/* The above APIs control only UART's IER/IIR; the application still enables NVIC with
+ * NVIC_EnableIRQ(USARTx_IRQn) and self - grants matching ISR/callback.
  * FU2 ALL includes interrupt sources only; select AUTO_CLEAR or MANUAL_CLEAR
  * separately (never both). enable/Disable AUTO_CLEAR clears/sets IER[4];
  * enable/Disable MANUAL_CLEAR sets/clears it. Reading IIR acknowledges pending

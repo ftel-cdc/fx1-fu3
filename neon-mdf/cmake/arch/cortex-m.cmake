@@ -1,13 +1,12 @@
-# Cờ compile/link chung cho mọi target Cortex-M. Gọi neon_mdf_apply_cortex_m_arch()
-# sau khi tạo target, truyền đúng tên core lấy từ cpu.core trong device .yaml
-# (vd "cortex-m0") + có FPU hay không (tham số thứ 3, tuỳ chọn, mặc định OFF).
+# Flag compile/link common to all Cortex-M targets. Call neon_mdf_apply_cortex_m_arch() after target
+# creation, pass the correct core name taken from cpu.core in device .yaml (e.g. "cortex-m0") + have
+# FPU please not (third parameter, optional, default OFF).
 #
 # neon_mdf_apply_cortex_m_arch(<target> <mcpu> [<fpu_present>])
-#   fpu_present = ON  -> "-mfloat-abi=hard -mfpu=fpv4-sp-d16" (Cortex-M4F THẬT
-#                         dùng FPU phần cứng - xem NEON_MDF_TARGET_<X>_FPU
-#                         trong cmake/mcu_variants.cmake).
-#   fpu_present = OFF/không truyền -> "-mfloat-abi=soft" (M0/M0+ không có FPU,
-#                         hoặc M4 không FPU) - hành vi mặc định như cũ.
+#   fpu_present = ON -> "-mfloat-abi=hard -mfpu=fpv4-sp-d16" (Cortex-M4F REALLY uses FPU hardware - see
+#                         NEON_MDF_TARGET_<X>_FPU in cmake/mcu_variants.cmake). fpu_present = OFF/no
+#                         transmission -> "-mfloat-abi=soft" (M0/M0+ without FPU, or M4 without FPU)
+#                         - default behavior as before.
 function(neon_mdf_apply_cortex_m_arch target mcpu)
   if(ARGC GREATER 2 AND ARGV2)
     set(_float_flags -mfloat-abi=hard -mfpu=fpv4-sp-d16)

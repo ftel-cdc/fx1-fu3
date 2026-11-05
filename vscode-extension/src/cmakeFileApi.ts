@@ -1,15 +1,11 @@
-// cmakeFileApi.ts - dung CMake File API (khong parse output/cache) de lay
-// danh sach executable THAT cua 1 build dir (ten + duong dan artifact) -
-// day la co che CHINH THUC CMake cung cap cho tool ben ngoai doc project
-// model (CMake Tools/CLion... deu dung co che nay), cho phep extension
-// KHONG can hardcode ten executable (blinky/bootloader/...) rieng cho tung
-// project vi du - tu dong ap dung cho project moi mien la co CMakePresets.json.
-// Xem https://cmake.org/cmake/help/latest/manual/cmake-file-api.7.html
+// Read executable targets and artifact paths from the CMake File API.
+// Use the grouped client query and its actual codemodel-v2 reply rather than
+// guessing build-directory names or executable filenames.
 import * as vscode from "vscode";
 
 export interface DiscoveredExecutable {
   name: string;
-  /** Duong dan TUYET DOI toi file thuc thi (.elf/khong duoi). */
+  /** extension, then resolve the actual file path (.elf or no suffix). */
   artifactPath: string;
 }
 
@@ -33,9 +29,9 @@ async function fileExists(uri: vscode.Uri): Promise<boolean> {
 }
 
 /**
- * Ghi query file (idempotent - chi ghi neu chua co). PHAI ton tai TRUOC
- * luc CMake configure/generate chay thi CMake moi ghi reply tuong ung -
- * goi ham nay TRUOC moi lan configure (xem configure.ts), khong phai sau.
+ * write query file (idempotent - only write if not already). must exist before CMake
+ * configure/generate runs, so CMake writes a corresponding reply every time - call this function
+ * before each configuration (see configure.ts), not after.
  */
 export async function ensureFileApiQuery(buildDir: vscode.Uri): Promise<void> {
   const file = queryFile(buildDir);
@@ -56,13 +52,12 @@ async function readJson<T>(uri: vscode.Uri): Promise<T> {
   return JSON.parse(Buffer.from(bytes).toString("utf8")) as T;
 }
 
-// Query file o day dung dang "grouped" (1 file query.json voi mang
-// "requests") - dang nay tra loi qua reply["<client>"]["query.json"].responses[]
-// (MOI response co "kind"+"jsonFile"), KHAC voi dang "stateless" (tung file
-// query rieng ten theo kind, vd "codemodel-v2") tra loi truc tiep qua
-// reply["<client>"]["codemodel-v2"] - da xac nhan bang test that tren build
-// dir thuc te (Blinky/WEACT_F412), lam ho khi gia dinh nham dang stateless
-// luc dau (reply["<client>"]["codemodel-v2"] la undefined trong thuc te).
+// The client query is stateful: one query.json contains a requests array. This was
+// checking for errors via reply["<client>"]["query.json"].responses[] (each response has
+// "kind"+"jsonFile"), unlike being "stateless" (each query file is named after its own kind, e.g.
+// "codemodel-v2") which checks for errors directly via reply["<client>"]["codemodel-v2"] -
+// verified against Blinky/WEACT_F412 build output. A stateless reply assumption fails because
+// reply["<client>"]["codemodel-v2"] is undefined.
 interface ReplyIndex {
   reply: {
     [client: string]: {
@@ -88,10 +83,9 @@ interface CodemodelTarget {
 }
 
 /**
- * Doc danh sach executable THAT trong build dir qua CMake File API - goi
- * SAU KHI da chac chan configure xong VA co reply (xem configure.ts). Neu
- * chua tung configure voi query file nay, reply chua ton tai - tra ve []
- * thay vi throw, noi goi tu quyet dinh thong bao gi.
+ * read the actual executable list in build dir via CMake File API - call after configure has been done
+ * and there is a reply (see configure.ts). if never configured with this query file, the reply does
+ * not exist - look up [] because throw, we call from what message specifier.
  */
 export async function readExecutables(buildDir: vscode.Uri): Promise<DiscoveredExecutable[]> {
   const reply = replyDir(buildDir);

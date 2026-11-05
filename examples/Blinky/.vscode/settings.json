@@ -6,7 +6,7 @@
   },
   "cortex-debug.armToolchainPath": "",
 
-  "//": "NEON_MDF_PATH: giong IDF_PATH cua ESP-IDF. VSCode KHONG luon ke thua bien moi truong shell (vd mo qua Dock/Spotlight) - set day de chac chan CMake Tools va integrated terminal deu thay, khong phu thuoc nguoi dung nho `source neon-mdf/export.sh` truoc. Path tinh tuong doi tu app nay (examples/<X>/) len neon-mdf/ (2 cap: <X> -> examples -> repo root -> neon-mdf) - doi lai neu copy app ra vi tri khac.",
+  "//": "NEON_MDF_PATH corresponds to ESP-IDF IDF_PATH. VS Code launched from Dock/Spotlight may not inherit the shell environment. Set the path here so CMake Tools and the integrated terminal can find the SDK without sourcing neon-mdf/export.sh. The default relative path goes from examples/<X>/ up two levels to the repository root and then into neon-mdf/. Update it when moving the app.",
   "cmake.environment": {
     "NEON_MDF_PATH": "${workspaceFolder}/../../neon-mdf"
   },

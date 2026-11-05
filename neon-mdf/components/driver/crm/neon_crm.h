@@ -2,11 +2,11 @@
  * @file neon_crm.h
  * @brief Public declarations for CRM.
  * @details
- * * NEON_CRM - HAL quản lý clock và reset.
+ * * NEON_CRM - HAL clock management and reset.
  *
- * API public chỉ dùng tên nguồn clock và tên ngoại vi ở mức Neon. Việc một
- * ngoại vi nằm trong CLK_GATE_0, CLK_GATE_1 hay SW_RST_N_x là chi tiết của
- * backend từng dòng chip và không được lộ ra ngoài ứng dụng.
+ * The public API uses only the clock source name and a Neon-level peripheral name. The fact that a
+ * peripheral is in CLK_GATE_0, CLK_GATE_1 or SW_RST_N_x is the backend of each chip line and must
+ * not be exposed to the application.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.
@@ -55,9 +55,9 @@ typedef struct {
     uint32_t pll_timeout_polls;
 } neon_crm_config_t;
 
-/* Tên ngoại vi độc lập với cách chia nhóm clock/reset của phần cứng.
- * Không public MRV, ROM và SRAM. FLASH được public để flash HAL quản lý
- * clock; không được disable/reset FLASH khi CPU đang execute từ main array. */
+/* The peripheral name is independent of hardware's clock/reset grouping. No MRV, ROM and SRAM are
+ * public. FLASH is public for HAL flash clock management; not disable/reset FLASH when the CPU is
+ * executing from the main array. */
 typedef enum {
     NEON_CRM_PERIPHERAL_AES = 0,
     NEON_CRM_PERIPHERAL_QSPI = 1,
@@ -106,14 +106,14 @@ typedef uint32_t neon_crm_reset_source_t;
 /*==================================================================================================
 *                                       FUNCTION PROTOTYPES
 ==================================================================================================*/
-/* Quy ước status của CRM:
- * - NEON_INVALID_PARAM: con trỏ, enum hoặc tổ hợp cấu hình đầu vào không hợp lệ.
- * - NEON_NOT_SUPPORTED: ngoại vi hợp lệ nhưng FU2 không có chức năng yêu cầu.
- * - NEON_TIMEOUT: PLL không khóa trong giới hạn pll_timeout_polls.
- * - NEON_OK: thao tác hoàn tất; ngoại vi không có clock gate riêng được xem
- *   là luôn bật và các API clock vẫn trả NEON_OK. */
+/* CRM status conventions:
+ * - NEON_INVALID_PARAM: invalid pointer, enum or input configuration combination.
+ * - NEON_NOT_SUPPORTED: valid peripheral but FU2 has no required function.
+ * - NEON_TIMEOUT: PLL is not locked within the limit of pll_timeout_polls.
+ * - NEON_OK: operation complete; no private peripheral clock gate is considered always enabled and the
+ *   clock API still returns NEON_OK. */
 
-/* Điền cấu hình mặc định: HSI, PLL tắt, multiplier/divider bằng 0. */
+/* Fill default configuration: HSI, PLL off, multiplier/divider equals 0. */
 /**
  * @brief Fill the default configuration for CRM.
  * @param[out] config Module configuration.
@@ -125,7 +125,7 @@ void neon_crm_get_default_config(neon_crm_config_t *config);
  * @param[in] config Module configuration.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Cấu hình nguồn clock hệ thống và PLL.
+ * configuration source system clock and PLL.
  */
 neon_status_t neon_crm_init(const neon_crm_config_t *config);
 /**
@@ -144,7 +144,7 @@ neon_status_t neon_crm_get_config(neon_crm_config_t *config);
  * @brief Read CRM system clock frequency.
  * @return The requested value or operation result.
  * @details
- * Đọc thông tin clock và trạng thái reset của hệ thống.
+ * read the clock information and reset status of the system.
  */
 uint32_t neon_crm_get_system_clock_frequency(void);
 /**
@@ -168,8 +168,8 @@ uint8_t neon_crm_is_pll_ready(void);
  * @param[in] peripheral Peripheral.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Điều khiển clock ngoại vi. Ngoại vi không có clock gate riêng được xem là
- * luôn bật để ứng dụng có thể dùng chung một flow trên nhiều dòng chip.
+ * Control the peripheral clock. Peripherals without their own clock gate are considered always on so
+ * that the application can share a flow across multiple chip lines.
  */
 neon_status_t neon_crm_peripheral_clock_enable(neon_crm_peripheral_t peripheral);
 /**
@@ -191,7 +191,7 @@ neon_status_t neon_crm_is_peripheral_clock_enabled(neon_crm_peripheral_t periphe
  * @param[in] peripheral Peripheral.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Reset của FU2 tích cực mức thấp: force reset ghi 0, release reset ghi 1.
+ * Reset of FU2 positive low level: force reset write 0, release reset write 1.
  */
 neon_status_t neon_crm_peripheral_force_reset(neon_crm_peripheral_t peripheral);
 /**

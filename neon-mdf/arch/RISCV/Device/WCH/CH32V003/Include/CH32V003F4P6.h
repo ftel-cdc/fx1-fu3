@@ -14,7 +14,7 @@ extern "C" {
 #include <stdint.h>
 
 /* =========================== Interrupt Number Definition (PFIC) ===================== */
-/* CH32V003F4P6 - xem mcu-description/devices/CH32V003F4P6.yaml */
+/* CH32V003F4P6 - see mcu-description/devices/CH32V003F4P6.yaml */
 typedef enum {
   SysTick_IRQn = 12,
   SW_IRQn = 14,
@@ -47,27 +47,27 @@ typedef enum {
 #include "riscv_csr.h"
 #include "system_CH32V003F4P6.h"
 
-/* =========================== Access qualifier (tuong duong CMSIS __IO/__I/__O) ===== */
+/* ========================= Access qualifier ( CMSIS __IO/__I/__O) ===== */
 #define __I     volatile const
 #define __O     volatile
 #define __IO    volatile
 
 /* =========================== Peripheral register structures ======================== */
-/* Reset and Clock Control - RM chuong 3 */
+/* Reset and Clock Control - RM chapter 3 */
 typedef struct {
-  __IO uint32_t CTLR;  /*!< Clock control register (HSION/HSIRDY/PLLON/...) - RM ghi reset 0x0000xx83, 'xx' la bit factory-trim khong xac dinh - dat 0x00 cho cac bit do (chi field lieu, khong anh huong sinh header), offset 0x00 */
+  __IO uint32_t CTLR;  /*!< Clock control register (HSION/HSIRDY/PLLON/...): RM reset 0x0000xx83 includes unknown factory-trim bits xx. Use 0x00 as a descriptive placeholder for those bits, offset 0x00 */
   __IO uint32_t CFGR0;  /*!< Clock configuration register 0 (SW/HPRE/PLLSRC/...) - THAT, RM 3.4.2, offset 0x04 */
   __IO uint32_t INTR;  /*!< Clock interrupt register - THAT, RM 3.4.3, offset 0x08 */
   __IO uint32_t APB2PRSTR;  /*!< PB2 peripheral reset register - THAT, RM 3.4.4, offset 0x0C */
   __IO uint32_t APB1PRSTR;  /*!< PB1 peripheral reset register - THAT, RM 3.4.5, offset 0x10 */
   __IO uint32_t AHBPCENR;  /*!< HB peripheral clock enable register - THAT, RM 3.4.6, offset 0x14 */
-  __IO uint32_t APB2PCENR;  /*!< PB2 peripheral clock enable register - bit0 AFIOEN, bit2 IOPAEN, bit4 IOPCEN, bit5 IOPDEN (THAT, RM 3.4.7) - dung boi NEON_GPIO_ClockEnable(), offset 0x18 */
+  __IO uint32_t APB2PCENR;  /*!< PB2 peripheral clock enable register - bit0 AFIOEN, bit2 IOPAEN, bit4 IOPCEN, bit5 IOPDEN (true, RM 3.4.7) - used by NEON_GPIO_ClockEnable(), offset 0x18 */
   __IO uint32_t APB1PCENR;  /*!< PB1 peripheral clock enable register - THAT, RM 3.4.8, offset 0x1C */
   __IO uint32_t RESERVED0[1];
   __IO uint32_t RSTSCKR;  /*!< Control/status register (reset source flags) - THAT, RM 3.4.9, offset 0x24 */
 } RCC_TypeDef;
 
-/* GPIOA (PA1-PA2 tren goi TSSOP20) - RM chuong 7 */
+/* GPIOA (PA1-PA2 on call TSSOP20) - RM cabin 7 */
 typedef struct {
   __IO uint32_t CFGLR;  /*!< Port configuration register low (CNFy/MODEy 2-bit/pin, y=0-7) - THAT, RM 7.3.1.1, offset 0x00 */
   __IO uint32_t RESERVED0[1];
@@ -78,25 +78,25 @@ typedef struct {
   __IO uint32_t LCKR;  /*!< Port configuration lock register - THAT, RM 7.3.1.6, offset 0x18 */
 } GPIO_TypeDef;
 
-/* USART1 (mapping mac dinh TX=PD5,RX=PD6) - RM chuong 12 */
+/* USART1 (default mapping TX=PD5,RX=PD6) - RM cage 12 */
 typedef struct {
   __IO uint32_t STATR;  /*!< Status register (TXE=bit7,TC=bit6,RXNE=bit5) - THAT, RM 12.10.1, offset 0x00 */
   __IO uint32_t DATAR;  /*!< Data register (DR[8:0]) - THAT, RM 12.10.2, offset 0x04 */
   __IO uint32_t BRR;  /*!< Baud rate register (DIV_Mantissa[15:4]/DIV_Fraction[3:0]) - THAT, RM 12.10.3, offset 0x08 */
-  __IO uint32_t CTLR1;  /*!< Control register 1 (UE=bit13,TE=bit3,RE=bit2) - THAT, RM 12.10.4, offset 0x0C */
+  __IO uint32_t CTLR1;  /*!< Control register 1 (UE=bit13,TE=bit3,RE=bit2), verified against RM 12.10.4, offset 0x0C */
   __IO uint32_t CTLR2;  /*!< Control register 2 - THAT, RM 12.10.5, offset 0x10 */
   __IO uint32_t CTLR3;  /*!< Control register 3 - THAT, RM 12.10.6, offset 0x14 */
   __IO uint32_t GPR;  /*!< Guard time and prescaler register - THAT, RM 12.10.7, offset 0x18 */
 } USART_TypeDef;
 
-/* Flash memory controller (FPEC) - RM chuong 16 */
+/* Flash memory controller (FPEC) - RM chapter 16 */
 typedef struct {
   __IO uint32_t ACTLR;  /*!< Control register (LATENCY) - THAT, RM 16.3.1, offset 0x00 */
-  __O uint32_t KEYR;  /*!< FPEC key register (KEY1=0x45670123,KEY2=0xCDEF89AB de unlock) - THAT, RM 16.3.2, offset 0x04 */
+  __O uint32_t KEYR;  /*!< FPEC key register: KEY1=0x45670123 and KEY2=0xCDEF89AB unlock it, verified against RM 16.3.2, offset 0x04 */
   __O uint32_t OBKEYR;  /*!< Option bytes key register - THAT, RM 16.3.3, offset 0x08 */
   __IO uint32_t STATR;  /*!< Status register (BUSY=bit0,EOP=bit5) - THAT, RM 16.3.4, offset 0x0C */
   __IO uint32_t CTLR;  /*!< Configuration register (PG=bit0,PER=bit1,MER=bit2,STRT=bit6,LOCK=bit7) - THAT, RM 16.3.5, offset 0x10 */
-  __O uint32_t ADDR;  /*!< Address register (dia chi erase/program) - THAT, RM 16.3.6, offset 0x14 */
+  __O uint32_t ADDR;  /*!< Address register (dia only erase/program) - real, RM 16.3.6, offset 0x14 */
   __IO uint32_t RESERVED0[1];
   __I uint32_t OBR;  /*!< Option byte register - THAT, RM 16.3.7, offset 0x1C */
   __I uint32_t WPR;  /*!< Write protection register - THAT, RM 16.3, offset 0x20 */
@@ -123,7 +123,7 @@ typedef struct {
 #define FLASH_MEM_BASE   0x00000000UL   /* flash, 0x4000 bytes */
 #define RAM_BASE   0x20000000UL   /* ram, 0x800 bytes */
 
-/* =========================== Bootloader partition layout (xem devices YAML, muc `bootloader:`) === */
+/* ========================= Bootloader partition layout (see YAML devices, item `bootloader:`) === */
 #define NEON_MDF_BOOTLOADER_SIZE     0x00001000UL
 #define NEON_MDF_IMAGE_HEADER_SIZE   0x00000100UL
 #define NEON_MDF_APP_BASE            0x00001000UL

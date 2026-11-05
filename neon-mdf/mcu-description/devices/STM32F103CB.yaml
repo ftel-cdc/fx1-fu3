@@ -1,12 +1,12 @@
 # STM32F103CB.yaml — STM32F103xB medium-density, package 48 pin.
 #
-# Nguon doi chieu chinh thuc:
+# Real Source Of Reconciliation:
 #   - DS5319 Rev 20: Features; Table 1 (Device summary); Section 2.3.2
 #     (embedded Flash); Section 2.3.4 (embedded SRAM); Section 2.3.5 (NVIC);
 #     Figure 11 (memory map); Section 7 (ordering information scheme).
 #   - PM0056 Rev 7: Section 4.4.4 (SCB_VTOR).
-#   - ST cmsis-device-f1, Include/stm32f103xb.h: khoi
-#     Configuration_section_for_CMSIS va cac macro FLASH_BASE/SRAM_BASE.
+#   - ST cmsis-device-f1, Include/stm32f103xb.h: blocks Configuration_section_for_CMSIS and macros
+#     FLASH_BASE/SRAM_BASE.
 
 device: STM32F103CB
 vendor: STMicroelectronics
@@ -20,13 +20,13 @@ cpu:
   revision: r2p0              # stm32f103xb.h: __CM3_REV=0x0200U (Core Revision r2p0)
   max_freq_hz: 72000000       # DS5319 Features: Cortex-M3, 72 MHz maximum frequency
   nvic_priority_bits: 4       # stm32f103xb.h: __NVIC_PRIO_BITS=4U; DS5319 2.3.5: 16 levels
-  num_irq: 43                 # DS5319 2.3.5: toi da 43 maskable interrupt channels
-  vtor_supported: true        # PM0056 4.4.4: co SCB_VTOR; cho phep relocate vector table
+  num_irq: 43                 # DS5319 section 2.3.5: up to 43 maskable interrupt channels
+  vtor_supported: true        # PM0056 4.4.4: yes SCB_VTOR; for phep relocate vector table
   mpu_present: false          # stm32f103xb.h: __MPU_PRESENT=0U
-  fpu_present: false          # Cortex-M3 cua STM32F103xB khong co FPU; ST header khong khai __FPU_PRESENT
+  fpu_present: false          # Cortex-M3 of STM32F103xB without FPU; ST header does not declare __FPU_PRESENT
 
 memory:
-  - name: FLASH_MEM           # Tranh trung FLASH_BASE voi peripheral FLASH o buoc sau
+  - name: FLASH_MEM           # Painting FLASH_BASE medium with peripheral FLASH in the following step
     kind: flash
     address: 0x08000000       # DS5319 Figure 11; stm32f103xb.h: FLASH_BASE
     size: 0x20000             # DS5319 Section 7: ma B = 128 KB
@@ -37,7 +37,7 @@ memory:
 
 peripherals:
   # RM0008 Rev 21, Section 7.3.11, Table 18: RCC register map and reset values.
-  # Base address doi chieu them voi ST cmsis-device-f1/stm32f103xb.h.
+  # Base address collated with ST cmsis-device-f1/stm32f103xb.h.
   - name: RCC
     base: 0x40021000
     description: "Reset and Clock Control"
@@ -53,9 +53,8 @@ peripherals:
       - {name: BDCR,     offset: 0x20, size: 32, access: rw, reset: 0x00000000, description: "Backup domain control register"}
       - {name: CSR,      offset: 0x24, size: 32, access: rw, reset: 0x0C000000, description: "Control/status register"}
 
-  # RM0008 Rev 21, Section 9.2: GPIO registers. STM32F1 dung CRL/CRH,
-  # khong dung MODER/AFR nhu STM32F4. YAML anchor dam bao moi port co cung
-  # mot register layout va chi sinh mot GPIO_TypeDef.
+  # RM0008 Rev 21, Section 9.2: GPIO registers. STM32F1 uses CRL/CRH, not MODER/AFR like STM32F4. YAML
+  # anchor ensures that each port has the same register layout and only creates one GPIO_TypeDef.
   - name: GPIOA
     type: GPIO
     base: 0x40010800
@@ -63,9 +62,9 @@ peripherals:
     registers: &gpio_registers
       - {name: CRL,  offset: 0x00, size: 32, access: rw, reset: 0x44444444, description: "Port configuration low register, pins 0..7"}
       - {name: CRH,  offset: 0x04, size: 32, access: rw, reset: 0x44444444, description: "Port configuration high register, pins 8..15"}
-      # RM0008 9.2.3 ghi reset IDR la 0x0000 XXXX: 16 bit thap phu thuoc
-      # muc dien tren chan. Schema chi nhan so nguyen nen dung 0 de bieu dien,
-      # KHONG coi day la reset value phan cung xac dinh.
+      # RM0008 9.2.3 write reset IDR is 0x0000 XXXX: 16 bits thap depends on the item to fill on the pin.
+      # The schema accepts integers only. Use 0 as a placeholder, not as a claimed hardware reset value.
+      # determined.
       - {name: IDR,  offset: 0x08, size: 32, access: ro, reset: 0x00000000, description: "Port input data register; reset bits 15:0 are pin-dependent (RM0008: 0x0000 XXXX)"}
       - {name: ODR,  offset: 0x0C, size: 32, access: rw, reset: 0x00000000, description: "Port output data register"}
       - {name: BSRR, offset: 0x10, size: 32, access: wo, reset: 0x00000000, description: "Port bit set/reset register"}
@@ -81,19 +80,18 @@ peripherals:
   - name: GPIOC
     type: GPIO
     base: 0x40011000
-    description: "GPIO port C; STM32F103CB package chi bond mot tap con cac pin"
+    description: "GPIO port C; STM32F103CB package only bonds a sub-tap of the batteries"
     registers: *gpio_registers
 
   - name: GPIOD
     type: GPIO
     base: 0x40011400
-    description: "GPIO port D; STM32F103CB package chi bond PD0/PD1 (OSC_IN/OSC_OUT)"
+    description: "GPIO port D; STM32F103CB package only bond PD0/PD1 (OSC_IN/OSC_OUT)"
     registers: *gpio_registers
 
-  # RM0008 Rev 21, Section 27.6: USART register map. USART1 nam tren APB2
-  # tai 0x40013800; mapping mac dinh la PA9=TX, PA10=RX (Table 54).
-  # type UART giu dung contract cua components/driver/uart/neon_uart.h;
-  # instance van mang ten peripheral that la USART1.
+  # RM0008 Rev 21, Section 27.6: USART register map. USART1 male on APB2 at 0x40013800; default mapping
+  # is PA9=TX, PA10=RX (Table 54). type UART keeps using contract of
+  # components/driver/uart/neon_uart.h; instance still nets real peripheral name USART1.
   - name: USART1
     type: UART
     base: 0x40013800
@@ -124,9 +122,8 @@ peripherals:
       - {name: OBR,       offset: 0x1C, size: 32, access: ro, reset: 0x00000000, description: "Option byte register"}
       - {name: WRPR,      offset: 0x20, size: 32, access: ro, reset: 0xFFFFFFFF, description: "Write protection register"}
 
-# ST cmsis-device-f1, Include/stm32f103xb.h, khoi
-# "STM32 specific Interrupt Numbers". Ten phai giu nguyen de output khop
-# CMSIS: <NAME>_IRQn trong header va <NAME>_IRQHandler trong startup.
+# ST cmsis-device-f1, Include/stm32f103xb.h, block "STM32 specific Interrupt Numbers". name must
+# remain the same for output to match CMSIS: <NAME>_IRQn in header and <NAME>_IRQHandler in startup.
 interrupts:
   - {number: 0,  name: WWDG,               description: "Window watchdog"}
   - {number: 1,  name: PVD,                description: "PVD through EXTI"}

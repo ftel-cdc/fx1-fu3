@@ -1,25 +1,25 @@
-# Phân tích toàn bộ CMake và hệ thống build của NEON_MDF
+# Analyze the whole CMake and build system of NEON_MDF
 
-## 0. Phạm vi và cách đọc tài liệu này
+## 0. Scope and how to read this document
 
-Tài liệu này phân tích tĩnh toàn bộ các file CMake trong SDK đã giải nén, cùng các file trực tiếp tham gia vào configure, generate, compile, link, tạo image, flash và tích hợp VS Code.
+This document statically analyzes all CMake files in the extracted SDK, along with the files directly involved in configure, generate, compile, link, create image, flash and integrate VS Code.
 
-- Không sửa source code của SDK.
-- Không chạy lệnh flash.
-- Không coi địa chỉ hoặc thông số trong YAML/generated file là dữ liệu silicon đã được xác minh độc lập. Tài liệu chỉ mô tả cách build system sử dụng các giá trị đó.
-- Các đường dẫn trong tài liệu là đường dẫn tương đối tính từ `survey/neon-mdf_gpt/`.
-- Ba file dưới `examples/Blinky/build/WEACT_F412/CMakeFiles/4.4.2/` là output do CMake sinh, không phải source build script.
-- Các file dưới `neon-mdf/rtos/FreeRTOS-Kernel/` là third-party/upstream. NEON_MDF chỉ dùng một phần trong số đó.
+- Do not modify SDK source code.
+- Do not run the flash command.
+- Do not treat addresses or parameters in the YAML/generated file as independently verified silicon data. The document only describes how the build system uses those values.
+- The paths in the document are relative paths calculated from `survey/neon-mdf_gpt/`.
+- The three files under `examples/Blinky/build/WEACT_F412/CMakeFiles/4.4.2/` are CMake - generated output, not source build script.
+- The files below `neon-mdf/rtos/FreeRTOS-Kernel/` are third-party/upstream. NEON_MDF using only a part of them.
 
-## 1. Bức tranh tổng thể
+## 1. Overall picture
 
-Trong SDK này, CMake không trực tiếp “biên dịch mọi thứ” ngay khi đọc `CMakeLists.txt`. Quá trình chia thành năm pha:
+In this SDK, CMake doesn't directly “compile everything” as soon as reading `CMakeLists.txt`. The process divides into five phases:
 
-1. **Chọn preset và toolchain**: `CMakePresets.json` chọn target, Ninja, build directory và toolchain file.
-2. **Configure**: CMake đọc các `CMakeLists.txt`/`.cmake`, chạy generator Python, tạo target graph và ghi `CMakeCache.txt`/`build.ninja`.
-3. **Generate dữ liệu build**: YAML sinh device/startup/linker/SVD; Kconfig sinh `sdkconfig.h`/`sdkconfig.cmake`; flashmap sinh header/CMake fragment/linker scripts.
-4. **Build**: Ninja gọi compiler, assembler, archiver và linker để tạo `.o`, `.a`, `.elf`, `.map`.
-5. **Post-build/flash**: `objcopy` tạo `.bin`; các custom target đóng gói image header/OTA rồi gọi OpenOCD hoặc UART flasher.
+1. Select preset and toolchain: `CMakePresets.json` select target, Ninja, build directory and toolchain file.
+2. **Configure**: CMake reads `CMakeLists.txt`/`.cmake`, runs Python generator, creates target graph and writes `CMakeCache.txt`/`build.ninja`.
+3. **Generate build data**: YAML generates device/startup/linker/SVD; Kconfig generates `sdkconfig.h`/`sdkconfig.cmake`; flashmap generates header/CMake fragment/linker scripts.
+4. Build: Ninja calls compiler, assembler, archiver and linker to create `.o`, `.a`, `.elf`, `.map`.
+5. **Post-build/flash**: `objcopy` creates `.bin`; custom targets package image header/OTA and call OpenOCD or UART flasher.
 
 ```mermaid
 flowchart TD
@@ -32,45 +32,45 @@ flowchart TD
     G --> H["Optional image packaging + flash"]
 ```
 
-Lệnh tối thiểu từ thư mục một application, ví dụ `examples/Blinky/`:
+The minimum command from the folder an application, for example `examples/Blinky/`:
 
 ```bash
 cmake --preset WEACT_F412
 cmake --build --preset WEACT_F412
 ```
 
-Lệnh thứ nhất là **configure/generate**. Lệnh thứ hai mới là **compile/link**. CLI `neon_mdf.py` và extension VS Code đều chỉ bọc lại hai dạng lệnh này.
+The first command is configure/generate.. The second command is compile/link.. CLI `neon_mdf.py` and extension VS Code only wrap these two commands.
 
-## 2. Các khái niệm CMake cần hiểu trước
+## 2. CMake concepts to understand first
 
 ### 2.1 Target
 
-Target là một đơn vị build có tên. SDK tạo ba loại chính:
+Target is a named build unit. The SDK creates three main types:
 
-- `STATIC`: tạo thư viện `.a`, ví dụ `neon_mdf_driver`.
-- `INTERFACE`: không tạo binary; chỉ truyền include path, macro hoặc dependency, ví dụ `neon_mdf_kconfig`.
-- `EXECUTABLE`: tạo firmware `.elf`, ví dụ `blinky`, `bootloader`.
+- `STATIC`: create library `.a`, for example `neon_mdf_driver`.
+- `INTERFACE`: does not create binary; only passes include path, macro or dependency, for example `neon_mdf_kconfig`.
+- `EXECUTABLE`: create firmware `.elf`, for example `blinky`, `bootloader`.
 
-Custom target như `menuconfig`, `flash_jtag` không tạo ELF; nó chạy command được khai báo bằng `add_custom_target()`.
+Custom targets such as `menuconfig`, `flash_jtag` do not generate ELF; they run commands declared with `add_custom_target()`.
 
 ### 2.2 `PRIVATE`, `PUBLIC`, `INTERFACE`
 
-- `PRIVATE`: chỉ target hiện tại dùng dependency/flag.
-- `PUBLIC`: target hiện tại dùng và target link tới nó cũng kế thừa.
-- `INTERFACE`: bản thân target không compile; consumer kế thừa.
+- `PRIVATE`: use current target only dependency/flag.
+- `PUBLIC`: the current target used and the target linked to it.
+- `INTERFACE`: the target itself does not compile; consumer inherits.
 
-Ví dụ `neon_mdf_driver PUBLIC neon_mdf_device_<TARGET>` khiến driver và app link driver đều kế thừa include path device header cùng cờ CPU.
+For example, `neon_mdf_driver PUBLIC neon_mdf_device_<TARGET>` makes the driver and app link driver both inherit include path device header and CPU flags.
 
-### 2.3 Cache và environment
+### 2.3 Cache and environment
 
-- Cache variable sống trong `build/<TARGET>/CMakeCache.txt`, ví dụ `NEON_MDF_TARGET`.
-- Environment variable sống trong process shell, ví dụ `NEON_MDF_PATH`, `NEON_MDF_SERIAL_PORT`.
-- `set(... CACHE STRING ...)` giữ giá trị qua các lần configure.
-- Đổi toolchain/target trong một build directory cũ dễ gây cache bẩn; thiết kế preset tránh việc đó bằng mỗi target một thư mục riêng.
+- Cache variables live in `build/<TARGET>/CMakeCache.txt`, e.g. `NEON_MDF_TARGET`.
+- Environment variables live in process shell, e.g. `NEON_MDF_PATH`, `NEON_MDF_SERIAL_PORT`.
+- `set(... CACHE STRING ...)` keeps the value through configures.
+- Changing toolchain/target in an old build directory is easy to cause dirty cache; the preset design avoids that by giving each target a separate folder.
 
-### 2.4 Scope và `PARENT_SCOPE`
+### 2.4 Scope and `PARENT_SCOPE`
 
-Mỗi `function()` có scope riêng; mỗi `add_subdirectory()` cũng tạo directory scope. Vì vậy các biến như linker script phải được đẩy qua nhiều tầng:
+Each `function()` has its own scope; each `add_subdirectory()` also creates directory scope. So variables like linker script must be pushed through multiple layers:
 
 ```text
 neon_mdf_configure_target() function
@@ -78,25 +78,25 @@ neon_mdf_configure_target() function
     → application CMakeLists.txt directory scope
 ```
 
-Đây là lý do code có nhiều `set(... PARENT_SCOPE)` liên tiếp.
+This is why the code has multiple consecutive `set(... PARENT_SCOPE)`.
 
 ### 2.5 Generator expression
 
-Cú pháp `$<TARGET_FILE:name>` chỉ được đánh giá ở generate/build time, không phải lúc CMake đang đọc file. Nó cho CMake biết chính xác đường dẫn artifact của target trên từng platform.
+The `$<TARGET_FILE:name>` syntax is only evaluated at generate/build time, not when CMake is reading the file. It tells CMake exactly the target artifact path on each platform.
 
-## 3. Entry point: CMake bắt đầu ở đâu?
+## 3. Entry point: Where does CMake start?
 
-Mỗi application là một CMake project độc lập. Entry point thật là `CMakeLists.txt` của app, không phải `neon-mdf/CMakeLists.txt`.
+Each application is a standalone CMake project. The real entry point is the app's `CMakeLists.txt`, not `neon-mdf/CMakeLists.txt`.
 
-Ví dụ `examples/Blinky/CMakeLists.txt` thực hiện:
+For example `examples/Blinky/CMakeLists.txt` does:
 
 1. `cmake_minimum_required(VERSION 3.21)`.
-2. `project(blinky C ASM)` bật ngôn ngữ C và Assembly.
-3. Đảm bảo environment `NEON_MDF_PATH` tồn tại.
-4. `include(.../tools/cmake/project.cmake)` để nạp toàn bộ SDK.
-5. Dựa trên `NEON_MDF_BOOTLOADER_ENABLED`, tạo một firmware whole-flash hoặc nhiều firmware bootloader/factory/OTA.
+2. `project(blinky C ASM)` enable C and Assembly languages.
+3. Ensure the `NEON_MDF_PATH` environment exists.
+4. `include(.../tools/cmake/project.cmake)` to load the whole SDK.
+5. Based on `NEON_MDF_BOOTLOADER_ENABLED`, create a whole-flash firmware or multiple firmware bootloader/factory/OTA.
 
-Quan hệ include/subdirectory chính:
+Main include/subdirectory relations:
 
 ```mermaid
 flowchart TD
@@ -107,228 +107,227 @@ flowchart TD
     A --> F["Optional FreeRTOS + flash targets"]
 ```
 
-## 4. Phân tích từng file CMake do NEON_MDF sở hữu
+## 4. Analyze each CMake file owned by NEON_MDF
 
 ### 4.1 `neon-mdf/tools/cmake/project.cmake`
 
-Đây là public entry point duy nhất mà app cần include.
+This is the only public entry point that the app needs to include.
 
-Nội dung chính:
+Main contents:
 
-- Dòng 25–32: resolve `NEON_MDF_PATH` theo ưu tiên biến CMake → environment → suy từ vị trí file.
-- Dòng 38–45: resolve `NEON_MDF_TARGET`, mặc định là `FU2`, rồi ghi vào cache.
-- Dòng 47–50: kiểm tra target có trong `NEON_MDF_KNOWN_TARGETS`.
-- Dòng 52: `add_subdirectory(${NEON_MDF_PATH} neon-mdf-build)` kéo SDK vào project của app.
-- `neon_mdf_add_executable()`: tạo firmware whole-flash.
-- `neon_mdf_add_app_executable()`: tạo app nằm sau bootloader bằng `_APP.ld`.
-- `neon_mdf_add_bootloader_executable()`: tạo bootloader bằng source do SDK cung cấp và `_BOOTLOADER.ld`.
+- Line 25–32: resolve `NEON_MDF_PATH` according to CMake variable preferences → environment → inferred from file location.
+- Line 38–45: resolve `NEON_MDF_TARGET`, defaults to `FU2`, and write to cache.
+- 47–50 series: test target is in `NEON_MDF_KNOWN_TARGETS`.
+- Line 52: `add_subdirectory(${NEON_MDF_PATH} neon-mdf-build)` pulls the SDK into the app's project.
+- `neon_mdf_add_executable()`: create whole-flash firmware.
+- `neon_mdf_add_app_executable()`: create app after bootloader with `_APP.ld`.
+- `neon_mdf_add_bootloader_executable()`: create bootloader using source provided by SDK and `_BOOTLOADER.ld`.
 
-Ba helper executable đều thực hiện cùng chuỗi:
+The three executable helpers all perform the same sequence:
 
 ```text
 add_executable
 → link library
-→ gắn linker script bằng -T
-→ yêu cầu relink khi linker script thay đổi
+→ mounts linker script with -T → requires relink when linker script changes
 → post-build objcopy -O binary
 → in size report
 ```
 
-Output trực tiếp là `<name>.elf`, `<name>.elf.map` và `<name>.elf.bin`. Vì `$<TARGET_FILE:name>` đã mang suffix `.elf`, lệnh nối thêm `.map`/`.bin` tạo tên có dạng `.elf.map` và `.elf.bin`, không phải `<name>.map`/`<name>.bin` thuần.
+The direct output is `<name>.elf`, `<name>.elf.map` and `<name>.elf.bin`. Since `$<TARGET_FILE:name>` already carries the suffix `.elf`, the `.map`/`.bin` append command produces names of the form `.elf.map` and `.elf.bin`, not pure `<name>.map`/`<name>.bin`.
 
-Không có target tạo Intel HEX; không có `objcopy -O ihex`.
+No Intel HEX creation target; no `objcopy -O ihex`.
 
 ### 4.2 `neon-mdf/CMakeLists.txt`
 
-Đây là root của phần SDK nhưng không phải top-level project độc lập.
+This is the root of the SDK but not a standalone top-level project.
 
-Luồng thực tế:
+Actual Flow:
 
-1. Kiểm tra `NEON_MDF_TARGET`.
-2. Include `mcu_variants.cmake` và gọi `neon_mdf_configure_target()`.
-3. Đẩy device target, linker script, arch và bootloader metadata lên app scope.
-4. Chọn `flashmap.<TARGET>.csv`; nếu không có thì fallback `flashmap.csv`.
-5. Nếu target có bootloader và app có flashmap, gọi `neon_mdf_process_flashmap()`.
-6. Với family được hỗ trợ, chạy Kconfig, thêm driver, rồi thêm bootloader nếu cần.
+1. Check the `NEON_MDF_TARGET`.
+2. Include `mcu_variants.cmake` and call `neon_mdf_configure_target()`.
+3. Push device target, linker script, arch and bootloader metadata to app scope.
+4. Select `flashmap.<TARGET>.csv`; if not, fallback `flashmap.csv`.
+5. If target has bootloader and app has flashmap, call `neon_mdf_process_flashmap()`.
+6. For supported family, run Kconfig, add drivers, and then add bootloader if necessary.
 
-Điểm quan trọng về thứ tự: flashmap được xử lý trước `components/bootloader` để target `neon_mdf_ota` có thể tồn tại trước khi bootloader executable link nó.
+Important point about order: flashmap is processed before `components/bootloader` so that target `neon_mdf_ota` can exist before bootloader executable link it.
 
 ### 4.3 `neon-mdf/cmake/mcu_variants.cmake`
 
-Đây là registry target và factory tạo device library.
+This is the registry target and factory that creates the device library.
 
-Registry hiện có:
+Existing Registry:
 
-| Target | Arch variable | Family | Thuộc tính thêm |
+| Target | Arch variable | Family | Additional Properties |
 |---|---|---|---|
-| `FU2` | `cortex-m0` | `FU2` | không có bootloader fragment |
+| `FU2` | `cortex-m0` | `FU2` | no bootloader fragment |
 | `WEACT_F412` | `cortex-m4` | `WEACT_F412` | `FPU=ON` |
 | `CH32V003F4P6` | `riscv-rv32ec` | `CH32V003` | vendor `WCH`, ABI `ilp32e` |
 
-`neon_mdf_configure_target()` làm bốn việc lớn:
+`neon_mdf_configure_target()` does four big things:
 
-1. Tìm `python3` và chạy `mcu-description/tools/generate.py --device <target>` ngay trong pha configure.
-2. Dispatch theo `arch` sang Cortex-M hoặc RISC-V.
-3. Tạo `neon_mdf_device_<TARGET>` gồm `system_*.c`, startup assembly, IRQ port và, với RISC-V, `riscv_soft_math.c`.
-4. Nếu generated bootloader fragment tồn tại, include nó và xuất đường dẫn linker script whole-flash/bootloader/app cùng metadata memory/erase.
+1. Find `python3` and run `mcu-description/tools/generate.py --device <target>` right in the configure phase.
+2. Dispatch according to `arch` to Cortex-M or RISC-V.
+3. Create `neon_mdf_device_<TARGET>` including `system_*.c`, startup assembly, IRQ port and, with RISC-V, `riscv_soft_math.c`.
+4. If generated bootloader fragment exists, include it and export linker script path whole-flash/bootloader/app with metadata memory/erase.
 
-Device library là nơi phát tán cờ CPU, include path và macro target ra toàn bộ dependency graph.
+The device library is where the CPU flags, including path and target macros are distributed to the entire dependency graph.
 
 ### 4.4 `neon-mdf/cmake/arch/cortex-m.cmake`
 
-Định nghĩa `neon_mdf_apply_cortex_m_arch(target, mcpu, [fpu])`.
+Define `neon_mdf_apply_cortex_m_arch(target, mcpu, [fpu])`.
 
-- Luôn thêm `-mcpu=<core>` và `-mthumb` cho compile lẫn link.
-- Không FPU: `-mfloat-abi=soft`.
-- Có FPU: `-mfloat-abi=hard -mfpu=fpv4-sp-d16`.
+- Always add `-mcpu=<core>` and `-mthumb` for compile and link.
+- No FPU: `-mfloat-abi=soft`.
+- With FPU: `-mfloat-abi=hard -mfpu=fpv4-sp-d16`.
 
-Đặt flag ở `PUBLIC` để target consumer kế thừa ABI. Đây là điều cần thiết: object build với hard-float và soft-float không được link lẫn tùy tiện.
+Set the flag at `PUBLIC` so that consumer targets inherit the ABI. This is essential: object builds with hard-float and soft-float are not arbitrarily linked.
 
 ### 4.5 `neon-mdf/cmake/arch/riscv.cmake`
 
-Định nghĩa `neon_mdf_apply_riscv_arch(target, isa, abi)`.
+Define `neon_mdf_apply_riscv_arch(target, isa, abi)`.
 
-- Compile và link cùng `-march=${isa}_zicsr`.
-- Compile và link cùng `-mabi=${abi}`.
-- Tự thêm extension `zicsr` vì startup dùng lệnh CSR.
+- Compile and link with `-march=${isa}_zicsr`.
+- Compile and link with `-mabi=${abi}`.
+- Self add extension `zicsr` because startup use CSR command.
 
-Với CH32 hiện tại, giá trị được truyền từ registry là ISA `rv32ec` và ABI `ilp32e`.
+For the current CH32, the values passed from the registry are the ISA `rv32ec` and the ABI `ilp32e`.
 
 ### 4.6 `neon-mdf/cmake/toolchain/arm-none-eabi.cmake`
 
-Vai trò: cho CMake biết đây là cross-compilation bare-metal ARM.
+Role: tell CMake this is cross-compilation bare-metal ARM.
 
-- `CMAKE_SYSTEM_NAME Generic`: không có host OS target.
+- `CMAKE_SYSTEM_NAME Generic`: no host OS target.
 - `CMAKE_SYSTEM_PROCESSOR arm`.
-- `CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY`: CMake kiểm tra compiler bằng library, tránh cố chạy/link executable trên host.
-- Prefix mặc định `arm-none-eabi-`.
-- Chọn `gcc`, `g++`, `objcopy`, `objdump`, `size`.
+- `CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY`: CMake checks compiler using library, avoiding trying to run/link executable on host.
+- Default prefix `arm-none-eabi-`.
+- Choose `gcc`, `g++`, `objcopy`, `objdump`, `size`.
 - Suffix executable `.elf`.
-- C/C++ dùng function/data sections để linker garbage-collect section không dùng.
-- C++ tắt RTTI và exception.
-- Linker dùng newlib-nano, nosys stubs, `--gc-sections`, `--print-memory-usage`.
+- C/C++ uses function/data sections to linker garbage-collect section unused.
+- C++ disables RTTI and exceptions.
+- Linker using newlib-nano, nosys stubs, `--gc-sections`, `--print-memory-usage`.
 
-Lưu ý: app hiện khai `project(... C ASM)`, chưa enable `CXX`. Việc toolchain đặt `CMAKE_CXX_COMPILER` không tự động làm `.cpp` build được; app dùng C++ phải khai thêm `CXX` trong `project()`.
+Note: the app currently implements `project(... C ASM)`, not enable `CXX`. The toolchain setting `CMAKE_CXX_COMPILER` does not automatically make `.cpp` buildable; C++ applications must implement `CXX` in `project()`.
 
 ### 4.7 `neon-mdf/cmake/toolchain/riscv-none-elf.cmake`
 
-Vai trò tương tự bản ARM nhưng cho toolchain bare-metal RISC-V.
+The role is similar to the ARM version but for the bare-metal RISC-V toolchain.
 
-- Prefix mặc định là `riscv64-elf-`, dù output có thể là RV32 nhờ multilib/flags.
-- Dùng `-ffreestanding` ở compile.
-- Không dùng newlib specs; linker dùng `-nostdlib -ffreestanding`.
+- Default prefix is `riscv64-elf-`, although output can be RV32 thanks to multilib/flags.
+- Use `-ffreestanding` in compile.
+- No newlib specs; linker uses `-nostdlib -ffreestanding`.
 - Suffix `.elf`.
 
-Comment dòng 52–63 nói `libgcc` sẽ được link từ device target, nhưng code hiện tại trong `mcu_variants.cmake` không link `gcc`; thay vào đó nó compile `riscv_soft_math.c`. Đây là comment lỗi thời so với implementation hiện tại.
+Comment line 52–63 says `libgcc` will be linked from device target, but current code in `mcu_variants.cmake` does not link `gcc`; instead it compiles `riscv_soft_math.c`. This is an outdated comment compared to current implementation.
 
 ### 4.8 `neon-mdf/cmake/kconfig.cmake`
 
-Định nghĩa `neon_mdf_process_kconfig(APP_DIR, [KCONFIG_FILE])`.
+Define `neon_mdf_process_kconfig(APP_DIR, [KCONFIG_FILE])`.
 
 Configure-time flow:
 
 1. Set environment `NEON_MDF_APP_KCONFIG=<app>/Kconfig`.
-2. Tìm `python3`.
-3. Kiểm tra import được `kconfiglib`.
-4. Chạy `tools/kconfig/gen_config_header.py`.
-5. Sinh `build/<target>/config/sdkconfig.h` và `sdkconfig.cmake`.
-6. Include `sdkconfig.cmake` để CMake có các biến `CONFIG_*`.
-7. Tạo `neon_mdf_kconfig` INTERFACE library chứa include path `config/`.
-8. Tạo custom target `menuconfig`.
-9. Đẩy mọi biến `CONFIG_*` lên caller scope.
+2. Find `python3`.
+3. Check the import is `kconfiglib`.
+4. Run `tools/kconfig/gen_config_header.py`.
+5. create `build/<target>/config/sdkconfig.h` and `sdkconfig.cmake`.
+6. Include `sdkconfig.cmake` so that CMake has the variable `CONFIG_*`.
+7. Create `neon_mdf_kconfig` INTERFACE library containing path `config/`.
+8. Create custom target `menuconfig`.
+9. Push all `CONFIG_*` variables to the caller scope.
 
-`menuconfig` chỉ sửa `sdkconfig`; sau khi lưu phải configure lại để source selection và `sdkconfig.h` cập nhật.
+`menuconfig` only fixes `sdkconfig`; after saving, it must be configured again for source selection and `sdkconfig.h` to update.
 
 ### 4.9 `neon-mdf/cmake/flashmap.cmake`
 
-Định nghĩa `neon_mdf_process_flashmap(APP_DIR, [CSV_PATH])`.
+Define `neon_mdf_process_flashmap(APP_DIR, [CSV_PATH])`.
 
-Nó biến partition CSV của app thành ba loại output trong `build/<target>/flashmap/`:
+It turns the app's CSV partition into three output types in `build/<target>/flashmap/`:
 
 - `flashmap.h`: macro C.
-- `flashmap.cmake`: biến CMake.
-- `<partition>.ld`: một linker script cho mỗi partition `type=app`.
+- `flashmap.cmake`: CMake variable.
+- `<partition>.ld`: a linker script for each `type=app` partition.
 
-Script Python được truyền flash base/size, app base, image header size, RAM, erase sector, target và architecture. Nếu generator lỗi, configure dừng bằng `FATAL_ERROR`.
+Python scripts are flashed with base/size, app base, image header size, RAM, erase sector, target and architecture. If generator fails, configure stop using `FATAL_ERROR`.
 
-Sau generation, file này:
+After generation, this file:
 
 - include CMake fragment;
-- tạo `neon_mdf_flashmap` INTERFACE library;
+- create `neon_mdf_flashmap` INTERFACE library;
 - add component OTA;
-- xuất danh sách biến `NEON_MDF_FLASHMAP_*` động lên scope cha.
+- export dynamic `NEON_MDF_FLASHMAP_*` variable list to parent scope.
 
-Comment dòng 111–113 nói hàm được gọi trực tiếp từ app, nhưng code thật gọi nó từ `neon-mdf/CMakeLists.txt`. Implementation vẫn hoạt động vì `neon-mdf/CMakeLists.txt` tiếp tục propagate thêm một tầng; comment đó đã lỗi thời.
+Comment line 111–113 says the function is called directly from the app, but the real code calls it from `neon-mdf/CMakeLists.txt`. Implementation still works because `neon-mdf/CMakeLists.txt` continues to propagate one more layer; that comment is outdated.
 
 ### 4.10 `neon-mdf/cmake/freertos.cmake`
 
-Định nghĩa `neon_mdf_add_freertos(TARGET_NAME, CONFIG_DIR)`.
+Define `neon_mdf_add_freertos(TARGET_NAME, CONFIG_DIR)`.
 
-Nó là adapter giữa target NEON_MDF và CMake chính thức của FreeRTOS:
+It is the adapter between target NEON_MDF and official CMake of FreeRTOS:
 
 - FU2 → `FREERTOS_PORT=GCC_ARM_CM0`.
-- WEACT_F412 → `GCC_ARM_CM4F` và cờ FPU.
+- WEACT_F412 → `GCC_ARM_CM4F` and FPU flag.
 - CH32V003F4P6 → `GCC_RISC_V_GENERIC` + `RISCV_no_extensions`.
-- Tạo `freertos_config` INTERFACE target trỏ tới `FreeRTOSConfig.h`.
-- Chọn `FREERTOS_HEAP=4`.
+- Create `freertos_config` INTERFACE target pointing to `FreeRTOSConfig.h`.
+- Select `FREERTOS_HEAP=4`.
 - Add FreeRTOS-Kernel subdirectory.
-- Áp đúng cờ arch/ABI cho cả `freertos_kernel` và `freertos_kernel_port`.
-- Với RISC-V, thêm libc shim vì toolchain không có libc.
+- Apply the correct arch/ABI flag to both `freertos_kernel` and `freertos_kernel_port`.
+- With RISC-V, add libc shim because the toolchain does not have libc.
 
-Hàm guard `if(TARGET freertos_kernel) return()` nên chỉ wire kernel một lần trong một configure.
+The `if(TARGET freertos_kernel) return()` guard function should only wire the kernel once in a configure.
 
 ### 4.11 `neon-mdf/cmake/flash_targets.cmake`
 
-File này không tham gia compile bình thường; nó tạo các custom target build + package + flash.
+This file does not join the normal compile; it creates custom target build + package + flash.
 
-`neon_mdf_add_flash_targets(bootloader_target, app_target, openocd_cfg)` tạo:
+`neon_mdf_add_flash_targets(bootloader_target, app_target, openocd_cfg)` Generate:
 
-- `serial_monitor`: chạy `python3 -m serial.tools.miniterm`.
-- `flash_jtag`: build dependency, đóng gói app blob, gọi OpenOCD ghi bootloader và app tại hai địa chỉ riêng. Nếu có OTA metadata, ghi thêm bản factory metadata.
-- `flash_uart_stm32`: đóng gói app blob, reset qua OpenOCD rồi gọi `stm32_uart_flash_firmware.py` ghi hai vùng trong một session UART.
-- `neon_mdf_debug_targets.txt`: manifest tên bootloader/factory cho extension debug.
+- `serial_monitor`: run `python3 -m serial.tools.miniterm`.
+- `flash_jtag`: build dependency, package app blob, call OpenOCD write bootloader and app at two separate addresses. If OTA metadata is available, write factory metadata as well.
+- `flash_uart_stm32`: encapsulate app blob, reset via OpenOCD and call `stm32_uart_flash_firmware.py` to write two regions in a UART session.
+- `neon_mdf_debug_targets.txt`: manifest name bootloader/factory for extension debug.
 
-`neon_mdf_add_ota_flash_target()` tạo `flash_ota`:
+`neon_mdf_add_ota_flash_target()` generates `flash_ota`:
 
-- tạo OTA app blob;
-- tạo `otadata_pending.bin`;
-- dùng OpenOCD ghi slot OTA và metadata;
-- append executable OTA vào debug manifest.
+- create OTA app blob;
+- create `otadata_pending.bin`;
+- using OpenOCD to record OTA slots and metadata;
+- append executable OTA to debug manifest.
 
-`DEPENDS` đảm bảo target executable được build trước khi package/flash. `USES_TERMINAL` dành terminal tương tác. `VERBATIM` yêu cầu CMake escape argument đúng.
+`DEPENDS` ensures target executable is built before package/flash. `USES_TERMINAL` spends terminal interaction. `VERBATIM` requires CMake escape argument correctly.
 
-Rủi ro coupling: cả hai function gọi `find_program(openocd REQUIRED)` ngay lúc configure. Vì vậy một người chỉ muốn build firmware bootloader-enabled vẫn phải có OpenOCD trong PATH, dù không hề gọi target flash.
+Coupling risk: both functions call `find_program(openocd REQUIRED)` as soon as configured. So a person who only wants to build bootloader-enabled firmware still has to have OpenOCD in PATH, even without calling target flash.
 
 ### 4.12 `neon-mdf/components/driver/CMakeLists.txt`
 
-Tạo static library `neon_mdf_driver`.
+Create static library `neon_mdf_driver`.
 
-- Chọn đúng GPIO backend theo family.
-- Chỉ thêm flash backend nếu bootloader enabled.
-- UART/I2C hiện chỉ được compile cho family FU2 và còn phụ thuộc `CONFIG_NEON_MDF_DRIVER_*`.
-- Public include directory là root `components/driver`.
-- Public-link device target và Kconfig target để kế thừa header, CPU flags và `sdkconfig.h`.
+- Select the correct GPIO backend by family.
+- Only add flash backend if bootloader enabled.
+- UART/I2C is currently only compile for family FU2 and depends on `CONFIG_NEON_MDF_DRIVER_*`.
+- Public include directory is root `components/driver`.
+- Public-link device target and Kconfig target to inherit headers, CPU flags and `sdkconfig.h`.
 
-Kết quả là application chỉ link một library nhưng kéo được dependency xuyên suốt.
+As a result, the application only links one library but pulls dependencies throughout.
 
 ### 4.13 `neon-mdf/components/bootloader/CMakeLists.txt`
 
-Tạo hai static library:
+Create two static libraries:
 
-- `neon_mdf_crc32`: CRC chung.
-- `neon_mdf_bootloader_uart`: UART implementation theo family.
+- `neon_mdf_crc32`: Common CRC.
+- `neon_mdf_bootloader_uart`: UART implementation by family.
 
-`neon_bootloader_main.c` và backend arch không đóng thành `.a`; chúng được trả về qua `NEON_MDF_BOOTLOADER_MAIN_SOURCES` rồi compile trực tiếp vào executable bootloader. Cách này tránh vòng phụ thuộc archive giữa startup cần `main()` và bootloader cần symbol device.
+`neon_bootloader_main.c` and the backend arch do not close as `.a`; they are returned via `NEON_MDF_BOOTLOADER_MAIN_SOURCES` and compile directly to the executable bootloader. This avoids the archive dependency loop between startup requiring `main()` and bootloader requiring symbol device.
 
 ### 4.14 `neon-mdf/components/ota/CMakeLists.txt`
 
-Tạo `neon_mdf_ota` từ `neon_ota.c`, public-link:
+Create `neon_mdf_ota` from `neon_ota.c`, public-link:
 
-- `neon_mdf_driver` để đọc/ghi flash;
+- `neon_mdf_driver` to read/write flash;
 - `neon_mdf_crc32`;
-- `neon_mdf_flashmap` để lấy macro partition.
+- `neon_mdf_flashmap` to get the partition macro.
 
-Component này chỉ được add khi app có flashmap.
+This component is only added when the app has flashmap.
 
 ### 4.15 Generated bootloader fragments
 
@@ -337,7 +336,7 @@ Hai file:
 - `neon-mdf/mcu-description/generated/WEACT_F412_bootloader.cmake`
 - `neon-mdf/mcu-description/generated/CH32V003F4P6_bootloader.cmake`
 
-Đây là bridge từ YAML/Python sang CMake. Mỗi file set:
+This is the bridge from YAML/Python to CMake. Each set file:
 
 - `NEON_MDF_BOOTLOADER_ENABLED`;
 - bootloader size;
@@ -347,108 +346,108 @@ Hai file:
 - RAM base/size;
 - erase sector description.
 
-Không sửa tay; `generate.py` ghi lại khi configure.
+No manual fixes; `generate.py` records when configured.
 
-Rủi ro: nếu xóa section `bootloader:` khỏi YAML, `generate.py` hiện không xóa fragment cũ. Vì CMake chỉ kiểm tra `EXISTS`, fragment stale có thể tiếp tục bật bootloader sai. Generator nên chủ động xóa fragment/partition linker scripts không còn hợp lệ.
+Risk: if deleting section `bootloader:` from YAML, `generate.py` does not currently delete old fragments. Since CMake only checks for `EXISTS`, stale fragments may continue to enable the wrong bootloader. Generator should actively remove invalid fragment/partition linker scripts.
 
-## 5. CMakeLists của từng example và template
+## 5. CMakeLists of each example and template
 
 ### 5.1 `examples/Blinky/CMakeLists.txt`
 
-- FU2: gọi `neon_mdf_add_executable(blinky ...)`, whole-flash, một executable.
-- Target có bootloader: tạo `bootloader`, `blinky` factory và `blinky_ota`.
-- Helper `_blinky_add_variant()` dùng cùng `Src/main.c` nhưng khác linker script và `NEON_OTA_APP_VERSION`.
-- Tạo flash targets và OTA flash target.
+- FU2: call `neon_mdf_add_executable(blinky ...)`, whole-flash, an executable.
+- Target has bootloader: create `bootloader`, `blinky` factory and `blinky_ota`.
+- Helper `_blinky_add_variant()` uses the same `Src/main.c` but different linker script and `NEON_OTA_APP_VERSION`.
+- Create flash targets and OTA flash targets.
 
-Code ở đây lặp lại logic add executable/post-build thay vì tái dùng một helper public nhận linker script tùy ý. Đây là duplication với FreeRTOS_Blinky và OTA_Demo.
+The code here repeats the add logic executable/post-build instead of reusing a public helper to receive arbitrary linker scripts. This is duplication with FreeRTOS_Blinky and OTA_Demo.
 
 ### 5.2 `examples/FreeRTOS_Blinky/CMakeLists.txt`
 
-Ngoài luồng giống Blinky, file này gọi `neon_mdf_add_freertos()` trước khi tạo executable.
+In addition to Blinky - like streams, this file calls `neon_mdf_add_freertos()` before creating executable.
 
-- FU2: một whole-flash app + FreeRTOS.
-- WEACT có flashmap: bootloader + factory + OTA.
-- CH32 có bootloader nhưng không có flashmap dành cho project này: bootloader + một app cố định, không A/B OTA.
+- FU2: a whole-flash app + FreeRTOS.
+- WEACT has flashmap: bootloader + factory + OTA.
+- CH32 has bootloader but no flashmap for this project: bootloader + a fixed app, not A/B OTA.
 
 ### 5.3 `examples/OTA_Demo/CMakeLists.txt`
 
-- Bắt buộc bootloader enabled.
-- Tạo `bootloader` và ba app variants: factory, OTA tốt, OTA không confirm.
-- Hai OTA variants cùng linker script slot OTA nhưng khác macro compile.
-- Chỉ đăng ký `ota_demo_ota` với target `flash_ota`; bản bad phải đổi thủ công theo comment.
+- Required bootloader enabled.
+- Create `bootloader` and three app variants: factory, good OTA, unconfirmed OTA.
+- Two OTA variants with OTA slot script linker but different macro compile.
+- Only register `ota_demo_ota` with target `flash_ota`; bad copy must be changed manually by comment.
 
-File chỉ check bootloader enabled, không check target là WEACT. CH32 cũng có bootloader nên qua check đầu, sau đó flashmap WEACT-sized sẽ bị generator từ chối vì capacity/alignment. Thông báo lỗi đầu file chưa phản ánh đầy đủ điều kiện thật.
+The file only checks the bootloader enabled, not the target that is WEACT. CH32 also has a bootloader, so it needs to be checked first, then the WEACT-sized flashmap will be rejected by the generator because capacity/alignment. The error message at the beginning of the file does not fully reflect the actual condition.
 
 ### 5.4 `neon-mdf/tools/templates/CMakeLists.txt`
 
-Template bare-metal dùng hai token:
+The bare-metal template uses two tokens:
 
 - `__APP_NAME__`.
 - `__NEON_MDF_RELATIVE_PATH__`.
 
-App mới có bootloader tạo bootloader + một fixed app; không tạo OTA/flashmap mặc định.
+New app with bootloader creates bootloader + a fixed app; does not create default OTA/flashmap.
 
 ### 5.5 `neon-mdf/tools/templates_freertos/CMakeLists.txt`
 
-Giống template bare-metal nhưng thêm FreeRTOS adapter và link `freertos_kernel`.
+Like bare-metal template but add FreeRTOS adapter and `freertos_kernel` link.
 
-### 5.6 Các `CMakePresets.json` của app/template
+### 5.6 The `CMakePresets.json` of the app/template
 
-Ba example và hai template đều là file mỏng chỉ include `neon-mdf/cmake/presets/targets.json`. Template dùng token relative path để hoạt động khi app nằm ngoài `examples/`.
+Three examples and two templates are thin files including only `neon-mdf/cmake/presets/targets.json`. The template uses relative path tokens to work when the app is outside of `examples/`.
 
 ### 5.7 `neon-mdf/cmake/presets/targets.json`
 
-Nguồn preset tập trung cho cả SDK:
+Centralized preset sources for both SDKs:
 
 - Generator: Ninja.
 - Binary dir: `${sourceDir}/build/<TARGET>`.
 - Build type: Debug.
 - Export `compile_commands.json`.
-- FU2/WEACT dùng ARM toolchain.
-- CH32 dùng RISC-V toolchain.
-- Có configure preset và build preset trùng tên cho từng target.
+- FU2/WEACT uses ARM toolchain.
+- CH32 uses RISC-V toolchain.
+- There are configure presets and build presets with the same name for each target.
 
-Extension và CLI đọc chính file này để khám phá target; thêm target vào registry nhưng quên thêm preset sẽ khiến UI/CLI không thấy target đó.
+Extensions and CLI read this file itself to discover the target; adding a target to the registry but forgetting to add a preset will cause UI/CLI not to see that target.
 
-## 6. Kconfig, sdkconfig và flashmap liên quan build
+## 6. Kconfig, sdkconfig and flashmap related builds
 
 ### 6.1 `neon-mdf/Kconfig`
 
-Root menu của SDK. Nó `rsource` driver Kconfig và `osource` Kconfig riêng của app thông qua environment `NEON_MDF_APP_KCONFIG`.
+Root menu of SDK. Its own `rsource` driver Kconfig and `osource` Kconfig app via `NEON_MDF_APP_KCONFIG` environment.
 
 ### 6.2 `neon-mdf/components/driver/Kconfig`
 
 Khai hai bool:
 
-- `NEON_MDF_DRIVER_UART`, mặc định `y`.
-- `NEON_MDF_DRIVER_I2C`, mặc định `y`.
+- `NEON_MDF_DRIVER_UART`, default `y`.
+- `NEON_MDF_DRIVER_I2C`, default `y`.
 
-Với FU2, chúng quyết định source `.c` có được thêm vào `neon_mdf_driver` hay không. Với family khác, guard family vẫn chặn source dù config đang `y`.
+With FU2, they decide whether the source `.c` is added to `neon_mdf_driver`. For other family, guard family still blocks the source even though config is `y`.
 
 ### 6.3 App/template Kconfig
 
-- `examples/Blinky/Kconfig` thêm `BLINKY_DELAY_LOOPS`.
-- Hai template Kconfig chỉ là skeleton/comment, có thể xóa vì root dùng `osource`.
-- FreeRTOS_Blinky và OTA_Demo không có app Kconfig riêng.
+- `examples/Blinky/Kconfig` adds `BLINKY_DELAY_LOOPS`.
+- Two Kconfig templates are only skeleton/comment, which can be deleted because the root uses `osource`.
+- FreeRTOS_Blinky and OTA_Demo do not have their own Kconfig app.
 
-### 6.4 `sdkconfig` và `sdkconfig.old`
+### 6.4 `sdkconfig` and `sdkconfig.old`
 
-`sdkconfig` là input có version control và cũng bị `gen_config_header.py` ghi lại trong configure để bổ sung default/xóa option cũ. `sdkconfig.old` trong Blinky là backup do menuconfig tạo, không được CMake include trực tiếp.
+`sdkconfig` is the version controlled input and was also rewritten by `gen_config_header.py` in configure to add the old default/erase option. `sdkconfig.old` in Blinky is the backup that menuconfig created, not directly included by CMake.
 
-### 6.5 Các `flashmap*.csv`
+### 6.5 The `flashmap*.csv`
 
-- `examples/Blinky/flashmap.csv`: layout mặc định, dùng khi không có target override.
-- `examples/Blinky/flashmap.CH32V003F4P6.csv`: override riêng cho CH32.
-- `examples/FreeRTOS_Blinky/flashmap.WEACT_F412.csv`: chỉ WEACT có OTA.
+- `examples/Blinky/flashmap.csv`: default layout, used without target override.
+- `examples/Blinky/flashmap.CH32V003F4P6.csv`: separate override for CH32.
+- `examples/FreeRTOS_Blinky/flashmap.WEACT_F412.csv`: WEACT only has OTA.
 - `examples/OTA_Demo/flashmap.csv`: layout OTA demo.
 
-CMake ưu tiên file target-specific rồi mới fallback. CSV không có cột offset; offset được tính tuần tự từ app base. Mỗi `type=app` dành một header slot trước vector/code.
+CMake prioritizes target-specific files before fallback. CSV does not have an offset column; offsets are calculated sequentially from the app base. Each `type=app` reserves a header slot before vector/code.
 
-## 7. Python generator và image tools trực tiếp phục vụ CMake
+## 7. Python generator and image tools directly serving CMake
 
 ### 7.1 `mcu-description/tools/generate.py`
 
-Được gọi bởi `mcu_variants.cmake` ở configure time.
+Called by `mcu_variants.cmake` at configure time.
 
 Input: `devices/<TARGET>.yaml`.
 
@@ -459,26 +458,26 @@ Output Cortex-M:
 - whole-flash linker script;
 - startup/vector assembly;
 - SVD;
-- nếu có bootloader: bootloader/app linker scripts và CMake fragment.
+- if there is bootloader: bootloader/app linker scripts and CMake fragment.
 
-Output RISC-V tương tự nhưng đặt dưới `arch/RISCV/Device/<vendor>/<family>` và dùng RISC-V backends.
+The output RISC-V is similar but set below `arch/RISCV/Device/<vendor>/<family>` and uses RISC-V backends.
 
-### 7.2 `mcu_desc/loader.py` và `model.py`
+### 7.2 `mcu_desc/loader.py` and `model.py`
 
-- `model.py` định nghĩa dataclass/model cho field, register, peripheral, memory, interrupt, CPU, bootloader và erase sector.
-- `loader.py` parse YAML, yêu cầu field bắt buộc và chạy sanity checks: overlap, register layout, erase coverage, alignment/bootloader constraints.
+- `model.py` defines dataclass/model for field, register, peripheral, memory, interrupt, CPU, bootloader and erase sector.
+- `loader.py` parse YAML, requires mandatory fields and runs sanity checks: overlap, register layout, erase coverage, alignment/bootloader constraints.
 
-Hai file này không gọi compiler nhưng quyết định configure thành công hay thất bại.
+These two files do not call the compiler but decide whether to configure successfully or fail.
 
 ### 7.3 Backend generator files
 
 Cortex-M:
 
 - `gen_cmsis_header.py`: device header, IRQ enum, register struct, peripheral macros.
-- `gen_linker_script.py`: whole-flash và bootloader/app linker scripts.
+- `gen_linker_script.py`: whole-flash and bootloader/app linker scripts.
 - `gen_startup_vector.py`: startup, vector table, weak handlers.
-- `gen_svd.py`: SVD cho debugger; dùng chung cho RISC-V.
-- `core_info.py`: ánh xạ core sang CMSIS core include/metadata dùng khi sinh header.
+- `gen_svd.py`: SVD for debugger; general use for RISC-V.
+- `core_info.py`: map core to CMSIS core include/metadata used for generating headers.
 
 RISC-V:
 
@@ -486,192 +485,192 @@ RISC-V:
 - `gen_linker_script.py`.
 - `gen_startup.py`.
 
-Chúng ghi output vào source tree trong configure. Điều này làm configure có side effect và có thể gây race nếu sau này hai device cùng family cùng ghi một `mcu_device.h` alias trong hai build song song.
+They write the output to the source tree in configure. This makes configure side-effective and can cause races if later two devices of the same family write a `mcu_device.h` alias in two parallel builds.
 
 ### 7.4 `tools/kconfig/gen_config_header.py`
 
-Đọc Kconfig + sdkconfig bằng `kconfiglib`, ghi lại sdkconfig, rồi sinh:
+Read Kconfig + sdkconfig using `kconfiglib`, write down sdkconfig, then generate:
 
-- C header với `#define CONFIG_*`.
-- CMake fragment với `set(CONFIG_* ON/OFF/value)`.
+- C header with `#define CONFIG_*`.
+- CMake fragment with `set(CONFIG_* ON/OFF/value)`.
 
-Nhờ đó cùng một config điều khiển cả preprocessor C lẫn source selection CMake.
+Thus, the same config controls both C preprocessor and CMake source selection.
 
 ### 7.5 `tools/gen_flashmap.py`
 
-Các bước:
+Steps:
 
-1. Parse CSV bốn cột.
-2. Chặn tên trùng/type sai/size không phải hex.
-3. Bắt buộc đúng ba partition `app`, `app_ota`, `otadata` với type/subtype tương ứng.
-4. Tính base/vector base/code size.
-5. Kiểm tra không vượt flash.
-6. Nếu có erase map, kiểm tra boundary partition trùng erase-sector boundary.
-7. Sinh header, CMake fragment và linker script theo architecture backend.
+1. Parse CSV four columns.
+2. Block duplicate name/type sai/size not hex.
+3. Mandatory correct three partitions `app`, `app_ota`, `otadata` with corresponding type/subtype.
+4. Calculate base/vector base/code size.
+5. Test does not exceed flash.
+6. If there is an erase map, check for duplicate erase-sector boundary partitions.
+7. create headers, CMake fragments and linker scripts according to backend architecture.
 
-Không có thông tin hardware mới được script tự đoán; mọi base/size/erase input đi từ generated YAML fragment hoặc CSV app.
+No new hardware information is guessed by the script; every base/size/erase input comes from generated YAML fragment or CSV app.
 
 ### 7.6 `tools/build_full_image.py`
 
-Chứa logic `build_header()` và `build_app_blob()`:
+Contains `build_header()` and `build_app_blob()` logic:
 
 - header 16 byte: magic, version, image size, CRC32;
-- padding `0xFF` tới hết header slot;
-- nối app bytes.
+- padding `0xFF` to the end of the header slot;
+- connect app bytes.
 
-`main()` của file có thể ghép bootloader + padding + app blob thành một image liên tục. Tuy nhiên CMake hiện không gọi `main()` này. `flash_targets.cmake` đã chuyển sang ghi bootloader và app ở hai địa chỉ riêng; chỉ `build_app_blob()` còn được `build_ota_image.py` import. Docstring nói full image được cả hai flash path dùng là lỗi thời.
+The file's `main()` can merge bootloader + padding + app blob into a continuous image. CMake does not currently call this `main()`, however. `flash_targets.cmake` has switched to write the bootloader and app at separate addresses; only `build_app_blob()` is imported by `build_ota_image.py`. Docstring says full image used by both flash paths is obsolete.
 
 ### 7.7 `tools/build_ota_image.py`
 
-Wrapper được CMake gọi thật. Nó đọc app BIN, dùng `build_app_blob()`, rồi ghi `[header slot][app]` để flash vào factory hoặc OTA slot.
+Wrapper is called by CMake. It reads app BIN, uses `build_app_blob()`, and writes `[header slot][app]` to flash into factory or OTA slot.
 
-Tên file là “OTA” nhưng code dùng nó cho cả factory app blob trong `flash_jtag`/`flash_uart_stm32` và OTA blob trong `flash_ota`.
+The file name is “OTA” but the code uses it for both factory app blob in `flash_jtag`/`flash_uart_stm32` and OTA blob in `flash_ota`.
 
 ### 7.8 `tools/build_otadata_image.py`
 
-Sinh struct metadata 20 byte gồm magic, active slot, state, boot attempts và CRC32. CMake gọi với:
+Generates 20 - byte struct metadata including magic, active slot, state, boot attempts and CRC32. CMake calls with:
 
-- `0 0 0` cho factory metadata khi flash JTAG full image.
-- `1 1 0` cho OTA pending.
+- `0 0 0` for factory metadata when flashing JTAG full image.
+- `1 1 0` for OTA pending.
 
 ### 7.9 `tools/stm32_uart_flash_firmware.py`
 
-Không tham gia compile/link. Custom target `flash_uart_stm32` gọi nó sau build/package để giao tiếp STM32 ROM bootloader, mass erase và ghi nhiều cặp `(file, address)` trong một UART session.
+Do not join compile/link. Custom target `flash_uart_stm32` call it after build/package to communicate STM32 ROM bootloader, mass erase and write multiple pairs of `(file, address)` in a UART session.
 
 ### 7.10 `tools/neon_mdf.py`
 
-CLI cấp cao, tương đương wrapper kiểu `idf.py`:
+High level CLI, equivalent to `idf.py` type wrapper:
 
-- Đọc target từ `-t`, state file hoặc preset.
-- `ensure_configured()` chỉ gọi `cmake --preset` nếu chưa có `CMakeCache.txt`.
-- `build` gọi `cmake --build --preset`.
-- flash/monitor/menuconfig gọi đúng custom target CMake.
-- Nhiều action chạy tuần tự và dừng ở lỗi đầu tiên.
+- Read target from `-t`, state file or preset.
+- `ensure_configured()` only calls `cmake --preset` if there is no `CMakeCache.txt`.
+- `build` to `cmake --build --preset`.
+- flash/monitor/menuconfig calls the correct custom target CMake.
+- Many actions run sequentially and stop at the first error.
 
-Hạn chế: nếu `CMakeCache.txt` tồn tại nhưng configure trước đó thất bại, CLI cho rằng build dir đã configured. Snapshot trong ZIP đúng trường hợp này: có cache nhưng thiếu `build.ninja` do không tìm thấy `python3`.
+Restrictions: if `CMakeCache.txt` exists but previous configuration failed, CLI assumes that build dir is configured. Snapshot in ZIP is correct for this: cache is present but missing `build.ninja` due to not finding `python3`.
 
 ### 7.11 `neon-mdf/export.sh`
 
-Chỉ export `NEON_MDF_PATH` vào shell hiện tại. Phải `source`; chạy thành subprocess thì environment mất khi process kết thúc. Script không cài CMake, Ninja, compiler, Python package hay OpenOCD.
+Only export `NEON_MDF_PATH` to the current shell. Must be `source`; run as subprocess then environment is lost when process ends. Script does not install CMake, Ninja, compiler, Python package or OpenOCD.
 
-## 8. Extension VS Code liên quan build
+## 8. Extension VS Code related build
 
 ### 8.1 `vscode-extension/src/presets.ts`
 
-Đọc `CMakePresets.json` và include một cấp để lấy danh sách target. Không parse `mcu_variants.cmake`, không hỗ trợ đầy đủ preset inheritance/condition.
+Read `CMakePresets.json` and include a level to get target list. Do not parse `mcu_variants.cmake`, do not support full preset inheritance/condition.
 
 ### 8.2 `src/sdkPath.ts`
 
-Resolve SDK root từ setting global `neonMdf.sdkPath` hoặc quy ước relative path. Khi setting có giá trị, `sdkPathEnv()` truyền `NEON_MDF_PATH` xuống process CMake.
+Resolve SDK root from setting global `neonMdf.sdkPath` or relative path convention. When setting is valid, `sdkPathEnv()` passes `NEON_MDF_PATH` down to CMake process.
 
 ### 8.3 `src/cmakeRunner.ts`
 
-Điểm duy nhất extension trực tiếp gọi CMake:
+The only point extension directly call CMake:
 
 - configure: `cmake --preset <preset>`;
 - build/custom target: `cmake --build --preset <preset> [--target ...]`.
 
-Nó dùng VS Code Task API và trả exit code thật cho command phía trên.
+It uses the VS Code Task API and returns real exit code to the command above.
 
 ### 8.4 `src/configure.ts`
 
-Đảm bảo build dir có `CMakeCache.txt` và CMake File API reply. Nó ghi query trước configure để CMake trả codemodel.
+Make sure the dir build has `CMakeCache.txt` and CMake File API reply. It writes the query before configure so that CMake returns the codemodel.
 
 ### 8.5 `src/cmakeFileApi.ts`
 
-Không parse `CMakeCache.txt` hoặc đoán tên ELF. Nó dùng CMake File API codemodel v2 để lấy các target `EXECUTABLE` và artifact path thật. Debug UI nhờ đó tự thấy `bootloader`, `blinky`, `blinky_ota`, v.v.
+Do not parse `CMakeCache.txt` or guess ELF names. It uses CMake File API codemodel v2 to get the targets `EXECUTABLE` and artifact path. Debug UI thus shows itself `bootloader`, `blinky`, `blinky_ota`, v.v.
 
 ### 8.6 `src/commands/build.ts`
 
-Validate workspace/target, ensure configure, rồi build default target `all`.
+Validate workspace/target, ensure configure, then build default target `all`.
 
 ### 8.7 `src/commands/menuconfig.ts`
 
-Wrapper mỏng gọi target CMake `menuconfig`; logic Kconfig thật ở `kconfig.cmake`.
+Thin wrapper calls CMake target `menuconfig`; real Kconfig logic in `kconfig.cmake`.
 
 ### 8.8 `src/commands/flash.ts`
 
-Map transport UI sang custom target:
+Map each UI transport to its CMake target:
 
 - JTAG/SWD → `flash_jtag`.
-- UART → `flash_uart_stm32` và truyền `NEON_MDF_SERIAL_PORT`.
+- UART → `flash_uart_stm32` and transmit `NEON_MDF_SERIAL_PORT`.
 
-Nó kiểm tra OpenOCD cfg trước khi chạy, điều mà CLI không làm sớm.
+It tests OpenOCD cfg before running, which the CLI does not do soon.
 
 ### 8.9 `src/commands/buildFlashMonitor.ts`
 
-Gọi lại flash command, sau đó gọi custom target `serial_monitor`. Tên command nói “build + flash” nhưng build đã được đảm bảo gián tiếp bởi dependency của flash target.
+Call the flash command again, then call the custom target `serial_monitor`. The command name says “build + flash” but the build has been secured indirectly by the dependency of the flash target.
 
 ### 8.10 `src/commands/debug.ts`, `src/debugArch.ts`
 
 Debug command:
 
 - ensure configure;
-- đọc executable từ File API;
-- build/flash đúng target trước debug;
-- đọc `neon_mdf_debug_targets.txt` để phân biệt bootloader/factory/OTA;
-- dùng OpenOCD cfg và optional SVD.
+- read executable from File API;
+- build/flash correct target before debug;
+- read `neon_mdf_debug_targets.txt` to distinguish bootloader/factory/OTA;
+- use OpenOCD cfg and optional SVD.
 
-`debugArch.ts` hiện chỉ có Cortex-M profile. CH32V003F4P6 đã tồn tại nhưng extension chưa có RISC-V debug profile; comment trong file vẫn nói RISC-V là tương lai, nên phần này lỗi thời.
+`debugArch.ts` currently only has Cortex-M profile. CH32V003F4P6 already exists but the extension does not have RISC-V debug profile; comments in the file still say RISC-V is future, so this section is outdated.
 
 ### 8.11 `src/commands/createApp.ts`
 
-Copy template bare-metal hoặc FreeRTOS, thay app name và relative SDK path. File này tạo `CMakeLists.txt`/`CMakePresets.json` đúng theo build model hiện tại.
+Copy bare-metal or FreeRTOS template, replace app name and relative SDK path. This file creates `CMakeLists.txt`/`CMakePresets.json` according to the current build model.
 
-### 8.12 Extension build riêng: `package.json`, `tsconfig.json`, `esbuild.js`
+### 8.12 Private Extension build: `package.json`, `tsconfig.json`, `esbuild.js`
 
-Đây là build system của extension, tách biệt firmware CMake:
+This is the build system of the extension, which separates CMake firmware:
 
 - `npm run typecheck` → `tsc --noEmit`.
-- `npm run compile` → esbuild bundle `src/extension.ts` thành `dist/extension.js` có sourcemap.
+- `npm run compile` → esbuild bundle `src/extension.ts` to `dist/extension.js` with sourcemap.
 - `npm run package` → production bundle minified.
 - `npm run vsix` → `vsce package`.
-- `serialport` và native binding được externalize khỏi bundle, nên phải có đúng files trong VSIX.
+- `serialport` and native binding are externalized from the bundle, so there must be the right files in VSIX.
 
-Snapshot đã khảo sát trước đó cho thấy `dist/extension.js` trong source không trùng bản nằm trong `neon-mdf-tools-0.1.0.vsix`; VSIX chưa thể coi là package của source hiện tại.
+Earlier survey snapshots showed that `dist/extension.js` in the source is not a duplicate of `neon-mdf-tools-0.1.0.vsix`; VSIX cannot yet be considered as the package of the current source.
 
-## 9. Các file CMake third-party của FreeRTOS
+## 9. FreeRTOS third-party CMake files
 
 ### 9.1 `rtos/FreeRTOS-Kernel/CMakeLists.txt`
 
-CMake root chính thức của kernel:
+CMake official kernel root:
 
-- yêu cầu consumer tạo `freertos_config`;
-- yêu cầu/chọn `FREERTOS_PORT`;
-- tạo `freertos_kernel` static library;
-- add `include/` và `portable/`;
-- thêm core source `croutine.c`, `event_groups.c`, `list.c`, `queue.c`, `stream_buffer.c`, `tasks.c`, `timers.c` và heap đã chọn;
+- require consumers to create `freertos_config`;
+- request/select `FREERTOS_PORT`;
+- create `freertos_kernel` static library;
+- add `include/` and `portable/`;
+- add core source `croutine.c`, `event_groups.c`, `list.c`, `queue.c`, `stream_buffer.c`, `tasks.c`, `timers.c` and selected heap;
 - link config/include/port targets.
 
-NEON_MDF chuẩn bị input cho file này trong `cmake/freertos.cmake`.
+NEON_MDF prepares input for this file in `cmake/freertos.cmake`.
 
 ### 9.2 `rtos/FreeRTOS-Kernel/include/CMakeLists.txt`
 
-Tạo `freertos_kernel_include` INTERFACE target để phát tán kernel public include directory và link `freertos_config`.
+Create `freertos_kernel_include` INTERFACE target to distribute kernel public include directory and link `freertos_config`.
 
 ### 9.3 `rtos/FreeRTOS-Kernel/portable/CMakeLists.txt`
 
-File lớn nhất, tạo:
+Largest file, create:
 
-- `freertos_kernel_port` OBJECT library với source được chọn bằng generator expression theo `FREERTOS_PORT`;
-- `freertos_kernel_port_headers` INTERFACE target với include directory tương ứng;
+- `freertos_kernel_port` OBJECT library with source selected by generator expression according to `FREERTOS_PORT`;
+- `freertos_kernel_port_headers` INTERFACE target with include directory respectively;
 - dependency platform-specific.
 
-Đối với NEON_MDF chỉ ba nhánh thực sự liên quan: `GCC_ARM_CM0`, `GCC_ARM_CM4F`, `GCC_RISC_V_GENERIC`. Hàng trăm nhánh khác là khả năng upstream, không phải NEON_MDF hỗ trợ các MCU đó.
+For NEON_MDF only three branches are actually related: `GCC_ARM_CM0`, `GCC_ARM_CM4F`, `GCC_RISC_V_GENERIC`. Hundreds of other branches are upstream capabilities, not NEON_MDF that support those MCUs.
 
 ### 9.4 RISC-V chip extension fragments
 
-- `portable/GCC/RISC-V/chip_extensions.cmake`: validate/chọn `FREERTOS_RISCV_EXTENSION` cho GCC generic port.
-- `portable/IAR/RISC-V/chip_extensions.cmake`: cùng vai trò cho IAR; NEON_MDF không dùng IAR.
+- `portable/GCC/RISC-V/chip_extensions.cmake`: validate/select `FREERTOS_RISCV_EXTENSION` for GCC generic port.
+- `portable/IAR/RISC-V/chip_extensions.cmake`: same role for IAR; NEON_MDF does not use IAR.
 
-NEON_MDF set `RISCV_no_extensions` trước khi add kernel.
+NEON_MDF set `RISCV_no_extensions` before adding kernel.
 
 ### 9.5 FreeRTOS example CMake files
 
-- `examples/cmake_example/CMakeLists.txt`: ví dụ consumer tạo `freertos_config`, chọn heap/port, add kernel và link app.
-- `examples/coverity/CMakeLists.txt`: project host/template dành cho Coverity.
+- `examples/cmake_example/CMakeLists.txt`: for example consumer creates `freertos_config`, selects heap/port, add kernel and link app.
+- `examples/coverity/CMakeLists.txt`: project host/template for Coverity.
 
-Hai file này không được NEON_MDF add vào firmware build.
+These files are not added to the firmware build by NEON_MDF.
 
 ### 9.6 RP2040 CMake files
 
@@ -680,39 +679,39 @@ Hai file này không được NEON_MDF add vào firmware build.
 - `library.cmake`.
 - `pico_sdk_import.cmake`.
 
-Đây là integration riêng cho Raspberry Pi Pico SDK: tìm/import kernel/Pico SDK và tạo các INTERFACE library/heap variants. NEON_MDF không include các file này và không dùng target RP2040.
+This integration is exclusive to Raspberry Pi Pico SDK: find/import kernel/Pico SDK and create INTERFACE library/heap variants. NEON_MDF does not include these files and does not use RP2040 target.
 
-## 10. CMake-generated files trong ZIP
+## 10. CMake-generated files in ZIP
 
-Thư mục `examples/Blinky/build/WEACT_F412/` là một configure dang dở từ máy Windows khác.
+The `examples/Blinky/build/WEACT_F412/` folder is an unfinished configure from another Windows machine.
 
 ### 10.1 `CMakeFiles/4.4.2/CMakeCCompiler.cmake`
 
-CMake tự ghi kết quả nhận diện ARM GCC 10.2.1, ELF, pointer 32-bit, little-endian, implicit include paths và tool paths.
+CMake manually logged ARM GCC 10.2.1, ELF, 32-bit pointer, little-endian, implicit include paths and tool paths.
 
 ### 10.2 `CMakeASMCompiler.cmake`
 
-Ghi assembler compiler và binutils mà CMake đã nhận diện.
+Write the compiler assembler and binutils that CMake has identified.
 
 ### 10.3 `CMakeSystem.cmake`
 
-Ghi host Windows, target `Generic/arm`, toolchain file và `CMAKE_CROSSCOMPILING=TRUE`.
+Record Windows host, target `Generic/arm`, toolchain file and `CMAKE_CROSSCOMPILING=TRUE`.
 
-### 10.4 `CMakeCache.txt` và configure log
+### 10.4 `CMakeCache.txt` and configure log
 
-Cache cho thấy:
+Cache shows:
 
 - generator Ninja;
 - target WEACT_F412;
-- ARM GCC lấy từ một VS Code extension;
-- Ninja/OpenOCD có trong PATH trên máy tạo ZIP;
+- ARM GCC taken from a VS Code extension;
+- Ninja/OpenOCD is in PATH on ZIP generator;
 - `NEON_MDF_PYTHON3=NOTFOUND`.
 
-Configure log kết thúc ở bước tìm `python3`; không có `build.ninja`, ELF hoặc BIN. Vì vậy đây không phải build artifact hoàn chỉnh và không nên copy sang máy khác. Các absolute path bên trong cũng chỉ hợp lệ trên máy đã tạo cache.
+Configure log ends with `python3`; there is no `build.ninja`, ELF or BIN. So this is not a complete artifact build and should not be copied to another machine. The absolute path inside is only valid on the machine that created the cache.
 
-## 11. Dependency graph của target build
+## 11. Dependency graph of target build
 
-Ví dụ firmware bare-metal whole-flash:
+For example bare-metal whole-flash firmware:
 
 ```mermaid
 flowchart TD
@@ -722,7 +721,7 @@ flowchart TD
     C --> E["startup + system + IRQ port"]
 ```
 
-Ví dụ bootloader + OTA:
+Example bootloader + OTA:
 
 ```mermaid
 flowchart TD
@@ -733,9 +732,9 @@ flowchart TD
     E --> F["flashmap interface"]
 ```
 
-FreeRTOS app thêm `freertos_kernel`, target này kéo `freertos_kernel_port`, `freertos_kernel_include` và `freertos_config`.
+FreeRTOS app adds `freertos_kernel`, this target pulls `freertos_kernel_port`, `freertos_kernel_include` and `freertos_config`.
 
-## 12. Output thực tế theo loại target
+## 12. Actual output by target type
 
 ### Whole-flash application
 
@@ -743,7 +742,7 @@ FreeRTOS app thêm `freertos_kernel`, target này kéo `freertos_kernel_port`, `
 - `<app>.elf.map`
 - `<app>.elf.bin`
 
-Link bằng `<TARGET>_FLASH.ld`.
+Link by `<TARGET>_FLASH.ld`.
 
 ### Bootloader-enabled, fixed single app
 
@@ -758,36 +757,36 @@ Bootloader link `_BOOTLOADER.ld`; app link `_APP.ld`.
 - factory ELF/BIN;
 - OTA ELF/BIN;
 - generated `flashmap.h`, `flashmap.cmake`, `app.ld`, `app_ota.ld`;
-- khi gọi flash target: app blob và otadata binary.
+- when calling flash target: app blob and otadata binary.
 
-Không có `.hex` trong bất kỳ nhánh nào.
+There is no `.hex` in any branch.
 
-## 13. Những điểm thiếu, mâu thuẫn hoặc nên cải thiện
+## 13. Points that are lacking, inconsistent or should be improved
 
-### Mức cao
+### High Levels
 
-1. **FU2 build inputs vẫn placeholder**: build system dùng YAML/generated output nhưng không làm các giá trị FU2 trở thành dữ liệu silicon hợp lệ.
-2. **OpenOCD bị bắt buộc quá sớm**: `find_program(... REQUIRED)` trong flash helper chạy ở configure, khiến build-only cũng phụ thuộc OpenOCD.
-3. **Windows Python naming**: CMake chỉ tìm `python3`; cache trong ZIP chứng minh máy Windows không có command này dù có thể có `python.exe`/Python Launcher.
-4. **CH32 flash/debug chưa wire**: không có `CH32V003F4P6_openocd.cfg`, không có wlink target, extension debug chỉ Cortex-M.
-5. **Generated fragment stale**: generator không xóa bootloader fragment cũ khi YAML bỏ bootloader.
+1. FU2 build inputs remain placeholder: build system uses YAML/generated output but does not make FU2 values valid silicon data.
+2. **OpenOCD is forced too soon**: `find_program(... REQUIRED)` in the flash helper runs in configure, making build-only also OpenOCD dependent.
+3. **Windows Python naming**: CMake only finds `python3`; the cache in ZIP proves that Windows does not have this command even though there may be a `python.exe`/Python Launcher.
+4. **CH32 flash/debug not yet wire**: no `CH32V003F4P6_openocd.cfg`, no wlink target, extension debug only Cortex-M.
+5. Generated fragment stale: generator does not delete the old bootloader fragment when YAML removes the bootloader.
 
-### Mức trung bình
+### Average level
 
-6. `build_full_image.py` docstring không khớp pipeline hai-vùng hiện tại.
-7. RISC-V toolchain comment về `libgcc` không khớp `riscv_soft_math.c` hiện tại.
-8. Comment trong `flashmap.cmake` mô tả caller cũ.
-9. Một số comment example vẫn nhắc target cũ như `flash_bootloader`, `flash_uart`, `flash_all`; code thật chỉ có `flash_jtag`, `flash_uart_stm32`, `flash_ota`, `serial_monitor`.
-10. Configure ghi generated device/startup/linker vào source tree; điều này làm checkout bị thay đổi và có rủi ro race khi build song song nhiều device cùng family.
-11. YAML, Kconfig và flashmap được xử lý qua `execute_process()` ở configure nhưng không đăng ký đầy đủ `CMAKE_CONFIGURE_DEPENDS`; sửa input có thể cần chủ động chạy configure lại.
-12. Logic tạo app variant/linker/post-build lặp ở ba example; nên có helper public nhận linker script/version/extra definitions.
-13. CLI coi chỉ cần có `CMakeCache.txt` là configured, dù configure có thể đã thất bại.
-14. Application `project()` chưa enable CXX dù toolchain khai C++.
-15. VSIX đóng gói không khớp extension source/dist hiện tại.
+6. `build_full_image.py` docstring does not match current two-zone pipeline.
+7. RISC-V toolchain comment on `libgcc` does not match current `riscv_soft_math.c`.
+8. Comment in `flashmap.cmake` describing the old caller.
+9. Some comment examples still remind the old target such as `flash_bootloader`, `flash_uart`, `flash_all`; real code only has `flash_jtag`, `flash_uart_stm32`, `flash_ota`, `serial_monitor`.
+10. Configure writes generated device/startup/linker to the source tree; this changes the checkout and creates a race risk when building multiple devices in parallel.
+11. YAML, Kconfig and flashmap are handled via `execute_process()` in configure but not fully registered with `CMAKE_CONFIGURE_DEPENDS`; correcting input may require actively running the configure again.
+12. Logic creates the app variant/linker/post-build iterated in three examples; there should be a public helper that recognizes linker script/version/extra definitions.
+13. The CLI considers only `CMakeCache.txt` to be configured, although configure may have failed.
+14. Application `project()` does not enable CXX even though the toolchain implements C++.
+15. VSIX packing does not match current source/dist extension.
 
-## 14. Thứ tự học các file hiệu quả nhất
+## 14. The most effective order of learning files
 
-1. `examples/Blinky/CMakeLists.txt` — thấy app gọi SDK thế nào.
+1. `examples/Blinky/CMakeLists.txt` — see how the app calls SDK.
 2. `tools/cmake/project.cmake` — public API build.
 3. `neon-mdf/CMakeLists.txt` — orchestration.
 4. `cmake/mcu_variants.cmake` — target/device generation.
@@ -800,9 +799,9 @@ Không có `.hex` trong bất kỳ nhánh nào.
 11. `cmake/freertos.cmake` + FreeRTOS root/portable CMake.
 12. Extension `cmakeRunner.ts`, `configure.ts`, `cmakeFileApi.ts` — UI integration.
 
-## 15. Kết luận ngắn
+## 15. Short conclusions
 
-Kiến trúc build của NEON_MDF có một trục khá rõ:
+The build architecture of NEON_MDF has a fairly clear axis:
 
 ```text
 Preset → toolchain → project.cmake → SDK CMakeLists
@@ -813,4 +812,4 @@ Preset → toolchain → project.cmake → SDK CMakeLists
        → optional header/OTA packaging → flash target
 ```
 
-Điểm thiết kế tốt nhất là target-based dependency propagation: app không cần tự lặp include path và CPU flags. Phần cần ưu tiên chuẩn hóa tiếp là tách flash tool dependency khỏi configure, làm generator output an toàn/idempotent hơn, bổ sung Windows Python resolution, hoàn thiện CH32 flash/debug, và loại bỏ comment/pipeline đã lỗi thời.
+The best design point is target-based dependency propagation: the app does not need to iterate include path and CPU flags. The next priority for standardization is separating the flash tool dependency from configure, making generator output safer/idempotent, adding Windows Python resolution, finalizing CH32 flash/debug, and removing obsolete comment/pipeline.

@@ -50,9 +50,9 @@ SECTIONS
   {
     . = ALIGN(4);
     _sdata = .;
-    /* __global_pointer$ - xem docstring dau file (gp-relative addressing,
-       startup.S `la gp, __global_pointer$` truoc khi .data/.bss dung duoc -
-       PHAI dinh nghia truoc khi startup dung toi, khong thi link loi
+    /* __global_pointer$ - view docstring at the beginning of file (gp-relative addressing, startup.S `la
+       gp, __global_pointer$` before .data/.bss is used - must be defined before startup uses me,
+       otherwise error link
        "undefined symbol"). */
     PROVIDE(__global_pointer$ = . + 0x800);
     *(.sdata)
@@ -86,8 +86,7 @@ SECTIONS
     . = ALIGN(8);
   } > RAM
 
-  /* KHONG co /DISCARD/ libc.a/libm.a/libgcc.a nhu ban ARM - riscv64-elf-gcc
-     (Homebrew) la compiler THUAN TUY, KHONG kem newlib (khac
-     arm-none-eabi-gcc dung nano.specs/nosys.specs) - build hoan toan
-     bare-metal (-nostdlib -ffreestanding), khong co libc.a de discard. */
+  /* there is no /DISCARD/ libc.a/libm.a/libgcc.a as ARM - riscv64-elf-gcc (Homebrew) compiler is
+     optional, does not include newlib (other arm-none-eabi-gcc uses nano.specs/nosys.specs) -
+     bare-metal safe build (-nostdlib -ffreestanding), there is no libc.a to discard. */
 }

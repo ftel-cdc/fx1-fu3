@@ -2,20 +2,19 @@
  * @file neon_qspi.h
  * @brief Public declarations for QSPI.
  * @details
- * * NEON_QSPI - chế độ Indirect (lệnh + data qua FIFO phần mềm điều khiển).
- * config/DeInit/SendCommand port THẬT từ src_fu2/fu2_dti_qspi.c (team cũ,
- * BuuPQ). WriteData/ReadData/IsBusy/WaitReady là wrap trực tiếp thanh ghi
- * TX/RX/STT.BUSY thật (inline LL_QSPI_IsBusy trong header) - KHÔNG có cờ
- * FIFO full/empty riêng nào được xác nhận trong inc_fu2/fu2_dti_qspi.h
- * (chỉ có STT.BUSY), nên KHÔNG bịa thêm polling flag nào khác - caller tự
- * dùng IsBusy()/WaitReady() giữa các lần đọc/ghi.
+ * * NEON_QSPI - Indirect mode (command + data via FIFO control software). config/DeInit/SendCommand
+ * port is REAL from src_fu2/fu2_dti_qspi.c (former team, BuuPQ).
+ * WriteData/ReadData/IsBusy/WaitReady is a direct wrap registering the real TX/RX/STT.BUSY (inline
+ * LL_QSPI_IsBusy in header) - NO private full/empty FIFO flags are validated in
+ * inc_fu2/fu2_dti_qspi.h (only STT.BUSY), so NO other polling flags are made - caller manually uses
+ * IsBusy()/WaitReady() between read/write.
  *
- * CHỈ điều khiển qua cửa sổ APB (DTI_QSPI = QSPI_APB_BASE) - cửa sổ AHB-Lite
- * (QSPI_CTRL, XiP memory-mapped read) KHÔNG có struct thanh ghi riêng trong
- * header team (chỉ là vùng nhớ đọc trực tiếp khi CFG.FMODE=MEM_MAPPED), xem
+ * ONLY control via APB window (DTI_QSPI = QSPI_APB_BASE) - AHB-Lite window (QSPI_CTRL, XiP
+ * memory-mapped read) NO separate struct register in header team (only direct read memory when
+ * CFG.FMODE=MEM_MAPPED), see
  * FU2.yaml peripheral QSPI_CTRL.
  *
- * Nguồn: inc_fu2/fu2_dti_qspi.h ("Dolphin Technology DTI QSPI").
+ * Source: inc_fu2/fu2_dti_qspi.h ("Dolphin Technology DTI QSPI").
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.
@@ -37,7 +36,7 @@ extern "C" {
 /*==================================================================================================
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
-/* Clock divider - SCLK = sysclk / (2^(div_index+1)), div_index = giá trị dưới đây */
+/* Clock divider - SCLK = sysclk / (2^(div_index+1)), div_index = below value */
 #define NEON_QSPI_CLK_DIV_2 0x0U
 #define NEON_QSPI_CLK_DIV_4 0x1U
 #define NEON_QSPI_CLK_DIV_8 0x2U
@@ -58,22 +57,22 @@ typedef struct {
     neon_qspi_pin_config_t pin_config;
 } neon_qspi_config_t;
 
-/* Line count cho instruction/address/data - dùng chung 1 constant vì cùng
- * encoding thật (0=NONE,1=1LINE,2=2LINES,3=4LINES) trên cả 3 field CCR. */
+/* Line count for instruction/address/data - shared constant because of the same real encoding
+ * (0=NONE,1=1LINE,2=2LINES,3=4LINES) on all 3 CCR fields. */
 #define NEON_QSPI_LINES_NONE 0x0U
 #define NEON_QSPI_LINES_1 0x1U
 #define NEON_QSPI_LINES_2 0x2U
 #define NEON_QSPI_LINES_4 0x3U
 
 typedef struct {
-    neon_field8_t instruction;    /* opcode 8-bit gửi cho flash (vd 0x9F = Read JEDEC ID) */
+    neon_field8_t instruction;    /* 8-bit opcode send to flash (e.g. 0x9F= Read JEDEC ID) */
     uint32_t instruction_lines;   /* NEON_QSPI_LINES_* */
-    uint32_t address_lines;       /* NEON_QSPI_LINES_NONE nếu lệnh không cần địa chỉ */
-    uint32_t address;             /* chỉ dùng khi address_lines != NONE, luôn 24-bit (ADDRSIZE cố định) */
+    uint32_t address_lines;       /* NEON_QSPI_LINES_NONE if the command does not need address */
+    uint32_t address;             /* only used when address_lines != NONE, always 24-bit (fixed ADDRSIZE) */
     uint32_t dummy_cycles;        /* 0-31 */
-    uint32_t data_lines;          /* NEON_QSPI_LINES_NONE nếu lệnh không có data phase */
-    uint32_t data_length;         /* số byte data, chỉ dùng khi data_lines != NONE */
-    neon_field8_t receive_enable; /* 1 = đọc data từ slave (vd Read), 0 = ghi (vd Page Program) */
+    uint32_t data_lines;          /* NEON_QSPI_LINES_NONE if the command has no data phase */
+    uint32_t data_length;         /* number of bytes of data, only used when data_lines != NONE */
+    neon_field8_t receive_enable; /* 1 = read data from slave (e.g. Read), 0 = write (e.g. Page Program) */
 } neon_qspi_command_t;
 
 /*==================================================================================================
@@ -102,11 +101,11 @@ neon_status_t neon_qspi_deinit(QSPI_TypeDef *instance);
  * @param[in] cmd Cmd.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * config thiết lập mode 0/SDR; config và SendCommand trả BUSY khi đang transfer.
- * Ghi AR/ABR/DLR rồi CCR - ở chế độ Indirect, ghi CCR THẬT SỰ BẮT ĐẦU
- * transfer ngay (khớp comment gốc "writing CCR is the trigger"). Gọi
- * WriteData/ReadData sau đó để bơm/đọc data qua FIFO (giao tiếp SPI/QSPI
- * flash chuẩn: gửi lệnh trước, data sau/đồng thời tuỳ chip flash thật).
+ * config set mode 0/SDR; config and SendCommand return BUSY while transferring. write AR/ABR/DLR then
+ * CCR - in Indirect mode, write CCR REALLY STARTS the transfer immediately (match original comment
+ * "writing CCR is the trigger"). Call WriteData/ReadData then to pump/read data via FIFO (standard
+ * communication SPI/QSPI flash: send command first, data later / at the same time depending on the
+ * real flash chip).
  */
 neon_status_t neon_qspi_send_command(QSPI_TypeDef *instance, const neon_qspi_command_t *cmd);
 
@@ -135,7 +134,7 @@ uint32_t neon_qspi_is_busy(QSPI_TypeDef *instance);
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Blocking - poll BUSY tới khi =0 hoặc hết timeout_polls (số vòng poll).
+ * Blocking - poll BUSY until =0 or timeout_polls (number of poll loops) is over.
  */
 neon_status_t neon_qspi_wait_ready(QSPI_TypeDef *instance, uint32_t timeout_polls);
 

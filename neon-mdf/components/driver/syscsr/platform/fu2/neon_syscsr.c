@@ -2,10 +2,10 @@
  * @file neon_syscsr.c
  * @brief Implementation for SYSCSR.
  * @details
- * * NEON SYSCSR backend cho FU2.
+ * *NEON SYSCSR backend for FU2.
  *
- * Dữ liệu register, reset state, physical pin và pin mux lấy theo FU2 LL.
- * API HAL dùng function logic thay cho việc để tầng trên phụ thuộc MUX_0..3.
+ * The register, reset state, physical pin and mux pin data are taken from FU2 LL. HAL API uses the
+ * function logic seen for leaving the upper layer MUX_0..3.
  */
 
 /*==================================================================================================
@@ -69,8 +69,8 @@ static const fu2_syscsr_pad_reset_t fu2_syscsr_pad_reset[] = {
 
 #define SYSCSR_PAD_MAP(pin, group, index) {SYSCSR_PIN_##pin, SYSCSR_REGISTER_GROUP_##group, index}
 
-/* Package pin → side/index của DIE pin. Mỗi side có 24 selector;
- * bảng này chép từ iopad_map.h của VP, không suy ra từ số package pin. */
+/* Package pin → side/index of DIE pin. Each side has 24 selector; this table copied from iopad_map.h
+ * of VP, not deduced from the package pin number. */
 static const fu2_syscsr_physical_pad_map_t fu2_syscsr_physical_pad_map[] = {
     SYSCSR_PAD_MAP(6, LEFT, 5),    SYSCSR_PAD_MAP(11, LEFT, 11),  SYSCSR_PAD_MAP(12, LEFT, 12),
     SYSCSR_PAD_MAP(13, LEFT, 13),  SYSCSR_PAD_MAP(14, LEFT, 14),  SYSCSR_PAD_MAP(18, LEFT, 19),
@@ -88,7 +88,7 @@ static const fu2_syscsr_physical_pad_map_t fu2_syscsr_physical_pad_map[] = {
 
 #undef SYSCSR_PAD_MAP
 
-/* Bảng mux theo kFU2PadMap[] trong VP mới. */
+/* mux table by kFU2PadMap[] in new VP. */
 #define SYSCSR_MUX_MAP(pin, mux0, mux1, mux2, mux3)                                                                    \
     {                                                                                                                  \
         SYSCSR_PIN_##pin, {                                                                                            \
@@ -140,7 +140,7 @@ static const fu2_syscsr_pin_function_map_t fu2_syscsr_function_map[] = {
 
 #define SYSCSR_GPIO_MAP(port, bit, pin) {GPIO##port, bit, SYSCSR_PIN_##pin}
 
-/* GPIO port/bit → package pin theo iopad_map.h của VP mới. */
+/* GPIO port/bit → battery pack according to iopad_map.h of new VP. */
 static const fu2_syscsr_gpio_map_t fu2_syscsr_gpio_map[] = {
     SYSCSR_GPIO_MAP(A, 0, PA0), SYSCSR_GPIO_MAP(A, 1, PA1), SYSCSR_GPIO_MAP(A, 2, PA2), SYSCSR_GPIO_MAP(A, 3, PA3),
     SYSCSR_GPIO_MAP(A, 4, PA4), SYSCSR_GPIO_MAP(A, 5, PA5), SYSCSR_GPIO_MAP(A, 6, PA6), SYSCSR_GPIO_MAP(A, 7, PA7),
@@ -600,7 +600,7 @@ neon_status_t fu2_syscsr_set_gpio_pins_function(GPIO_TypeDef *gpio, uint32_t pin
         return NEON_INVALID_PARAM;
     }
 
-    /* Resolve toàn bộ trước khi ghi để lỗi ở một pin không tạo trạng thái dở. */
+    /* Resolve the entirety before writing so that errors at a pin do not create a bad state. */
     for (bit = 0UL; bit < 8UL; ++bit) {
         if ((pin_mask & (1UL << bit)) == 0UL) {
             continue;
@@ -645,7 +645,7 @@ neon_status_t fu2_syscsr_configure_gpio_pads(GPIO_TypeDef *gpio, uint32_t pin_ma
         return NEON_INVALID_PARAM;
     }
 
-    /* Resolve toàn bộ trước khi ghi để lỗi ở một pin không tạo trạng thái dở. */
+    /* Resolve the entirety before writing so that errors at a pin do not create a bad state. */
     for (bit = 0UL; bit < 8UL; ++bit) {
         if ((pin_mask & (1UL << bit)) == 0UL) {
             continue;
@@ -820,7 +820,7 @@ neon_status_t neon_syscsr_set_sleep_hold(uint8_t hold) {
         return NEON_INVALID_PARAM;
     }
 
-    /* SLEEPHOLDREQN tích cực thấp: hold=1 phải ghi field bằng 0. */
+    /* Positive low SLEEPHOLDREQN: hold=1 must write field equals 0. */
     return syscsr_write_boolean_field(&SYSCSR->CPU_CTRL, SYSCSR_CPU_CTRL_SLEEPHOLDREQN_Msk, (hold == 0U) ? 1U : 0U);
 }
 
@@ -1226,9 +1226,9 @@ static void syscsr_write_pad(const fu2_syscsr_physical_pad_map_t *pad, const fu2
 
     ctrl3 &= ~(pin_bit | upper_pin_bit);
     if (config->pull == SYSCSR_PULL_NONE) {
-        ctrl0 |= upper_pin_bit; /* PE=1: pull cell không hoạt động. */
+        ctrl0 |= upper_pin_bit; /* PE=1: pull cell does not work. */
     } else {
-        ctrl0 &= ~upper_pin_bit; /* PE=0: pull cell hoạt động. */
+        ctrl0 &= ~upper_pin_bit; /* PE=0: active pull cell. */
         if (config->pull == SYSCSR_PULL_UP) {
             ctrl3 |= upper_pin_bit;
         } else {

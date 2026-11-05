@@ -1,20 +1,19 @@
 # FPGA_Terminal
 
-Terminal dòng lệnh chạy trên FU2 FPGA qua UART0. Một firmware cung cấp prompt
-`fpga> ` để gọi các testcase. Hiện đã tích hợp UART echo polling từ ví dụ
-`UART_ECHO_Polling`, nút bấm/LED từ `GPIO_Input_Output` với output đổi sang PB7,
-ngắt `GPIO_Interrupt` trên PB5, LED nháy bằng `TIM_Periodic_Interrupt` trên PB7
-và xóa/ghi/đọc Flash bằng `Flash_Read_Write`. UART RX interrupt và PWM
-cũng đã có code. `SPI_W5500` thay cho hai khung `SPI_Loopback` và
-`SPI_Master_Slave` trong kế hoạch ban đầu: hiện có 20 testcase,
-8 bài có code và 12 bài chờ triển khai.
+The command-line terminal runs on FU2 FPGA via UART0. A firmware at the same level prompts `fpga> `
+to call testcases. There is now integration of UART echo polling from example `UART_ECHO_Polling`,
+button/LED from `GPIO_Input_Output` with output changed to PB7, interrupt `GPIO_Interrupt` on PB5,
+flash LED with `TIM_Periodic_Interrupt` on PB7 and erase/write/read Flash with `Flash_Read_Write`.
+UART RX interrupt and PWM also have code. `SPI_W5500` shows two stubs `SPI_Loopback` and
+`SPI_Master_Slave` in the original plan: there are currently 20 testcase, 8 coded post and 12 post
+waiting for deployment.
 
-Mặc định: **UART0, 19200 baud, 8N1, FIFO tắt, clock FPGA 10 MHz**. Terminal
-nhận lệnh bằng polling; testcase `gpio_irq` bật ngắt GPIO, `tim_irq` bật ngắt
-timer. Testcase `uart_rx_irq` tạm bật FIFO và ngắt RX trên UART0,
-rồi khôi phục cấu hình console khi thoát. Không dùng DMA hoặc FreeRTOS.
+Default: UART0, 19200 baud, 8N1, FIFO off, 10 MHz FPGA clock. Terminal receives commands by polling;
+testcase `gpio_irq` enables GPIO interruption, `tim_irq` enables timer interruption. Testcase
+`uart_rx_irq` temporarily enables FIFO and RX interruption on UART0, then restores console
+configuration when exiting. Do not use DMA or FreeRTOS.
 
-## Cấu trúc
+## Structures
 
 ```text
 FPGA_Terminal/
@@ -24,11 +23,11 @@ FPGA_Terminal/
 ├── sdkconfig
 ├── README.md
 ├── Inc/
-│   └── main.h                # Include dùng cho main.c
+│   └── main.h                # Include for main.c
 ├── Src/
-│   └── main.c                # UART, nhận dòng, bảng lệnh và dispatch
+│   └── main.c                # UART, line receiving, command panel and dispatch
 └── testcase/
-    ├── CMakeLists.txt        # Đăng ký thư mục của từng testcase
+    ├── CMakeLists.txt        # Register the directory of each testcase
     ├── UART_ECHO_Polling/
     ├── GPIO_Input_Output/
     ├── GPIO_Interrupt/
@@ -51,184 +50,174 @@ FPGA_Terminal/
     └── FreeRTOS_Peripheral_Queue/
 ```
 
-`Inc/`, `Src/` và `testcase/` cùng cấp. `main.c` include `Inc/main.h`, nơi
-gộp các include của terminal. Khi thêm testcase, mỗi bài có một thư mục
-riêng dưới `testcase/`, chứa header và source. Thêm include header của bài
-vào `Inc/main.h` và handler vào bảng `commands` trong `main.c`; `help` đọc
-cùng bảng để liệt kê lệnh.
-Source `.c` được thêm qua `target_sources(fpga_terminal PRIVATE ...)` trong
-CMake của testcase, không include trực tiếp `.c` vào `main.c`.
+`Inc/`, `Src/` and `testcase/` are of the same level. `main.c` include `Inc/main.h`, which combines
+the include of the terminal. When adding a testcase, each post has its own directory under
+`testcase/`, containing the header and source. Add the post's include to `Inc/main.h` and handler to
+the table `commands` in `main.c`; `help` reads the same table to list commands. Source `.c` is added
+via `target_sources(fpga_terminal PRIVATE ...)` in the CMake of the testcase, not including directly
+`.c` into `main.c`.
 
-Handler có dạng `void handler(void)`. Terminal lấy từ đầu tiên làm tên lệnh
-và bỏ qua phần nhập thêm phía sau. Handler trả về để terminal hiện lại
-prompt. Wrapper của lệnh
-`uart_echo`, `gpio_io`, `gpio_irq`, `tim_irq` và `spi_w5500` truyền handle UART0 hiện tại
-cho testcase.
+The handler is in the form of `void handler(void)`. Terminal takes the first word as its command
+name and ignores any additional input after it. Handler returns to prompt terminal again. Wrapper of
+commands `uart_echo`, `gpio_io`, `gpio_irq`, `tim_irq` and `spi_w5500` pass the current UART0 handle
+to testcase.
 
-Lệnh `flash_rw` chạy một lượt rồi trả về, không cần nhận UART.
+The command `flash_rw` runs one turn and then returns, no need to receive UART.
 
-Mỗi thư mục khung mới có `CMakeLists.txt`, file `.h` khai báo hàm
-`Run(void)` và file `.c` chứa stub của hàm đó. Bảng lệnh gọi wrapper private
-`static_fpga_terminal_command_*` trong `main.c`, wrapper gọi `Run()` của bài.
-Stub in `[TODO] <testcase> is not implemented yet.` rồi trở về prompt. Phần
-thiết lập ngoại vi, truyền dữ liệu và kiểm chứng sẽ được điền sau; các
-khung DMA/FreeRTOS cũng chưa bật driver hoặc scheduler.
+Each new frame directory has `CMakeLists.txt`, the file `.h` declares the function `Run(void)` and
+the file `.c` contains the stub of that function. The script calls the private wrapper
+`static_fpga_terminal_command_*` in `main.c`, the wrapper calls the post's `Run()`. Stub in `[TODO]
+<testcase> is not implemented yet.` then returns to prompt. Peripheral settings, data transfer and
+verification will be filled in later; the frames DMA/FreeRTOS have not yet enabled drivers or
+schedulers.
 
 ## UART RX Interrupt (`uart_rx_irq`)
 
-Ví dụ tối giản chỉ có hai hàm: `USART0_IRQHandler()` nhận dữ liệu và
-`uart_rx_interrupt_run()` thiết lập UART, chạy main rồi trả về terminal.
-Luồng dữ liệu: PC → UART RX FIFO → ISR → ring buffer → main → echo về PC.
+The minimal example has only two functions: `USART0_IRQHandler()` receives data and
+`uart_rx_interrupt_run()` sets up UART, runs main and returns terminal. Data stream: PC → UART RX
+FIFO → ISR → ring buffer → main → echo to PC.
 
-Nhập `uart_rx_irq`, chờ dòng `[READY]` rồi gửi chuỗi. ISR đọc các byte đang
-có trong FIFO vào mảng `g_rx_buffer`; main lấy từng byte ra, in log nhận
-`[PC -> FPGA]` rồi echo nguyên byte với nhãn `[FPGA -> PC]`. Ví dụ gửi `A`:
+Enter `uart_rx_irq`, wait for `[READY]` and send the string. ISR reads existing bytes in FIFO into
+array `g_rx_buffer`; main takes each byte out, prints log for `[PC -> FPGA]` and echoes whole bytes
+with label `[FPGA -> PC]`. Example sending `A`:
 
 ```text
 [PC -> FPGA] 'A' (0x41)
 [FPGA -> PC]  A  (0x41)
 ```
 
-Log nằm ở main, sau khi byte đã được lấy khỏi FIFO và ring; không biểu thị
-dữ liệu hiện còn trong FIFO. Ký tự không in được hiển thị bằng `.` ở dòng
-nhận; giá trị hex cho biết byte thực tế. Dòng gửi vẫn truyền byte echo gốc,
-nên CR/LF có thể làm xuống dòng. Log từng byte tăng lượng dữ liệu TX, nên
-gửi từng ký tự hoặc burst ngắn để dễ quan sát. Tắt local echo trên PC.
+Log is in the main, after byte has been removed from FIFO and ring; does not indicate data remaining
+in FIFO. Unprinted characters are displayed with `.` at the receiving line; hex value indicates
+actual byte. The sending line still transmits original echo bytes, so CR/LF can do downstream. Log
+each byte increases the amount of TX data, should send each character or short burst for easy
+observation. Turn off local echo on PC.
 
-Mảng dùng phần tử `uint32_t` theo yêu cầu bộ nhớ FU2. `g_rx_head` là
-vị trí ghi tiếp theo, `g_rx_tail` là vị trí đọc tiếp theo, `g_rx_count` là
-số byte đang chờ. Main khóa ngắt trong đoạn ngắn cập nhật ring.
+Array uses element `uint32_t` according to FU2 memory requirements. `g_rx_head` is the next write
+position, `g_rx_tail` is the next read position, `g_rx_count` is the number of bytes pending. Main
+key break in short segment update ring.
 
-Kích thước ring đặt bằng `CONFIG_UART_RX_INTERRUPT_RING_BUF_SIZE`, mặc
-định 128 slot. Ring đầy thì bỏ byte mới và tiếp tục lấy dữ liệu khỏi FIFO.
-Không có struct thống kê, hàm phụ, log lỗi hay kiểm tra điều kiện khởi tạo
-trong ví dụ. Ví dụ dùng UART0 8-bit đã được terminal cấu hình sẵn; các kiểm
-tra bên trong driver UART vẫn do driver thực hiện.
+The ring size is set in `CONFIG_UART_RX_INTERRUPT_RING_BUF_SIZE`, default 128 slots. When the ring
+is full, remove new bytes and continue to retrieve data from FIFO. There are no statistical structs,
+subfunctions, error logs or initialization conditions checks in the example. For example, use
+terminal-configured 8-bit UART0; tests inside the UART driver are still performed by the driver.
 
-Biến `g_main_work` tăng mỗi lượt main, có thể quan sát trong debugger để
-thấy main vẫn chạy khi chưa gửi dữ liệu. Ctrl+C (`0x03`) đặt cờ dừng ngay
-trong ISR, kể cả khi ring đầy. Main echo hết các byte đã xếp hàng trước đó,
-tắt ngắt RX và khôi phục cấu hình UART để hiện lại `fpga> `. LF dư của lệnh
-CRLF được bỏ qua. Dữ liệu dư đã nhận sau Ctrl+C bị bỏ; chờ prompt trước
-khi gửi lệnh tiếp theo.
+The `g_main_work` variable increases with each main pass, which can be observed in the debugger to
+show that the main is still running when no data has been sent. Ctrl+C (`0x03`) sets a stop flag
+right in the ISR, even when the ring is full. The main echoes all previously queued bytes, disables
+RX interrupts and restores UART configuration to render `fpga> ` again. Residual LF of CRLF command
+is ignored. Residual data received after Ctrl+C is ignored; wait for prompt before sending next
+command.
 
-TX dùng polling. `neon_uart_try_receive()` cho phép ISR nhận RX trong lúc
-main đang truyền trên cùng handle. Trước khi đổi cấu hình, ví dụ gọi
-`neon_uart_wait_tx_complete()` để chờ byte cuối truyền hết trên dây.
-Quá trình thiết lập FIFO có reset UART, nên chỉ gửi payload sau `[READY]`.
+TX uses polling. `neon_uart_try_receive()` allows the ISR to receive RX while the main is
+transmitting on the same handle. Before changing configuration, for example call
+`neon_uart_wait_tx_complete()` to wait for the last byte to run out of wires. The FIFO setup has a
+UART reset, so only send payload after `[READY]`.
 
-Kiểm tra: gửi `ABC123` và quan sát echo đúng thứ tự, nhấn Ctrl+C rồi thử
-`help`; chạy lại `uart_rx_irq` để kiểm tra khả năng vào/thoát nhiều lần.
-Xác nhận hoạt động IRQ/FIFO trên FPGA thực tế.
+Test: send `ABC123` and observe the echo in the correct order, press Ctrl+C then try `help`; re-run
+`uart_rx_irq` to test multiple entry/exit. Confirm IRQ/FIFO operation on actual FPGA.
 
 ## SPI W5500 (`spi_w5500`)
 
-FU2 là SPI0 master, W5500 là slave. Testcase kiểm tra giao tiếp SPI bằng
-thanh ghi và SRAM của W5500; chưa cấu hình IP, socket hoặc truyền Ethernet.
-Không cần cắm cáp LAN để chạy các phép thử này.
+FU2 is SPI0 master, W5500 is slave. Testcase tests the SPI communication by W5500's register and
+SRAM; no IP, socket or Ethernet transmission configured yet. No LAN cable plug is needed to run
+these tests.
 
-Đấu dây theo bảng dưới, nối chung GND, cấp nguồn đúng yêu cầu
-module và bảo đảm RSTn đã được kéo lên/mạch reset hoạt động. Tín hiệu
-W5500 dùng mức 3,3 V; INTn chưa sử dụng.
+Wire according to the table below, connect GND together, power up the module as required and ensure
+RSTn has been pulled up / reset circuit is active. Signal W5500 uses 3,3 V level; INTn is not used.
 
-| SPI0 | Chân PMOD | Package FU2 | Die pad / nhóm SYSCSR |
+| SPI0 | PMOD pin | Package FU2 | Die pad/SYSCSR group |
 |---|---|---|---|
 | SCK | IO5 | 60 | PIN_70 / right[21] |
 | MOSI | IO4 | 62 | PIN_74 / top[1] |
 | MISO | IO1 | 61 | PIN_73 / top[0] |
 | SS0 → W5500 SCSn | IO0 | 63 | PIN_75 / top[2] |
 
-Driver SPI tự chọn mux và cấu hình pad khi `pin_config=AUTO` (mặc định).
-DeInit khôi phục các bit pad/mux đã lưu; testcase không ghi SYSCSR trực tiếp.
-`KEEP` dành cho ứng dụng đã tự cấu hình chân. Số package và số die pad khác
-nhau. UART0 vẫn dùng để nhập lệnh và in log.
+The SPI driver manually selects mux and configuration pad when `pin_config=AUTO` (default). DeInit
+restores saved pad/mux bits; the testcase does not write SYSCSR directly. `KEEP` is for applications
+that have configured pins themselves. Package and die pad numbers vary. UART0 remains for command
+entry and log printing.
 
-Nhập `spi_w5500` rồi Enter. Mặc định mode 3, MSB trước, SCK 1 MHz, hardware
-SS0; tại clock hệ thống 10 MHz, divider bằng 4. Testcase đợi 560 ms cho
-mạch reset module, đọc `VERSIONR` (phải bằng `0x04`), ghi MR=`0x80` để soft
-reset rồi chờ MR về `0x00`. Chỉ reset/ghi thử RCR sau khi đọc đúng ID.
-Sau `[READY]`, nhấn từng phím, không cần Enter:
+Enter `spi_w5500` and then Enter. Default mode 3, MSB first, SCK 1 MHz, hardware SS0; at system
+clock 10 MHz, divider by 4. Testcase wait for 560 ms for circuit reset module, read `VERSIONR` (must
+be equal to `0x04`), write MR=`0x80` to soft reset and wait for MR to return to `0x00`. Only reset or test writes to RCR
+RCR after reading correct ID. After `[READY]`, press each key, do not need Enter:
 
-| Phím | Thao tác |
+| Keys | Operations |
 |---|---|
-| `i` | Chạy lại chờ khởi động và soft reset W5500 |
-| `t` | Đọc VERSIONR, MR, PHYCFGR, RTR, RCR và trạng thái LINK |
-| `p` | Lưu RCR; ghi/đọc `0x55`, `0xAA`; ghi lại và kiểm tra giá trị ban đầu |
-| `r` | Đọc liên tiếp 32 byte socket 0 TX SRAM tại offset `0x0000` |
-| `b` | Tắt auto, quét B2B từ 10 xuống 0 chu kỳ SCK; đọc lặp và thống kê lỗi CRC32/ID/SPI |
-| `d` | Chỉ đọc VERSIONR/RCR/PHYCFGR ở mode 0/3, 1 MHz/100 kHz, rồi trả lại mode/tốc độ đã chọn |
+| `i` | Running again waiting for boot and soft reset W5500 |
+| `t` | Read VERSIONR, MR, PHYCFGR, RTR, RCR and LINK status |
+| `p` | Save RCR; write/read `0x55`, `0xAA`; rewrite and check the original value |
+| `r` | Continuous reading 32 bytes socket 0 TX SRAM at offset `0x0000` |
+| `b` | Turn off auto, B2B scan from 10 to 0 SCK cycles; repeat reading and CRC32/ID/SPI error statistics |
+| `d` | Read only VERSIONR/RCR/PHYCFGR in mode 0/3, 1 MHz/100 kHz, then return the selected mode/speed |
 | `0`–`4` | Mode 0: 100 kHz, 500 kHz, 1 MHz, 2,5 MHz, 5 MHz |
-| `5`–`9` | Mode 3: cùng năm mức tốc độ trên |
-| `a` | Bật/tắt ping/pong tự động mỗi 3 giây |
-| `h` / `?` | In hướng dẫn |
-| Ctrl+C / `q` | Tắt SPI0, khôi phục pad và SysTick, trở về `fpga> ` |
+| `5`–`9` | Mode 3: same five speed levels above |
+| `a` | Turn on/off ping/pong automatically every 3 seconds |
+| `h` / `?` | Print instruction |
+| Ctrl+C / `q` | Turn off SPI0, restore pad and SysTick, return to `fpga> ` |
 
-Auto mặc định OFF. Chọn một preset `0`–`9` sẽ chạy ping/pong ngay và bật
-auto. `CONFIG_SPI_W5500_SCK_HZ` đặt tốc độ ban đầu; divider làm tròn lên
-để SCK thực không vượt giá trị yêu cầu. `CONFIG_SPI_W5500_TIMEOUT_POLLS`
-là số vòng chờ mỗi giao dịch, không phải mili giây.
+Auto default OFF. Select a preset `0`–`9` that will run ping/pong immediately and enable auto.
+`CONFIG_SPI_W5500_SCK_HZ` set initial speed; divider rounds up so the real SCK does not exceed the
+required value. `CONFIG_SPI_W5500_TIMEOUT_POLLS` is the number of wait rings per transaction, not
+milliseconds.
 
-Driver FU2 mặc định nghỉ 10 chu kỳ SCK giữa các byte, kể cả các byte trong
-word 32 bit. Chỉnh `NEON_SPI_FU2_B2B_SCK_CYCLES` trong `spi/neon_spi.h`
-rồi build lại để đổi mặc định. Driver tự tính
-`T_B2B = between_frames * 2 * (clock_divider + 1)` khi đơn vị là
-`NEON_SPI_B2B_SCK_CYCLES`, kể cả khi đổi divider lúc chạy.
-Tại core 10 MHz/SCK 1 MHz, giá trị mặc định của `T_B2B` là 100, tương ứng
-10 µs. Giá trị thanh ghi phải vừa 16 bit; cấu hình vượt giới hạn bị từ chối.
+Driver FU2 defaults to 10 SCK cycles between bytes, including bytes in 32-bit word. Adjust
+`NEON_SPI_FU2_B2B_SCK_CYCLES` in `spi/neon_spi.h` and rebuild to change the default. Driver
+calculates `T_B2B = between_frames * 2 * (clock_divider + 1)` when the unit is
+`NEON_SPI_B2B_SCK_CYCLES`, even if changing the divider at runtime. At core 10 MHz/SCK 1 MHz, the
+default value of `T_B2B` is 100, corresponding to 10 μs. Register value must be 16 bits;
+configuration exceeding the limit is rejected.
 
-Log `[FU2 -> W5500]` hiển thị lệnh/TX; `[W5500 -> FU2]` hiển thị RX thô
-và byte dữ liệu thấp. Ví dụ đọc VERSIONR gửi `0x00390000`: hai byte địa chỉ,
-một byte control và một byte dummy. Ba byte RX của phần header bị bỏ qua.
-RX khi ghi không phải ACK; kết quả ghi được xác nhận bằng lần đọc sau.
-Ping/pong chỉ `[PASS]` nếu cả hai mẫu đọc đúng và RCR đã khôi phục đúng.
+Log `[FU2 -> W5500]` shows command/TX; `[W5500 -> FU2]` shows raw RX and low data bytes. Example
+VERSIONR reading sends `0x00390000`: two bytes address, one byte control and one byte dummy. Three
+RX bytes of the header are ignored. RX when written is not ACK; write results are confirmed with a
+subsequent read. Ping/pong indicates `[PASS]` if both patterns are correctly read and RCR has been
+restored correctly.
 
-Burst gửi header `00 00 10` (BSB=2, read, VDM), sau đó 32 byte dummy. Giữ
-SS0 LOW bằng manual hold: tám word 32-bit chứa header và 29 byte dữ liệu,
-rồi một word 24-bit nhận ba byte cuối và release CS. Phần cứng tạo B2B
-giữa các byte trong word. Sau đó trở về word 32-bit và SS bình
-thường. Nội dung SRAM sau reset không cố định nên dump này không dùng
-để kết luận PASS/FAIL hoặc làm mẫu kiểm tra bộ nhớ.
+Burst sends the `00 00 10` header (BSB=2, read, VDM), then 32 bytes dummy. Hold SS0 LOW with manual
+hold: eight 32-bit words containing the header and 29 bytes of data, then a 24-bit word receives the
+last three bytes and release CS. hardware creates B2B between bytes in the word. Then returns to
+normal 32-bit words and SS. The SRAM content after reset is not fixed, so this dump is not used to
+conclude PASS/FAIL or as a memory test sample.
 
-Phím `b` chỉ đọc VERSIONR và cùng 32 byte TX SRAM, không ghi W5500.
-Socket không chạy nên vùng TX SRAM giữ nguyên trong suốt bài đo. Ở B2B=10,
-test lấy CRC32 lần đọc đầu làm mẫu và kiểm chứng bằng toàn bộ lượt đọc
-của mức này. Nếu VERSIONR khác `04`, CRC32 thay đổi hoặc giao dịch lỗi thì
-dừng vì mẫu chuẩn chưa ổn định. Các mức 9..0 so với cùng CRC32 đó, không
-cập nhật mẫu theo lần đọc mới. Mỗi lượt chỉ tính fail một lần; các cột
-CRC/ID/IO cho biết nguyên nhân và có thể trùng nhau.
+The key `b` only reads VERSIONR and the same 32 bytes of TX SRAM, not W5500. Socket is not running
+so the TX SRAM remains intact throughout the test. At B2B=10, the test takes CRC32 first reading as
+a sample and verifies it with the entire reading of this level. If VERSIONR differs from `04`, CRC32
+changes or error transactions are stopped because the standard sample is unstable. Levels 9..0
+compared to the same CRC32, do not update the sample according to new readings. Each turn counts
+fail only once; columns CRC/ID/IO indicate the cause and may overlap.
 
-`CONFIG_SPI_W5500_B2B_TRIES` đặt số lượt đọc mỗi mức (mặc định 1.000).
-Log báo số lượt fail, tỷ lệ phần trăm và mức nghỉ nhỏ nhất không có lỗi
-trong lần chạy. Không in từng giao dịch khi quét. Nhấn `q`/Ctrl+C để hủy
-và về menu; test luôn thử khôi phục cấu hình ban đầu, auto giữ OFF.
-Chạy lại ở các mode/tốc độ cần dùng trước khi chọn mặc định mới. CRC32
-kiểm tra tính lặp lại so với mẫu, chưa chứng minh nội dung SRAM là đúng;
-VERSIONR là kiểm tra bổ sung với giá trị đã biết.
+`CONFIG_SPI_W5500_B2B_TRIES` sets the number of reads per level (default 1.000). Logs the number of
+failed attempts, percentage and lowest break without error during runtime. Do not print each
+transaction when scanning. Press `q`/Ctrl+C to cancel and return to the menu; test always try to
+restore the original configuration, auto keep OFF. Run again at the mode/speed used before choosing
+a new default. CRC32 checks for numeric repeatability with templates, does not prove SRAM internal
+use is correct; VERSIONR is an additional test with known values.
 
-SPI dùng polling, không dùng DMA/IRQ. SysTick chạy đếm chu kỳ, không bật
-ngắt; nếu SysTick đang bật thì testcase báo bận và trả về. Timeout SPI sẽ
-reset controller trước giao dịch tiếp theo; burst lỗi không in dump dở.
+SPI uses polling, not DMA/IRQ. SysTick runs cycle counting, does not enable interrupt; if SysTick is
+on, the testcase says busy and returns. Timeout SPI resets controller before next transaction; burst
+error does not print dump unfinished.
 
-Kiểm tra trên board: đọc ID `04`, chạy `p` thấy PASS và RCR giữ nguyên,
-thử các preset, `r`, `d`, bật/tắt auto rồi Ctrl+C và chạy lại `help`.
-Dùng FPGA/logic analyzer để xác nhận pin, timing, CS và đường MISO/MOSI thực tế.
+Check on board: read ID `04`, run `p` see PASS and RCR remain the same, try presets, `r`, `d`, turn
+on/off auto then Ctrl+C and re-run `help`. Use FPGA/logic analyzer to confirm pin, timing, CS and
+actual MISO/MOSI line.
 
-## Lệnh hiện có
+## Existing commands
 
-| Lệnh | Testcase/chức năng | Ưu tiên | Trạng thái |
+| Orders | Testcase/Function | Priorities | The status |
 |---|---|---|---|
-| `help` | Liệt kê lệnh | — | Sẵn có |
-| `info` | Thông tin terminal | — | Sẵn có |
-| `clear` | Xóa màn hình | — | Sẵn có |
-| `uart_echo` | UART_ECHO_Polling | P1 | Có code |
-| `gpio_io` | GPIO_Input_Output | P1 | Có code |
-| `gpio_irq` | GPIO_Interrupt | P1 | Có code |
-| `tim_irq` | TIM_Periodic_Interrupt | P1 | Có code |
-| `pwm_output` | PWM_Output | P1 | Có code |
+| `help` | List commands | — | Availability |
+| `info` | Terminal Information | — | Availability |
+| `clear` | Delete Screen | — | Availability |
+| `uart_echo` | UART_ECHO_Polling | P1 | With code |
+| `gpio_io` | GPIO_Input_Output | P1 | With code |
+| `gpio_irq` | GPIO_Interrupt | P1 | With code |
+| `tim_irq` | TIM_Periodic_Interrupt | P1 | With code |
+| `pwm_output` | PWM_Output | P1 | With code |
 | `i2c_rw` | I2C_Register_Read_Write | P1 | Khung `[TODO]` |
-| `spi_w5500` | SPI_W5500 | P1 | Có code |
-| `flash_rw` | Flash_Read_Write | P1 | Có code |
-| `uart_rx_irq` | UART_RX_Interrupt | P2 | Có code |
+| `spi_w5500` | SPI_W5500 | P1 | With code |
+| `flash_rw` | Flash_Read_Write | P1 | With code |
+| `uart_rx_irq` | UART_RX_Interrupt | P2 | With code |
 | `adc_sampling` | ADC_Sampling | P2 | Khung `[TODO]` |
 | `dma_memcpy` | DMA_Memory_Copy | P2 | Khung `[TODO]` |
 | `rtc_calendar` | RTC_Calendar | P2 | Khung `[TODO]` |
@@ -241,11 +230,11 @@ Dùng FPGA/logic analyzer để xác nhận pin, timing, CS và đường MISO/M
 | `i2c_dma` | I2C_DMA | P3 | Khung `[TODO]` |
 | `freertos_queue` | FreeRTOS_Peripheral_Queue | P3 | Khung `[TODO]` |
 
-“Có code” chỉ mô tả trạng thái triển khai, không xác nhận bài đã đạt kiểm tra
-phần cứng. Các mục `[TODO]` chưa thực hiện thao tác ngoại vi.
+“Having code” only describes the deployment status, does not confirm that the paper has passed
+hardware tests. Items `[TODO]` have not performed peripheral operations.
 
-Các lệnh trên phân biệt chữ hoa/thường và bỏ qua phần nhập thêm sau tên lệnh.
-Nhập lệnh rồi nhấn Enter; hỗ trợ CR, LF và CRLF. Ví dụ:
+The above commands are case sensitive and ignore the extra text after the command name. Enter the
+command and press Enter; CR, LF and CRLF are supported. For example:
 
 ```text
 FU2 FPGA terminal
@@ -285,10 +274,10 @@ fpga>
 
 ## Testcase UART_ECHO_Polling
 
-Nhập `uart_echo` rồi Enter. Testcase dùng chung handle UART0, baud, clock và
-FIFO mặc định của console; không reset hoặc khởi tạo lại UART khi vào/ra.
-Mỗi byte nhận được sẽ in thông tin `[USER -> FPGA]`, gửi lại chính byte đó
-bằng `neon_uart_transmit`, rồi in kết quả `[FPGA -> USER]`, như ví dụ gốc:
+Enter `uart_echo`, then Enter. The testcase uses the console's default UART0 handle, baud, clock and
+FIFO; do not reset or re-create the UART when entering/exiting. Each received byte will print `[USER
+-> FPGA]` information, send back the same byte with `neon_uart_transmit`, and then print `[FPGA ->
+USER]` results, as in the original example:
 
 ```text
 fpga> uart_echo
@@ -297,43 +286,41 @@ fpga> uart_echo
 [FPGA -> USER] A (0x41)
 ```
 
-Nhấn Ctrl+C để dừng testcase và quay lại `fpga> `. Dòng `[STATS]` in số byte
-RX/TX, số RX/TX timeout, số RX/TX lỗi, trạng thái và mã lỗi gần nhất. Các số
-đếm không gồm dữ liệu chẩn đoán, Ctrl+C và LF thuộc Enter CRLF khi gọi lệnh.
-Biến `g_uart_echo_stats` có thể xem trong debugger; thống kê được xóa khi chạy
-testcase lần tiếp theo.
+Press Ctrl+C to stop the testcase and go back to `fpga> `. The `[STATS]` line prints the byte number
+RX/TX, the timeout number RX/TX, the error number RX/TX, the latest error status and code. The count
+numbers do not include diagnostic data, Ctrl+C and LF belong to Enter CRLF when calling commands.
+The variable `g_uart_echo_stats` can be viewed in the debugger; statistics are deleted when running
+the next testcase.
 
-Khi testcase đang chạy, các ký tự như `help` là dữ liệu echo. Thoát bằng Ctrl+C
-trước khi nhập lệnh terminal khác. RX timeout khi chờ gõ là bình thường và
-được đếm; lỗi RX/TX được ghi nhận rồi tiếp tục nhận, không tự gửi lại byte lỗi.
-Chỉ việc echo thành công chưa tự xác nhận testcase đạt; cần đối chiếu byte
-nhận/gửi và các bộ đếm lỗi trên phần cứng.
+when the testcase is running, characters such as `help` are echo data. Exit with Ctrl+C before
+entering another terminal command. RX timeout pending typing is normal and counted; error RX/TX is
+written to receive and continues to receive, not manually re-send byte errors. Only successful echo
+does not confirm the testcase achieved by itself; need to compare received/sent bytes and counter
+errors on hardware.
 
-Tắt local echo trên terminal máy tính vì FPGA đã echo ký tự. Ở prompt
-`fpga> `, Backspace và DEL xóa ký tự cuối; Tab thành một khoảng trắng;
-Ctrl+C hủy dòng đang nhập.
-Phím mũi tên/function key được bỏ qua, chưa có history hoặc autocomplete.
-Không cần nhập lại firmware để chạy một lệnh terminal khác.
+Turn off local echo on your terminal because FPGA has already echoed the character. In prompt `fpga>
+`, Backspace and DEL delete the last character; Tab to a blank; Ctrl+C cancels the input line. Arrow
+key/function key is ignored without history or autocomplete. No need to re-enter firmware to run
+another terminal command.
 
-Buffer mặc định 128 byte chứa tối đa 127 ký tự và ký tự kết thúc. Dòng quá
-dài hoặc có lỗi RX sẽ bị bỏ toàn bộ đến Enter; Ctrl+C cũng cho phép nhập lại.
-RX timeout khi chưa có dữ liệu là trạng thái idle bình thường. Đây là terminal
-tương tác: gõ lệnh hoặc gửi từng dòng, chờ prompt rồi gửi tiếp; chưa có flow
-control để bảo đảm nhận các burst/paste dài liên tục.
+The default 128-byte buffer contains up to 127 characters and end characters. Lines that are too
+long or have RX errors will be dropped entirely to Enter; Ctrl+C also allows re-entry. RX timeout
+when no data is available is the normal idle state. This is an interactive terminal: type commands
+or send each line, wait for prompt and then send again; there is no flow control to ensure
+continuous long burst/paste.
 
 ## Testcase GPIO_Input_Output
 
-Nhập `gpio_io` rồi Enter. Testcase giữ input **GPIOB5 (PB5)** của ví dụ gốc
-và dùng **GPIOB7 (PB7)** làm output active-high:
+Enter `gpio_io` and then Enter. Testcase keeps the original example's input GPIOB5 (PB5) and uses
+GPIOB7 (PB7) as its active-high output:
 
-| Chân | Cấu hình và hoạt động |
+| Feet | configuration and operation |
 |---|---|
-| PB5 | Input pull-up, đồng bộ input; nút nối xuống GND, nhấn = 0, nhả = 1 |
-| PB7 | Output khởi động thấp; nhấn nút = 1, nhả nút = 0 |
+| PB5 | Input pull-up, synchronize input; GND downlink button, press=0, release=1 |
+| PB7 | Low start-up output; press button=1, release button=0 |
 
-Nối PB7 tới LED qua điện trở hoặc thiết bị đo theo pin map của PDI. Nếu PDI
-không hỗ trợ pull-up PAD, dùng điện trở kéo lên ngoài cho PB5. GPIO UART0
-vẫn được giữ cho terminal.
+Connect PB7 to LED via resistor or pin map of PDI. If PDI does not support pull-up PAD, use external
+pull-up resistor for PB5. GPIO UART0 is kept for terminal.
 
 ```text
 fpga> gpio_io
@@ -343,30 +330,31 @@ fpga> gpio_io
 [GPIO] PB5=1 RELEASED -> PB7=0 (LED OFF)
 ```
 
-Log xuất khi vào testcase và khi mức PB5 thay đổi. Vòng lặp đọc GPIO trực
-tiếp và kiểm tra UART không chờ để nhận Ctrl+C; các ký tự khác được bỏ qua.
-Khi thoát, PB7 được ghi thấp rồi PB5/PB7 được DeInit, tắt output trước khi
-trở lại prompt. Có thể chạy lại `gpio_io` hoặc `uart_echo` ngay sau đó.
-Testcase không chống dội nút, nên một lần nhấn/nhả có thể tạo nhiều log.
+Log output when entering the testcase and when PB5 level is changed. loop read GPIO directly and
+check UART do not wait to receive Ctrl+C; other characters are ignored. When exiting, PB7 is written
+low then PB5/PB7 is DeInit, turning off output before returning to prompt. It is possible to re-run
+`gpio_io` or `uart_echo` immediately afterwards. The testcase does not flush the button, so a single
+press/release can create multiple logs.
 
 ## Testcase GPIO_Interrupt
 
-Nhập `gpio_irq` rồi Enter. Testcase cấu hình **PB5 input pull-up**, bật đồng
-bộ input và ngắt cạnh lên. Với nút PB5 nối xuống GND, nhấn tạo cạnh xuống;
-**nhả nút tạo cạnh lên và tăng bộ đếm**. Có thể dùng nguồn tín hiệu ngoài
-với mức điện áp phù hợp bank thay cho nút.
+Enter `gpio_irq` and then Enter. Testcase configuration PB5 input pull-up, enable input
+synchronization and interrupt edge up. With the PB5 button connecting down to GND, press create edge
+down;
+**release the edge-up button and increase counter**. Can use an external signal source with a suitable
+voltage bank instead of the button.
 
-GPIOB nối tới **IRQ20** theo FU2 Common Specification v8 và wiring
-`gpioB.intr => armcortexM0.intisr[20]` trong `FVP_FU2.lisa` của nguồn FU2.
-Header/startup hiện tại của SDK đặt tên đường này là `EXTI1_IRQn` và
-`EXTI1_IRQHandler`. Testcase dùng CMSIS `NVIC_EnableIRQ`/`NVIC_DisableIRQ`
-trực tiếp. BootROM v5 chuyển tiếp ngắt tới vector ứng dụng như mô tả trong
+GPIOB connects to IRQ20 according to FU2 Common Specification v8 and wiring `gpioB.intr =>
+armcortexM0.intisr[20]` in the `FVP_FU2.lisa` of the FU2 source. The current Header/startup of the
+SDK names this path `EXTI1_IRQn` and `EXTI1_IRQHandler`. Testcase uses CMSIS
+`NVIC_EnableIRQ`/`NVIC_DisableIRQ` directly. BootROM v5 forwards the interrupt to the application
+vector as described in
 [FU2 build/boot contract](../../guide/FU2.md).
 
-ISR đọc `neon_gpio_get_interrupt_status()`, xử lý riêng PB5, xóa raw pending
-và software injection qua `neon_gpio_clear_interrupt()`, rồi tăng biến
-`g_gpio_interrupt_count`. Vòng lặp testcase đọc bộ đếm và in log; ISR không
-gọi `printf`. Bộ đếm là word 32-bit, được xóa mỗi lần chạy testcase.
+ISR reads `neon_gpio_get_interrupt_status()`, handles PB5 separately, clears raw pending and
+software injection via `neon_gpio_clear_interrupt()`, and then increases the variable
+`g_gpio_interrupt_count`. The testcase loop reads counter and prints log; ISR does not call
+`printf`. Counter is a 32-bit word, which is deleted each time the testcase is run.
 
 ```text
 fpga> gpio_irq
@@ -378,30 +366,29 @@ fpga> gpio_irq
 fpga>
 ```
 
-Nhấn **`i`** để đặt software injection của PB5; ISR phải chạy một lần rồi
-xóa nguồn ngắt. Đây là kiểm tra đường GPIO interrupt/NVIC/ISR, không xác
-nhận chân PAD ngoài. Các ký tự khác được bỏ qua, Ctrl+C dừng testcase.
-Khi thoát, code tắt NVIC và mask PB5, xóa cờ GPIO/NVIC rồi DeInit PB5.
-PRIMASK được khôi phục về giá trị trước khi vào testcase.
-PB7 không được sử dụng trong testcase này. Có thể chạy lại `gpio_irq` hoặc
-chuyển sang `gpio_io`/`uart_echo` mà không nạp lại firmware.
+Press `i` to set the software injection of PB5; ISR must be run once and then delete the interrupt
+source. This is GPIO path check interrupt/NVIC/ISR, do not confirm external PAD pins. Other
+characters are ignored, Ctrl+C stops testcase. When exiting, code disables NVIC and mask PB5,
+removes flag GPIO/NVIC and DeInit PB5. PRIMASK is restored to value before entering testcase. PB7 is
+not used in this testcase. It is possible to re-run `gpio_irq` or switch to `gpio_io`/`uart_echo`
+without flashing firmware again.
 
-Với nguồn cạnh sạch, mỗi lần ISR phục vụ PB5 tăng bộ đếm một đơn vị. Nếu có
-nhiều IRQ trong lúc in, dòng log báo tổng mới và số tăng thêm `(+N)`.
-Testcase chưa chống dội phần mềm; nút cơ có thể tạo nhiều cạnh lên. Các cạnh
-đến quá nhanh khi cờ đang pending có thể gộp lại, nên đây không phải bộ đếm
-xung tốc độ cao. Đối chiếu số cạnh và bộ đếm trên FPGA để xác nhận phần cứng.
+With a clean edge source, each time the ISR serves the PB5, it increases the counter by one unit. If
+there are multiple IRQs during printing, the log line indicates a new total and an additional
+`(+N)`. The testcase is not anti-backlash software yet; the mechanical node can create multiple
+edges up. Edges that arrive too quickly when the flag is pending can be pooled, so this is not a
+high speed pulse counter. Collate the number of edges and counters on the FPGA to confirm hardware.
 
 ## Testcase TIM_Periodic_Interrupt
 
-Nhập `tim_irq` rồi Enter. Testcase dùng **TIM1 CH0, IRQ13
-(`TIM1_IRQHandler`)** và **GPIOB7 (PB7)** làm output. Nối PB7 tới LED qua
-điện trở theo pin map của PDI. PB7 bắt đầu mức thấp, sau đó đảo mức mỗi
-**500 ms** ngay trong ISR: sáng 0,5 giây, tắt 0,5 giây, nháy **1 Hz** để
-quan sát bằng mắt. Nếu LED trên board là active-low thì mức sáng/tắt đảo lại.
+Enter `tim_irq` and Enter. Testcase uses TIM1 CH0, IRQ13 (`TIM1_IRQHandler`) and GPIOB7 (PB7) as
+outputs. Connect PB7 to LED via resistor according to PDI's map pin. PB7 starts low, then reverses
+each level
+500 ms right in ISR: brighten 0,5 sec, turn off 0,5 sec, flashing 1 Hz for visual observation. If
+the LED on board is active-low then the light/off level reverses.
 
-Timer đếm xuống, bật auto-reload và ngắt update. Clock TIM1 được lấy bằng
-`SystemCoreClock`, phải khớp clock FPGA thực tế. Cấu hình mặc định 10 MHz:
+Timer counts down, enables auto-reload and interrupt update. TIM1 clock is obtained with
+`SystemCoreClock`, must match the actual FPGA clock. default configuration 10 MHz:
 
 ```text
 TIM_PERIODIC_TICK_HZ = 2
@@ -410,19 +397,18 @@ auto_reload (CHL) = 1000 / TIM_PERIODIC_TICK_HZ - 1 = 499
 T_update = (prescaler + 1) * (CHL + 1) / timer_clock = 0,5 s
 ```
 
-Counter dùng tick 1 ms, cùng cấu hình prescaler với phần chạy ngắt định kỳ
-của `timer_irq_wdt`. Trên FPGA đã thử, STT chỉ đọc. Theo bên IP, đọc STT
-không xóa cờ hoặc clear IRQ và cờ UPDATE không tự hạ ở tick kế tiếp.
-Cơ chế acknowledge trên phiên bản FPGA đang thử chưa được xác nhận.
+Counter uses 1 ms tick, same configuration prescaler as the periodic interrupt of `timer_irq_wdt`.
+On tried FPGA, STT read only. According to IP side, reading STT does not clear flags or clear IRQ
+and UPDATE flags do not lower themselves at the next tick. The acknowledge mechanism on the trying
+FPGA version has not been confirmed.
 
-Testcase chỉ bật ngắt UPDATE của CH0. ISR đọc STT_CH0; khi có cờ UPDATE
-mới đảo PB7, tăng `g_tim_periodic_ticks`, rồi dùng vòng `while` đọc STT
-đợi UPDATE về 0 trước khi thoát để tránh đếm lặp. Vòng chờ chỉ đọc STT,
-không thực hiện acknowledge và không có timeout. Nếu cờ giữ mức 1,
-vòng chờ sẽ không kết thúc; cần bên IP xác nhận thao tác acknowledge.
-Log được in ở vòng lặp chính; ISR không gọi `printf`.
-Vòng lặp chính kiểm tra UART để nhận Ctrl+C và in tổng số tick mỗi hai tick
-(khoảng một giây). Bộ đếm là số ngắt đã xử lý, không tự đo độ chính xác thời gian.
+Testcase only enables CH0's UPDATE interrupt. ISR reads STT_CH0; when a new UPDATE flag is invoked,
+it reverses PB7, increases `g_tim_periodic_ticks`, and then uses the `while` loop to read UPDATE
+message to 0 before exiting to avoid repeat counting. The waiting loop only reads message, does not
+acknowledge, and has no timeout. If the flag holds level 1, the waiting loop will not end; the IP
+should confirm acknowledge operation. Log is printed in the main loop; ISR does not call `printf`.
+The main loop checks UART for Ctrl+C and prints the total number of ticks per two ticks (about one
+second). counter is the number of interrupts processed, does not measure time accuracy by itself.
 
 ```text
 fpga> tim_irq
@@ -433,55 +419,55 @@ fpga> tim_irq
 [TIM IRQ] ticks=4 (+2)
 ```
 
-Nhấn Ctrl+C để dừng counter, tắt ngắt timer/NVIC và xóa pending. Testcase
-ghi PB7 thấp rồi DeInit chân trước khi trả về prompt; số tick được xóa khi
-chạy lại. PRIMASK được lưu/khôi phục giống `gpio_irq`. Bài này dành riêng
-**toàn bộ TIM1** vì lúc vào có pulse reset để xóa trạng thái cả CH0/CH1.
-CH1 được DeInit để chỉ CH0 có thể phát ngắt. CHL được ghi lại sau Start
-vì bản FPGA tham khảo chỉ nạp CNT từ CHL khi kênh đang chạy.
+Press Ctrl+C to stop counter, disable interrupt timer/NVIC and erase pending. Testcase write low PB7
+then DeInit pins before prompt return; tick number is erased when rerunning. PRIMASK is
+saved/restored like `gpio_irq`. This post is dedicated to
+**all TIM1** because at the time of entry there is pulse reset to clear the status of both CH0/CH1.
+CH1 is DeInit so only CH0 can play interrupt. CHL is recorded after Start because the reference FPGA
+flashes CNT from CHL only when the channel is running.
 
-Khi đo bằng scope/logic analyzer, bỏ qua cạnh đầu/cuối lúc start/stop. Khoảng
-cách hai cạnh liên tiếp dự kiến 500 ms; một chu kỳ đầy đủ dự kiến 1 s. Mục tiêu
-kiểm tra chu kỳ là ±1% so với giá trị đặt khi clock đã đúng; jitter cần ghi
-nhận từ phép đo thực tế. Kiểm tra sau Ctrl+C không còn đảo mức và có thể
-chạy lại `tim_irq`, `gpio_io`, `gpio_irq`. LED nháy và log tick chỉ xác nhận
-luồng ngắt hoạt động; cần thiết bị đo để đánh giá chu kỳ/jitter.
+when measuring with scope/logic analyzer, skip the leading/ trailing edge at start/stop. Expected
+two consecutive edge distances 500 ms; a full period is expected 1 s. The target of period checking
+is ±1% so with set value when clock is correct; jitter needs to write receiving from actual
+measurement. Check after Ctrl+C no longer reverses level and can run again `tim_irq`, `gpio_io`,
+`gpio_irq`. Flash LED and log tick only confirm active interrupt stream; measuring device is needed
+to evaluate period/jitter.
 
-Giữ `CONFIG_NEON_MDF_DRIVER_TIM=y` trong `sdkconfig`. Muốn đổi tốc độ nháy,
-sửa `TIM_PERIODIC_TICK_HZ` trong source; mỗi ngắt đảo LED một lần nên tần số
-nháy bằng một nửa tần số ngắt.
+Keep `CONFIG_NEON_MDF_DRIVER_TIM=y` in `sdkconfig`. Want to change the blink rate, fix
+`TIM_PERIODIC_TICK_HZ` in source; each interrupt reverses the LED once so the blink frequency is
+half of the interrupt frequency.
 
-Spec rev1.0 ghi STT là RW nhưng không mô tả cách xóa; FPGA đã thử báo
-lỗi bus khi ghi STT. Backend hiện chỉ đọc STT qua `GetActiveFlags()` và
-`neon_tim_clear_flag()` trả `NEON_NOT_SUPPORTED` vì chưa có cách clear
-được xác nhận cho phiên bản FPGA này. Cần bên IP cung cấp địa chỉ và thao
-tác acknowledge chính xác, gồm cả side effect của lần đọc STT.
+Spec rev1.0 writes STT as RW but does not describe how to delete it; the FPGA has tried to report
+bus errors when writing STT. The backend currently only reads STT through `GetActiveFlags()` and
+`neon_tim_clear_flag()` returns `NEON_NOT_SUPPORTED` because there is no confirmed clearing for this
+version of FPGA. It is necessary for the IP to provide the address and acknowledge operation
+correctly, including the side effect of reading STT.
 
 ## Testcase Flash_Read_Write
 
-Nhập `flash_rw` rồi Enter để chạy một lượt và tự trở về prompt. Lệnh xóa
-**sector 512 byte tại 0x0009FE00–0x0009FFFF**, sector cuối của main Flash
-512 KB theo map FU2 hiện tại. Mọi dữ liệu cũ trong sector này sẽ bị xóa.
-Testcase không gọi chip erase và không truy cập NVR.
+Enter `flash_rw` and then Enter to run a turn and automatically return prompt. Delete command
+**sector 512 bytes at 0x0009FE00–0x0009FFFF**, last sector of main Flash 512 KB according to current
+FU2 map. All old data in this sector will be deleted. Testcase does not call chip erase and does not
+access NVR.
 
-`flash_read_write.ld` dành riêng vùng này bằng section `NOLOAD`, cung cấp
-địa chỉ cho code qua `__flash_rw_start__` và chặn link nếu image chạm tới
-sector test. Vùng scratch không chứa dữ liệu khởi tạo trong image. Script
-được ghép với linker script của SDK và yêu cầu profile FU2 normal chạy từ
-internal Flash; không sửa linker script được sinh tự động của SDK.
+`flash_read_write.ld` reserved this area with section `NOLOAD`, providing code address through
+`__flash_rw_start__` and blocking links if the image reaches the test sector. The scratch area does
+not contain initialization data in the image. Scripts are paired with SDK's linker scripts and
+require FU2 normal profiles to run from internal Flash; do not modify SDK's automatically generated
+linker scripts.
 
-Luồng kiểm tra dùng các API public của driver Flash:
+Test stream using Flash driver public APIs:
 
-1. GetDefaultConfig và config driver.
-2. EraseSector và ReadWord kiểm tra đủ 128 word đã về `0xFFFFFFFF`.
-3. ProgramWord đủ 128 word bằng pattern 0/1, xen kẽ bit và dữ liệu có
-   thay đổi theo nhóm địa chỉ để phát hiện ghi nhầm địa chỉ.
-4. ReadWord đối chiếu từng word, báo PASS hoặc địa chỉ/dữ liệu lỗi đầu tiên.
-5. DeInit driver trước khi trả về terminal; pattern được giữ trong sector.
+1. GetDefaultConfig and config driver.
+2. EraseSector and ReadWord checked enough 128 words were about `0xFFFFFFFF`.
+3. ProgramWord has enough 128 words by pattern 0/1, alternating bits and data with changes in address
+   group to detect mistakenly written address.
+4. ReadWord collates each word, indicating PASS or address/error data first.
+5. DeInit driver before returning terminal; pattern is kept in sector.
 
-Ở cả profile `normal` và `xip`, `flash_rw` thử trên sector Internal Flash
-`0x0009FE00`, không ghi vào QSPI Flash chứa image XIP. Linker kiểm tra vùng
-image normal không chồng lên sector này.
+In both `normal` and `xip` profiles, `flash_rw` tests on the Internal Flash sector `0x0009FE00`, not
+writing to the QSPI Flash containing XIP image. Linker checks that the normal image area does not
+overlap this sector.
 
 ```text
 fpga> flash_rw
@@ -493,49 +479,46 @@ fpga> flash_rw
 fpga>
 ```
 
-Các địa chỉ đọc/ghi cách nhau 4 byte và dữ liệu là `uint32_t`. Driver đặt hàm
-erase/program và vòng chờ command trong `.ramfunc`, được startup copy
-sang RAM qua `.data`; lưu/khôi phục PRIMASK khi thao tác Flash. timeout
-command tính theo số vòng poll, không phải mili-giây. Testcase tuân theo
-map và command engine FU2 v8 mà driver đang sử dụng; cần chạy trên FPGA để
-xác nhận hành vi phần cứng thực tế.
+The address read/write is separated by 4 bytes and the data is `uint32_t`. The driver sets the
+function erase/program and the command waiting ring in `.ramfunc`, which is startup copied to RAM
+via `.data`; saves/restore PRIMASK when Flash operations are performed. The command timeout is
+calculated by the number of poll rings, not milliseconds. Testcase follows the map and FU2 v8
+command engine that the driver is using; it needs to run on an FPGA to confirm actual hardware
+behavior.
 
-Theo Flash Controller Specification v1.4 mục 9.1, config chờ BUSY và START
-cùng về 0 trước khi dùng lại INIT_DONE của BootROM hoặc phát INIT. Khi phát
-command, driver ghi opcode với START=0 rồi mới đặt START=1. Mỗi vòng chờ
-có giới hạn operation_timeout_polls; hết hạn trả NEON_TIMEOUT thay vì chờ vô hạn.
-neon_flash_init trả neon_status_t và không đặt trong `.ramfunc`;
-các helper phát lệnh/chờ hoàn tất vẫn chạy từ SRAM và giữ ngắt bị khóa
-trong thời gian command hoạt động.
+According to Flash Controller Specification v1.4 entry 9.1, config wait BUSY and START together on 0
+before reusing BootROM's INIT_DONE or play INIT. when playing command, driver write opcode with
+START=0 then set START=1. Each waiting ring has a limit operation_timeout_polls; expiry pays
+NEON_TIMEOUT see because of infinite waiting. neon_flash_init pays neon_status_t and does not set in
+`.ramfunc`; the helper that plays command/wait for completion still runs from SRAM and keeps
+interrupt locked during command operation.
 
-## Lưu ý khi dùng ngắt trên FU2 FPGA
+## Note when using interrupt on FU2 FPGA
 
-**BootROM v5 bàn giao ứng dụng với `PRIMASK=1`, tức ngắt toàn cục đang bị
-khóa.** `NVIC_EnableIRQ()` chỉ mở một đường IRQ trong NVIC, không xóa
-PRIMASK. Vì vậy, ngoại vi có thể đã phát yêu cầu và NVIC đã pending nhưng
-CPU vẫn chưa vào ISR.
+**BootROM v5 hands over the application with `PRIMASK=1`, i.e. global interrupt is locked.**
+`NVIC_EnableIRQ()` only opens an IRQ path in NVIC, not PRIMASK. So the periphery may have emitted a
+request and NVIC is pending but the CPU has not entered the ISR yet.
 
-Sau khi cấu hình ngoại vi, chuẩn bị dữ liệu dùng chung với ISR và xóa cờ
-pending cũ, cần mở cả NVIC lẫn ngắt toàn cục. Ví dụ trong `gpio_irq`:
+After the peripheral configuration, preparation of shared data with ISR and deletion of old pending
+flags, it is necessary to open both NVIC and global interrupt. For example in `gpio_irq`:
 
 ```c
 uint32_t saved_primask = __get_PRIMASK();
-/* Cấu hình GPIO, chuẩn bị bộ đếm và xóa pending GPIO/NVIC. */
+/* configuration GPIO, prepare counter and delete pending GPIO/NVIC. */
 NVIC_EnableIRQ(EXTI1_IRQn);
 __enable_irq();
 ```
 
-Khi thoát testcase, tắt NVIC và nguồn ngắt ngoại vi, xóa pending rồi gọi
-`__set_PRIMASK(saved_primask)` để khôi phục trạng thái ban đầu. Các helper
-critical section trong driver lưu/khôi phục PRIMASK; chúng không tự mở khóa
-ngắt toàn cục cho ứng dụng.
+when exiting the testcase, disable NVIC and peripheral interrupt sources, erase pending and call
+`__set_PRIMASK(saved_primask)` to restore the initial state. The critical section helpers in PRIMASK
+save/restore drivers; they do not unlock global interrupts for applications themselves.
 
-Nếu nhấn `i` chỉ thấy `[INFO] Injecting a GPIO interrupt event.` mà bộ đếm
-không tăng, kiểm tra `__get_PRIMASK()`: giá trị `1` nghĩa là CPU vẫn khóa
-ngắt. Giữ ISR ngắn: đọc/xóa cờ và tăng bộ đếm; in `printf` ở vòng lặp chính
-vì console có thể đang bận khi ngắt xảy ra.
+If pressing `i` only shows `[INFO] Injecting a GPIO interrupt event.` and the counter does not
+increase, check `__get_PRIMASK()`: the value `1` means that the CPU still locks the interrupt. Keep
+the ISR short: read/erase flag and increase the counter; print `printf` in the main loop because the
+console may be busy when the interrupt occurs.
 
-## Build và cấu hình
+## Build and configuration
 
 ```sh
 cd /home/quang-hoang/github_neon_mdf/CDC_NEON_MDF/examples/FPGA_Terminal
@@ -543,7 +526,7 @@ cmake --preset FU2
 cmake --build --preset FU2
 ```
 
-Đổi clock, kích thước dòng và RX/TX timeout nhận lệnh/testcase:
+Change clock, line size and RX/TX timeout to receive command/testcase:
 
 ```sh
 cmake --build --preset FU2 --target menuconfig
@@ -551,30 +534,28 @@ cmake --preset FU2
 cmake --build --preset FU2
 ```
 
-Giữ driver UART bật. Clock phải khớp PDI đang dùng; timeout tính theo số vòng
-poll, không phải mili-giây. Lệnh `printf` đầu tiên tự khởi tạo UART0 theo mặc
-định SDK, giống ví dụ `Printf_Log`. Terminal lấy handle qua
-`neon_console_get_uart()` rồi dùng trực tiếp cho nhận lệnh và testcase.
-`main()` không cấu hình/config UART riêng và không cần gọi `neon_console_attach_uart`.
-Console dùng baud 19200 và timeout mặc định cho từng byte `printf`.
-RX timeout áp dụng cho nhận ký tự ở prompt. Testcase GPIO kiểm tra RX không
-chờ để tiếp tục đọc nút.
-Mục `UART_ECHO_Polling testcase` trong menuconfig có RX/TX timeout riêng cho
+Keep the UART driver on. Clock must match PDI in use; timeout by number of rounds poll, not
+milliseconds. The first `printf` command initializes UART0 itself by SDK default, like for example
+`Printf_Log`. Terminal takes handle via `neon_console_get_uart()` and uses it directly to receive
+commands and testcases. `main()` does not have its own configuration/config UART and does not need
+to call `neon_console_attach_uart`. Console uses baud 19200 and default timeout for each byte
+`printf`. RX timeout applies to prompt characters. Testcase GPIO checks RX without waiting to
+continue reading node. The `UART_ECHO_Polling testcase` entry in menuconfig has its own RX/TX
+timeout for
 testcase (`CONFIG_UART_ECHO_RX_TIMEOUT_POLLS`, `CONFIG_UART_ECHO_TX_TIMEOUT_POLLS`).
 
-## Nạp và mở terminal
+## flash and open terminal
 
-Nạp PDI phù hợp trước. UART0 phải được wrapper nối tới FTDI hoặc USB-UART
-ngoài theo pin map của PDI; firmware này không thay đổi chân header FPGA.
+suitable PDI flash first. UART0 must be wrapper connected to an external FTDI or USB-UART according
+to the PDI's pin map; this firmware does not change the FPGA header pin.
 
-Với profile `normal`, file để nạp BootROM v5 là
-**`build/FU2/fpga_terminal_image.bin`**, gồm header 128 byte và payload.
-Profile `xip` tạo **`fpga_terminal_image_xip.bin`** cho boot từ QSPI Flash.
-Hai file `fpga_terminal.bin` và `fpga_terminal_xip.bin` chỉ chứa payload raw.
-Chọn XIP bằng `cmake --preset FU2 --fresh -DNEON_MDF_PROFILE=xip` rồi build.
-Xem [FU2 build/boot contract](../../guide/FU2.md).
+With profile `normal`, the file to flash BootROM v5 is
+`build/FU2/fpga_terminal_image.bin`, consists of 128 byte header and payload. Profile `xip` creates
+`fpga_terminal_image_xip.bin` for boot from QSPI Flash. Two files `fpga_terminal.bin` and
+`fpga_terminal_xip.bin` contain only raw payload. Select XIP with `cmake --preset FU2 --fresh
+-DNEON_MDF_PROFILE=xip` and build. See [FU2 build/boot contract](../../guide/FU2.md).
 
-Trên máy đang nối FPGA, thay serial port và đường dẫn image theo máy đó:
+On the machine that is connecting FPGA, replace the serial port and image path according to that machine:
 
 ```sh
 python3 uart_boot_loader.py \
@@ -583,19 +564,18 @@ python3 uart_boot_loader.py \
   --baud 9600 --byte-gap-ms 2 --no-monitor
 ```
 
-Reset theo quy trình board để loader truyền image. Baud BootROM của lệnh
-trên là 9600, độc lập với baud ứng dụng; dùng giá trị khớp PDI thực tế.
-Sau khi loader đóng cổng, mở serial terminal ở 19200 baud, 8N1, không local
-echo và không hardware flow control. Có thể dùng:
+Reset according to the board process for the loader to transmit images. The BootROM Baud of the
+above command is 9600, independent of the application baud; use the actual PDI matching value. After
+the loader closes the port, open the serial terminal at 19200 baud, 8N1, no local echo and no
+hardware flow control. Can be used:
 
 ```sh
 python3 -m serial.tools.miniterm /dev/ttyUSB2 19200 --raw
 ```
 
-Thoát miniterm bằng `Ctrl+]`. Banner có thể đã truyền trước khi mở monitor;
-nhấn Enter để nhận prompt, sau đó nhập `help`.
+Exit the miniterm with `Ctrl+]`. Banner may have been transmitted before opening the monitor; press
+Enter to get prompt, then enter `help`.
 
-Buffer RX và buffer dòng sở hữu đầy đủ các word căn chỉnh; thao tác ký tự
-dùng `memcpy`, `memset` và các hàm chuỗi chuẩn do runtime FU2 cung cấp.
-Build tự kiểm tra byte/halfword access
-trong driver và firmware. Build thành công chưa xác nhận UART chạy trên FPGA.
+RX buffer and line buffer own full alignment words; character operations using `memcpy`, `memset`
+and standard string functions provided by FU2 runtime. Build manually checks for byte/halfword
+access in drivers and firmware. Successful build has not confirmed UART running on FPGA.

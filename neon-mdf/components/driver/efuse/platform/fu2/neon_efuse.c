@@ -16,7 +16,7 @@
 /*==================================================================================================
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
-/* Bit vị trí THẬT (inc_fu2/fu2_efuse.h) cho 2 thanh ghi timing. */
+/* REAL position bits (inc_fu2/fu2_efuse.h) for 2 register timing. */
 #define EFUSE_RD_TIMING0_TCS_SETUP_POS 24U
 #define EFUSE_RD_TIMING0_TCS_HOLD_POS 20U
 #define EFUSE_RD_TIMING0_TPRCHG_SETUP_POS 16U
@@ -24,7 +24,7 @@
 #define EFUSE_RD_TIMING0_TSENSE_SETUP_POS 8U
 #define EFUSE_RD_TIMING0_TSENSE_HOLD_POS 4U
 #define EFUSE_RD_TIMING0_TCAP_DATA_POS 0U
-#define EFUSE_TIMING4_MASK 0xFU /* mọi field TIMING4 rộng 4 bit */
+#define EFUSE_TIMING4_MASK 0xFU /* every 4 bit wide TIMING4 field */
 
 #define EFUSE_PGM_TIMING0_TPROGWH_POS 16U
 #define EFUSE_PGM_TIMING0_TPROGWH_MASK 0x3FFU
@@ -33,9 +33,8 @@
 #define EFUSE_PGM_TIMING0_TADDR2PROG_POS 4U
 #define EFUSE_PGM_TIMING0_TPAH_POS 0U
 
-/* Mảng eFuse thật - THẬT theo inc_fu2/fu2_efuse.h, memory-mapped riêng,
- * KHÔNG qua thanh ghi OTP_TypeDef (xem neon_efuse.h). Base = OTP_BASE +
- * 0x1000, stride 4 byte/hàng. */
+/* True eFuse array - TRUE according to inc_fu2/fu2_efuse.h, memory-mapped separately, NOT via register
+ * OTP_TypeDef (see neon_efuse.h). Base = OTP_BASE + 0x1000, stride 4 bytes/row. */
 #define EFUSE_NEON_EFUSE_ARRAY_BASE ((uintptr_t)OTP_BASE + 0x1000U)
 #define EFUSE_NEON_EFUSE_ROW_STRIDE 4U
 

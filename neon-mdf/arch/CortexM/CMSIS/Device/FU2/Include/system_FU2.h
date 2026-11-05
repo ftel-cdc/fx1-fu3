@@ -2,9 +2,9 @@
  * @file system_FU2.h
  * @brief Public declarations for system fu2.
  * @details
- * * system_FU2.h - CMSIS system file, viết tay (không sinh tự động).
- * Khai báo chuẩn CMSIS: mọi CMSIS device header đều #include file này và
- * cần biến SystemCoreClock + 2 hàm bên dưới tồn tại.
+ * * system_FU2.h - CMSIS system file, handwritten (not generated automatically). CMSIS standard
+ * declaration: every CMSIS device header #includes this file and needs the SystemCoreClock + 2
+ * variable below to exist.
  */
 
 #ifndef SYSTEM_FU2_H
@@ -19,7 +19,7 @@
 extern "C" {
 #endif
 
-/** Tần số CPU hiện tại (Hz) - phải gọi SystemCoreClockUpdate() sau khi đổi clock. */
+/** current CPU frequency (Hz) - must call SystemCoreClockUpdate() after changing clock. */
 extern uint32_t SystemCoreClock;
 
 /*==================================================================================================
@@ -28,14 +28,14 @@ extern uint32_t SystemCoreClock;
 /**
  * @brief Initialize the device clocks and architecture state before entering main.
  * @details
- * Gọi từ Reset_Handler (xem startup_FU2.s) trước khi vào main().
+ * Call from Reset_Handler (see startup_FU2.s) before entering main().
  */
 extern void SystemInit(void);
 
 /**
  * @brief Update SystemCoreClock from the active device clock configuration.
  * @details
- * Đọc lại cấu hình clock hiện tại và cập nhật SystemCoreClock.
+ * read back the current clock configuration and update SystemCoreClock.
  */
 extern void SystemCoreClockUpdate(void);
 

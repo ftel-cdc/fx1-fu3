@@ -2,12 +2,12 @@
  * @file neon_gpio.h
  * @brief Public declarations for GPIO.
  * @details
- * * NEON GPIO - HAL GPIO dùng chung cho các target của Neon MDF.
+ * * NEON GPIO - HAL GPIO is used for Neon MDF targets.
  *
- * API chỉ dùng khái niệm logic như input/output, pull và tốc độ. Backend của
- * từng chip chịu trách nhiệm chuyển chúng sang register/mux thật. Với FU2,
- * neon_gpio_init() đồng thời cấu hình GPIO và PAD/SYSCSR; ứng dụng không cần
- * biết một chân GPIO tương ứng với giá trị mux 0, 1 hay 2.
+ * The API uses only logical concepts such as input/output, pull and speed. The backend of each chip is
+ * responsible for porting them to the real register/mux. With FU2, neon_gpio_init() simultaneously
+ * configure GPIO and PAD/SYSCSR; the application does not need to know a GPIO pin corresponding to
+ * mux value 0, 1 or 2.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.
@@ -46,7 +46,7 @@ extern "C" {
 #define NEON_GPIO_PIN_14 (1UL << 14U)
 #define NEON_GPIO_PIN_15 (1UL << 15U)
 
-/* FU2 và CH32V003 có 8 bit/port; các STM32 đang hỗ trợ có 16 bit/port. */
+/* FU2 and CH32V003 have 8 bit/port; the currently supported STM32 has 16 bit/port. */
 #if defined(FU2) || defined(CH32V003F4P6)
 #define NEON_GPIO_PIN_ALL (0xFFUL)
 #else
@@ -91,7 +91,7 @@ typedef enum {
 
 typedef enum {
     NEON_GPIO_INTERRUPT_DISABLE = 0,
-    /* FU2 phát interrupt khi input đã lọc chuyển lên mức cao (rising edge). */
+    /* FU2 plays interrupt when the filtered input moves to a rising edge. */
     NEON_GPIO_INTERRUPT_ENABLE = 1,
 } neon_gpio_interrupt_t;
 
@@ -101,17 +101,17 @@ typedef enum {
 } neon_gpio_pin_state_t;
 
 typedef struct {
-    uint32_t pin;                    /* Bitmask các pin cần cấu hình. */
-    neon_gpio_mode_t mode;           /* Hướng input hoặc output. */
-    neon_gpio_pull_t pull;           /* Không pull, pull-up hoặc pull-down. */
-    neon_gpio_speed_t speed;         /* Mức drive tương đối của pad. */
-    neon_gpio_schmitt_t schmitt;     /* Bộ schmitt của đường input. */
-    neon_gpio_slew_rate_t slew_rate; /* Tốc độ chuyển mức output. */
-    /* Khi interrupt=ENABLE, backend FU2 luôn bật đồng bộ vì phần cứng yêu cầu
-   * CTL.SYNC_EN để lọc và phát hiện cạnh. */
-    neon_gpio_input_sync_t input_sync;   /* Đồng bộ input vào clock GPIO. */
-    neon_gpio_interrupt_t interrupt;     /* Cho phép ngắt của các pin đã chọn. */
-    neon_gpio_pin_state_t initial_state; /* Mức output trước khi bật output. */
+    uint32_t pin;                    /* Bitmask the pins to configure. */
+    neon_gpio_mode_t mode;           /* Input or output direction. */
+    neon_gpio_pull_t pull;           /* No pull, pull-up or pull-down. */
+    neon_gpio_speed_t speed;         /* The relative drive level of the pad. */
+    neon_gpio_schmitt_t schmitt;     /* Input line schmitt. */
+    neon_gpio_slew_rate_t slew_rate; /* speed output level switch. */
+    /* when interrupt=ENABLE, FU2 backend is always on synchronously because hardware requires CTL.SYNC_EN
+   * for edge filtering and detection. */
+    neon_gpio_input_sync_t input_sync;   /* Synchronize input to GPIO clock. */
+    neon_gpio_interrupt_t interrupt;     /* Allow interrupt of selected batteries. */
+    neon_gpio_pin_state_t initial_state; /* Output level before enabling output. */
 } neon_gpio_config_t;
 
 /*==================================================================================================
@@ -121,10 +121,9 @@ typedef struct {
  * @brief Fill the default configuration for GPIO.
  * @param[out] config Module configuration.
  * @details
- * Điền cấu hình an toàn tương đương mặc định LL_GPIO_StructInit(): toàn bộ
- * pin, input, no-pull, drive thấp, schmitt tắt, slew chậm, input trực tiếp và
- * ngắt tắt. initial_state mặc định là RESET. Nên gọi trước rồi chỉ sửa các
- * field cần dùng.
+ * Fill in the default secure configuration LL_GPIO_StructInit(): full battery, input, no-pull, low
+ * drive, schmitt off, slow slew, direct input and interrupt off. The default initial_state is
+ * RESET. Call first and only edit fields to be used.
  */
 void neon_gpio_get_default_config(neon_gpio_config_t *config);
 
@@ -133,8 +132,8 @@ void neon_gpio_get_default_config(neon_gpio_config_t *config);
  * @param[in] instance Peripheral register instance.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Clock không được bật ngầm trong config để giữ cùng flow trên mọi target.
- * Backend FU2 đồng thời nhả reset của GPIO khi bật clock.
+ * Clock is not enabled implicitly in config to keep the same flow on all targets. Backend FU2
+ * simultaneously releases GPIO reset when clock is enabled.
  */
 neon_status_t neon_gpio_clock_enable(GPIO_TypeDef *instance);
 
@@ -144,13 +143,13 @@ neon_status_t neon_gpio_clock_enable(GPIO_TypeDef *instance);
  * @param[in] init Initialization settings.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Trên FU2, PA0..PA4 dùng chung route JTAG. config một trong các pin này sẽ
- * nhả JTAG trước khi chọn GPIO; nếu JTAG mux đã bị khóa ở trạng thái bật,
- * hàm trả NEON_LOCKED và không thay đổi cấu hình GPIO/PAD.
+ * On FU2, PA0..PA4 share the JTAG route. config one of these pins releases JTAG before selecting GPIO;
+ * if JTAG mux is locked in on state, function returns NEON_LOCKED and no configuration changes are
+ * seen GPIO/PAD.
  *
- * Với die-pad index 0..11, config áp dụng cả mux và cấu hình điện của PAD.
- * VP mới chưa công bố đầy đủ encoding PAD_CTRL5..7 cho index 12..23, nên
- * các chân này vẫn được chọn mux GPIO nhưng giữ cấu hình điện reset.
+ * With die-pad index 0..11, the config applies both mux and power configuration of the PAD. The new VP
+ * has not yet fully published encoding PAD_CTRL5..7 for index 12..23, so these pins are still
+ * selected mux GPIO but keep power configuration reset.
  */
 neon_status_t neon_gpio_init(GPIO_TypeDef *instance, const neon_gpio_config_t *init);
 /**
@@ -189,8 +188,8 @@ void neon_gpio_toggle_pin(GPIO_TypeDef *instance, uint32_t pin_mask);
  * @param[in] enable Nonzero to enable, zero to disable.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * API ngắt FU2 phát hiện rising edge sau bộ lọc/synchronizer. Backend chưa
- * hỗ trợ trên target khác trả NEON_NOT_SUPPORTED thay vì âm thầm bỏ qua.
+ * API interrupt FU2 detects rising edge after filter/synchronizer. Backend not yet supported on other
+ * target return NEON_NOT_SUPPORTED see because silently ignored.
  */
 neon_status_t neon_gpio_set_interrupt_enabled(GPIO_TypeDef *instance, uint32_t pin_mask, uint8_t enable);
 /**
@@ -213,7 +212,7 @@ neon_status_t neon_gpio_get_interrupt_status(GPIO_TypeDef *instance, uint32_t *s
  * @param[in] pin_mask Bitmask of the selected GPIO pins.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Xóa cả raw status và nguồn software injection của các pin được chọn.
+ * erase both raw status and software injection source of selected batteries.
  */
 neon_status_t neon_gpio_clear_interrupt(GPIO_TypeDef *instance, uint32_t pin_mask);
 /**

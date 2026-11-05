@@ -1,25 +1,24 @@
-# Thêm device và driver
+# Add device and driver
 
-`components/driver` tạo duy nhất target CMake `neon_mdf_driver`. Mỗi
-peripheral có thư mục riêng và tự thêm source vào target đó qua
-`target_sources()`. Việc chọn backend dựa trên **family**, không dựa trực tiếp
-trên tên device:
+`components/driver` creates a single CMake target `neon_mdf_driver`. Each peripheral has its own
+directory and adds its own source to the target via `target_sources()`. The backend selection is
+based on family, not device name:
 
 ```text
 NEON_MDF_TARGET = STM32F103CB
              └─ NEON_MDF_TARGET_STM32F103CB_FAMILY = STM32F103
-                                                        └─ chọn platform/stm32f103/neon_gpio.c
+                                                        └─ choose platform/stm32f103/neon_gpio.c
 ```
 
-Do đó cần phân biệt rõ hai trường hợp dưới đây.
+It is necessary to clearly distinguish the two cases below.
 
-## Thêm device cùng family đã có
+## Add device with existing family
 
-Ví dụ: thêm một biến thể STM32F103 khác, vẫn dùng cùng register layout và
+For example, add another STM32F103 variant, still using the same register layout and
 backend `STM32F103`.
 
-1. Tạo `mcu-description/devices/<DEVICE>.yaml`.
-2. Đăng ký `<DEVICE>` trong `cmake/mcu_variants.cmake`:
+1. Create `mcu-description/devices/<DEVICE>.yaml`.
+2. Registration of `<DEVICE>` in `cmake/mcu_variants.cmake`:
 
    ```cmake
    list(APPEND NEON_MDF_KNOWN_TARGETS <DEVICE>)
@@ -27,31 +26,29 @@ backend `STM32F103`.
    set(NEON_MDF_TARGET_<DEVICE>_FAMILY STM32F103)
    ```
 
-3. Khai báo các thuộc tính riêng của device nếu cần, ví dụ FPU, vendor, ABI
-   hoặc `bootloader:` trong YAML.
-4. Configure và build app với `-DNEON_MDF_TARGET=<DEVICE>` hoặc preset tương
-   ứng.
+3. declare device specific properties if needed, e.g. FPU, vendor, ABI or `bootloader:` in YAML.
+4. Configure and build app with `-DNEON_MDF_TARGET=<DEVICE>` or the corresponding preset.
 
-Không sửa CMake trong `components/driver` nếu device mới thực sự dùng cùng
-backend với family cũ. Nếu register layout khác đáng kể, tạo family mới thay
-vì cố dùng lại family cũ.
+Do not fix CMake in `components/driver` if the new device actually uses the same backend as the old
+family. If register layout is significantly different, creating a new family will be seen because it
+tries to re-use the old family.
 
-## Thêm family mới
+## Add new family
 
-Ví dụ family `MY_MCU` có GPIO và UART riêng.
+For example the family `MY_MCU` has its own GPIO and UART.
 
-1. Đăng ký device với `NEON_MDF_TARGET_<DEVICE>_FAMILY MY_MCU` trong
+1. Register device with `NEON_MDF_TARGET_<DEVICE>_FAMILY MY_MCU` in
    `cmake/mcu_variants.cmake`.
-2. Thêm `MY_MCU` vào guard cho phép dùng driver trong `neon-mdf/CMakeLists.txt`.
-3. Tạo source backend trong peripheral phù hợp, ví dụ:
+2. Adding `MY_MCU` to guard allows drivers in `neon-mdf/CMakeLists.txt`.
+3. Create a source backend in the appropriate peripheral, for example:
 
    ```text
    gpio/platform/my_mcu/neon_gpio.c
    uart/platform/my_mcu/neon_uart.c
    ```
 
-4. Thêm mapping vào `CMakeLists.txt` của **chỉ các peripheral mà family hỗ
-   trợ**. Ví dụ trong `gpio/CMakeLists.txt`:
+4. Add mapping to `CMakeLists.txt` of only peripherals that family supports. Example in
+   `gpio/CMakeLists.txt`:
 
    ```cmake
    neon_mdf_driver_select_family_source(
@@ -64,20 +61,19 @@ Ví dụ family `MY_MCU` có GPIO và UART riêng.
    )
    ```
 
-`REQUIRED` dùng cho GPIO: thiếu backend thì cấu hình phải lỗi. Với driver tùy
-chọn như ADC, SPI, I2C, không dùng `REQUIRED`; family chưa hỗ trợ sẽ không có
-source nào được thêm vào.
+`REQUIRED` for GPIO: missing backend, configuration must be failed. With optional drivers such as
+ADC, SPI, I2C, do not use `REQUIRED`; unsupported family will have no source added.
 
-5. Nếu device có bootloader, thêm mapping Flash trong `flash/CMakeLists.txt`.
-   File này chỉ yêu cầu backend khi `NEON_MDF_BOOTLOADER_ENABLED` là `ON`.
-6. Build ít nhất một app cho family mới. Kiểm tra log build có đúng các file
-   `platform/my_mcu/neon_<peripheral>.c` được compile.
+5. If device has bootloader, add Flash mapping in `flash/CMakeLists.txt`. This file only requires
+   backend when `NEON_MDF_BOOTLOADER_ENABLED` is `ON`.
+6. Build at least one app for the new family. Check that the build log contains compile
+   `platform/my_mcu/neon_<peripheral>.c` files.
 
-## Thêm driver/peripheral mới
+## Add new driver/peripheral
 
-Ví dụ thêm CAN driver.
+Additional examples require drivers.
 
-1. Tạo thư mục `components/driver/can/`, đặt header và source tại đây:
+1. Create folder `components/driver/can/`, put header and source here:
 
    ```text
    can/neon_can.h
@@ -85,13 +81,11 @@ Ví dụ thêm CAN driver.
    can/CMakeLists.txt
    ```
 
-2. Thêm `can` vào danh sách `foreach(... add_subdirectory(...))` trong
-   `components/driver/CMakeLists.txt`. Đây là một thay đổi bắt buộc để CMake
-   biết đọc CMake của folder mới.
-3. Nếu có thể tắt driver để giảm Flash, thêm symbol Kconfig vào
-   `components/driver/Kconfig`, ví dụ `NEON_MDF_DRIVER_CAN`.
-4. Viết `can/CMakeLists.txt` và gọi helper. Ví dụ CAN chỉ có trên STM32F103
-   và WEACT_F412:
+2. Add `can` to the list of `foreach(... add_subdirectory(...))` in `components/driver/CMakeLists.txt`.
+   This is a compulsory change to let CMake know read CMake's new folder.
+3. If the driver can be disabled to reduce Flash, add symbol Kconfig to `components/driver/Kconfig`,
+   for example `NEON_MDF_DRIVER_CAN`.
+4. Write `can/CMakeLists.txt` and call helper. Examples need only on STM32F103 and WEACT_F412:
 
    ```cmake
    if(CONFIG_NEON_MDF_DRIVER_CAN)
@@ -105,31 +99,31 @@ Ví dụ thêm CAN driver.
    endif()
    ```
 
-5. Include header theo đường dẫn qualified từ app/source khác:
+5. Include header by qualified path from other app/source:
 
    ```c
    #include "can/neon_can.h"
    ```
 
-Không thêm `target_include_directories()` cho từng peripheral: include path
-public đã là root `components/driver`, nên cách include trên hoạt động cho mọi
+Do not add `target_include_directories()` for each peripheral: include path public is already root
+`components/driver`, so the above include method works for all
 driver.
 
-Trong driver, public API dùng `neon_<module>_<action>()`, private helper
+In driver, public API uses `neon_<module>_<action>()`, private helper
 `static ... <module>_<action>()`, type `_t`, field `snake_case`. Header guard
-và cách trình bày theo [convention V1.3](../../../guide/NEON_Coding_Convention_V1.3.md).
-Các backend nằm trong `platform/<family>/` với tên `neon_<module>.c`.
-UART/I2C tách khởi tạo handle và cấu hình phần cứng. Interface pinmux nội bộ
-FU2 nằm ở `syscsr/platform/fu2/neon_syscsr_internal.h`.
+and the presentation follows [convention V1.3](../../../guide/NEON_Coding_Convention_V1.3.md). The
+backend is in `platform/<family>/` with name `neon_<module>.c`. UART/I2C separates initialize handle
+and configuration hardware. Interface pinmux internal FU2 is in
+`syscsr/platform/fu2/neon_syscsr_internal.h`.
 
 ## `neon_mdf_driver_select_family_source()`
 
-Helper trong `components/cmake/driver_helpers.cmake` có dạng:
+Helper in `components/cmake/driver_helpers.cmake` has the form:
 
 ```cmake
 neon_mdf_driver_select_family_source(
   TARGET <target>
-  PERIPHERAL <tên-peripheral>
+  PERIPHERAL <peripheral-name>
   [REQUIRED]
   SOURCES
     <FAMILY_1> <source_1>
@@ -137,18 +131,17 @@ neon_mdf_driver_select_family_source(
 )
 ```
 
-Nó lấy family của target đang build, tìm cặp `FAMILY source` tương ứng và gọi
-`target_sources(<target> PRIVATE <source>)`. Nên dùng
-`${CMAKE_CURRENT_LIST_DIR}` cho source để đường dẫn luôn là thư mục chứa
-`CMakeLists.txt` hiện tại.
+It takes the family of the target being built, finds the corresponding `FAMILY source` pair and
+calls `target_sources(<target> PRIVATE <source>)`. Use `${CMAKE_CURRENT_LIST_DIR}` for source so
+that the path is always a directory containing the current `CMakeLists.txt`.
 
-## Kiểm tra trước khi gửi thay đổi
+## Check before sending see change
 
 ```sh
 cmake --preset <DEVICE>
 cmake --build --preset <DEVICE>
 ```
 
-Nên kiểm tra cả một device cùng family cũ (để bảo đảm không làm hỏng backend
-đang có) và device/family vừa thêm. Khi tắt Kconfig của driver tùy chọn, xác
-nhận source của nó không xuất hiện trong log build.
+It is recommended to check both an old device and family (to make sure not to damage the existing
+backend) and the newly added device/family. when disabling Kconfig of the optional driver, confirm
+its source does not appear in the log build.

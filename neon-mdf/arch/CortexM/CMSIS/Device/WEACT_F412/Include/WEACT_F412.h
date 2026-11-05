@@ -25,10 +25,10 @@ typedef enum {
   DebugMonitor_IRQn      = -4,
   PendSV_IRQn         = -2,
   SysTick_IRQn        = -1,
-  /* WEACT_F412 device-specific interrupts (xem mcu-description/devices/WEACT_F412.yaml) */
+  /* WEACT_F412 device-specific interrupts (see mcu-description/devices/WEACT_F412.yaml) */
 } IRQn_Type;
 
-/* =========================== Core config (cần trước khi include core_cm4.h) ======== */
+/* ========================= Core config (need before include core_cm4.h) ========== */
 #define __CM4_REV                0x0001U
 #define __MPU_PRESENT             1U
 #define __VTOR_PRESENT            1U
@@ -36,55 +36,55 @@ typedef enum {
 #define __Vendor_SysTickConfig    0U
 #define __FPU_PRESENT             1U
 
-#include "core_cm4.h"          /* CMSIS-Core ARM, xem arch/CortexM/CMSIS/Core */
+#include "core_cm4.h"          /* CMSIS-Core ARM, see arch/CortexM/CMSIS/Core */
 #include "system_WEACT_F412.h"
 
 /* =========================== Peripheral register structures ======================== */
-/* Reset and Clock Control THẬT - AHB1ENR (GPIO) + APB2ENR (USART1, can cho bootloader UART) */
+/* REAL Reset and Clock Control - AHB1ENR (GPIO) + APB2ENR (USART1, required for UART bootloader) */
 typedef struct {
   __IO uint32_t RESERVED0[12];
-  __IO uint32_t AHB1ENR;  /*!< AHB1 peripheral clock enable - bit 1=GPIOBEN. KHAC AHBENR (STM32F0, offset 0x14) va IOPENR (STM32L0, offset 0x2C) - xac nhan RCC_AHB1ENR_GPIOBEN that trong stm32f412zx.h, offset 0x30 */
+  __IO uint32_t AHB1ENR;  /*!< AHB1 peripheral clock enable - bit 1=GPIOBEN. Other AHBENR (STM32F0, offset 0x14) and IOPENR (STM32L0, offset 0x2C) - confirm true RCC_AHB1ENR_GPIOBEN in stm32f412zx.h, offset 0x30 */
   __IO uint32_t RESERVED1[4];
-  __IO uint32_t APB2ENR;  /*!< APB2 peripheral clock enable - bit 4=USART1EN. THAT - xac nhan RCC_APB2ENR_USART1EN_Pos=4 trong stm32f412zx.h, offset 0x44 */
+  __IO uint32_t APB2ENR;  /*!< APB2 peripheral clock enable - bit 4=USART1EN. true - confirm RCC_APB2ENR_USART1EN_Pos=4 in stm32f412zx.h, offset 0x44 */
 } RCC_TypeDef;
 
-/* GPIOA THẬT - chan PA9(TX)/PA10(RX) dung cho bootloader UART (USART1, AF7) */
+/* GPIOA REAL - pins PA9(TX)/PA10(RX) for UART bootloader (USART1, AF7) */
 typedef struct {
-  __IO uint32_t MODER;  /*!< Mode - 2 bit/pin (00=input,01=output,10=AF,11=analog). Reset THẬT khac theo pin BOOT/debug, xem RM0402 - de 0xFFFFFFFF (all analog) lam gia tri an toan., offset 0x00 */
+  __IO uint32_t MODER;  /*!< Mode: 2 bits/pin (00=input,01=output,10=AF,11=analog). Actual reset values vary for BOOT/debug pins; see RM0402. Use 0xFFFFFFFF (all analog) as a safe placeholder, offset 0x00 */
   __IO uint32_t OTYPER;  /*!< Output type - 1 bit/pin (0=push-pull, 1=open-drain), offset 0x04 */
   __IO uint32_t OSPEEDR;  /*!< Output speed - 2 bit/pin, offset 0x08 */
   __IO uint32_t PUPDR;  /*!< Pull-up/pull-down - 2 bit/pin, offset 0x0C */
-  __I uint32_t IDR;  /*!< Input data - doc muc pin hien tai, moi bit 1 pin, offset 0x10 */
-  __IO uint32_t ODR;  /*!< Output data - moi bit 1 pin, offset 0x14 */
-  __O uint32_t BSRR;  /*!< Bit set/reset - bit[15:0] ghi 1 de SET, bit[31:16] ghi 1 de RESET (atomic), offset 0x18 */
+  __I uint32_t IDR;  /*!< Input data - read item current pin, 1 pin per bit, offset 0x10 */
+  __IO uint32_t ODR;  /*!< Output data: one bit per pin, offset 0x14 */
+  __O uint32_t BSRR;  /*!< bit set/reset - bit[15:0] write 1 to SET, bit[31:16] write 1 to RESET (atomic), offset 0x18 */
   __IO uint32_t LCKR;  /*!< Configuration lock, offset 0x1C */
   __IO uint32_t AFRL;  /*!< Alternate function - pin 0..7, offset 0x20 */
   __IO uint32_t AFRH;  /*!< Alternate function - pin 8..15, offset 0x24 */
 } GPIO_TypeDef;
 
-/* USART1 THẬT - dung boi bootloader UART tren PA9(TX)/PA10(RX), AF7, 115200 8N1 (xem bootloader.uart duoi) */
+/* USART1 REAL - used by UART bootloader on PA9(TX)/PA10(RX), AF7, 115200 8N1 (see bootloader.uart below) */
 typedef struct {
-  __IO uint32_t SR;  /*!< Status - bit5=RXNE, bit6=TC, bit7=TXE. Reset THAT co TXE=TC=1 (san sang gui ngay sau reset), offset 0x00 */
-  __IO uint32_t DR;  /*!< Data register (doc = RX, ghi = TX), offset 0x04 */
-  __IO uint32_t BRR;  /*!< Baud rate - vd 0x8B cho 115200 baud @ HSI 16MHz (OVER8=0), offset 0x08 */
+  __IO uint32_t SR;  /*!< Status: bit5=RXNE, bit6=TC, bit7=TXE. TXE=TC=1 after reset, ready to transmit, offset 0x00 */
+  __IO uint32_t DR;  /*!< Data register (read = RX, write = TX), offset 0x04 */
+  __IO uint32_t BRR;  /*!< Baud rate - e.g. 0x8B for 115200 baud @ HSI 16MHz (OVER8=0), offset 0x08 */
   __IO uint32_t CR1;  /*!< Control 1 - bit2=RE, bit3=TE, bit13=UE, offset 0x0C */
-  __IO uint32_t CR2;  /*!< Control 2 (chua dung - stop bits/clock), offset 0x10 */
-  __IO uint32_t CR3;  /*!< Control 3 (chua dung - flow control/DMA), offset 0x14 */
-  __IO uint32_t GTPR;  /*!< Guard time + prescaler (chua dung - IrDA/smartcard), offset 0x18 */
+  __IO uint32_t CR2;  /*!< Control 2 (unused - stop bits/clock), offset 0x10 */
+  __IO uint32_t CR3;  /*!< Control 3 (unused - flow control/DMA), offset 0x14 */
+  __IO uint32_t GTPR;  /*!< Guard time + prescaler (unused - IrDA/smartcard), offset 0x18 */
 } USART_TypeDef;
 
-/* FLASH controller THẬT - dung boi bootloader de erase/program sector app (xem components/driver/flash) */
+/* REAL FLASH controller - used by bootloader to erase/program sector app (see components/driver/flash) */
 typedef struct {
-  __IO uint32_t ACR;  /*!< Access control (latency/prefetch/cache) - chua dung, offset 0x00 */
-  __O uint32_t KEYR;  /*!< Key register - ghi KEY1=0x45670123 roi KEY2=0xCDEF89AB de mo khoa CR, offset 0x04 */
-  __O uint32_t OPTKEYR;  /*!< Option key register - chua dung (khong dung option bytes), offset 0x08 */
+  __IO uint32_t ACR;  /*!< Access control (latency/prefetch/cache) - unused, offset 0x00 */
+  __O uint32_t KEYR;  /*!< Key register - write KEY1=0x45670123 then KEY2=0xCDEF89AB to open CR department, offset 0x04 */
+  __O uint32_t OPTKEYR;  /*!< Option key register - unused (no option bytes), offset 0x08 */
   __IO uint32_t SR;  /*!< Status - bit0=EOP, bit16=BSY, offset 0x0C */
   __IO uint32_t CR;  /*!< Control - bit0=PG, bit1=SER, bit[6:3]=SNB, bit[9:8]=PSIZE, bit16=STRT, bit31=LOCK (reset THAT = locked), offset 0x10 */
-  __IO uint32_t OPTCR;  /*!< Option control - chua dung, offset 0x14 */
-  __IO uint32_t OPTCR1;  /*!< Option control 1 - chua dung, offset 0x18 */
+  __IO uint32_t OPTCR;  /*!< Option control - unused, offset 0x14 */
+  __IO uint32_t OPTCR1;  /*!< Option control 1 - unused, offset 0x18 */
 } FLASH_TypeDef;
 
-/* =========================== Định nghĩa bit thanh ghi ngoại vi ===================== */
+/* =========================== Definition of peripheral register bits ===================== */
 /* =========================== Peripheral base address / instance ==================== */
 #define RCC_BASE   0x40023800UL
 #define GPIOA_BASE   0x40020000UL
@@ -102,11 +102,11 @@ typedef struct {
 #define FLASH_MEM_BASE   0x08000000UL   /* flash, 0x80000 bytes */
 #define RAM_BASE   0x20000000UL   /* ram, 0x40000 bytes */
 
-/* =========================== Bootloader partition layout (xem devices YAML, muc `bootloader:`) === */
+/* ========================= Bootloader partition layout (see YAML devices, item `bootloader:`) === */
 #define NEON_MDF_BOOTLOADER_SIZE     0x00008000UL
 #define NEON_MDF_IMAGE_HEADER_SIZE   0x00000200UL
-#define NEON_MDF_APP_BASE            0x08008000UL   /* dau partition app - header nam tai day */
-#define NEON_MDF_APP_VECTOR_BASE     0x08008200UL   /* = APP_BASE + IMAGE_HEADER_SIZE - vector table THAT cua app */
+#define NEON_MDF_APP_BASE            0x08008000UL   /* application header partition; construct its header here */
+#define NEON_MDF_APP_VECTOR_BASE     0x08008200UL   /* = APP_BASE + IMAGE_HEADER_SIZE - real app vector table */
 #define NEON_MDF_APP_SIZE            0x00077E00UL
 
 #ifdef __cplusplus

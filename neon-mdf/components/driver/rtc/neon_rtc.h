@@ -2,13 +2,13 @@
  * @file neon_rtc.h
  * @brief Public declarations for RTC.
  * @details
- * * NEON_RTC - API giờ/ngày decimal, backend chuyển sang BCD theo FU2.yaml.
- * year dùng đủ bốn chữ số; SetDate kiểm tra ngày trong tháng và năm nhuận.
+ * * NEON_RTC - API hour/date decimal, backend switches to BCD according to FU2.yaml. year uses full
+ * four digits; SetDate checks the date in month and leap year.
  *
- * CHƯA làm: Alarm/interrupt channel/Stopwatch (có thật trong header nhưng
- * chưa cần cho use-case đọc/ghi giờ cơ bản - thêm sau nếu app cần).
+ * NOT done yet: Alarm/interrupt channel/Stopwatch (true in header but not needed for use-case
+ * read/write basic hours - added later if app needs it).
  *
- * Nguồn: inc_fu2/fu2_dti_rtc.h (DTI RTC).
+ * Source: inc_fu2/fu2_dti_rtc.h (DTI RTC).
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.
@@ -31,21 +31,21 @@ extern "C" {
 *                                  STRUCTURES AND OTHER TYPEDEFS
 ==================================================================================================*/
 typedef struct {
-    uint32_t clock_frequency_hz; /* tần số clock cấp cho RTC - 0 để tự khai prescaler thay vì tự tính */
-    uint32_t prescaler;          /* cpsr_div [25:0], chỉ dùng khi clock_frequency_hz=0. Mặc định thật: freq/100 */
+    uint32_t clock_frequency_hz; /* frequency clock granted to RTC - 0 for self declaration prescaler sees because of self calculation */
+    uint32_t prescaler;          /* cpsr_div [25:0], only used when clock_frequency_hz=0. True default: freq/100 */
 } neon_rtc_config_t;
 
 typedef struct {
-    neon_field8_t hour;   /* 0-23, giá trị decimal thường (KHÔNG phải BCD - driver tự convert) */
+    neon_field8_t hour;   /* 0-23, normal decimal value (NOT BCD - driver self convert) */
     neon_field8_t minute; /* 0-59 */
     neon_field8_t second; /* 0-59 */
 } neon_rtc_time_t;
 
 typedef struct {
-    neon_field16_t year; /* năm đầy đủ 1..9999, vd 2026 */
+    neon_field16_t year; /* Full year 1..9999, e.g. 2026 */
     neon_field8_t month; /* 1-12 */
     neon_field8_t date;  /* 1-31 */
-    neon_field8_t day;   /* 1=Monday..7=Sunday - CHỈ ĐỌC, phần cứng tự tính khi ghi year/month/date */
+    neon_field8_t day;   /* 1=Monday..7=Sunday - ONLY read, hardware calculates itself when writing year/month/date */
 } neon_rtc_date_t;
 
 /*==================================================================================================

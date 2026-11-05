@@ -71,8 +71,8 @@ SECTIONS
   {
     . = ALIGN(4);
     _sdata = .;
-    /* Hàm thao tác Flash phải chạy từ RAM để không fetch instruction từ
-       chính mảng Flash trong lúc controller đang program/erase. */
+    /* Flash operations must be run from RAM in order not to fetch instruction from the Flash array itself
+       while the controller is program/erase. */
     *(.ramfunc)
     *(.ramfunc*)
     *(.data)

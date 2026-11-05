@@ -1,23 +1,21 @@
-# flashmap.WEACT_F412.csv - partition table CUA RIENG app nay tren WEACT_F412
-# (xem neon-mdf/cmake/flashmap.cmake). Thu tu dong khong bat buoc - chi can
-# co dung 1 partition ten "app" (type=app, subtype=factory), xem
-# neon-mdf/tools/gen_flashmap.py. Cung layout voi examples/OTA_Demo/ va
-# examples/Blinky/ (cung chip WEACT_F412, khong ly do gi khac di).
+# flashmap.WEACT_F412.csv - this app's own partition table on WEACT_F412 (see
+# neon-mdf/cmake/flashmap.cmake). Automatic mail is not required - just use the 1 partition named
+# "app" (type=app, subtype=factory), see neon-mdf/tools/gen_flashmap.py. same layout as
+# examples/OTA_Demo/ and examples/Blinky/ (same chip as WEACT_F412, no difference).
 #
-# DAT TEN THEO DEVICE (khong dung ten "flashmap.csv" mac dinh nhu Blinky/) -
-# vi app nay, KHAC Blinky, CO 1 target (CH32V003F4P6) CHU DICH KHONG dung
-# flashmap/OTA chut nao (FreeRTOS-Kernel toi thieu da ~8.5KB flash/~2KB RAM,
-# khong the fit 2 ban image + bootloader trong 16KB/2KB that cua chip - xem
-# comment dau Src/main.c) - CH32V003F4P6 dung nhanh "bootloader + 1 app co
-# dinh, KHONG OTA" (neon_mdf_add_app_executable(), NEON_MDF_APP_BASE co dinh
-# tu YAML, xem CMakeLists.txt) thay vi nhanh flashmap. Neu file nay ten
-# "flashmap.csv" (mac dinh), CH32V003F4P6 se VO TINH "roi" xuong dung NHAM
-# partition table nay (size tinh cho WEACT_F412 512KB, sai hoan toan cho chip
-# 16KB) do co che fallback flashmap.<TARGET>.csv -> flashmap.csv trong
-# neon-mdf/CMakeLists.txt - dat ten ro rang de KHONG co file "mac dinh" nao
-# ca, tranh fallback nham.
+# name UNDER DEVICE (do not use default "flashmap.csv" as Blinky/) - this app, unlike Blinky, has 1
+# target (CH32V003F4P6)
+# flashmap/OTA support (FreeRTOS-Kernel alone uses about 8.5KB flash/2KB RAM,
+# can't fit 2 image + bootloader version in the real 16KB/2KB of the chip - see first comment
+# Src/main.c) - CH32V003F4P6 quick use "bootloader + 1 app has specified, not OTA"
+# (neon_mdf_add_app_executable(), NEON_MDF_APP_BASE have specified YAML word, see CMakeLists.txt)
+# see because fast flashmap. if this file name "flashmap.csv" (default), CH32V003F4P6 will VO
+# calculate "well" down misuse this partition table (size calculated for WEACT_F412 512KB, false
+# safe for 16KB chip) that covers fallback flashmap.<TARGET>.csv -> flashmap.csv in
+# neon-mdf/CMakeLists.txt. Specify the filename explicitly to prevent selecting a default or
+# unintended fallback.
 #
 # name,     type, subtype, size
 app,        app,  factory, 0x8000     # sector 2+3 (16+16KB) = 0x08008000..0x08010000
-otadata,    data, ota,     0x10000    # sector 4 (64KB, du du - can nguyen 1 sector)
-app_ota,    app,  ota,     0x60000    # sector 5+6+7 (128*3KB) = het flash
+otadata,    data, ota,     0x10000    # sector 4 (64KB; reserve a complete sector)
+app_ota,    app,  ota,     0x60000    # sector 5+6+7 (128*3KB) = end of flash

@@ -1,60 +1,57 @@
-# flashmap.cmake - xu ly <APP_DIR>/flashmap.csv (partition table CUA RIENG
-# project, giong het partitions.csv that cua ESP-IDF - KHONG phai cua device)
-# qua tools/gen_flashmap.py - CUNG PATTERN voi cmake/kconfig.cmake
-# (neon_mdf_process_kconfig()): Python sinh fragment, CMake chi include().
+# flashmap.cmake processes <APP_DIR>/flashmap.csv, the app-specific partition table, like ESP-IDF
+# partitions.csv but not device's) over tools/gen_flashmap.py - same PATTERN as cmake/kconfig.cmake
+# (neon_mdf_process_kconfig()): Python creates fragments, CMake only include().
 #
 # neon_mdf_process_flashmap(<APP_DIR> [<CSV_PATH>])
-#   Goi TU neon-mdf/CMakeLists.txt (TU DONG, giong osource cua kconfig cho
-#   Kconfig rieng cua app - xem cmake/kconfig.cmake) - KHONG phai app tu goi.
-#   neon-mdf/CMakeLists.txt tu kiem tra EXISTS <CSV_PATH> TRUOC khi goi ham
-#   nay - app CHI CAN CO file flashmap la moi thu tu dong duoc wire, khong
-#   can sua CMakeLists.txt cua app de "bat" flashmap (ban dau du dinh app tu
-#   goi ham nay, nhung doi lai vi ly do ky thuat: ham nay add_subdirectory(components/ota) -
-#   can chay TRUOC add_subdirectory(components/bootloader) de
-#   components/bootloader/CMakeLists.txt link duoc target neon_mdf_ota moi
-#   tao - da xac nhan bang test rieng rang thu tu target_link_libraries()
-#   KHONG quan trong voi CMake hien dai, nhung goi tu neon-mdf/CMakeLists.txt
-#   van la vi tri tu nhien nhat, gan voi bootloader.cmake fragment cung dang
-#   duoc include o do).
+#   call from neon-mdf/CMakeLists.txt (automatic, like kconfig's osource for the app's own Kconfig - see
+#   cmake/kconfig.cmake) - not the caller app. neon-mdf/CMakeLists.txt checks EXISTS <CSV_PATH>
+#   itself before calling this function - the app only needs to have a flashmap file so that each
+#   message is wired automatically, and does not need to modify the app's CMakeLists.txt to "enable"
+#   the flashmap (originally sufficiently specified app from calling this function, but in return
+#   it's ridiculous: this function add_subdirectory(components/ota) - needs to be run before
+#   add_subdirectory(components/bootloader) so that the components/bootloader/CMakeLists.txt link is
+#   created by target neon_mdf_ota each - confirmed by separate test ranging order
+#   target_link_libraries() is irrelevant with the current long CMake, but call from
+#   neon-mdf/CMakeLists.txt remains the most magnetic value, assigned to the same bootloader.cmake
+#   fragment being included there).
 #
-#   CSV_PATH (tuy chon, mac dinh <APP_DIR>/flashmap.csv neu bo trong): du
-#   THEO PROJECT nhu thiet ke ban dau (ESP-IDF partitions.csv-style), nhung
-#   1 app co the build cho NHIEU device KHAC NHAU (vd Blinky: FU2/WEACT_F412/
-#   CH32V003F4P6) voi flash size CHENH LECH RAT LON (16KB vs 512KB) - 1
-#   flashmap.csv DUY NHAT khong the vua tat ca. neon-mdf/CMakeLists.txt tu
-#   uu tien flashmap.<NEON_MDF_TARGET>.csv (override THEO DEVICE) NEU co,
-#   fallback ve flashmap.csv (dung chung/mac dinh) neu khong - xem logic do
-#   o day, ham nay CHI nhan CSV_PATH da duoc chon san, khong tu quyet dinh.
+#   CSV_PATH (optional, defaults to <APP_DIR>/flashmap.csv if internal): fits PROJECT as original
+#   (ESP-IDF partitions.csv-style), but the 1 app can be built for many other devices (e.g. Blinky:
+#   FU2/WEACT_F412/ CH32V003F4P6) with huge difference in flash size (16KB vs 512KB) - the only 1
+#   flashmap.csv cannot fit all. neon-mdf/CMakeLists.txt from flashmap
+#   priority.<NEON_MDF_TARGET>.csv (override by device) if available, fallback to flashmap.csv
+#   (shared/default) if not - see that logic here, this function only accepts selected CSV_PATH, not
+#   specified ones.
 #
-# Sau khi goi (chi khi flashmap.csv co that):
-#   - Bien CMake NEON_MDF_FLASHMAP_<TEN_PARTITION>_BASE/SIZE (+ _VECTOR_BASE/
-#     _CODE_SIZE cho partition type=app) trong scope goi ham nay.
-#   - Bien NEON_MDF_FLASHMAP_VAR_NAMES (list ten cac bien tren) - dung boi
-#     neon-mdf/CMakeLists.txt de propagate tiep PARENT_SCOPE tang thu 2 len
-#     app (danh sach ten partition la DONG, khong co san de hardcode).
-#   - Target INTERFACE `neon_mdf_flashmap` - include dir chua flashmap.h
-#     (macro C cung ten voi bien CMake o tren, dung boi components/ota/ +
+# after calling (only if flashmap.csv is real):
+#   - CMake variables NEON_MDF_FLASHMAP_<PARTITION_NAME>_BASE/SIZE, plus _VECTOR_BASE/
+#     _CODE_SIZE for partition type=app) in the scope calls this function.
+#   - NEON_MDF_FLASHMAP_VAR_NAMES variable (list name of above variables) - used by
+#     neon-mdf/CMakeLists.txt to propagate next PARENT_SCOPE second tier mail to the app (partition
+#     name list is dynamic, no hardcode).
+#   - Target INTERFACE `neon_mdf_flashmap` - include dir not flashmap.h (macro C with the same name as
+#     CMake variable above, used by components/ota/ +
 #     neon_bootloader_main.c).
-#   - Target `neon_mdf_ota` (components/ota/, xem o duoi).
-#   - 1 file .ld MOI cho MOI partition type=app, sinh vao
+#   - Target `neon_mdf_ota` (components/ota/, see below).
+#   - 1 .ld file each for each partition type=app, create
 #     ${CMAKE_BINARY_DIR}/flashmap/<ten_partition>.ld - app CMakeLists.txt
-#     tu link -T dung file tuong ung cho tung executable (vd app.ld cho ban
-#     factory, app_ota.ld cho ban ota - xem examples/OTA_Demo/).
+#     from link -T use the same file for each executable (e.g. app.ld for factory version, app_ota.ld for
+#     ota version - see examples/OTA_Demo/).
 #
-# YEU CAU: app phai co bootloader-enabled target (NEON_MDF_BOOTLOADER_ENABLED,
-# tu NEON_MDF_APP_BASE/IMAGE_HEADER_SIZE/RAM_BASE/RAM_SIZE/ERASE_SECTORS da
-# duoc mcu-description sinh - xem generate.py) - FATAL_ERROR neu goi ham nay
-# ma thieu cac bien do, thay vi loi kho hieu tu Python script.
+# requirement: app must have bootloader-enabled target (NEON_MDF_BOOTLOADER_ENABLED,
+# from NEON_MDF_APP_BASE/IMAGE_HEADER_SIZE/RAM_BASE/RAM_SIZE/ERASE_SECTORS already
+# created by mcu-description - see generate.py) - FATAL_ERROR if calling this function without those
+# variables instead of obscure Python-script errors.
 function(neon_mdf_process_flashmap APP_DIR)
   find_program(NEON_MDF_PYTHON3 python3 REQUIRED)
 
   if(NOT NEON_MDF_BOOTLOADER_ENABLED)
-    message(FATAL_ERROR "neon_mdf_process_flashmap: target '${NEON_MDF_TARGET}' chua bat NEON_MDF_BOOTLOADER_ENABLED (thieu `bootloader:` trong device YAML) - flashmap.csv can bootloader lam nen tang (APP_BASE/IMAGE_HEADER_SIZE)")
+    message(FATAL_ERROR "neon_mdf_process_flashmap: target ${NEON_MDF_TARGET} does not enable NEON_MDF_BOOTLOADER_ENABLED (missing bootloader: in the device YAML). flashmap.csv requires a bootloader and its APP_BASE/IMAGE_HEADER_SIZE layout.")
   endif()
 
-  # NEON_MDF_FLASH_BASE - tinh GIONG HET cach flash_targets.cmake da lam
-  # (APP_BASE - BOOTLOADER_SIZE) thay vi them 1 bien moi - xem comment
-  # tuong tu trong flash_targets.cmake target flash_jtag.
+  # NEON_MDF_FLASH_BASE uses the same calculation as flash_targets.cmake: APP_BASE - BOOTLOADER_SIZE
+  # see because add 1 variable each - see corresponding comment in flash_targets.cmake target
+  # flash_jtag.
   math(EXPR _flashmap_flash_base "${NEON_MDF_APP_BASE} - ${NEON_MDF_BOOTLOADER_SIZE}" OUTPUT_FORMAT HEXADECIMAL)
 
   if(ARGC GREATER 1)
@@ -88,7 +85,7 @@ function(neon_mdf_process_flashmap APP_DIR)
   )
   message(STATUS "[flashmap] ${_gen_output}")
   if(NOT _gen_result EQUAL 0)
-    message(FATAL_ERROR "Sinh flashmap that bai:\n${_gen_output}${_gen_error}")
+    message(FATAL_ERROR "failed flashmap generation:\n${_gen_output}${_gen_error}")
   endif()
 
   include(${_cmake_out})
@@ -98,19 +95,19 @@ function(neon_mdf_process_flashmap APP_DIR)
     target_include_directories(neon_mdf_flashmap INTERFACE ${_flashmap_dir})
   endif()
 
-  # components/ota/ (neon_ota.h - doc/ghi otadata, dung chung boi bootloader
-  # LAN app) CHI can khi flashmap bat - add_subdirectory() ngay tai day de
-  # app CMakeLists.txt chi can goi 1 ham nay la co du flashmap.h LAN target
-  # neon_mdf_ota, khong can tu include/add_subdirectory rieng. neon_mdf_crc32
-  # (components/bootloader/CMakeLists.txt) da chac chan ton tai vi flashmap
-  # da FATAL_ERROR o tren neu NEON_MDF_BOOTLOADER_ENABLED chua bat.
+  # components/ota/ (neon_ota.h - read/write otadata, shared by bootloader times app) just when flashmap
+  # turned on - add_subdirectory() right here to app CMakeLists.txt just call 1 this function is
+  # enough flashmap.h times target neon_mdf_ota, no need from include/add_subdirectory separately.
+  # neon_mdf_crc32
+  # (components/bootloader/CMakeLists.txt) already exists because flashmap
+  # already FATAL_ERROR above if NEON_MDF_BOOTLOADER_ENABLED is not enabled.
   if(NOT TARGET neon_mdf_ota)
     add_subdirectory(${NEON_MDF_PATH}/components/ota ${CMAKE_BINARY_DIR}/neon_mdf_ota_build)
   endif()
 
-  # Propagate moi bien NEON_MDF_FLASHMAP_* len PARENT_SCOPE - ham nay duoc
-  # goi TRUC TIEP tu CMakeLists.txt cua app (khong qua add_subdirectory nao
-  # them, khac kconfig.cmake) nen CHI can 1 tang PARENT_SCOPE, khong phai 2.
+  # Propagate each NEON_MDF_FLASHMAP_* variable to PARENT_SCOPE - this function is called directly from
+  # the app's CMakeLists.txt (not through add_subdirectory, other than kconfig.cmake) so only 1 tier
+  # of PARENT_SCOPE is needed, not 2.
   execute_process(
     COMMAND ${NEON_MDF_PYTHON3} -c "
 import re

@@ -43,9 +43,9 @@ class ProtocolError(RuntimeError):
 
 def build_header(firmware: bytes, version: int) -> bytes:
     if not firmware:
-        raise ValueError("Firmware rong")
+        raise ValueError("Empty Firmware")
     if version < 0 or version > 0xFFFFFFFF:
-        raise ValueError("Version phai nam trong khoang uint32_t")
+        raise ValueError("Version must be male in the range uint32_t")
     crc = zlib.crc32(firmware) & 0xFFFFFFFF
     return struct.pack("<IIII", IMAGE_MAGIC, version, len(firmware), crc)
 
@@ -55,7 +55,7 @@ def _write_all(ser, data: bytes, what: str) -> None:
     ser.flush()
     if written != len(data):
         raise ProtocolError(
-            f"Chi gui duoc {written}/{len(data)} byte cua {what}"
+            f"send only {written}/{len(data)} bytes of {what}"
         )
 
 
@@ -70,16 +70,16 @@ def _wait_control_byte(ser, expected: int, timeout_s: float, what: str) -> None:
         if value == expected:
             return
         if value == NAK_BYTE:
-            raise ProtocolError(f"Bootloader tra NAK khi {what}")
+            raise ProtocolError(f"Bootloader check NAK when {what}")
         if len(unexpected) < 8:
             unexpected.append(value)
 
     suffix = ""
     if unexpected:
-        suffix = "; byte la da nhan: " + " ".join(
+        suffix = "; bytes are received: " + " ".join(
             f"0x{value:02X}" for value in unexpected
         )
-    raise ProtocolError(f"Timeout {timeout_s:g}s khi {what}{suffix}")
+    raise ProtocolError(f"Timeout {timeout_s:g}s when {what}{suffix}")
 
 
 def synchronize(ser, timeout_s: float) -> None:
@@ -109,12 +109,12 @@ def synchronize(ser, timeout_s: float) -> None:
 
     suffix = ""
     if unexpected:
-        suffix = "; du lieu UART gan nhat: " + " ".join(
+        suffix = "; Latest UART data received: " + " ".join(
             f"0x{value:02X}" for value in unexpected
         )
     raise ProtocolError(
-        f"Khong nhan READY 0x{READY_BYTE:02X} trong {timeout_s:g}s. "
-        "Hay reset board sau khi chay lenh va dong Serial Monitor"
+        f"unrecognized READY 0x{READY_BYTE:02X} in the {timeout_s:g}s. "
+        "please reset the board after running the command and dynamic Serial Monitor"
         f"{suffix}"
     )
 
@@ -128,9 +128,9 @@ def send_firmware(
     write_timeout_s: float = DEFAULT_WRITE_TIMEOUT_S,
 ) -> int:
     """Transfer firmware and return its CRC32 after the final ACK."""
-    print("Dang cho bootloader; hay reset board ngay bay gio...")
+    print("giving bootloader; please reset board now...")
     synchronize(ser, sync_timeout_s)
-    print("Da nhan READY 0x52")
+    print("got READY 0x52")
 
     return transfer_after_ready(
         ser,
@@ -156,9 +156,9 @@ def transfer_after_ready(
     # stale bytes here cannot discard a protocol ACK.
     ser.reset_input_buffer()
     _write_all(ser, header, "header")
-    _wait_control_byte(ser, ACK_BYTE, erase_timeout_s, "cho erase + ACK header")
+    _wait_control_byte(ser, ACK_BYTE, erase_timeout_s, "for erase + ACK header")
     print(
-        f"Header hop le: version={version}, size={len(firmware)} byte, "
+        f"Synchronous header: version={version}, size={len(firmware)} byte, "
         f"crc32=0x{crc:08X}"
     )
 
@@ -169,13 +169,13 @@ def transfer_after_ready(
         chunk = firmware[sent : sent + CHUNK_SIZE]
         _write_all(ser, chunk, f"chunk {chunk_index}")
         _wait_control_byte(
-            ser, ACK_BYTE, write_timeout_s, f"cho ACK chunk {chunk_index}"
+            ser, ACK_BYTE, write_timeout_s, f"for ACK chunk {chunk_index}"
         )
         sent += len(chunk)
         chunk_index += 1
         percent = sent * 100 // len(firmware)
         print(
-            f"\rDang gui {sent}/{len(firmware)} byte "
+            f"\rSending {sent}/{len(firmware)} byte "
             f"({percent}%, chunk {chunk_index}/{total_chunks})",
             end="",
             flush=True,
@@ -184,18 +184,18 @@ def transfer_after_ready(
     print()
     # The chunk loop consumed the ACK for the final chunk. The bootloader then
     # calculates the whole-image CRC and emits one additional ACK/NAK.
-    _wait_control_byte(ser, ACK_BYTE, write_timeout_s, "cho ACK CRC cuoi")
-    print("CRC firmware hop le; bootloader dang ghi otadata va reset MCU")
+    _wait_control_byte(ser, ACK_BYTE, write_timeout_s, "for ACK CRC")
+    print("CRC firmware leaks; bootloader is writing otadata and resets the MCU")
     return crc
 
 
 def _parse_args() -> argparse.Namespace:
     default_port = os.environ.get("NEON_MDF_SERIAL_PORT", DEFAULT_PORT)
     parser = argparse.ArgumentParser(
-        description="Nap app_ota qua giao thuc UART 0x55 cua NEON-MDF bootloader"
+        description="flash app_ota via NEON-MDF bootloader UART 0x55"
     )
     parser.add_argument("firmware", type=Path, help="File app_ota .bin tho")
-    parser.add_argument("--port", default=default_port, help=f"Cong UART (mac dinh: {default_port})")
+    parser.add_argument("--port", default=default_port, help=f"UART port (default: {default_port})")
     parser.add_argument("--baud", type=int, default=DEFAULT_BAUD)
     parser.add_argument("--version", type=lambda value: int(value, 0), default=1)
     parser.add_argument("--sync-timeout", type=float, default=DEFAULT_SYNC_TIMEOUT_S)
@@ -209,23 +209,23 @@ def main() -> int:
     try:
         firmware = args.firmware.read_bytes()
     except OSError as exc:
-        print(f"Khong doc duoc firmware '{args.firmware}': {exc}", file=sys.stderr)
+        print(f"cannot read firmware '{args.firmware}': {exc}", file=sys.stderr)
         return 2
     if not firmware:
-        print(f"Firmware '{args.firmware}' rong", file=sys.stderr)
+        print(f"Firmware '{args.firmware}' Empty", file=sys.stderr)
         return 2
 
     try:
         import serial
     except ImportError:
         print(
-            "Thieu pyserial. Cai bang: python3 -m pip install pyserial",
+            "Missing pyserial. Install it with: python3 -m pip install pyserial",
             file=sys.stderr,
         )
         return 2
 
     print(
-        f"Mo {args.port} @ {args.baud} 8N1; firmware={args.firmware} "
+        f"Open {args.port} @ {args.baud} 8N1; firmware={args.firmware} "
         f"({len(firmware)} byte)"
     )
     serial_options = dict(
@@ -241,7 +241,7 @@ def main() -> int:
     last_connection_error = None
 
     try:
-        print("Dang cho bootloader; hay bam nut RESET (khong rut cap USB)...")
+        print("waiting for the bootloader; press RESET without unplugging USB...")
         while time.monotonic() < sync_deadline:
             synchronized = False
             try:
@@ -249,7 +249,7 @@ def main() -> int:
                     remaining = sync_deadline - time.monotonic()
                     synchronize(ser, max(remaining, 0.01))
                     synchronized = True
-                    print("Da nhan READY 0x52")
+                    print("got READY 0x52")
                     transfer_after_ready(
                         ser,
                         firmware,
@@ -263,27 +263,27 @@ def main() -> int:
                     # Once READY was consumed, reconnecting and sending a new
                     # SYNC would corrupt the in-progress header/chunk stream.
                     raise ProtocolError(
-                        "Mat ket noi sau khi bootloader da READY; reset board "
-                        "va chay lai lenh"
+                        "lose connection after bootloader has READY; reset board "
+                        "and restart the command"
                     ) from exc
                 last_connection_error = exc
                 print(
-                    f"Cong {args.port} tam thoi ngat; dang cho no xuat hien lai...",
+                    f"Port {args.port} intermittent interrupt; reappearing no...",
                     file=sys.stderr,
                 )
                 time.sleep(0.25)
 
         detail = f": {last_connection_error}" if last_connection_error else ""
         raise ProtocolError(
-            f"Khong bat duoc bootloader tren {args.port} trong "
-            f"{args.sync_timeout:g}s{detail}. Phai dung USB-UART noi "
-            "PA9/PA10, khong phai cong USB truc tiep cua Blue Pill"
+            f"cannot enable bootloader on {args.port} in the "
+            f"{args.sync_timeout:g}s{detail}must use USB-UART "
+            "PA9/PA10, Not Curved USB Direct of Blue Pill"
         )
     except KeyboardInterrupt:
-        print("\nDa huy boi nguoi dung", file=sys.stderr)
+        print("\nCancelled by the user", file=sys.stderr)
         return 130
     except (OSError, ProtocolError, ValueError, serial.SerialException) as exc:
-        print(f"Loi OTA UART: {exc}", file=sys.stderr)
+        print(f"OTA UART error: {exc}", file=sys.stderr)
         return 1
 
 

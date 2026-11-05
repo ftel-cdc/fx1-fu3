@@ -2,9 +2,8 @@
  * @file system_WEACT_F412.h
  * @brief Public declarations for system weact f412.
  * @details
- * * system_WEACT_F412.h - CMSIS system file, viết tay (không sinh tự động).
- * WEACT_F412 là test rig phần cứng thật (STM32F412RET6, board WeAct Studio
- * STM32F4 Core Board), KHÔNG PHẢI FU2 - xem cảnh báo trong
+ * * system_WEACT_F412.h - CMSIS system file, handwritten (not auto generated). WEACT_F412 is real
+ * hardware test rig (STM32F412RET6, WeAct Studio STM32F4 Core Board), NOT FU2 - see warning in
  * mcu-description/devices/WEACT_F412.yaml.
  */
 

@@ -1,16 +1,18 @@
-# RISC-V backend — RESERVED, chưa triển khai
+# RISC-V backend — RESERVED, not yet implemented
 
-Thư mục này giữ chỗ cho backend sinh code (header/linker/startup) khi SDK hỗ
-trợ thêm kiến trúc RISC-V (xem `mcu-description/schema/arch/riscv.schema.yaml`
-và `Core/Arch/RISCV/README.md`).
+This directory reserves space for a code generation backend (headers, linker
+scripts and startup code) when the SDK adds RISC-V support. See
+`mcu-description/schema/arch/riscv.schema.yaml` and `Core/Arch/RISCV/README.md`.
 
-Khi triển khai, dự kiến cần các file tương ứng với `backends/cortex_m/`:
-- `gen_riscv_header.py` — sinh header register struct (peripheral logic dùng
-  chung schema/common, chỉ core/CSR khác Cortex-M)
-- `gen_linker_script.py` — linker script RISC-V (khác cú pháp MEMORY/SECTIONS
-  một phần do ABI/relocation model khác)
-- `gen_startup.py` — startup + trap vector (PLIC/CLINT thay vì NVIC, xem ghi
-  chú trong riscv.schema.yaml)
+The planned files mirror `backends/cortex_m/`:
 
-`generate.py` ở thư mục cha đã dispatch theo `device.arch` — chỉ cần thêm
-`elif device.arch.startswith("riscv"):` trỏ vào backend này khi sẵn sàng.
+- `gen_riscv_header.py` generates peripheral register structures. Peripheral
+  definitions share the common schema; core/CSR definitions differ from Cortex-M.
+- `gen_linker_script.py` generates RISC-V linker scripts, with some differences
+  in MEMORY/SECTIONS due to the ABI and relocation model.
+- `gen_startup.py` generates startup code and trap vectors (PLIC/CLINT rather
+  than NVIC; see the notes in `riscv.schema.yaml`).
+
+The parent `generate.py` already dispatches by `device.arch`. Add an
+`elif device.arch.startswith("riscv"):` branch pointing to this backend when
+it is ready.

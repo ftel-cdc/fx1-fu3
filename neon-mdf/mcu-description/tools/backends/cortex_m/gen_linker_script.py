@@ -1,9 +1,9 @@
-"""Sinh GNU ld linker script (GCC arm-none-eabi) từ model.Device.
+"""generate GNU ld linker script (GCC arm-none-eabi) from model.Device.
 
-Chọn 1 vùng flash (kind=='flash', địa chỉ thấp nhất) và 1 vùng ram để app dùng
-(ưu tiên region có tên chứa "USR" - theo quy ước FU2.yaml RAM_SYS/RAM_USR;
-nếu không có thì lấy vùng ram đầu tiên). Vùng RAM còn lại (vd RAM_SYS) không bị
-đụng tới bởi linker script này - để dành cho firmware hệ thống/DMA buffer khác.
+Select 1 flash area (kind=='flash', lowest address) and 1 RAM area for the app to use (prefer region
+with name containing "USR" - according to convention FU2.yaml RAM_SYS/RAM_USR; if not, take the
+first RAM area). The remaining RAM area (e.g. RAM_SYS) is not touched by this linker script - for
+other system firmware / DMA buffer.
 """
 
 TEMPLATE = """/*
@@ -69,8 +69,8 @@ SECTIONS
   {{
     . = ALIGN(4);
     _sdata = .;
-    /* Hàm thao tác Flash phải chạy từ RAM để không fetch instruction từ
-       chính mảng Flash trong lúc controller đang program/erase. */
+    /* Flash operations must be run from RAM in order not to fetch instruction from the Flash array itself
+       while the controller is program/erase. */
     *(.ramfunc)
     *(.ramfunc*)
     *(.data)

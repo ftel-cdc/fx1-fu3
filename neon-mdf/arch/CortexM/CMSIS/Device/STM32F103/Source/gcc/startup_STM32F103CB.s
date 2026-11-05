@@ -130,7 +130,7 @@ g_pfnVectors:
   .word USBWakeUp_IRQHandler   /* IRQ42: USB wakeup through EXTI */
 
 
-/* ============ Weak aliases (override bằng cách define hàm cùng tên) ============ */
+/* ============ Weak aliases (override by defining functions of the same name) ============== */
   .weak NMI_Handler
   .thumb_set NMI_Handler,Default_Handler
 

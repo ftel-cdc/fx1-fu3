@@ -7,7 +7,7 @@ def pick_flash(device):
     if device.profile.flash:
         return next(m for m in regions if m.name == device.profile.flash.region)
     if not regions:
-        raise ValueError(f"Device {device.device} không có memory region kind=flash")
+        raise ValueError(f"Device {device.device} no memory region kind=flash")
     return min(regions, key=lambda m: m.address)
 
 
@@ -16,7 +16,7 @@ def pick_ram(device):
     if device.profile.ram:
         return next(m for m in regions if m.name == device.profile.ram.region)
     if not regions:
-        raise ValueError(f"Device {device.device} không có memory region kind=ram")
+        raise ValueError(f"Device {device.device} no memory region kind=ram")
     return next((m for m in regions if "USR" in m.name.upper()),
                 min(regions, key=lambda m: m.address))
 

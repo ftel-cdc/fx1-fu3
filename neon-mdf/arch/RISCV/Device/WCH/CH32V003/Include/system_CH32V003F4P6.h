@@ -2,10 +2,9 @@
  * @file system_CH32V003F4P6.h
  * @brief Public declarations for system ch32v003f4p6.
  * @details
- * * system_CH32V003F4P6.h - viet tay (khong sinh tu dong), mirror
- * system_FU2.h/system_WEACT_F412.h ben Cortex-M (cung API SystemCoreClock/
- * SystemInit/SystemCoreClockUpdate - startup_CH32V003F4P6.s (sinh tu dong)
- * goi `jal SystemInit` truoc khi vao main(), xem gen_startup.py).
+ * * system_CH32V003F4P6.h - handwritten (not auto generated), mirror system_FU2.h/system_WEACT_F412.h
+ * on Cortex-M (the same SystemCoreClock/SystemInit/SystemCoreClockUpdate API; startup_CH32V003F4P6.s
+ * (auto generated) call `jal SystemInit` before vao main(), see gen_startup.py).
  */
 
 #ifndef SYSTEM_CH32V003F4P6_H
@@ -20,7 +19,7 @@
 extern "C" {
 #endif
 
-/** Tần số CPU hiện tại (Hz) - phải gọi SystemCoreClockUpdate() sau khi đổi clock. */
+/** current CPU frequency (Hz) - must call SystemCoreClockUpdate() after changing clock. */
 extern uint32_t SystemCoreClock;
 
 /*==================================================================================================
@@ -29,14 +28,14 @@ extern uint32_t SystemCoreClock;
 /**
  * @brief Initialize the device clocks and architecture state before entering main.
  * @details
- * Gọi từ handle_reset (xem startup_CH32V003F4P6.s) trước khi vào main().
+ * Call from handle_reset (see startup_CH32V003F4P6.s) before entering main().
  */
 extern void SystemInit(void);
 
 /**
  * @brief Update SystemCoreClock from the active device clock configuration.
  * @details
- * Đọc lại cấu hình clock hiện tại và cập nhật SystemCoreClock.
+ * read back the current clock configuration and update SystemCoreClock.
  */
 extern void SystemCoreClockUpdate(void);
 

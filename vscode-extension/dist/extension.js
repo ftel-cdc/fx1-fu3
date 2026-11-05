@@ -103,12 +103,12 @@ var NeonMdfStatusBar = class {
   portItem;
   subscription;
   refresh() {
-    this.targetItem.text = `$(circuit-board) ${this.state.target || "chon target"}`;
-    this.targetItem.tooltip = "NEON-MDF: Chon Target";
+    this.targetItem.text = `$(circuit-board) ${this.state.target || "select target"}`;
+    this.targetItem.tooltip = "NEON-MDF: Select Target";
     this.transportItem.text = this.state.transport === "jtag" ? "$(circuit-board) JTAG" : "$(plug) UART";
-    this.transportItem.tooltip = "NEON-MDF: Chien luoc Flash (JTAG = qua SWD 1 phien, nhanh; UART = qua System Bootloader, can thao tac tay)";
-    this.portItem.text = `$(radio-tower) ${this.state.port ?? "chua chon cong"}`;
-    this.portItem.tooltip = "NEON-MDF: Chon Cong Serial";
+    this.transportItem.tooltip = "NEON-MDF: Flash transport (JTAG: one fast SWD session; UART: System Bootloader, manual preparation required)";
+    this.portItem.text = `$(radio-tower) ${this.state.port ?? "no port selected"}`;
+    this.portItem.tooltip = "NEON-MDF: Select Serial Port";
   }
   dispose() {
     this.subscription.dispose();
@@ -170,19 +170,19 @@ async function discoverTargets(workspaceFolder) {
 async function selectTargetCommand(state) {
   const folder = vscode4.workspace.workspaceFolders?.[0];
   if (!folder) {
-    vscode4.window.showWarningMessage("NEON-MDF: chua mo workspace folder nao.");
+    vscode4.window.showWarningMessage("NEON-MDF: no workspace folder opened.");
     return;
   }
   const targets = await discoverTargets(folder.uri);
   if (targets.length === 0) {
     vscode4.window.showWarningMessage(
-      "NEON-MDF: khong tim thay target nao trong CMakePresets.json cua workspace nay - dam bao dang mo dung 1 thu muc vi du (vd examples/Blinky), khong phai thu muc goc repo."
+      "NEON-MDF: No targets found in this workspace CMakePresets.json. Open an application folder such as examples/Blinky."
     );
     return;
   }
   const picked = await vscode4.window.showQuickPick(
     targets.map((t) => ({ label: t.displayName, description: t.name })),
-    { placeHolder: "Chon target (doc tu CMakePresets.json)" }
+    { placeHolder: "select target (read from CMakePresets.json)" }
   );
   if (!picked) {
     return;
@@ -196,16 +196,16 @@ async function selectTransportCommand(state) {
   const items = [
     {
       label: "$(plug) UART",
-      description: state.target === "FU2" ? "ROMCODE USART update: chon boot mode 100, bam RESET khi tool san sang" : "System Memory Bootloader STM32: target flash_uart_stm32, thao tac B0/PB2 theo board",
+      description: state.target === "FU2" ? "ROMCODE USART update: select boot mode 100 and press RESET when the tool is ready" : "System Memory Bootloader STM32: target flash_uart_stm32, operation B0/PB2 by board",
       value: "uart"
     },
     {
       label: "$(circuit-board) JTAG/SWD",
-      description: state.target === "FU2" ? "Chua ho tro: cau hinh OpenOCD FU2 dang la placeholder" : "Nap qua OpenOCD (target flash_jtag)",
+      description: state.target === "FU2" ? "unsupported: configuration OpenOCD FU2 is a placeholder" : "flash via OpenOCD (target flash_jtag)",
       value: "jtag"
     }
   ];
-  const picked = await vscode5.window.showQuickPick(items, { placeHolder: "Chon transport" });
+  const picked = await vscode5.window.showQuickPick(items, { placeHolder: "select transport" });
   if (!picked) {
     return;
   }
@@ -293,44 +293,44 @@ async function detectPortCommand(state) {
   await vscode6.window.withProgress(
     {
       location: vscode6.ProgressLocation.Notification,
-      title: "NEON-MDF: dang do cong serial - RESET/cap lai nguon board NGAY BAY GIO..."
+      title: "NEON-MDF: Probing serial ports - reset or power-cycle the board now..."
     },
     async () => {
       const found = await detectBootloaderPort();
       if (!found) {
         vscode6.window.showWarningMessage(
-          "NEON-MDF: khong tim thay cong nao dang chay bootloader trong cua so cho SYNC (~9.5s) - dam bao board vua duoc RESET/cap lai nguon dung luc lenh nay chay, hoac chon cong bang tay."
+          "NEON-MDF: No bootloader responded within the SYNC window (~9.5s). Reset or power-cycle the board while this command runs, or select a port manually."
         );
         return;
       }
       await state.setPort(found);
-      vscode6.window.showInformationMessage(`NEON-MDF: da tim thay bootloader tren cong ${found}.`);
+      vscode6.window.showInformationMessage(`NEON-MDF: found bootloader on ${found} port.`);
     }
   );
 }
 
 // src/commands/selectPort.ts
-var MANUAL_ENTRY = "$(edit) Nhap tay...";
-var AUTO_DETECT_ENTRY = "$(zap) Tu dong do (RESET board truoc)...";
+var MANUAL_ENTRY = "$(edit) enter hand...";
+var AUTO_DETECT_ENTRY = "$(zap) auto that (RESET board before)...";
 async function selectPortCommand(state) {
   let ports = [];
   try {
     ports = await listPorts();
   } catch (err) {
     vscode7.window.showWarningMessage(
-      `NEON-MDF: khong doc duoc danh sach cong serial (${String(err)}) - nhap tay.`
+      `NEON-MDF: unable to read serial ports list (${String(err)}) - manual input.`
     );
   }
   const items = [
-    { label: AUTO_DETECT_ENTRY, description: "do cong dang chay bootloader (giao thuc SYNC/READY)" },
+    { label: AUTO_DETECT_ENTRY, description: "that port is running bootloader (real delivery SYNC/READY)" },
     ...ports.map((p) => ({
       label: p.path,
       description: p.manufacturer
     })),
-    { label: MANUAL_ENTRY, description: "go duong dan cong serial" }
+    { label: MANUAL_ENTRY, description: "type serial port" }
   ];
   const picked = await vscode7.window.showQuickPick(items, {
-    placeHolder: ports.length > 0 ? "Chon cong serial" : "Khong tim thay cong nao - nhap tay hoac tu dong do"
+    placeHolder: ports.length > 0 ? "select serial port" : "no knob found - enter that hand or auto"
   });
   if (!picked) {
     return;
@@ -342,7 +342,7 @@ async function selectPortCommand(state) {
   let port = picked.label;
   if (picked.label === MANUAL_ENTRY) {
     const typed = await vscode7.window.showInputBox({
-      prompt: "Duong dan cong serial (vd /dev/cu.usbmodem102, COM3, /dev/ttyACM0)",
+      prompt: "Serial port, e.g. /dev/cu.usbmodem102, COM3 or /dev/ttyACM0",
       value: state.port ?? ""
     });
     if (!typed) {
@@ -407,9 +407,9 @@ function runCMakeTarget(options) {
   }
   const shellExec = new vscode9.ShellExecution("cmake", args, {
     cwd: options.cwd.fsPath,
-    // sdkPathEnv() chi tra ve gia tri neu nguoi dung da chon SDK path rieng
-    // (neonMdf.sdkPath) - de trong thi khong can, de CMakeLists.txt/
-    // settings.json cua tung app tu quyet dinh nhu truoc gio.
+    // sdkPathEnv() only checks the value if the user has selected a separate SDK path (neonMdf.sdkPath) -
+    // it is not necessary to leave in, so that CMakeLists.txt/ settings.json of each app from the
+    // specified as before.
     env: { ...sdkPathEnv(), ...options.env }
   });
   const task = new vscode9.Task(
@@ -563,18 +563,18 @@ async function ensureConfigured(cwd, preset) {
 async function buildCommand(state) {
   const folder = vscode12.workspace.workspaceFolders?.[0];
   if (!folder) {
-    vscode12.window.showWarningMessage("NEON-MDF: chua mo workspace folder nao.");
+    vscode12.window.showWarningMessage("NEON-MDF: no workspace folder opened.");
     return;
   }
   if (!state.target) {
     vscode12.window.showWarningMessage(
-      'NEON-MDF: chua chon target - bam vao "chon target" tren status bar truoc.'
+      "NEON-MDF: No target selected. Use Select Target in the status bar first."
     );
     return;
   }
   const configOk = await ensureConfigured(folder.uri, state.target);
   if (!configOk) {
-    vscode12.window.showErrorMessage(`NEON-MDF: configure that bai (target ${state.target}) - xem terminal.`);
+    vscode12.window.showErrorMessage(`NEON-MDF: configure failed (target ${state.target}) - see terminal.`);
     return;
   }
   const exitCode = await runCMakeTarget({
@@ -583,7 +583,7 @@ async function buildCommand(state) {
     cwd: folder.uri
   });
   if (exitCode !== 0) {
-    vscode12.window.showErrorMessage(`NEON-MDF: build that bai (target ${state.target}).`);
+    vscode12.window.showErrorMessage(`NEON-MDF: build failed (target ${state.target}).`);
   }
 }
 
@@ -600,7 +600,7 @@ async function fileExists4(uri) {
 async function checkOpenocdCfg(state, folder) {
   const openocdCfg = vscode13.Uri.joinPath(resolveSdkPathUri(folder), "cmake", "openocd", `${state.target}_openocd.cfg`);
   if (!await fileExists4(openocdCfg)) {
-    vscode13.window.showErrorMessage(`NEON-MDF: khong tim thay file openocd cfg: ${openocdCfg.fsPath}`);
+    vscode13.window.showErrorMessage(`NEON-MDF: could not find openocd cfg file: ${openocdCfg.fsPath}`);
     return false;
   }
   return true;
@@ -608,18 +608,18 @@ async function checkOpenocdCfg(state, folder) {
 async function flashCommand(state, monitor) {
   const folder = vscode13.workspace.workspaceFolders?.[0];
   if (!folder) {
-    vscode13.window.showWarningMessage("NEON-MDF: chua mo workspace folder nao.");
+    vscode13.window.showWarningMessage("NEON-MDF: no workspace folder opened.");
     return;
   }
   if (!state.target) {
     vscode13.window.showWarningMessage(
-      'NEON-MDF: chua chon target - bam vao "chon target" tren status bar truoc.'
+      "NEON-MDF: No target selected. Use Select Target in the status bar first."
     );
     return;
   }
   const configOk = await ensureConfigured(folder.uri, state.target);
   if (!configOk) {
-    vscode13.window.showErrorMessage(`NEON-MDF: configure that bai (target ${state.target}) - xem terminal.`);
+    vscode13.window.showErrorMessage(`NEON-MDF: configure failed (target ${state.target}) - see terminal.`);
     return;
   }
   if (state.transport === "jtag") {
@@ -631,7 +631,7 @@ async function flashCommand(state, monitor) {
 }
 async function runFlashCombined(state, folder) {
   if (state.target === "FU2") {
-    vscode13.window.showErrorMessage("NEON-MDF: FU2 OpenOCD chua co cau hinh nap. Hay chon Transport UART de nap qua ROMCODE.");
+    vscode13.window.showErrorMessage("NEON-MDF: FU2 OpenOCD does not have a flash configuration. select Transport UART to flash via ROMCODE.");
     return void 0;
   }
   if (!await checkOpenocdCfg(state, folder)) {
@@ -644,7 +644,7 @@ async function runFlashCombined(state, folder) {
     cwd: folder
   });
   if (exitCode !== 0) {
-    vscode13.window.showErrorMessage(`NEON-MDF: flash qua SWD that bai (target ${state.target}) - xem terminal.`);
+    vscode13.window.showErrorMessage(`NEON-MDF: flash via SWD failed (target ${state.target}) - see terminal.`);
   }
   return exitCode;
 }
@@ -653,11 +653,11 @@ async function runFlashUart(state, folder) {
     return runFlashStm32Bootloader(state, folder);
   }
   if (!state.port) {
-    vscode13.window.showWarningMessage("NEON-MDF: Chon cong serial truoc khi nap UART FU2.");
+    vscode13.window.showWarningMessage("NEON-MDF: select the serial port before flashing UART FU2.");
     return void 0;
   }
   if (!Number.isInteger(state.flashBaudRate) || state.flashBaudRate <= 0) {
-    vscode13.window.showErrorMessage("NEON-MDF: neonMdf.fu2FlashBaudRate phai la so nguyen duong khop ROMCODE.");
+    vscode13.window.showErrorMessage("NEON-MDF: neonMdf.fu2FlashBaudRate must be a ROMCODE matching line integer.");
     return void 0;
   }
   const exitCode = await runCMakeTarget({
@@ -671,14 +671,14 @@ async function runFlashUart(state, folder) {
     }
   });
   if (exitCode !== 0 && exitCode !== void 0) {
-    vscode13.window.showErrorMessage("NEON-MDF: Nap UART FU2 that bai; xem terminal. Kiem tra boot mode 100, RESET va baud ROMCODE.");
+    vscode13.window.showErrorMessage("NEON-MDF: UART FU2 flash failed; see terminal. test boot mode 100, RESET and baud ROMCODE.");
   }
   return exitCode;
 }
 async function runFlashStm32Bootloader(state, folder) {
   if (!state.port) {
     vscode13.window.showWarningMessage(
-      'NEON-MDF: chua chon cong serial - bam "NEON-MDF: Chon Cong Serial" truoc khi flash qua UART.'
+      "NEON-MDF: No serial port selected. Use NEON-MDF: Select Serial Port before UART flashing."
     );
     return void 0;
   }
@@ -686,11 +686,11 @@ async function runFlashStm32Bootloader(state, folder) {
     return void 0;
   }
   const proceed = await vscode13.window.showInformationMessage(
-    "NEON-MDF: Flash qua UART can THAO TAC TAY - Noi day PB2 -> GND + GIU nut B0 tren board (KHONG can bam Reset - tu dong reset qua SWD). Giu nguyen ca 2 cho toi khi thay lenh chay xong.",
-    "Da san sang, Tiep tuc",
-    "Huy"
+    "NEON-MDF: UART flashing requires manual preparation: connect PB2 to GND and hold B0 on the board. Reset is automatic through SWD. Keep both in place until flashing finishes.",
+    "leveled, continue",
+    "deactivate"
   );
-  if (proceed !== "Da san sang, Tiep tuc") {
+  if (proceed !== "leveled, continue") {
     return void 0;
   }
   const exitCode = await runCMakeTarget({
@@ -698,18 +698,18 @@ async function runFlashStm32Bootloader(state, folder) {
     preset: state.target,
     cmakeTarget: "flash_uart_stm32",
     cwd: folder,
-    // Cong THAT nguoi dung da chon - xem comment o dau ham. Thieu dong nay
-    // truoc day (bug that) khien flash_uart_stm32 luon dung gia tri mac
-    // dinh hard-code trong CMake cache, khong phai cong that cua board.
+    // Pass the actual user-selected port; omitting this previously caused a
+    // bug): flash_uart_stm32 always used the hardcoded CMake-cache default instead of the selected board
+    // ports.
     env: { NEON_MDF_SERIAL_PORT: state.port }
   });
   if (exitCode !== 0) {
     vscode13.window.showErrorMessage(
-      `NEON-MDF: flash qua UART System Bootloader that bai (target ${state.target}) - xem terminal. Kiem tra da noi PB2->GND + giu B0 dung luc reset chua.`
+      `NEON-MDF: flash via UART System Bootloader failed (target ${state.target}) - see terminal. checked that PB2->GND + keep B0 used for reset.`
     );
   } else {
     vscode13.window.showInformationMessage(
-      "NEON-MDF: Flash thanh cong - nho THA nut B0 + RUT day PB2->GND, roi reset lai de chay app that."
+      "NEON-MDF: Flashing succeeded. Release B0, disconnect PB2 from GND, then reset to run the app."
     );
   }
   return exitCode;
@@ -720,23 +720,23 @@ var vscode14 = __toESM(require("vscode"));
 async function buildFlashMonitorCommand(state, monitor) {
   const folder = vscode14.workspace.workspaceFolders?.[0];
   if (!folder) {
-    vscode14.window.showWarningMessage("NEON-MDF: chua mo workspace folder nao.");
+    vscode14.window.showWarningMessage("NEON-MDF: no workspace folder opened.");
     return;
   }
   if (!state.target) {
     vscode14.window.showWarningMessage(
-      'NEON-MDF: chua chon target - bam vao "chon target" tren status bar truoc.'
+      "NEON-MDF: No target selected. Use Select Target in the status bar first."
     );
     return;
   }
   const configOk = await ensureConfigured(folder.uri, state.target);
   if (!configOk) {
-    vscode14.window.showErrorMessage(`NEON-MDF: configure that bai (target ${state.target}) - xem terminal.`);
+    vscode14.window.showErrorMessage(`NEON-MDF: configure failed (target ${state.target}) - see terminal.`);
     return;
   }
   if (!state.port) {
     vscode14.window.showWarningMessage(
-      "NEON-MDF: chua chon cong serial - can cho ca flash (duong UART) lan serial monitor."
+      "NEON-MDF: not selected serial port - needed for both flash (UART path) times serial monitor."
     );
     return;
   }
@@ -748,11 +748,11 @@ async function buildFlashMonitorCommand(state, monitor) {
     exitCode = await runFlashUart(state, folder.uri);
     if (exitCode === 0 && state.target !== "FU2") {
       const proceed = await vscode14.window.showInformationMessage(
-        "NEON-MDF: Da THA nut B0 + RUT day PB2->GND + reset lai chua? App CHUA CHAY cho toi khi lam xong buoc nay.",
-        "Da xong, Mo Monitor",
-        "Bo qua Monitor"
+        "NEON-MDF: Have you released B0, disconnected PB2 from GND and reset the board? Complete these steps to start the app.",
+        "Done, Open Monitor",
+        "ignore Monitor"
       );
-      if (proceed !== "Da xong, Mo Monitor") {
+      if (proceed !== "Done, Open Monitor") {
         return;
       }
     }
@@ -777,7 +777,7 @@ async function buildFlashMonitorCommand(state, monitor) {
     background: true
   });
   if (monitorExitCode !== 0) {
-    vscode14.window.showErrorMessage(`NEON-MDF: mo serial monitor that bai (target ${state.target}) - xem terminal.`);
+    vscode14.window.showErrorMessage(`NEON-MDF: Opening serial monitor failed (target ${state.target}) - see terminal.`);
   }
 }
 
@@ -787,24 +787,21 @@ var vscode15 = __toESM(require("vscode"));
 // src/debugArch.ts
 var CORTEX_M_PROFILE = {
   debugType: "cortex-debug",
-  // Bat DEMCR.VC_CORERESET (bit0 cua 0xE000EDFC, dac ta ARMv7-M) TRUOC khi
-  // debug adapter tu lam reset - day la co che PHAN CUNG THAT cua chinh
-  // CPU, khong phu thuoc polling/timing cua openocd: CPU se TU DONG vao
-  // Debug state NGAY luc lay reset vector, TRUOC KHI chay lenh nao cua
-  // Reset_Handler - bat ke reset duoc kich boi co che nao (SRST that hay
-  // AIRCR phan mem). Can vi cortex-debug (servertype openocd) mac dinh
-  // dung `monitor reset halt` - CHINH LA co che reset da xac nhan KHONG
-  // DANG TIN CAY tren combo ST-Link clone + board WeAct nay (cung ly do vi
-  // sao flash_jtag/flash_uart_stm32 dung AIRCR.SYSRESETREQ thay vi
-  // `reset run` chuan, xem cmake/flash_targets.cmake). Da verify THAT: 4/4
-  // lan lap lai voi dung lenh `reset halt` cua openocd (khong phai AIRCR
-  // tu viet) cho ket qua GIONG HET nhau (SP = dinh RAM nguyen ven, chua he
-  // dung stack - bang chung halt dung luc, truoc khi chay bat ky lenh nao).
+  // Enable DEMCR.VC_CORERESET (bit0 of 0xE000EDFC, ARMv7-M) before the debug adapter resets the target.
+  // This CPU hardware mechanism does not depend on OpenOCD polling or timing:
+  // The CPU will automatically enter the Debug state NOW to get the reset vector, before running
+  // instruction in Reset_Handler, regardless of whether reset uses physical SRST
+  // let AIRCR software). need to use default cortex-debug (servertype openocd) using `monitor reset
+  // halt` - this is a confirmed not trusting reset cover on this ST-Link clone + WeAct board combo
+  // (same reason why flash_jtag/flash_uart_stm32 uses AIRCR.SYSRESETREQ see because `reset run`
+  // standard behavior; see cmake/flash_targets.cmake). Verified in four of four OpenOCD `reset
+  // halt` command, rather than an AIRCR write, gave identical results: SP at the top of RAM, before stack
+  // a general halt during execution, before any instruction runs).
   preLaunchCommands: ["monitor halt", "monitor mww 0xE000EDFC 0x00000001"],
-  // Tat lai VC_CORERESET sau do (khong anh huong halt da xay ra - chi la
-  // thanh ghi dieu khien cho LAN reset TIEP THEO) de khong lam anh huong
-  // cac lan reset thu cong khac (vd flash_jtag/flash_uart_stm32 chay ben
-  // ngoai VS Code) sau khi phien debug ket thuc.
+  // re-disable VC_CORERESET afterwards (not the halt-directed image that was milled out - just the
+  // control register for the next reset) so as not to direct the image to other curved message
+  // resets outside VS Code, such as flash_jtag/flash_uart_stm32, after the debug session
+  // authentication.
   postLaunchCommands: ["monitor mww 0xE000EDFC 0x00000000"]
 };
 function resolveDebugArchProfile(family) {
@@ -812,7 +809,7 @@ function resolveDebugArchProfile(family) {
     return CORTEX_M_PROFILE;
   }
   throw new Error(
-    `debugArch: chua co DebugArchProfile cho family "${family}" - them 1 profile moi vao debugArch.ts (xem TODO trong resolveDebugArchProfile()).`
+    `debugArch: no DebugArchProfile for family "${family}" yet - add 1 profile per debugArch.ts (see TODO in resolveDebugArchProfile()).`
   );
 }
 
@@ -857,25 +854,25 @@ async function readDebugTargetsManifest(buildDir) {
 async function debugCommand(state) {
   const folder = vscode15.workspace.workspaceFolders?.[0];
   if (!folder) {
-    vscode15.window.showWarningMessage("NEON-MDF: chua mo workspace folder nao.");
+    vscode15.window.showWarningMessage("NEON-MDF: no workspace folder opened.");
     return;
   }
   if (!state.target) {
     vscode15.window.showWarningMessage(
-      'NEON-MDF: chua chon target - bam vao "chon target" tren status bar truoc.'
+      "NEON-MDF: No target selected. Use Select Target in the status bar first."
     );
     return;
   }
   const configOk = await ensureConfigured(folder.uri, state.target);
   if (!configOk) {
-    vscode15.window.showErrorMessage(`NEON-MDF: configure that bai (target ${state.target}) - xem terminal.`);
+    vscode15.window.showErrorMessage(`NEON-MDF: configure failed (target ${state.target}) - see terminal.`);
     return;
   }
   const buildDir = buildDirFor(folder.uri, state.target);
   const executables = await readExecutables(buildDir);
   if (executables.length === 0) {
     vscode15.window.showWarningMessage(
-      `NEON-MDF: khong tim thay executable nao trong build dir cua target ${state.target} (da configure nhung CMake File API khong tra ve target EXECUTABLE nao).`
+      `NEON-MDF: No executable found for target ${state.target}. Configuration completed, but the CMake File API returned no EXECUTABLE target.`
     );
     return;
   }
@@ -885,7 +882,7 @@ async function debugCommand(state) {
   } else {
     const picked = await vscode15.window.showQuickPick(
       executables.map((e) => ({ label: e.name, exe: e })),
-      { placeHolder: "Chon executable de debug" }
+      { placeHolder: "select executable to debug" }
     );
     if (!picked) {
       return;
@@ -899,7 +896,7 @@ async function debugCommand(state) {
     `${state.target}_openocd.cfg`
   );
   if (!await fileExists5(openocdCfg)) {
-    vscode15.window.showErrorMessage(`NEON-MDF: khong tim thay file openocd cfg: ${openocdCfg.fsPath}`);
+    vscode15.window.showErrorMessage(`NEON-MDF: could not find openocd cfg file: ${openocdCfg.fsPath}`);
     return;
   }
   const svdFile = vscode15.Uri.joinPath(
@@ -918,7 +915,7 @@ async function debugCommand(state) {
       flashTargetName = "flash_jtag";
     } else {
       vscode15.window.showErrorMessage(
-        `NEON-MDF: executable "${chosen.name}" khong duoc gan flash target tu dong nao (khong phai bootloader/factory/OTA theo CMakeLists.txt cua app nay) - khong the debug qua "NEON-MDF: Debug" vi khong biet phai flash gi truoc. Xem CMakeLists.txt cua app de flash/test thu cong (vd ban "_bad" cua examples/OTA_Demo dung de test rollback, can sua CMake tam thoi - xem comment trong file do).`
+        `NEON-MDF: executable "${chosen.name}" not assigned flash target automatically (not bootloader/factory/OTA according to CMakeLists.txt of this app) - cannot debug via "NEON-MDF: Debug" because I don't know what to flash first. See CMakeLists.txt of app to flash/test curved message (e.g. the "_bad" version of examples/OTA_Demo used for testing rollback, need to fix CMake temporarily - see comment in that file).`
       );
       return;
     }
@@ -926,14 +923,14 @@ async function debugCommand(state) {
     flashTargetName = chosen.name.endsWith("_ota") ? "flash_ota" : "flash_jtag";
   }
   const flashExitCode = await runCMakeTarget({
-    taskName: `NEON-MDF: flash truoc khi Debug (${flashTargetName})`,
+    taskName: `NEON-MDF: flash before Debug (${flashTargetName})`,
     preset: state.target,
     cmakeTarget: flashTargetName,
     cwd: folder.uri
   });
   if (flashExitCode !== 0) {
     vscode15.window.showErrorMessage(
-      `NEON-MDF: flash truoc khi Debug that bai (target CMake "${flashTargetName}") - xem terminal. Debug bi huy.`
+      `NEON-MDF: flash before debug fails (target CMake "${flashTargetName}") - see terminal. Debug aborted.`
     );
     return;
   }
@@ -948,15 +945,14 @@ async function debugCommand(state) {
     configFiles: [openocdCfg.fsPath],
     device: state.target,
     runToEntryPoint: "main",
-    // [] (KHONG PHAI false - da doc source cortex-debug: false van chay
-    // `target-download` binh thuong, CHI mang []/list rong moi thuc su bo
-    // qua buoc download) - da flash dung cach o tren roi (flash_jtag/
-    // flash_ota, giu nguyen header), KHONG de cortex-debug flash lai lan
-    // nua bang `load` goc (se xoa mat header, xem giai thich o tren). Day
-    // la hanh vi CHUNG cho moi kien truc (van de header/flashmap cua chinh
-    // SDK nay, khong phai dac thu ARM) - khong nam trong debugArch.ts.
+    // [] (not false - read source cortex-debug: false still running normal `target-download`, only empty
+    // network []/list per instance ignoring download) - already flashed using the above method
+    // (flash_jtag/ flash_ota, keep header intact), do not let cortex-debug flash again old time
+    // using GDB load, which would erase the image header; see above. This behavior applies to all
+    // each live kien (still leaves header/flashmap of this SDK itself, not ARM letter dac) - not
+    // male in debugArch.ts.
     loadFiles: [],
-    // Lenh workaround reset DAC THU THEO KIEN TRUC - xem debugArch.ts.
+    // workaround command reset DAC mail BY KIEN live - see debugArch.ts.
     preLaunchCommands: archProfile.preLaunchCommands,
     postLaunchCommands: archProfile.postLaunchCommands
   };
@@ -966,7 +962,7 @@ async function debugCommand(state) {
   const started = await vscode15.debug.startDebugging(folder, config);
   if (!started) {
     vscode15.window.showErrorMessage(
-      'NEON-MDF: khong khoi dong duoc phien debug - kiem tra extension "cortex-debug" (marus25.cortex-debug) da cai chua.'
+      "NEON-MDF: Could not start the debug session. Check that cortex-debug (marus25.cortex-debug) is enabled."
     );
   }
 }
@@ -976,18 +972,18 @@ var vscode16 = __toESM(require("vscode"));
 async function menuconfigCommand(state) {
   const folder = vscode16.workspace.workspaceFolders?.[0];
   if (!folder) {
-    vscode16.window.showWarningMessage("NEON-MDF: chua mo workspace folder nao.");
+    vscode16.window.showWarningMessage("NEON-MDF: no workspace folder opened.");
     return;
   }
   if (!state.target) {
     vscode16.window.showWarningMessage(
-      'NEON-MDF: chua chon target - bam vao "chon target" tren status bar truoc.'
+      "NEON-MDF: No target selected. Use Select Target in the status bar first."
     );
     return;
   }
   const configOk = await ensureConfigured(folder.uri, state.target);
   if (!configOk) {
-    vscode16.window.showErrorMessage(`NEON-MDF: configure that bai (target ${state.target}) - xem terminal.`);
+    vscode16.window.showErrorMessage(`NEON-MDF: configure failed (target ${state.target}) - see terminal.`);
     return;
   }
   const exitCode = await runCMakeTarget({
@@ -997,7 +993,7 @@ async function menuconfigCommand(state) {
     cwd: folder.uri
   });
   if (exitCode !== 0) {
-    vscode16.window.showErrorMessage(`NEON-MDF: menuconfig that bai (target ${state.target}) - xem terminal.`);
+    vscode16.window.showErrorMessage(`NEON-MDF: menuconfig failed (target ${state.target}) - see terminal.`);
   }
 }
 
@@ -1042,19 +1038,19 @@ async function createAppCommand() {
   const folder = vscode17.workspace.workspaceFolders?.[0];
   if (!folder) {
     vscode17.window.showWarningMessage(
-      "NEON-MDF: chua mo workspace folder nao - mo thu muc goc repo (neon_mdf/) hoac 1 app vi du (vd examples/Blinky/) truoc."
+      "NEON-MDF: No workspace folder is open. Open the repository root (neon_mdf/) or an application such as examples/Blinky/."
     );
     return;
   }
   const appName = await vscode17.window.showInputBox({
-    prompt: "Ten app moi (dung lam ten thu muc + ten CMake target - chi chu/so/underscore, khong bat dau bang so)",
+    prompt: "App name, used for the folder and CMake target: letters, digits and underscores; must not start with a digit",
     placeHolder: "vd my_app",
     validateInput: (value) => {
       if (!value) {
-        return "Ten app khong duoc de trong";
+        return "app name not in";
       }
       if (!APP_NAME_PATTERN.test(value)) {
-        return "Chi cho phep chu/so/underscore, khong bat dau bang so (vd my_app)";
+        return "Use letters, digits and underscores; do not start with a digit, for example my_app";
       }
       return void 0;
     }
@@ -1065,17 +1061,17 @@ async function createAppCommand() {
   const templateChoice = await vscode17.window.showQuickPick(
     [
       {
-        label: "$(circuit-board) App thuong (bare-metal)",
-        description: "superloop don gian, khong FreeRTOS",
+        label: "$(circuit-board) Bare-metal app",
+        description: "superloop don space, no FreeRTOS",
         templateFolder: "templates"
       },
       {
-        label: "$(list-tree) App dung FreeRTOS",
-        description: "1 task + scheduler, xem examples/FreeRTOS_Blinky/ cho vi du day du hon",
+        label: "$(list-tree) App using FreeRTOS",
+        description: "1 task + scheduler, see examples/FreeRTOS_Blinky/ for more detail",
         templateFolder: "templates_freertos"
       }
     ],
-    { placeHolder: "Tao app kieu gi?" }
+    { placeHolder: "What kind of app?" }
   );
   if (!templateChoice) {
     return;
@@ -1084,10 +1080,10 @@ async function createAppCommand() {
   const defaultDest = vscode17.Uri.joinPath(examplesDir, appName);
   const picked = await vscode17.window.showQuickPick(
     [
-      { label: "$(folder) Tao trong examples/ (khuyen dung)", description: defaultDest.fsPath, dest: defaultDest },
-      { label: "$(folder-opened) Chon thu muc khac...", description: "duyet thu muc", dest: void 0 }
+      { label: "$(folder) created in examples/ (recommended)", description: defaultDest.fsPath, dest: defaultDest },
+      { label: "$(folder-opened) select different folder...", description: "duyet directory", dest: void 0 }
     ],
-    { placeHolder: "Tao app o dau?" }
+    { placeHolder: "create app at the top?" }
   );
   if (!picked) {
     return;
@@ -1098,7 +1094,7 @@ async function createAppCommand() {
       canSelectFolders: true,
       canSelectFiles: false,
       canSelectMany: false,
-      openLabel: "Tao app o day"
+      openLabel: "Create app here"
     });
     if (!chosen || chosen.length === 0) {
       return;
@@ -1106,23 +1102,23 @@ async function createAppCommand() {
     destDir = vscode17.Uri.joinPath(chosen[0], appName);
   }
   if (await pathExists(destDir)) {
-    vscode17.window.showErrorMessage(`NEON-MDF: thu muc da ton tai: ${destDir.fsPath}`);
+    vscode17.window.showErrorMessage(`NEON-MDF: directory already exists: ${destDir.fsPath}`);
     return;
   }
   const sdkDir = resolveSdkPathUri(destDir);
   if (!await looksLikeSdkRoot(sdkDir)) {
     const proceed = await vscode17.window.showWarningMessage(
-      `NEON-MDF: khong tim thay neon-mdf SDK tai ${sdkDir.fsPath} (thu muc nay khong giong 1 checkout SDK that). Neu app dang tao o vi tri khong chuan (khong nam duoi examples/), hay chon SDK path rieng qua lenh "NEON-MDF: Chon Duong Dan SDK..." truoc. Van tao app (co the build se loi)?`,
-      "Van tao",
-      "Huy"
+      `NEON-MDF: can't find neon-mdf SDK at ${sdkDir.fsPath} (this directory is not the same as a real SDK checkout). if the app is creating at an unknown value (not below examples/), select its own SDK path via the command "NEON-MDF: select Dan SDK path..." first. still creating app (build might fail)?`,
+      "still create",
+      "deactivate"
     );
-    if (proceed !== "Van tao") {
+    if (proceed !== "still create") {
       return;
     }
   }
   const templatesDir = vscode17.Uri.joinPath(sdkDir, "tools", templateChoice.templateFolder);
   if (!await pathExists(templatesDir)) {
-    vscode17.window.showErrorMessage(`NEON-MDF: khong tim thay thu muc template: ${templatesDir.fsPath}`);
+    vscode17.window.showErrorMessage(`NEON-MDF: template directory not found: ${templatesDir.fsPath}`);
     return;
   }
   const relPath = relativePathToSdk(destDir, sdkDir);
@@ -1131,8 +1127,8 @@ async function createAppCommand() {
     __NEON_MDF_RELATIVE_PATH__: relPath
   });
   const openNow = await vscode17.window.showInformationMessage(
-    `NEON-MDF: da tao app "${appName}" tai ${destDir.fsPath}`,
-    "Mo trong cua so moi"
+    `NEON-MDF: created app "${appName}" at ${destDir.fsPath}`,
+    "open in of each number"
   );
   if (openNow) {
     await vscode17.commands.executeCommand("vscode.openFolder", destDir, { forceNewWindow: true });
@@ -1141,32 +1137,32 @@ async function createAppCommand() {
 
 // src/commands/selectSdkPath.ts
 var vscode18 = __toESM(require("vscode"));
-var BROWSE_LABEL = "$(folder-opened) Duyet toi thu muc neon-mdf...";
-var RESET_LABEL = "$(discard) Dat lai ve tu dong";
+var BROWSE_LABEL = "$(folder-opened) Browse my neon-mdf directory...";
+var RESET_LABEL = "$(discard) reset to automatic";
 async function selectSdkPathCommand() {
   const current = getConfiguredSdkPath();
   const items = [
-    { label: BROWSE_LABEL, description: "chon 1 checkout SDK that" },
+    { label: BROWSE_LABEL, description: "select 1 real SDK checkout" },
     {
       label: RESET_LABEL,
-      description: "xoa lua chon, dung lai quy uoc duong dan tuong doi (../../neon-mdf)"
+      description: "select erase, reuse the modified dan convention (../../neon-mdf)"
     }
   ];
-  const placeHolder = current ? `Dang dung: ${current}` : "Dang dung mac dinh (tu dong suy tu vi tri app) - chon de doi";
+  const placeHolder = current ? `in use: ${current}` : "using default (automatically inferred from app value) - select to change";
   const picked = await vscode18.window.showQuickPick(items, { placeHolder });
   if (!picked) {
     return;
   }
   if (picked.label === RESET_LABEL) {
     await setConfiguredSdkPath(void 0);
-    vscode18.window.showInformationMessage("NEON-MDF: da dat lai ve duong dan SDK mac dinh (tu dong).");
+    vscode18.window.showInformationMessage("NEON-MDF: reset to default SDK path (automatic).");
     return;
   }
   const chosen = await vscode18.window.showOpenDialog({
     canSelectFolders: true,
     canSelectFiles: false,
     canSelectMany: false,
-    openLabel: "Chon lam SDK path",
+    openLabel: "Select SDK Path",
     defaultUri: current ? vscode18.Uri.file(current) : void 0
   });
   if (!chosen || chosen.length === 0) {
@@ -1175,16 +1171,16 @@ async function selectSdkPathCommand() {
   const dir = chosen[0];
   if (!await looksLikeSdkRoot(dir)) {
     const proceed = await vscode18.window.showWarningMessage(
-      `NEON-MDF: ${dir.fsPath} khong giong 1 checkout neon-mdf SDK (khong thay tools/cmake/project.cmake) - van dung duong dan nay?`,
-      "Van dung",
-      "Huy"
+      `NEON-MDF: ${dir.fsPath} is not the same as a neon-mdf SDK checkout (no tools/cmake/project.cmake seen) - still use this dan path?`,
+      "still use",
+      "deactivate"
     );
-    if (proceed !== "Van dung") {
+    if (proceed !== "still use") {
       return;
     }
   }
   await setConfiguredSdkPath(dir.fsPath);
-  vscode18.window.showInformationMessage(`NEON-MDF: da chon SDK path: ${dir.fsPath}`);
+  vscode18.window.showInformationMessage(`NEON-MDF: selected SDK path: ${dir.fsPath}`);
 }
 
 // src/commands/openMonitor.ts
@@ -1206,23 +1202,23 @@ var NeonMdfSerialMonitor = class {
   async open(state) {
     if (!state.port) {
       vscode19.window.showWarningMessage(
-        'NEON-MDF: chua chon cong serial - bam vao "chon cong" tren status bar truoc.'
+        "NEON-MDF: No serial port selected. Use Select Serial Port in the status bar first."
       );
       return;
     }
     await this.close();
     this.lineBuf = "";
     this.output.show(true);
-    this.output.appendLine(`--- Mo ${state.port} @ ${state.baudRate} 8N1 ---`);
+    this.output.appendLine(`--- Open ${state.port} @ ${state.baudRate} 8N1 ---`);
     const sp = new import_serialport3.SerialPort({ path: state.port, baudRate: state.baudRate, autoOpen: false });
     this.port = sp;
     sp.on("data", (chunk) => this.handleData(chunk));
-    sp.on("error", (err) => this.output.appendLine(`--- Loi serial: ${err.message} ---`));
-    sp.on("close", () => this.output.appendLine("--- Da dong cong ---"));
+    sp.on("error", (err) => this.output.appendLine(`--- Serial error: ${err.message} ---`));
+    sp.on("close", () => this.output.appendLine("--- Port closed ---"));
     this.opening = new Promise((resolve) => {
       sp.open((err) => {
         if (err) {
-          this.output.appendLine(`--- Khong mo duoc cong: ${err.message} ---`);
+          this.output.appendLine(`--- Cannot open port: ${err.message} ---`);
           if (this.port === sp) {
             this.port = void 0;
           }

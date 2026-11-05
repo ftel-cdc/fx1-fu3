@@ -1,8 +1,5 @@
-// cmakeRunner.ts - chay `cmake --build --preset <preset> [--target <t>]`
-// qua VS Code Task API (khong phai child_process truc tiep) de tai dung
-// terminal panel/problem-matcher/huy-task co san, giong cach .vscode/tasks.json
-// cua cac vi du da lam thu cong - day la diem DUY NHAT trong extension goi
-// CMake, moi command (build/flash/buildFlashMonitor) deu di qua day.
+// Shared CMake task runner. Commands use VS Code tasks for consistent terminal
+// output, problem matching and cancellation.
 import * as vscode from "vscode";
 import { sdkPathEnv } from "./sdkPath";
 
@@ -11,18 +8,18 @@ const TASK_SOURCE = "NEON-MDF";
 export interface RunCMakeTargetOptions {
   taskName: string;
   preset: string;
-  /** Bo trong neu muon build target mac dinh (`all`). */
+  /** set in if you want to build default target (`all`). */
   cmakeTarget?: string;
   cwd: vscode.Uri;
-  /** Bien moi truong bo sung cho shell chay lenh - vd NEON_MDF_SERIAL_PORT. */
+  /** variable of each plugin field for the command shell - e.g. NEON_MDF_SERIAL_PORT. */
   env?: Record<string, string>;
   background?: boolean;
 }
 
 /**
- * Tra ve exit code THAT cua tien trinh (khong phai khi task chi "bat dau") -
- * cac command phia tren dua vao gia tri nay de biet build/flash thanh cong
- * hay khong va hien thong bao loi tuong ung.
+ * look for the actual exit code of the program (not when the task just "starts") - the command above
+ * only has this value to know if build/flash succeeds or fails and displays a similar error
+ * message.
  */
 export function runCMakeTarget(options: RunCMakeTargetOptions): Promise<number | undefined> {
   const args = ["--build", "--preset", options.preset];
@@ -32,9 +29,9 @@ export function runCMakeTarget(options: RunCMakeTargetOptions): Promise<number |
 
   const shellExec = new vscode.ShellExecution("cmake", args, {
     cwd: options.cwd.fsPath,
-    // sdkPathEnv() chi tra ve gia tri neu nguoi dung da chon SDK path rieng
-    // (neonMdf.sdkPath) - de trong thi khong can, de CMakeLists.txt/
-    // settings.json cua tung app tu quyet dinh nhu truoc gio.
+    // sdkPathEnv() only checks the value if the user has selected a separate SDK path (neonMdf.sdkPath) -
+    // it is not necessary to leave in, so that CMakeLists.txt/ settings.json of each app from the
+    // specified as before.
     env: { ...sdkPathEnv(), ...options.env },
   });
 
@@ -65,7 +62,7 @@ export function runCMakeTarget(options: RunCMakeTargetOptions): Promise<number |
   });
 }
 
-/** `cmake --preset <preset>` (chi configure, khong build) - xem configure.ts cho logic "khi nao can goi ham nay". */
+/** `cmake --preset <preset>` (configure only, not build) - see configure.ts for "when to call" logic. */
 export function runCMakeConfigure(preset: string, cwd: vscode.Uri): Promise<number | undefined> {
   const shellExec = new vscode.ShellExecution("cmake", ["--preset", preset], {
     cwd: cwd.fsPath,

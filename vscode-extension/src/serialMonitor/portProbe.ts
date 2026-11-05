@@ -1,26 +1,11 @@
-// portProbe.ts - tu dong do cong serial dang chay bootloader TU VIET cua
-// SDK, mirror giao thuc SYNC/READY ma components/bootloader/neon_bootloader_main.c
-// noi TREN CHIP (SYNC_BYTE, READY_BYTE, SYNC_TIMEOUT_MS/SYNC_RETRY_S - xem
-// chu thich trong file do). KHONG re-implement toan bo giao thuc
-// header/CRC/chunk o day - chi la 1 tien ich "tim cong tay" doc lap (xem
-// commands/detectPort.ts), KHONG con target CMake flash nao goi qua UART
-// protocol nay nua (khong flash_uart/flash_bootloader/flash_all - da xoa,
-// script PC-side cua protocol nay - tools/neon_flash_app_firmware.py - cung
-// da xoa theo, xem cmake/flash_targets.cmake, gio chi con flash_jtag/
-// flash_uart_stm32, ca 2 deu nap TRON BO [bootloader+header+app], khong dung
-// giao thuc nay). Bootloader tren chip VAN CON chay protocol nay moi lan
-// boot (chi la khong con cong cu PC-side nao chu dong noi chuyen voi no qua
-// UART nua) nen probe nay van dung duoc.
-//
-// Bootloader chi lang nghe SYNC trong 1 CUA SO NGAN DUY NHAT ngay sau reset
-// (xem SYNC_TIMEOUT_MS trong components/bootloader/neon_bootloader_main.c) -
-// cua so nay duoc CHIA SE cho MOI cong ung vien, nen phai probe SONG SONG
-// (mo tat ca cong cung luc, gui SYNC deu tren tung cong) - probe TUAN TU se
-// het gio truoc khi thu het danh sach cong.
+// Probe the SDK bootloader SYNC/READY protocol, separately from FU2 ROMCODE.
+// Keep constants synchronized with neon_bootloader_main.c. The bootloader
+// listens only briefly after reset, so probe candidate ports in parallel.
+// Full-image flash_jtag/flash_uart_stm32 do not use this UART protocol.
 import { SerialPort } from "serialport";
 import { listPorts } from "../ports";
 
-// Phai khop CHINH XAC voi components/bootloader/neon_bootloader_main.c - doi 1 ben thi doi ca 2.
+// Must match components/bootloader/neon_bootloader_main.c exactly; update both sides together.
 const SYNC_BYTE = 0x55;
 const READY_BYTE = 0x52;
 const SYNC_RETRY_MS = 9500;
@@ -45,23 +30,21 @@ function probeOnePort(path: string): Promise<boolean> {
       clearTimeout(timeout);
       sp.removeAllListeners();
       if (sp.isOpen) {
-        // Fire-and-forget: mot so cong AO cua he dieu hanh (vd Bluetooth
-        // Incoming Port, debug-console tren macOS) co the TREO VO HAN o
-        // callback cua close() - da xac nhan bang test that (Promise.all()
-        // ca cum khong bao gio resolve du tat ca finish() da chay). Da co
-        // ket qua (found) roi thi khong can doi close() xong moi resolve.
+        // Fire-and-forget: some AO ports of the operating he (e.g. Bluetooth Incoming Port, macOS
+        // debug-console) can TREO infinitely at callbacks of close() - confirmed by real test
+        // (Promise.all() even if no resolve time is announced enough to disable all running
+        // finish()). once found, no need to change close() after each resolve.
         sp.close(() => {});
       }
       resolve(found);
     };
 
-    // Dat timeout NGAY TU DAU (truoc ca khi mo cong), khong phai sau khi
-    // mo thanh cong - mot so "cong ao" cua he dieu hanh (vd
-    // /dev/tty.debug-console tren macOS) co the treo vo han o buoc open(),
-    // khong bao gio goi callback loi hay thanh cong. Neu timeout chi bat
-    // dau sau khi mo xong, 1 cong treo se lam ca Promise.all() cua
-    // detectBootloaderPort() treo vinh vien theo (da xac nhan bang test
-    // that - sua truoc khi bug nay lot vao production).
+    // set timeout NOW from the beginning (before opening port), not after successful opening - some
+    // "ports" of the operating he (e.g. /dev/tty.debug-console on macOS) can hang indefinitely at
+    // step open(), do not tell the time to callback error please succeed. if the timeout starts
+    // only after opening is finished, a hanging port will make both Promise.all() of
+    // detectBootloaderPort() hang permanently according to (confirmed by real test - fix before
+    // this bug lots and production).
     const timeout = setTimeout(() => finish(false), SYNC_RETRY_MS);
 
     sp.on("error", () => finish(false));
@@ -71,21 +54,20 @@ function probeOnePort(path: string): Promise<boolean> {
         finish(false);
         return;
       }
-      // XA BO du lieu con ton trong buffer nhan CUA HE DIEU HANH truoc khi
-      // gan listener "data" (tuong duong ser.reset_input_buffer() cua
-      // pyserial). Thieu buoc nay da xac nhan bang test that: byte
-      // "rac" con lai tu app CU (dang chay TRUOC khi board duoc reset) van
-      // con nam trong buffer nhan cua driver luc mo cong, khien probe ket
-      // luan SAI la "khong phai bootloader" chi sau ~30ms, du bootloader
-      // that su van dang cho SYNC dung luc do.
+      // XA sets enough children in the receive buffer of HE operator before assigning listener "data"
+      // (equivalent to path ser.reset_input_buffer() of pyserial). missing this step has been
+      // confirmed by real test: byte "rac" child from old app (running before board reset) still
+      // male children in driver's receive buffer when open port, whenen probe concluded that SAI
+      // is "not bootloader" only after ~30ms, enough actual bootloader is still used by SYNC at
+      // that time.
       sp.flush(() => {
         if (settled) {
           return;
         }
         sp.on("data", (chunk: Buffer) => {
-          // Nhan BAT KY byte nao la du de ket luan - KHONG gui them SYNC sau
-          // khi da co phan hoi (tranh lam lech giao thuc phia bootloader
-          // thuc su neu day dung la no - bootloader khong co co che resync).
+          // Any received byte is enough to finish probing. Stop sending SYNC after a response to avoid disrupting a bootloader with no resynchronization support.
+          // included (the real-time bootloader interface is used if the use date is no - the
+          // bootloader does not have resync cover).
           finish(chunk.length > 0 && chunk[0] === READY_BYTE);
         });
         interval = setInterval(() => sp.write(Buffer.from([SYNC_BYTE])), SYNC_POLL_MS);
@@ -95,18 +77,17 @@ function probeOnePort(path: string): Promise<boolean> {
 }
 
 /**
- * RESET board TRUOC khi goi ham nay (bootloader chi cho SYNC trong 1 cua so
- * ngan sau reset). Tra ve duong dan cong dau tien tra loi dung giao thuc,
- * undefined neu khong cong nao phan hoi trong cua so cho.
+ * RESET board before calling this function (bootloader only for SYNC in 1 of the short numbers after
+ * reset). look up the first curved path, check for authentication errors, undefined if not the
+ * inner part of the given number.
  */
 export async function detectBootloaderPort(): Promise<string | undefined> {
   const allCandidates = await listPorts();
-  // Chi probe cong co vendorId (thiet bi USB-serial that - ST-Link VCP,
-  // CH340, FTDI...) - cac "cong ao" cua macOS (Bluetooth-Incoming-Port,
-  // debug-console, tai nghe Bluetooth...) khong bao gio co vendorId VA da
-  // xac nhan bang test that: mo/dong cac cong nay co the treo VINH VIEN o
-  // tang native (khong lien quan gi den logic JS o day, timeout/resolve
-  // van chay dung) - khong bao gio la board that nen khong co ly do probe.
+  // Only probe ports with vendorId, representing physical USB serial devices such as ST-Link VCP, CH340 and FTDI -
+  // macOS "ponds" (Bluetooth-Incoming-Port, debug-console, at listening to Bluetooth...) do not
+  // never have vendorId. Hardware testing confirmed that opening or closing these virtual ports can hang indefinitely in
+  // the native layer. The JavaScript timeout/resolve logic still runs, but these ports are never physical boards
+  // board so there is no reason for that probe.
   const candidates = allCandidates.filter((c) => c.vendorId !== undefined);
   if (candidates.length === 0) {
     return undefined;

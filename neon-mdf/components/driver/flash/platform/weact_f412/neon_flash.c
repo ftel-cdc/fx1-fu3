@@ -2,23 +2,21 @@
  * @file neon_flash.c
  * @brief Implementation for Flash.
  * @details
- * * platform/weact_f412/neon_flash.c - implementation THAT cho STM32F412 FLASH
- * controller - tong quat hoa tu Bootloader_WeAct/Src/bootloader_flash.c
- * (ban dau chi xoa/ghi CO DINH sector 2) thanh erase-theo-vung-dia-chi bat
- * ky, dung struct FLASH_TypeDef sinh tu mcu-description (xem
- * mcu-description/devices/WEACT_F412.yaml, peripheral "FLASH") thay vi 1
- * struct rieng hand-roll nhu truoc.
+ * * platform/weact_f412/neon_flash.c - real implementation for STM32F412 FLASH
+ * controller; generalized from Bootloader_WeAct/Src/bootloader_flash.c
+ * (initial only erase/write with sector specifier 2) to erase-by-area-dia-only periodic, using struct
+ * FLASH_TypeDef generated from mcu-description (see mcu-description/devices/WEACT_F412.yaml,
+ * peripheral "FLASH") seen because 1 separately struct hand-roll as before.
  *
- * Thanh ghi/gia tri xac nhan qua source that (KHONG doan):
+ * register/confirm value via real source (no guess):
  *   - FLASH_KEY1=0x45670123, FLASH_KEY2=0xCDEF89AB
  *     (STMicroelectronics/stm32f4xx_hal_driver, Inc/stm32f4xx_hal_flash.h)
  *   - Sector map STM32F412 (RM0402): sector 0-3 = 16KB, sector 4 = 64KB,
- *     sector 5-7 = 128KB - xac nhan qua WebSearch, KHONG doan tu dong F0/L0
- *     (2 dong do dung page-based deu nhau, F4 dung sector KHONG deu nhau).
- * Bang sector la HARDCODE CO CHU DICH (khong sinh tu mcu-description) - map
- * sector khong deu nhau cua STM32F4 khong bieu dien duoc qua `memory:` don
- * gian hien tai, giong cach GPIO driver van hand-write logic thanh ghi rieng
- * cho tung family thay vi generator tu sinh.
+ *     sector 5-7 = 128KB - confirmed via WebSearch, not automatically guess F0/L0 (2 dynamics that use
+ * page-based uniformity, F4 use irregular sector). by sector is HARDCODE with translation (not
+ * generated from mcu-description) - map irregular sector of STM32F4 can not be filled in through
+ * `memory:` don current time, the same way GPIO driver still hand-write logic register separately
+ * for each family to see because generator from generating.
  */
 
 /*==================================================================================================
@@ -41,7 +39,7 @@
 #define FLASH_CR_SER (1U << 1)
 #define FLASH_CR_SNB_POS 3
 #define FLASH_CR_PSIZE_WORD                                                                                            \
-    (2U << 8) /* PSIZE=10b: chuong trinh 32-bit/lan - hop le vi VDD board = 3.3V (>2.7V, xem RM0402) */
+    (2U << 8) /* PSIZE=10b selects 32-bit programming. The board supply is 3.3V (>2.7V; see RM0402) */
 #define FLASH_CR_STRT (1U << 16)
 #define FLASH_CR_LOCK (1U << 31)
 
@@ -103,7 +101,7 @@ neon_status_t neon_flash_program_word(uint32_t address, uint32_t data) {
         return NEON_INVALID_PARAM;
     }
     flash_wait_busy();
-    flash_unlock(); /* phong truong hop goi ham nay ma chua erase truoc (LOCK con bat) */
+    flash_unlock(); /* in case of calling this function without pre-erasing */
 
     FLASH->CR = FLASH_CR_PG | FLASH_CR_PSIZE_WORD;
     *((volatile uint32_t *)address) = data;
@@ -133,13 +131,12 @@ static void flash_erase_sector(uint32_t index) {
     flash_wait_busy();
     flash_unlock();
 
-    FLASH->SR = FLASH_SR_EOP; /* clear co EOP cu (ghi 1 de clear, chuan STM32) */
+    FLASH->SR = FLASH_SR_EOP; /* clear has old EOP (write 1 to clear, STM32 standard) */
     FLASH->CR = FLASH_CR_SER | (index << FLASH_CR_SNB_POS);
     FLASH->CR |= FLASH_CR_STRT;
     flash_wait_busy();
     FLASH->CR &= ~FLASH_CR_SER;
-    /* KHONG lock lai FLASH->CR o day - erase nhieu sector lien tiep (vong lap
-   * o duoi) hoac ghi word tiep theo se can CR mo khoa san. Tu lock lai luc
-   * reset/nhay vao app (CR luon reset ve LOCK=1 sau reset - hanh vi that
-   * cua silicon, khong phai gia dinh). */
+    /* do not re-lock FLASH->CR here - erase multiple sectors in a row (loop below) or the next write word
+   * requires unlocking CR. Reset/app handoff relocks it; CR resets with LOCK=1
+   * after reset - true silicon behavior, not assumption). */
 }

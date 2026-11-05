@@ -2,7 +2,7 @@
  * @file neon_uart.c
  * @brief Implementation for UART.
  * @details
- * UART polling backend tối thiểu cho STM32F103 USART1.
+ * UART polling backend minimum for STM32F103 USART1.
  */
 
 /*==================================================================================================
@@ -252,8 +252,8 @@ neon_status_t neon_uart_receive(neon_uart_handle_t *huart, uint8_t *data, uint16
 }
 
 /** @copydoc neon_uart_transmit_words * @details
- * Backend STM32F103 hiện chỉ giữ chức năng polling 8-N-1. Các API mở rộng
- * vẫn có symbol rõ ràng để ứng dụng nhận NEON_NOT_SUPPORTED thay vì lỗi link.
+ * The STM32F103 backend currently only holds the 8-N-1 polling function. The extended API still has a
+ * clear symbol for the receiver application NEON_NOT_SUPPORTED to see because of the link error.
  */
 neon_status_t neon_uart_transmit_words(neon_uart_handle_t *huart, const uint16_t *data, uint16_t size,
                                        uint32_t timeout_polls) {

@@ -1,5 +1,5 @@
-// extension.ts - activate()/deactivate(), wiring only (khong chua logic
-// nghiep vu o day - xem cac module rieng trong src/*).
+// extension.ts only wires activate()/deactivate(); implementation is in the separate modules
+// in src/*).
 import * as vscode from "vscode";
 import { NeonMdfState } from "./state";
 import { NeonMdfStatusBar } from "./statusBar";
@@ -42,5 +42,5 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-  // khong co gi can don dep o day - moi thu da dang ky qua context.subscriptions
+  // No additional cleanup is needed here; resources are registered in context.subscriptions
 }
