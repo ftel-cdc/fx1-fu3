@@ -223,19 +223,17 @@ static uint32_t w5500_crc32(const uint32_t *data) {
     return ~crc;
 }
 
-static void w5500_b2b_test(neon_uart_handle_t *uart) {
-    neon_spi_timing_t saved_timing = g_spi_config.timing;
-    uint32_t data[32], reference_crc = 0U, have_reference = 0U, minimum = 11U;
+/* Returns 1 after a full sweep, 0 on an unstable baseline/configuration error,
+ * and -1 when the user cancels. All cases share the first validated CRC. */
+static int w5500_b2b_sweep(neon_uart_handle_t *uart, uint32_t *reference_crc, uint32_t make_reference) {
+    uint32_t data[32], have_reference = make_reference == 0U, minimum = 11U;
     const uint32_t tries = CONFIG_SPI_W5500_B2B_TRIES;
-    printf("[B2B] Read-only sweep 10..0 SCK periods, %lu reads per level.\n", (unsigned long)tries);
-    printf("[B2B] Same 32 socket 0 TX SRAM bytes each time; VERSIONR must be 04.\n");
-    printf("[B2B] First level validates the reference; q/Ctrl+C cancels to the menu.\n");
     for (int32_t gap = 10; gap >= 0; --gap) {
         g_spi_config.timing.between_frames = (uint32_t)gap;
         g_spi_config.timing.between_frames_unit = NEON_SPI_B2B_SCK_CYCLES;
         if (neon_spi_set_timing(SPI0, &g_spi_config.timing) != NEON_OK) {
             printf("[B2B] Cannot configure %ld SCK periods; no minimum reported.\n", (long)gap);
-            goto restore;
+            return 0;
         }
         uint32_t failed = 0U, crc_errors = 0U, id_errors = 0U, io_errors = 0U, first_bad_crc = 0U;
         for (uint32_t attempt = 0U; attempt < tries; ++attempt) {
@@ -243,7 +241,7 @@ static void w5500_b2b_test(neon_uart_handle_t *uart) {
             if (neon_uart_try_receive(uart, &key) == NEON_OK &&
                 (key == 'q' || key == 'Q' || key == 3U)) {
                 printf("[B2B] Cancelled; partial sweep has no minimum result.\n");
-                goto restore;
+                return -1;
             }
             uint32_t tx = 0x00390000U, rx = 0U;
             spi_w5500_ticks();
@@ -261,11 +259,11 @@ static void w5500_b2b_test(neon_uart_handle_t *uart) {
                 continue;
             }
             uint32_t crc = w5500_crc32(data);
-            if (gap == 10 && attempt == 0U && bad_id == 0U) {
-                reference_crc = crc;
+            if (make_reference != 0U && gap == 10 && attempt == 0U && bad_id == 0U) {
+                *reference_crc = crc;
                 have_reference = 1U;
             }
-            uint32_t bad_crc = have_reference == 0U || crc != reference_crc;
+            uint32_t bad_crc = have_reference == 0U || crc != *reference_crc;
             if (bad_crc != 0U) {
                 if (crc_errors == 0U) { first_bad_crc = crc; }
                 ++crc_errors;
@@ -274,29 +272,73 @@ static void w5500_b2b_test(neon_uart_handle_t *uart) {
             spi_w5500_ticks();
         }
         uint32_t percent = (failed * 10000U) / tries;
-        printf("[B2B] gap=%ld T_B2B=%lu: fail=%lu/%lu (%lu.%02lu%%) CRC=%lu ID=%lu IO=%lu %s\n",
-               (long)gap, (unsigned long)((SPI0->TREG1 & SPI_TREG1_T_B2B_Msk) >> SPI_TREG1_T_B2B_Pos),
+        printf("[B2B] mode=%lu SCK=%lu Hz gap=%ld T_B2B=%lu: fail=%lu/%lu (%lu.%02lu%%) CRC=%lu ID=%lu IO=%lu %s\n",
+               (unsigned long)g_mode, (unsigned long)g_sck_hz, (long)gap,
+               (unsigned long)((SPI0->TREG1 & SPI_TREG1_T_B2B_Msk) >> SPI_TREG1_T_B2B_Pos),
                (unsigned long)failed, (unsigned long)tries, (unsigned long)(percent / 100U),
                (unsigned long)(percent % 100U), (unsigned long)crc_errors,
                (unsigned long)id_errors, (unsigned long)io_errors, failed == 0U ? "[PASS]" : "[FAIL]");
-        if (crc_errors != 0U) {
+        if (crc_errors != 0U && have_reference != 0U) {
             printf("[B2B] Expected CRC32=%08lX; first different CRC32=%08lX.\n",
-                   (unsigned long)reference_crc, (unsigned long)first_bad_crc);
+                   (unsigned long)*reference_crc, (unsigned long)first_bad_crc);
         }
         if (gap == 10) {
             if (failed != 0U) {
-                printf("[B2B] Reference at 10 SCK periods is unstable; no minimum reported.\n");
-                goto restore;
+                printf("[B2B] mode=%lu SCK=%lu Hz fails at 10 SCK periods; no minimum reported.\n",
+                       (unsigned long)g_mode, (unsigned long)g_sck_hz);
+                return 0;
             }
             printf("[B2B] Reference CRC32=%08lX verified over %lu reads.\n",
-                   (unsigned long)reference_crc, (unsigned long)tries);
+                   (unsigned long)*reference_crc, (unsigned long)tries);
         }
         if (failed == 0U) { minimum = (uint32_t)gap; }
     }
-    printf("[B2B] Smallest gap with zero errors in this run: %lu SCK periods.\n", (unsigned long)minimum);
-    printf("[B2B] Result applies to this mode/speed and sample count; default is unchanged.\n");
+    printf("[B2B] mode=%lu SCK=%lu Hz: smallest gap with zero errors = %lu SCK periods.\n",
+           (unsigned long)g_mode, (unsigned long)g_sck_hz, (unsigned long)minimum);
+    return 1;
+}
+
+static void w5500_b2b_test(neon_uart_handle_t *uart) {
+    neon_spi_config_t saved_config = g_spi_config;
+    uint32_t saved_mode = g_mode, saved_hz = g_sck_hz;
+    static const uint32_t speeds[] = {1000000U, 3000000U, 5000000U, 10000000U};
+    uint32_t reference_crc = 0U, reference_ready = 0U;
+    printf("[B2B] Read-only mode 0/3 sweep, requested SCK 1/3/5/10 MHz.\n");
+    printf("[B2B] Each case tests gaps 10..0 SCK periods, %lu reads per gap.\n",
+           (unsigned long)CONFIG_SPI_W5500_B2B_TRIES);
+    printf("[B2B] Shared CRC reference starts at mode 0 / 1 MHz / gap 10; VERSIONR must be 04.\n");
+    printf("[B2B] Unavailable exact frequencies are skipped; q/Ctrl+C cancels to the menu.\n");
+    for (uint32_t mode = 0U; mode <= 3U; mode += 3U) {
+        for (uint32_t speed = 0U; speed < 4U; ++speed) {
+            uint32_t actual = 0U;
+            if (!spi_w5500_configure(mode, speeds[speed]) ||
+                neon_spi_get_clock_frequency(SPI0, &actual) != NEON_OK) {
+                printf("[B2B] Cannot configure mode=%lu requested=%lu Hz.\n",
+                       (unsigned long)mode, (unsigned long)speeds[speed]);
+                if (reference_ready == 0U) { goto restore; }
+                continue;
+            }
+            if (actual != speeds[speed]) {
+                printf("[B2B] SKIP mode=%lu requested=%lu Hz: divider gives %lu Hz at core=%lu Hz.\n",
+                       (unsigned long)mode, (unsigned long)speeds[speed],
+                       (unsigned long)actual, (unsigned long)SystemCoreClock);
+                if (reference_ready == 0U) { goto restore; }
+                continue;
+            }
+            int result = w5500_b2b_sweep(uart, &reference_crc, reference_ready == 0U);
+            if (result < 0) { goto restore; }
+            if (result == 0 && reference_ready == 0U) {
+                printf("[B2B] Reference is unstable; remaining mode/speed cases cancelled.\n");
+                goto restore;
+            }
+            reference_ready = 1U;
+        }
+    }
+    printf("[B2B] Mode/speed sweep finished; results apply to this sample count.\n");
 restore:
-    g_spi_config.timing = saved_timing;
+    g_spi_config = saved_config;
+    g_mode = saved_mode;
+    g_sck_hz = saved_hz;
     if (neon_spi_init(SPI0, &g_spi_config) != NEON_OK) {
         printf("[FAIL] Could not restore SPI0 after B2B test.\n");
     } else {
@@ -323,7 +365,7 @@ static void w5500_diagnose(void) {
 static void spi_w5500_help(void) {
     printf("\n i: init/reset W5500 | t: info | p: SPI write/read/restore RCR\n");
     printf(" r: read 32 SRAM bytes | d: read-only diagnostics | h/?: help\n");
-    printf(" b: read-only B2B sweep 10..0 SCK periods (auto OFF)\n");
+    printf(" b: read-only B2B 10..0, modes 0/3, SCK 1/3/5/10 MHz (exact only, auto OFF)\n");
     printf(" 0..4: mode 0 at 100/500/1000/2500/5000 kHz\n");
     printf(" 5..9: mode 3 at 100/500/1000/2500/5000 kHz\n");
     printf(" Preset runs ping/pong now, then every 3 s; a: toggle auto (starts OFF)\n");

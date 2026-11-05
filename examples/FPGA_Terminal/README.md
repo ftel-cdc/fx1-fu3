@@ -148,7 +148,7 @@ RCR after reading correct ID. After `[READY]`, press each key, do not need Enter
 | `t` | Read VERSIONR, MR, PHYCFGR, RTR, RCR and LINK status |
 | `p` | Save RCR; write/read `0x55`, `0xAA`; rewrite and check the original value |
 | `r` | Continuous reading 32 bytes socket 0 TX SRAM at offset `0x0000` |
-| `b` | Turn off auto, B2B scan from 10 to 0 SCK cycles; repeat reading and CRC32/ID/SPI error statistics |
+| `b` | Turn off auto; sweep B2B 10..0 in modes 0/3 at exact SCK 1/3/5/10 MHz, with CRC32/ID/SPI error statistics |
 | `d` | Read only VERSIONR/RCR/PHYCFGR in mode 0/3, 1 MHz/100 kHz, then return the selected mode/speed |
 | `0`–`4` | Mode 0: 100 kHz, 500 kHz, 1 MHz, 2,5 MHz, 5 MHz |
 | `5`–`9` | Mode 3: same five speed levels above |
@@ -180,19 +180,28 @@ last three bytes and release CS. hardware creates B2B between bytes in the word.
 normal 32-bit words and SS. The SRAM content after reset is not fixed, so this dump is not used to
 conclude PASS/FAIL or as a memory test sample.
 
-The key `b` only reads VERSIONR and the same 32 bytes of TX SRAM, not W5500. Socket is not running
-so the TX SRAM remains intact throughout the test. At B2B=10, the test takes CRC32 first reading as
-a sample and verifies it with the entire reading of this level. If VERSIONR differs from `04`, CRC32
-changes or error transactions are stopped because the standard sample is unstable. Levels 9..0
-compared to the same CRC32, do not update the sample according to new readings. Each turn counts
-fail only once; columns CRC/ID/IO indicate the cause and may overlap.
+The key `b` tests mode 0 followed by mode 3, each at requested SCK 1, 3, 5 and 10 MHz.
+Each supported case sweeps B2B from 10 down to 0 SCK periods. Only exact frequencies are tested;
+the log reports `SKIP` with the requested and achievable frequencies for other cases. The divider
+uses `SCK = core_clock / (2 * (divider + 1))`. With the default 10 MHz FPGA clock, 1 and 5 MHz are
+tested in both modes; 3 MHz (rounded to 2.5 MHz) and 10 MHz (limited to 5 MHz) are skipped. Testing
+all four frequencies exactly requires a suitable actual SPI source clock, such as 60 MHz. The
+configured clock must match the hardware.
 
-`CONFIG_SPI_W5500_B2B_TRIES` sets the number of reads per level (default 1.000). Logs the number of
-failed attempts, percentage and lowest break without error during runtime. Do not print each
-transaction when scanning. Press `q`/Ctrl+C to cancel and return to the menu; test always try to
-restore the original configuration, auto keep OFF. Run again at the mode/speed used before choosing
-a new default. CRC32 checks for numeric repeatability with templates, does not prove SRAM internal
-use is correct; VERSIONR is an additional test with known values.
+The sweep only reads VERSIONR and the same 32 bytes of socket 0 TX SRAM. No sockets run during
+the test, so the SRAM contents remain unchanged. The first read in mode 0 / 1 MHz / B2B=10 supplies
+the CRC32 reference, which is validated over all attempts at this gap. If this baseline fails,
+the entire sweep stops. All later gaps and mode/speed cases use the same reference. If another
+case fails at gap 10, its lower gaps are skipped and the next case runs. Each attempt counts as
+failed only once; CRC/ID/IO counters indicate the causes and may overlap.
+
+`CONFIG_SPI_W5500_B2B_TRIES` sets the attempts per gap per mode/speed case (default 1000).
+Logs include mode, actual SCK, gap, failed attempts, percentage and the smallest gap with zero
+errors in each completed case. Individual transactions are not printed during the sweep.
+Press `q`/Ctrl+C to cancel and return to the menu. The test attempts to restore the full original
+SPI configuration and selected mode/speed on every exit; auto remains OFF. Results describe this
+sample count and do not change the default B2B. CRC32 checks read repeatability, while VERSIONR
+provides a known expected value; neither establishes that the SRAM holds a known test pattern.
 
 SPI uses polling, not DMA/IRQ. SysTick runs cycle counting, does not enable interrupt; if SysTick is
 on, the testcase says busy and returns. Timeout SPI resets controller before next transaction; burst
