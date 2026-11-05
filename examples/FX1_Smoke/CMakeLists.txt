@@ -1,8 +1,0 @@
-cmake_minimum_required(VERSION 3.25)
-project(fx1_smoke C ASM)
-get_filename_component(NEON_MDF_PATH "${CMAKE_CURRENT_LIST_DIR}/../../neon-mdf" ABSOLUTE)
-include("${NEON_MDF_PATH}/tools/cmake/project.cmake")
-if(NOT NEON_MDF_TARGET STREQUAL "FX1")
-  message(FATAL_ERROR "Use preset FX1")
-endif()
-neon_mdf_add_executable(fx1_smoke Src/main.c)

@@ -1,4 +1,4 @@
-# User D65 normalized CCM + WB + exposure via DG. Other settings inherit VP shared profile.
+# Application-owned tuning profile; WB, exposure via DG and normalized CCM.
 # Shared fixed full test profile for 2688x1520 BGGR frames.
 # V2 colour/detail tuning selected 2026-10-13; WB gains stay fixed across inputs.
 # GTM auto needs two frames from reset: first warms up, second is the output.
@@ -9,9 +9,9 @@ BLC_GAIN_SEL 0x100
 BLC_OFS_G0_DFT 0x100
 BLC_SCALE_G0 0x11112
 WB_CTRL 0x1
-WB_GAIN_R 0x24F
+WB_GAIN_R 0x20F
 WB_GAIN_G 0x100
-WB_GAIN_B 0x189
+WB_GAIN_B 0x1DB
 LSC_MESH_NODES 0x911
 LSC_LOAD_CTRL 0x101
 LSC_COEF_DATA 0x66666
@@ -634,7 +634,7 @@ BPC_MODE 0x0
 BPC_THRESH 0x4D0192
 BPC_CTRL 0x1
 DG_CTRL 0x1
-DG_GAIN 0x22D
+DG_GAIN 0x100
 CCM_CRR 0x388
 CCM_CRG 0xE9E
 CCM_CRB 0xFD9

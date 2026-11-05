@@ -7,15 +7,22 @@ if(NOT NEON_MDF_TARGET STREQUAL "FX1" OR NOT TARGET neon_mdf_ftel_isp)
 endif()
 neon_mdf_add_executable(fx1_isp_image Src/main.c)
 target_link_libraries(fx1_isp_image PRIVATE neon_mdf_ftel_isp)
-
-option(FX1_IMAGE_ALL_BLOCKS "Enable every supported pixel/statistics block" ON)
-if(FX1_IMAGE_ALL_BLOCKS)
-  target_compile_definitions(fx1_isp_image PRIVATE FX1_IMAGE_ALL_BLOCKS=1)
-else()
-  target_compile_definitions(fx1_isp_image PRIVATE FX1_IMAGE_ALL_BLOCKS=0)
-endif()
-
-option(FX1_IMAGE_D65_PROFILE "Apply user D65 WB, exposure and normalized CCM" ON)
-if(FX1_IMAGE_D65_PROFILE)
-  target_compile_definitions(fx1_isp_image PRIVATE FX1_IMAGE_D65_PROFILE=1)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+set(FX1_ISP_PROFILE "${CMAKE_CURRENT_SOURCE_DIR}/profile/profile.csrw" CACHE FILEPATH "Neon application tuning profile")
+set(_profile_header "${CMAKE_CURRENT_BINARY_DIR}/generated/profile.h")
+add_custom_command(OUTPUT "${_profile_header}"
+  COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_profile.py"
+    --profile "${FX1_ISP_PROFILE}"
+    --output "${_profile_header}"
+  DEPENDS "${FX1_ISP_PROFILE}"
+          "${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_profile.py"
+  VERBATIM)
+target_sources(fx1_isp_image PRIVATE "${_profile_header}")
+target_include_directories(fx1_isp_image PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(FX1_IMAGE_FRAME_COUNT "" CACHE STRING "Override frame count (1..4); empty uses tuning default")
+if(NOT FX1_IMAGE_FRAME_COUNT STREQUAL "")
+  if(NOT FX1_IMAGE_FRAME_COUNT MATCHES "^[1-4]$")
+    message(FATAL_ERROR "FX1_IMAGE_FRAME_COUNT must be 1..4")
+  endif()
+  target_compile_definitions(fx1_isp_image PRIVATE FRAME_COUNT=${FX1_IMAGE_FRAME_COUNT})
 endif()

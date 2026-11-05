@@ -1,88 +1,71 @@
-# Một ảnh D65: bật các khối hoặc bypass BLC/LSC
+# FX1_ISP_Image — Neon ISP với profile ứng dụng
 
-**Hướng dẫn từng bước:** [Build ELF, chép sang VP và xuất ảnh D65](../../guide/FX1_ELF_TO_VP.md). Bao gồm lệnh build, copy, chuyển RAW, chạy VP và kiểm tra PASS.
+App dùng `neon_mdf_ftel_isp`, mặc định nạp full tuning D65, bật các khối xử lý
+và chạy 2 frame. RAW đầu vào 2688×1520 BGGR RAW12; output NV12 1920×1080,
+stride 2688. Không cần các cờ FULL_TUNING, ALL_BLOCKS hoặc D65_PROFILE.
 
+[Hướng dẫn đầy đủ: build, chuyển RAW, chạy VP và xuất PNG](../../guide/FX1_NEON_ISP_RUN.md).
 
-**Cập nhật:** mặc định `FX1_IMAGE_ALL_BLOCKS=ON`: bật BLC, LSC, BPC, WB, DG,
-CCM, Gamma, GTM, 2DNR, EE, CNF và thống kê AEC/AWB/AF. Firmware đọc lại
-14 bit enable và yêu cầu tất cả bật. IFMT/demosaic/CSC vẫn nằm trong pipeline.
-Giữ CH0 NV12 full-size để so đúng ảnh trước; CH1/CH2 không bật thêm. Các vùng
-D-WDR/3D-TNR dự trữ không có implementation trong pipeline driver hiện tại.
-Tham số các khối giữ default; bật thống kê AWB/AF chưa phải thuật toán tự
-cân bằng trắng/lấy nét. Không dùng calibration mới hay profile.bin.
-
-Để build lại cấu hình cũ BLC/LSC OFF và các khối khác mặc định:
+Từ thư mục example:
 
 ```sh
-cmake --preset FX1 -DFX1_IMAGE_ALL_BLOCKS=OFF -DFX1_IMAGE_D65_PROFILE=OFF
+python3 tools/generate_profile.py
+cmake --preset FX1
 cmake --build --preset FX1
 ```
 
-Lần chạy mới ON trên cùng input D65 đạt `IMAGE_RESULT=PASS`, exit 0;
-ảnh/log/ELF/report ở workspace `artifacts/all_blocks_on/`. Ảnh OFF trước đó
-vẫn giữ tại `artifacts/blc_lsc_off/`. Cấu hình ON mới chạy một frame, chưa
-kiểm chứng hội tụ GTM tự động qua nhiều frame hoặc so golden pixel.
+ELF nằm ở `build/FX1/fx1_isp_image.elf`. Tuning nằm tại
+`profile/profile.csrw`; generator tạo `profile/profile.h` để điền
+`isp_config_t`. Không biên dịch Reference driver, không dùng SEAL/APPLY.
 
-Build độc lập từ thư mục example:
-
-```sh
-cmake --preset FX1 -DFX1_IMAGE_ALL_BLOCKS=ON
-cmake --build --preset FX1
-```
-
-Chép `build/FX1/fx1_isp_image.elf` sang VP bằng tay. App này khác Frame tổng
-hợp: cần một RAW đầu vào 2688×1520 BGGR, RAW12 right-aligned trong uint16 LE.
-Mẫu `isp/d65/input.isp16` trong gói VP V3.0 đã đúng định dạng đó; không dịch
-bit lần nữa. Không cần `profile.bin`: firmware tự cấu hình ISP.
-
-Từ gốc gói `fx1-dev`, sau khi chép ELF vào `test-fw`:
+Chạy một frame, giữ cùng tuning:
 
 ```sh
-./vp/bin/VP_FX1_V3.0/fx1_soc \
-  --fw ./test-fw/fx1_isp_image.elf \
-  --ddr-boot preinit --timeout-ms 2000 \
-  --load 0x81000000:./sw/bootloader/test/VP_FX1_V3.0/isp/d65/input.isp16 \
-  --dump 0x88000000:6128640:./test-fw/output.nv12 \
-  > ./test-fw/vp.log 2>&1
+cmake --preset FX1 -B build/FX1-1frame -DFX1_IMAGE_FRAME_COUNT=1
+cmake --build build/FX1-1frame
 ```
 
-Yêu cầu process exit 0, BLC_CTRL/LSC_CTRL đúng mode (ON: bit 0 bằng 1;
-OFF: bit 0 bằng 0), `IMAGE_RESULT=PASS` và
-`[fx1_soc] RESULT PASS`. Bài kiểm tra xác nhận một frame, tag, counters,
-không có lỗi DMA ngoài INPUT_PAUSED khi kết thúc một frame; stop phải clear
-cờ pause, DMA_ERR cuối bằng 0. BLC/LSC giữ trạng thái đã chọn sau stop. LSC vẫn nạp bảng
-1/2 trong bước init để giữ hợp đồng init hiện tại, khối chỉ bypass khi chọn mode OFF.
+Bật/tắt BLC bằng `BLC_CTRL 0x1` / `BLC_CTRL 0x0` trong
+`profile/profile.csrw`, rồi sinh lại header và build. Không dùng cờ CMake. Số frame mặc định 2, có thể chọn 1..4; phải nạp RAW cho từng
+slot được chạy. Thư viện quản lý các slot không chồng bộ nhớ.
 
-Đổi NV12 sang PNG bằng công cụ độc lập (cần Pillow), không thuộc build:
+Full tuning hai frame đã kiểm chứng NV12 khớp từng byte với ProfileReplay và
+PNG khớp toàn bộ pixel với `image/elf_all_on_output.png`. Hash NV12:
+`4822cf3199fef425980e47a2c357e97745517f3f39ef50066c248224ba912627`.
+Một frame có hash khác do trạng thái GTM auto ban đầu. Xem hướng dẫn để chọn
+đúng địa chỉ load/dump theo số frame.
+
+## Dọn build
+
+Từ thư mục `examples/FX1_ISP_Image`:
 
 ```sh
-python3 tools/nv12_to_png.py /path/to/output.nv12 /path/to/output.png
+make clean
 ```
 
-Đã chạy thành công 04/11/2026 với ELF build từ Neon, VP V3.0 và mẫu D65.
-Kết quả lần thử lưu ở workspace `artifacts/blc_lsc_off/`: ELF, log, NV12,
-PNG và report/hash/command. Cấu hình còn lại giữ mặc định driver; WB/Gamma
-chưa được hiệu chuẩn nên ảnh tối và ngả xanh. Không dùng golden kèm mẫu VP
-vì golden đó dùng profile khác. PASS xác nhận bypass và transport/frame,
-chưa phải xác nhận chất lượng màu hoặc so pixel toàn ảnh với oracle.
+Xóa `build/FX1/`, gồm ELF/MAP/BIN và CMake cache. Giữ nguyên
+source, tuning, header đã sinh và ảnh/log trong `artifacts/`. Các build folder
+thử nghiệm khác không bị xóa. Sau đó chạy lại ba lệnh build ở trên;
+`make build` cũng thực hiện cùng ba bước sinh header, configure và build.
 
-## Profile D65 người dùng cung cấp
+## Profile độc lập của ứng dụng
 
-Mặc định mới: `FX1_IMAGE_D65_PROFILE=ON`. Header `Src/d65_profile.h` áp WB
-UQ4.8 = 591/256/393, exposure_scale qua DG UQ4.8 = 557, CCM signed SQ2.9
-= [904,-354,-39,-180,892,-201,-18,-331,861]. Chín giá trị CCM tương ứng đúng
-hex trong CSV. Không nhân exposure vào CCM lần nữa.
+- `profile/profile.csrw`: sửa tuning tại đây.
+- `profile/profile.h`: được sinh bởi `tools/generate_profile.py`.
 
-```sh
-cmake --preset FX1 -DFX1_IMAGE_ALL_BLOCKS=ON -DFX1_IMAGE_D65_PROFILE=ON
-cmake --build --preset FX1
-```
+App không đọc CSR profile của VP hoặc ProfileReplay. Profile mặc định giữ
+bộ hệ số đã kiểm chứng trên D65. Thay các tham số được API Neon hỗ trợ,
+sinh lại header rồi build. Tên profile chung không tự tạo calibration cho
+mọi nguồn sáng; hãy chọn tuning phù hợp với ảnh.
 
-Muốn tái tạo ảnh all-blocks trước khi áp profile, configure
-`-DFX1_IMAGE_ALL_BLOCKS=ON -DFX1_IMAGE_D65_PROFILE=OFF`.
+Cùng ELF chạy được các RAW khác nhau cùng định dạng BGGR RAW10 căn trái,
+2688×1520 bằng `run_vp_neon ELF RAW`. Đổi tuning phải build lại ELF.
+Kích thước/Bayer/depth đầu vào vẫn được đặt trong main.c, chưa tự nhận mọi
+độ phân giải hoặc định dạng RAW.
 
-Đã kiểm chứng readback WB/DG và cả chín hệ số CCM rồi chạy frame trên VP;
-artifact ở `artifacts/d65_user_profile/`. Profile fit ban đầu dùng black level
-RAW10=64; lần port này chỉ áp WB/exposure/CCM theo dòng CSV, giữ BLC/LSC và
-Gamma/GTM mặc định của app. Vì khác pipeline và lượng tử hóa, không tuyên bố
-ảnh sẽ giống công cụ fit hoặc đã đạt calibration sản phẩm. Không sửa file VP.
+## Kiểm tra profile lúc build
+
+CMake tự sinh và dùng `build/FX1/generated/profile.h`; không phụ thuộc việc
+nhớ chạy Python trước. Có thể chọn file riêng bằng `-DFX1_ISP_PROFILE=/path/profile.csrw`.
+Xem phạm vi schema và các mode bị từ chối trong hướng dẫn. BIN là binary thô;
+VP dùng ELF. Các example FX1 khác đã được xóa, chỉ giữ FX1_ISP_Image.

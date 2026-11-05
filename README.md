@@ -261,5 +261,10 @@ See `guide/AddNewMCU.md` for the full procedure:
 ## FX1 ISP
 
 The FX1 target and ISP component build independently with the `FX1` preset.
-See [FX1 Quickstart](guide/FX1_Quickstart.md) for the Smoke/Init/FullInit/Frame
-apps, ELF/MAP/BIN artifacts and instructions for copying them to VP.
+See [the Neon ISP run guide](guide/FX1_NEON_ISP_RUN.md) for the retained
+FX1_ISP_Image app, ELF/MAP/BIN artifacts and VP instructions.
+
+## FX1 ISP application
+
+Use [FX1_ISP_Image](examples/FX1_ISP_Image/README.md) and the
+[run guide](guide/FX1_NEON_ISP_RUN.md). The other FX1 examples were removed.
