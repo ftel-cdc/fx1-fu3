@@ -49,8 +49,14 @@ static int spi_w5500_delay_ms(uint32_t ms) {
     return 1;
 }
 
+static neon_status_t spi_w5500_wait_before_rx(void) {
+    /* Wait 1 ms after RX-ready, before the driver reads the RX register. */
+    return spi_w5500_delay_ms(1U) ? NEON_OK : NEON_TIMEOUT;
+}
+
 static int spi_w5500_configure(uint32_t mode, uint32_t requested_hz) {
     neon_spi_get_default_config(&g_spi_config);
+    g_spi_config.before_rx_read = spi_w5500_wait_before_rx;
     g_spi_config.clock_polarity = mode == 3U ? NEON_SPI_POLARITY_HIGH : NEON_SPI_POLARITY_LOW;
     g_spi_config.clock_phase = mode == 3U ? NEON_SPI_PHASE_2EDGE : NEON_SPI_PHASE_1EDGE;
     g_spi_config.data_width = NEON_SPI_DATA_WIDTH_32BIT;

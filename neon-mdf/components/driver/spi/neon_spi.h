@@ -196,6 +196,12 @@ typedef struct {
      * SS1..3 have no package route: use KEEP with board-managed routing.
      * DeInit restores the bits saved by AUTO. Rebuild after struct changes. */
     neon_spi_pin_config_t pin_config;
+#ifdef FU2
+    /* Optional wait after RX-ready, before each received FIFO word is read.
+     * NULL skips the wait. Return NEON_OK to continue; do not call SPI APIs
+     * or read the RX register from this callback. Rebuild all FU2 objects. */
+    neon_status_t (*before_rx_read)(void);
+#endif
 } neon_spi_config_t;
 
 typedef struct {
