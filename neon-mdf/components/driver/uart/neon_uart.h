@@ -362,6 +362,33 @@ neon_uart_state_t neon_uart_get_state(const neon_uart_handle_t *huart);
  * @return Module error bitmask.
  */
 uint32_t neon_uart_get_error(const neon_uart_handle_t *huart);
+
+#ifdef FU2
+typedef enum {
+    NEON_UART_DMA_RX = 0,
+    NEON_UART_DMA_TX = 1,
+} neon_uart_dma_direction_t;
+
+/* UART0 uses peripheral request slot 2 on DMA0. */
+#define NEON_UART0_DMA_PERIPHERAL_ID 2U
+
+/**
+ * @brief Configure single-request UART DMA handshaking (FU2).
+ * @param[in,out] huart Configured 8-bit UART in FIFO mode.
+ * @param[in] direction RX or TX.
+ * @param[in] count UART characters; zero disables that direction.
+ * @return NEON_OK, NEON_BUSY, NEON_INVALID_PARAM, NEON_NOT_SUPPORTED or NEON_ERROR.
+ * @details Configure/start the DMA controller separately. Use aligned uint32_t
+ * buffer elements, one UART character in each low byte; the DMA moves 4*count
+ * memory bytes with one 32-bit FIFO access per request. Only one UART DMA
+ * direction may be enabled at a time. CPU access to that direction and UART
+ * reconfiguration are blocked until disabled. Polling TX remains available
+ * during RX DMA for READY/status messages. Finish or reset the DMA controller
+ * before reusing the buffer. Disabling RX also snapshots UART receive errors.
+ */
+neon_status_t neon_uart_set_dma(neon_uart_handle_t *huart, neon_uart_dma_direction_t direction, uint16_t count);
+#endif
+
 /**
  * @brief Clear UART error.
  * @param[in,out] huart UART handle and runtime state.

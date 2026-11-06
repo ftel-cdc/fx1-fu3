@@ -24,6 +24,7 @@
 #include "Flash_Read_Write/flash_read_write.h"
 #include "UART_ECHO_Polling/uart_echo_polling.h"
 #include "UART_RX_Interrupt/uart_rx_interrupt.h"
+#include "UART_DMA/uart_dma.h"
 #include "PWM_Output/pwm_output.h"
 #include "I2C_Register_Read_Write/i2c_register_read_write.h"
 #include "SPI_W5500/spi_w5500.h"

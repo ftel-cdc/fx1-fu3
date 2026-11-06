@@ -39,6 +39,7 @@ static void fpga_terminal_command_gpio_irq(void);
 static void fpga_terminal_command_tim_irq(void);
 static void fpga_terminal_command_flash_rw(void);
 static void fpga_terminal_command_uart_rx_interrupt(void);
+static void fpga_terminal_command_uart_dma(void);
 static void fpga_terminal_command_pwm_output(void);
 static void fpga_terminal_command_i2c_rw(void);
 static void fpga_terminal_command_spi_w5500(void);
@@ -72,6 +73,7 @@ static const terminal_command_t commands[] = {
     {"tim_irq", "TIM1 500 ms IRQ -> PB7 LED blink 1 Hz; Ctrl+C returns", fpga_terminal_command_tim_irq},
     {"flash_rw", "Erase/program/verify reserved Flash sector at 0x0009FE00", fpga_terminal_command_flash_rw},
     {"uart_rx_irq", "UART0 FIFO RX interrupt + main echo; Ctrl+C returns", fpga_terminal_command_uart_rx_interrupt},
+    {"uart_dma", "UART0 DMA: t=TX64, r=RX16, q=return", fpga_terminal_command_uart_dma},
     {"pwm_output", "TIM0_CH0 PWM output; Ctrl+C returns to terminal", fpga_terminal_command_pwm_output},
     {"i2c_rw", "[TODO] I2C register read/write", fpga_terminal_command_i2c_rw},
     {"spi_w5500", "SPI0 W5500 register read/write + burst; Ctrl+C returns", fpga_terminal_command_spi_w5500},
@@ -206,6 +208,11 @@ static void fpga_terminal_command_uart_rx_interrupt(void) {
 static void fpga_terminal_command_pwm_output(void) {
     skip_lf = 0U;
     pwm_output_run(terminal_uart);
+}
+
+static void fpga_terminal_command_uart_dma(void) {
+    skip_lf = 0U;
+    uart_dma_run(terminal_uart);
 }
 
 static void fpga_terminal_command_i2c_rw(void) {

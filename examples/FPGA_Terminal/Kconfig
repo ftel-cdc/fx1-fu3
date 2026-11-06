@@ -19,6 +19,7 @@ config FPGA_TERMINAL_RX_TIMEOUT_POLLS
 
 rsource "testcase/UART_ECHO_Polling/Kconfig"
 rsource "testcase/UART_RX_Interrupt/Kconfig"
+rsource "testcase/UART_DMA/Kconfig"
 rsource "testcase/PWM_Output/Kconfig"
 rsource "testcase/SPI_W5500/Kconfig"
 

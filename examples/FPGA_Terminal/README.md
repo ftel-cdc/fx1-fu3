@@ -4,14 +4,15 @@ The command-line terminal runs on FU2 FPGA via UART0. A firmware at the same lev
 to call testcases. There is now integration of UART echo polling from example `UART_ECHO_Polling`,
 button/LED from `GPIO_Input_Output` with output changed to PB7, interrupt `GPIO_Interrupt` on PB5,
 flash LED with `TIM_Periodic_Interrupt` on PB7 and erase/write/read Flash with `Flash_Read_Write`.
-UART RX interrupt and PWM also have code. `SPI_W5500` shows two stubs `SPI_Loopback` and
-`SPI_Master_Slave` in the original plan: there are currently 20 testcase, 8 coded post and 12 post
+UART RX interrupt, UART DMA and PWM also have code. `SPI_W5500` shows two stubs `SPI_Loopback` and
+`SPI_Master_Slave` in the original plan: there are currently 21 testcase, 9 coded post and 12 post
 waiting for deployment.
 
 Default: UART0, 19200 baud, 8N1, FIFO off, 10 MHz FPGA clock. Terminal receives commands by polling;
 testcase `gpio_irq` enables GPIO interruption, `tim_irq` enables timer interruption. Testcase
 `uart_rx_irq` temporarily enables FIFO and RX interruption on UART0, then restores console
-configuration when exiting. Do not use DMA or FreeRTOS.
+configuration when exiting. `uart_dma` temporarily uses UART0 FIFO and DMA0, then restores the
+terminal UART configuration. FreeRTOS is not used.
 
 ## Structures
 
@@ -37,6 +38,7 @@ FPGA_Terminal/
     ├── SPI_W5500/
     ├── Flash_Read_Write/
     ├── UART_RX_Interrupt/
+    ├── UART_DMA/
     ├── ADC_Sampling/
     ├── DMA_Memory_Copy/
     ├── RTC_Calendar/
@@ -59,7 +61,7 @@ via `target_sources(fpga_terminal PRIVATE ...)` in the CMake of the testcase, no
 
 The handler is in the form of `void handler(void)`. Terminal takes the first word as its command
 name and ignores any additional input after it. Handler returns to prompt terminal again. Wrapper of
-commands `uart_echo`, `gpio_io`, `gpio_irq`, `tim_irq` and `spi_w5500` pass the current UART0 handle
+commands `uart_echo`, `gpio_io`, `gpio_irq`, `tim_irq`, `uart_dma` and `spi_w5500` pass the current UART0 handle
 to testcase.
 
 The command `flash_rw` runs one turn and then returns, no need to receive UART.
@@ -68,8 +70,38 @@ Each new frame directory has `CMakeLists.txt`, the file `.h` declares the functi
 the file `.c` contains the stub of that function. The script calls the private wrapper
 `static_fpga_terminal_command_*` in `main.c`, the wrapper calls the post's `Run()`. Stub in `[TODO]
 <testcase> is not implemented yet.` then returns to prompt. Peripheral settings, data transfer and
-verification will be filled in later; the frames DMA/FreeRTOS have not yet enabled drivers or
-schedulers.
+verification will be filled in later. DMA is enabled for UART_DMA; the DMA memory-copy, SPI DMA,
+I2C DMA and FreeRTOS testcase stubs remain unimplemented.
+
+## UART DMA (`uart_dma`)
+
+Enter `uart_dma`, then press single keys without Enter:
+
+| Key | Test |
+|---|---|
+| `t` | DMA sends `0123456789ABCDEF` four times: exactly 64 UART characters |
+| `r` | After `[READY]`, paste exactly `0123456789ABCDEF`, with no Enter; DMA receives 16 characters and compares them |
+| `q` / Ctrl+C | Return to the terminal when no transfer is running |
+
+The testcase uses the existing UART0 baud and pins, FIFO mode, DMA0 channel 0 and UART0 request
+slot 2. It requires a PDI with the native FU2 DMA and UART DMA handshake interface. DMA0 is
+exclusive to this testcase; entry refuses an already active DMA channel. TX and RX run separately.
+The main loop counts iterations while DMA moves data and polls completion; no DMA ISR is needed.
+TX completion waits for both DMA/UART completion and the last serial bit before printing status.
+Compare the TX text on the PC; RX reports `[PASS]` only for the complete expected pattern.
+
+Buffers use `uint32_t` elements, one character per low byte. A 64-character TX uses 256 RAM bytes
+and a 16-character RX uses 64 RAM bytes. DMA memory addresses increment by four; the UART FIFO
+address stays fixed, with one 32-bit access per single request. UART DMA counts characters,
+while the DMA controller counts memory bytes.
+
+CPU RX is suspended during RX DMA, including `q`/Ctrl+C, which are payload at that point.
+`CONFIG_UART_DMA_TIMEOUT_POLLS` bounds the wait (default 10000000 iterations, not milliseconds).
+Timeout or DMA errors discard the partial result and reset the exclusively owned DMA0 before the
+buffer can be reused. The DMA no-progress watchdog is advisory for peripheral-paced commands;
+bus/FIFO/AXI timeout errors still fail the test. UART receive errors also prevent RX PASS.
+On exit the UART configuration is restored. Configuration lives
+in the driver; the testcase contains only pattern setup, transfer setup and the menu loop.
 
 ## UART RX Interrupt (`uart_rx_irq`)
 
@@ -235,6 +267,7 @@ actual MISO/MOSI line.
 | `spi_w5500` | SPI_W5500 | P1 | With code |
 | `flash_rw` | Flash_Read_Write | P1 | With code |
 | `uart_rx_irq` | UART_RX_Interrupt | P2 | With code |
+| `uart_dma` | UART_DMA | P2 | With code |
 | `adc_sampling` | ADC_Sampling | P2 | Khung `[TODO]` |
 | `dma_memcpy` | DMA_Memory_Copy | P2 | Khung `[TODO]` |
 | `rtc_calendar` | RTC_Calendar | P2 | Khung `[TODO]` |
@@ -267,6 +300,7 @@ Available commands:
   tim_irq            TIM1 500 ms IRQ -> PB7 LED blink 1 Hz; Ctrl+C returns
   flash_rw           Erase/program/verify reserved Flash sector at 0x0009FE00
   uart_rx_irq        UART0 rx interrupt; Ctrl+C returns to terminal
+  uart_dma           UART0 DMA: t=TX64, r=RX16, q=return
   pwm_output         TIM0_CH0 PWM output; Ctrl+C returns to terminal
   i2c_rw             [TODO] I2C register read/write
   spi_w5500          SPI0 W5500 register read/write + burst; Ctrl+C returns

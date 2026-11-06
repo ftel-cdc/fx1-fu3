@@ -1,0 +1,11 @@
+menu "UART DMA testcase"
+
+config UART_DMA_TIMEOUT_POLLS
+    int "UART DMA polling budget"
+    range 1000 100000000
+    default 10000000
+    help
+        Maximum main-loop iterations while waiting for a DMA transfer.
+        This is not a time in milliseconds. Paste the RX pattern after READY.
+
+endmenu
