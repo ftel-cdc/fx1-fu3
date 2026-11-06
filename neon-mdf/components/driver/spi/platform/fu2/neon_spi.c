@@ -39,7 +39,6 @@ static volatile uint32_t fu2_spi_faulted[2];
 static fu2_syscsr_pin_group_t spi_pins[2];
 static neon_spi_pin_config_t spi_pin_policy[2];
 static neon_spi_timing_t spi_timing[2];
-static neon_status_t (*spi_before_rx_read[2])(void);
 
 /*==================================================================================================
 *                                   PRIVATE FUNCTION PROTOTYPES
@@ -111,7 +110,6 @@ void neon_spi_get_default_config(neon_spi_config_t *config) {
     config->timing.slave_select_timeout = 0U;
     config->timing.between_frames_unit = NEON_SPI_B2B_SCK_CYCLES;
     config->pin_config = NEON_SPI_PIN_CONFIG_AUTO;
-    config->before_rx_read = NULL;
 }
 
 /** @copydoc neon_spi_init */
@@ -206,7 +204,6 @@ neon_status_t neon_spi_init(SPI_TypeDef *instance, const neon_spi_config_t *init
     instance->TREG0 = spi_treg0_encoding(&init->timing);
     instance->TREG1 = spi_treg1_encoding(&init->timing, init->clock_divider);
     spi_timing[index] = init->timing;
-    spi_before_rx_read[index] = init->before_rx_read;
     instance->CTRL_RX = 0U;
     instance->CTRL_TX = 0U;
 
@@ -254,7 +251,6 @@ neon_status_t neon_spi_deinit(SPI_TypeDef *instance) {
     primask = spi_enter_critical();
     fu2_spi_initialized[index] = 0U;
     fu2_spi_faulted[index] = 0U;
-    spi_before_rx_read[index] = NULL;
     fu2_spi_busy[index] = 0U;
     spi_exit_critical(primask);
     return status;
@@ -1096,12 +1092,6 @@ static neon_status_t spi_transfer_core(SPI_TypeDef *instance, const uint32_t *tx
             status = spi_wait_rx_ready(instance, &timeout_polls);
             if (status != NEON_OK) {
                 return spi_end_transfer(instance, status);
-            }
-            if (spi_before_rx_read[spi_index(instance)] != NULL) {
-                status = spi_before_rx_read[spi_index(instance)]();
-                if (status != NEON_OK) {
-                    return spi_end_transfer(instance, status);
-                }
             }
             rx_value = instance->RX & data_mask;
             if (rx_words != NULL) {
