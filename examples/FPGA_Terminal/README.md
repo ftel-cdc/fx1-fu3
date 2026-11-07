@@ -184,7 +184,6 @@ After `[READY]`, press each key, no Enter needed:
 | `r` | Continuous reading 32 bytes socket 0 TX SRAM at offset `0x0000` |
 | `b` | Turn off auto; sweep B2B 10..0 in modes 0/3 at exact SCK 1/3/5/10 MHz, with CRC32/ID/SPI error statistics |
 | `d` | Read only VERSIONR/RCR/PHYCFGR in mode 0/3, 1 MHz/100 kHz, then return the selected mode/speed |
-| `v` | Turn off auto; dump SPI/CRM/pin registers and compare VERSION reads through API, direct SPI registers and GPIO software SPI |
 | `0`–`4` | Mode 0: 100 kHz, 500 kHz, 1 MHz, 2,5 MHz, 5 MHz |
 | `5`–`9` | Mode 3: same five speed levels above |
 | `a` | Turn on/off ping/pong automatically every 3 seconds |
@@ -201,29 +200,6 @@ CS and clear its FIFOs, then writes W5500 MR=`0x80`. It polls for MR=`0x00` and 
 before reporting `[PASS]`. Unlike startup/`i`, it attempts the reset even if the previous ID read
 failed. This is a software reset over SPI, so it still needs a working SPI connection. This example
 does not configure a GPIO for RSTn; hardware reset requires the module's reset circuit or a power cycle.
-
-For a failed VERSION read, run `v` and keep the complete `[DBG] BEGIN W5500-v3` to `[DBG] END` log.
-It reads VERSION 16 times per path: the live driver state, the driver after resetting SPI0, direct
-32-bit SPI frames, four 8-bit SPI transfers with CS held, and GPIO software SPI mode 0 on the same
-physical pins. GPIOC4/5/6/7 correspond to SCK/MISO/MOSI/CS; MISO stays an input. GPIOC clock,
-selected GPIO registers and pin mux fields are restored, followed by the selected SPI configuration.
-The GPIO path is skipped if GPIOC is held in reset or these pins have GPIO interrupts enabled.
-The command does not write W5500 registers or reset W5500. A 1 ms pause separates frames; there
-is no added delay before reading the hardware RX FIFO. Successful frame transfers do not print
-UART logs while CS is active.
-
-The GPIO path first drives SCK/MOSI through four combinations with CS HIGH and compares their
-GPIO input levels. The first VERSION frame then logs the observed MOSI bits, SCK levels, CS
-levels and MISO sampled during both LOW and HIGH clock phases. It also repeats VERSION with a
-dummy byte of `FF`; a working device still returns `04`. Any pin readback mismatch makes the
-GPIO comparison inconclusive. GPIO input readback checks the FU2 side; it does not prove the
-signals arrive correctly at the module connector.
-
-If `API-reset` works while `API-live` fails, inspect the live controller/pin state. If `MMIO32`
-works while the API fails, inspect the driver transfer path. If only `MMIO8-CS` works, inspect
-32-bit framing and CS behavior. If GPIO reads `04` while hardware SPI does not, focus on SPI0
-and its input routing/capture. If every path fails, the result is inconclusive: capture signals
-at the module and check its power, reset, ground and wiring. Software logs do not measure the pins.
 
 Driver FU2 defaults to 10 SCK cycles between bytes, including bytes in 32-bit word. Adjust
 `NEON_SPI_FU2_B2B_SCK_CYCLES` in `spi/neon_spi.h` and rebuild to change the default. Driver
