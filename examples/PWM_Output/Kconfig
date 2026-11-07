@@ -1,0 +1,17 @@
+rsource "../cmake/FPGA_Kconfig"
+
+menu "PWM Output Example Configuration"
+
+    config PWM_OUTPUT_TEST_PERIOD
+        int "PWM Period Ticks (Base resolution)"
+        default 1000
+        help
+            use the amount of PWM period ticks (full text: 1000 equivalent to 100% resolution).
+
+    config PWM_OUTPUT_TEST_PRESCALER
+        int "PWM Clock Prescaler"
+        default 15
+        help
+            PWM/TIM block clock prescaler.
+
+endmenu

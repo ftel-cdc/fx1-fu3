@@ -1,0 +1,21 @@
+rsource "../cmake/FPGA_Kconfig"
+
+menu "UART_ECHO_Polling example"
+
+config UART_ECHO_RX_TIMEOUT_POLLS
+    int "Echo RX timeout (poll iterations, not milliseconds)"
+    range 1 100000000
+    default 10000
+    help
+        Polling budget for receiving one byte. A timeout with no buffered data is normal
+        and continue to receive.
+
+config UART_ECHO_TX_TIMEOUT_POLLS
+    int "Echo TX timeout (poll iterations, not milliseconds)"
+    range 1 100000000
+    default 1000000
+    help
+        Budget poll for one time Transmit a byte echo. When error, example write receives and continues to
+        receive, not from regui the byte. UART0 is initialized by the console; the FPGA clock is configured above.
+
+endmenu

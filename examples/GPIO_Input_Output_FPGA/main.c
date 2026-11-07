@@ -1,0 +1,16 @@
+#include <stdio.h>
+#include "mcu_device.h"
+#include "gpio_input_output.h"
+#include "console/neon_console.h"
+
+int main(void) {
+    printf("\nFU2 GPIO_Input_Output\n");
+    neon_uart_handle_t *uart = neon_console_get_uart();
+    if (uart != NULL) {
+        gpio_input_output_run(uart);
+    } else {
+        printf("[FAIL] UART0 initialization failed.\n");
+    }
+    printf("[STOPPED] Reset the board to run again.\n");
+    for (;;) { __WFI(); }
+}

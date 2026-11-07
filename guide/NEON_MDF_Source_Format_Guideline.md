@@ -62,8 +62,8 @@ SRAM.
 | Backend | `<module>/platform/<family>/neon_<module>.c` |
 | Internal header by platform | `syscsr/platform/fu2/neon_syscsr_internal.h` |
 | FU2 internal memory utility | `components/driver/neon_utils_memory.h` |
-| Source/header app | `examples/<App>/Src/`, `Inc/` as per existing app |
-| Testcase terminal | `examples/FPGA_Terminal/testcase/<Testcase>/` |
+| Source/header app | `examples/<App>/Src/`, `Inc/`, or app-root files for standalone FPGA examples |
+| Standalone FPGA peripheral example | `examples/<Example>/` |
 
 For example:
 
@@ -77,9 +77,9 @@ components/driver/uart/
     └── stm32f103/neon_uart.c
 ```
 
-The file name uses lowercase letters and underscores. The existing app/testcase directory names such
-as `FPGA_Terminal`, `CRC_Known_Vector` are still project/testcase. Testcase names added with
-`target_sources()`, do not include directly the file `.c`.
+The file name uses lowercase letters and underscores. Existing example directory names such
+as `UART_RX_Interrupt` and `CRC_Known_Vector` are retained. Each FU2 example has its own `main.c`
+and executable. Add implementation files to CMake sources; do not include a `.c` file directly.
 
 ## 5. Naming convention
 
@@ -249,7 +249,7 @@ Rebuild the entire object after changing API/type/handle. See [FU2.md](FU2.md).
 
 ```sh
 . neon-mdf/export.sh
-cd examples/FPGA_Terminal
+cd examples/SPI_W5500
 cmake --preset FU2
 cmake --build --preset FU2
 ```

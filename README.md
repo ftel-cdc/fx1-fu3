@@ -72,13 +72,24 @@ neon_mdf/
     Printf_Log/                  # FU2 word-only printf through _write/UART0
     UART_ECHO_Polling/           # FU2 UART0 polling echo; configurable baud/clock/timeout
     GPIO_Input_Output/           # FU2 PB5 button controls PB1 LED; logs over UART0
-    FPGA_Terminal/               # FU2 UART0 terminal and testcase directory
+    SPI_W5500/                  # Standalone FPGA SPI0/W5500 register and SRAM checks
+    UART_DMA/                   # Standalone FPGA UART0 DMA TX/RX
+    UART_RX_Interrupt/          # Standalone FPGA UART FIFO/ISR/ring-buffer echo
+    GPIO_Interrupt/             # Standalone FPGA PB5 interrupt counter
+    TIM_Periodic_Interrupt/     # Standalone FPGA TIM1 interrupt and PB7 LED
+    Flash_Read_Write/           # Standalone FPGA internal Flash erase/write/verify
+    PWM_Output/                 # Standalone FPGA TIM0_CH0 PWM menu
+    UART_ECHO_Polling_FPGA/     # Polling echo migrated from the FPGA testcases
+    GPIO_Input_Output_FPGA/     # PB5 button controls PB7; separate from the PB1 example
+    ...                         # Other peripheral skeletons are also independent projects
+    cmake/                      # Shared FPGA build/preset/Kconfig settings only
 
   vscode-extension/             # Build/flash/monitor/debug/menuconfig UI; see VSCODE.md
 ```
 
-Each `examples/<App>/` directory has its own `CMakeLists.txt`,
-`CMakePresets.json` and `.vscode/` configuration. Applications configure and
+Each application directory has its own `CMakeLists.txt` and `CMakePresets.json`;
+some also provide `.vscode/` configuration. See the
+[FPGA example index](examples/README.md). Applications configure and
 build independently of each other and of the SDK, just like ESP-IDF examples.
 
 FU2 Flash Tool **1.0** provides the `flash_uart_fu2` CMake target. Port and baud
