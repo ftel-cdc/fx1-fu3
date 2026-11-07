@@ -202,7 +202,7 @@ before reporting `[PASS]`. Unlike startup/`i`, it attempts the reset even if the
 failed. This is a software reset over SPI, so it still needs a working SPI connection. This example
 does not configure a GPIO for RSTn; hardware reset requires the module's reset circuit or a power cycle.
 
-For a failed VERSION read, run `v` and keep the complete `[DBG] BEGIN W5500-v2` to `[DBG] END` log.
+For a failed VERSION read, run `v` and keep the complete `[DBG] BEGIN W5500-v3` to `[DBG] END` log.
 It reads VERSION 16 times per path: the live driver state, the driver after resetting SPI0, direct
 32-bit SPI frames, four 8-bit SPI transfers with CS held, and GPIO software SPI mode 0 on the same
 physical pins. GPIOC4/5/6/7 correspond to SCK/MISO/MOSI/CS; MISO stays an input. GPIOC clock,
@@ -211,6 +211,13 @@ The GPIO path is skipped if GPIOC is held in reset or these pins have GPIO inter
 The command does not write W5500 registers or reset W5500. A 1 ms pause separates frames; there
 is no added delay before reading the hardware RX FIFO. Successful frame transfers do not print
 UART logs while CS is active.
+
+The GPIO path first drives SCK/MOSI through four combinations with CS HIGH and compares their
+GPIO input levels. The first VERSION frame then logs the observed MOSI bits, SCK levels, CS
+levels and MISO sampled during both LOW and HIGH clock phases. It also repeats VERSION with a
+dummy byte of `FF`; a working device still returns `04`. Any pin readback mismatch makes the
+GPIO comparison inconclusive. GPIO input readback checks the FU2 side; it does not prove the
+signals arrive correctly at the module connector.
 
 If `API-reset` works while `API-live` fails, inspect the live controller/pin state. If `MMIO32`
 works while the API fails, inspect the driver transfer path. If only `MMIO8-CS` works, inspect

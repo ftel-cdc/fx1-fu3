@@ -457,16 +457,24 @@ failed:
 }
 
 /* GPIOC4=SCK, C5=MISO input, C6=MOSI, C7=CS. Mode 0, about 10 kHz or slower. */
-static int w5500_debug_gpio_read(uint32_t address, uint32_t *result) {
-    uint32_t tx = address << 16, rx = 0U;
+static int w5500_debug_gpio_read(uint32_t tx, uint32_t *result, uint32_t log) {
+    uint32_t sent = tx, rx = 0U, miso_low = 0U, mosi = 0U;
+    uint32_t sck_low = 0U, sck_high = 0U, cs_high = 0U;
     uint32_t half_period = (SystemCoreClock + 19999U) / 20000U;
     GPIOC->OUT &= ~((1U << 4) | (1U << 7));
     for (uint32_t bit = 0U; bit < 32U; ++bit) {
         GPIOC->OUT = (GPIOC->OUT & ~(1U << 6)) | ((tx >> 25) & (1U << 6));
         if (!w5500_debug_wait(half_period)) { goto failed; }
+        uint32_t low = GPIOC->IN;
+        miso_low = (miso_low << 1) | ((low >> 5) & 1U);
+        sck_low = (sck_low << 1) | ((low >> 4) & 1U);
         GPIOC->OUT |= 1U << 4;
         if (!w5500_debug_wait(half_period)) { goto failed; }
-        rx = (rx << 1) | ((GPIOC->IN >> 5) & 1U);
+        uint32_t high = GPIOC->IN;
+        rx = (rx << 1) | ((high >> 5) & 1U);
+        mosi = (mosi << 1) | ((high >> 6) & 1U);
+        sck_high = (sck_high << 1) | ((high >> 4) & 1U);
+        cs_high = (cs_high << 1) | ((high >> 7) & 1U);
         GPIOC->OUT &= ~(1U << 4);
         tx <<= 1;
     }
@@ -474,6 +482,14 @@ static int w5500_debug_gpio_read(uint32_t address, uint32_t *result) {
     GPIOC->OUT |= 1U << 7;
     if (!w5500_debug_wait(half_period)) { return 0; }
     *result = rx;
+    if (log != 0U) {
+        printf("[PIN] TX=%08lX observed_MOSI=%08lX %s\n", (unsigned long)sent, (unsigned long)mosi,
+               mosi == sent ? "[MATCH]" : "[MISMATCH]");
+        printf("[PIN] SCK_low=%08lX SCK_high=%08lX CS_high=%08lX expected=00000000/FFFFFFFF/00000000\n",
+               (unsigned long)sck_low, (unsigned long)sck_high, (unsigned long)cs_high);
+        printf("[PIN] MISO sampled LOW=%08lX HIGH=%08lX data=%02lX (expected 04 for VERSION)\n",
+               (unsigned long)miso_low, (unsigned long)rx, (unsigned long)(rx & 0xFFU));
+    }
     return 1;
 failed:
     GPIOC->OUT |= 1U << 7;
@@ -497,7 +513,7 @@ static void w5500_debug_reads(const char *name, uint32_t path) {
         } else if (path < 3U) {
             ok = w5500_debug_mmio(&rx, path == 2U, trial == 0U);
         } else {
-            ok = w5500_debug_gpio_read(W5500_VERSIONR, &rx);
+            ok = w5500_debug_gpio_read(W5500_VERSIONR << 16, &rx, trial == 0U);
         }
         ++attempts;
         if (!ok) { ++io; break; }
@@ -536,16 +552,31 @@ static void w5500_debug_gpio(void) {
     printf("[DBG] GPIO mode0: PC4=SCK PC5=MISO PC6=MOSI PC7=CS, MISO stays INPUT.\n");
     printf("[DBG] GPIO OE=%08lX IN=%08lX OUT=%08lX; CS is HIGH before reads.\n",
            (unsigned long)GPIOC->OE, (unsigned long)GPIOC->IN, (unsigned long)GPIOC->OUT);
+    /* Toggle SCK/MOSI only while CS is HIGH, then read their input paths. */
+    for (uint32_t vector = 0U; vector < 4U; ++vector) {
+        uint32_t driven = 0x80U | ((vector & 1U) << 4) | ((vector & 2U) << 5);
+        GPIOC->OUT = (GPIOC->OUT & ~0xD0U) | driven;
+        if (!w5500_debug_wait((SystemCoreClock + 19999U) / 20000U)) { goto gpio_restore; }
+        uint32_t observed = GPIOC->IN;
+        printf("[PIN] CS HIGH: drive=%02lX observed=%02lX MISO=%lu %s\n", (unsigned long)driven,
+               (unsigned long)(observed & 0xD0U), (unsigned long)((observed >> 5) & 1U),
+               (observed & 0xD0U) == driven ? "[MATCH]" : "[MISMATCH]");
+    }
+    GPIOC->OUT = (GPIOC->OUT & ~0xD0U) | 0x80U;
     if (spi_w5500_delay_ms(1U)) {
         w5500_debug_reads("GPIO-mode0", 3U);
         static const uint32_t addresses[] = {W5500_MR, W5500_RCR, W5500_PHYCFGR};
         for (uint32_t i = 0U; i < 3U; ++i) {
             uint32_t rx = 0U;
-            if (!w5500_debug_gpio_read(addresses[i], &rx)) { break; }
+            if (!w5500_debug_gpio_read(addresses[i] << 16, &rx, 0U)) { break; }
             printf("[DBG] GPIO addr=%04lX raw=%08lX data=%02lX\n", (unsigned long)addresses[i],
                    (unsigned long)rx, (unsigned long)(rx & 0xFFU));
         }
+        uint32_t rx = 0U;
+        printf("[PIN] VERSION again with dummy FF; expected data remains 04.\n");
+        w5500_debug_gpio_read((W5500_VERSIONR << 16) | 0xFFU, &rx, 1U);
     }
+gpio_restore:
     GPIOC->OUT |= 1U << 7;
     GPIOC->OE &= ~0xF0U;
     SYSCSR->RIGHT_IO_CFG_EXT = (SYSCSR->RIGHT_IO_CFG_EXT & ~(3U << 10)) | right_mux;
@@ -559,7 +590,7 @@ clock_restore:
 }
 
 static void w5500_debug(void) {
-    printf("[DBG] BEGIN W5500-v2: read-only, auto OFF; no W5500 reset/write.\n");
+    printf("[DBG] BEGIN W5500-v3: read-only, auto OFF; no W5500 reset/write.\n");
     printf("[DBG] Each path reads VERSION 16 times, with 1 ms BETWEEN frames.\n");
     w5500_debug_registers("live");
     w5500_debug_reads("API-live", 0U);
