@@ -19,4 +19,4 @@ if(NOT CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ EQUAL 0)
 endif()
 
 neon_mdf_add_executable(${PROJECT_NAME} ${FU2_EXAMPLE_SOURCES})
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Inc)

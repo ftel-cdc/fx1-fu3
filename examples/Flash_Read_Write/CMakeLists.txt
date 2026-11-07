@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 project(fu2_flash_read_write C ASM)
 
-set(FU2_EXAMPLE_SOURCES main.c flash_read_write.c)
+set(FU2_EXAMPLE_SOURCES Src/main.c Src/flash_read_write.c)
 include(../cmake/fpga_example.cmake)
 
 # Reserve the scratch sector before the SDK linker script is processed.

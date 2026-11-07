@@ -1,9 +1,32 @@
 # FPGA peripheral examples
 
-Each folder below is a separate FU2 application with its own `main.c`, `CMakeLists.txt`,
-`CMakePresets.json`, `Kconfig`, `sdkconfig` and firmware image. The selected example starts
-immediately at boot. There is no combined terminal or command for selecting another example.
-Build and load a different directory to change applications.
+Each folder below is a separate FU2 application with its own `Src/main.c`, `CMakeLists.txt`,
+`CMakePresets.json`, `Kconfig`, `sdkconfig` and firmware image. Each firmware boots into a UART
+terminal in its own `Src/main.c` with the prompt `fpga:>>`. Press `r` without Enter to call
+that example's run function.
+When it returns, the terminal waits for `r` again. Build and load a different directory to change
+applications; each terminal controls only its own example.
+
+## Directory layout
+
+The standalone examples follow the `Printf_Log` application layout, with headers in `Inc/`
+when needed:
+
+```text
+SPI_W5500/
+├── CMakeLists.txt
+├── CMakePresets.json
+├── Kconfig
+├── sdkconfig
+├── README.md
+├── Inc/
+│   └── spi_w5500.h
+└── Src/
+    ├── main.c
+    └── spi_w5500.c
+```
+
+`Flash_Read_Write` also keeps its scratch-sector linker script at the project root.
 
 ## Examples
 
@@ -31,7 +54,7 @@ Build and load a different directory to change applications.
 | [UART_RX_Interrupt](UART_RX_Interrupt/README.md) | Implemented | `fu2_uart_rx_interrupt` |
 
 The 9 implemented examples retain their peripheral behavior. The 11 TODO skeletons remain
-unimplemented and print their status at boot. `Flash_Read_Write` accesses internal FU2 Flash.
+unimplemented and print their status when started with `r`. `Flash_Read_Write` accesses internal FU2 Flash.
 There is no external SPI/QSPI Flash example in this collection.
 
 `UART_ECHO_Polling_FPGA` and `GPIO_Input_Output_FPGA` retain the former FPGA testcases. The
@@ -78,11 +101,14 @@ cmake -E env \
 
 Use the packaged `_image.bin` when selecting a file manually. Restore the normal boot straps
 and reset if the loader/board workflow requires it. Open UART0 at 19200 baud, 8N1, no local echo
-and no flow control. The application starts directly; type the keys shown by that example.
+and no flow control. Wait for `fpga:>>`, then press `r` without Enter. After `[RUN]`, type the
+keys/data shown by that example.
 See [FU2 build and boot](../guide/FU2.md) for the ROM boot contract and supported loading methods.
 
-Interactive examples stop on their documented key; one-shot examples stop after completion.
-Reset the board to run the same firmware again. There is no `fpga>` prompt.
+Interactive examples return on their documented stop key; one-shot examples return after completion.
+The application then prints `fpga:>>` again. Press `r` to repeat without resetting the board.
+While a run is active, its own keys apply: for example, `r` reads SRAM in the SPI/W5500 menu and
+arms RX in the UART DMA menu. At `fpga:>>`, other keys, including CR/LF, are ignored.
 
 ## Hardware verification
 

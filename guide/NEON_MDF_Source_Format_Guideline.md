@@ -62,7 +62,7 @@ SRAM.
 | Backend | `<module>/platform/<family>/neon_<module>.c` |
 | Internal header by platform | `syscsr/platform/fu2/neon_syscsr_internal.h` |
 | FU2 internal memory utility | `components/driver/neon_utils_memory.h` |
-| Source/header app | `examples/<App>/Src/`, `Inc/`, or app-root files for standalone FPGA examples |
+| Source/header app | `examples/<App>/Src/`, `Inc/`; standalone FPGA examples follow `Printf_Log` |
 | Standalone FPGA peripheral example | `examples/<Example>/` |
 
 For example:
@@ -78,7 +78,7 @@ components/driver/uart/
 ```
 
 The file name uses lowercase letters and underscores. Existing example directory names such
-as `UART_RX_Interrupt` and `CRC_Known_Vector` are retained. Each FU2 example has its own `main.c`
+as `UART_RX_Interrupt` and `CRC_Known_Vector` are retained. Each FU2 example has its own `Src/main.c`
 and executable. Add implementation files to CMake sources; do not include a `.c` file directly.
 
 ## 5. Naming convention

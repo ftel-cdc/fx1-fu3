@@ -2,8 +2,11 @@
 
 PB5 button controls PB7 output.
 
-This is an independent FU2 firmware. It starts immediately after boot; there is no command terminal.
+This is an independent FU2 firmware. Its UART terminal waits at boot; press `r` without Enter
+to start the example at the `fpga:>>` prompt.
 Console: UART0, 19200 baud, 8N1. FPGA system clock: 10 MHz by default.
+
+Source files are in `Src/`, with the terminal entry in `Src/main.c`. Example headers are in `Inc/`.
 
 ## Build and load
 
@@ -25,7 +28,9 @@ releases the port. Use the board's UART-download/normal-boot straps as described
 
 Connect PB5 to a button to GND and PB7 to an LED through a resistor. A pressed button drives PB7 HIGH. Ctrl+C stops.
 
-The example stops after completion or its stop key. Reset the board to run it again.
+When the run function completes or its stop key is pressed, the application returns to its
+UART terminal. Press `r` again to repeat the example. While the run function is active, its own
+menu/data keys apply; `r` only starts a run when the application is at `fpga:>>`.
 Configure with `cmake --build --preset FU2 --target menuconfig`, then build again.
 `CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ` must match the actual FPGA clock. Timeout values ending in
 `_POLLS` are polling budgets, not milliseconds.

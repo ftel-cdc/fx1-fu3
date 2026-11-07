@@ -2,8 +2,11 @@
 
 Erase, program and verify FU2 internal Flash.
 
-This is an independent FU2 firmware. It starts immediately after boot; there is no command terminal.
+This is an independent FU2 firmware. Its UART terminal waits at boot; press `r` without Enter
+to start the example at the `fpga:>>` prompt.
 Console: UART0, 19200 baud, 8N1. FPGA system clock: 10 MHz by default.
+
+Source files are in `Src/`, with the terminal entry in `Src/main.c`. Example headers are in `Inc/`.
 
 ## Build and load
 
@@ -23,9 +26,11 @@ releases the port. Use the board's UART-download/normal-boot straps as described
 
 ## Run
 
-Runs once at boot. It erases the reserved 512-byte internal Flash sector at 0x0009FE00, writes a pattern and checks all 128 words. The linker reserves the sector and rejects an overlapping image.
+Each `r` command runs one erase/program/verify cycle. It erases the reserved 512-byte internal Flash sector at 0x0009FE00, writes a pattern and checks all 128 words. The linker reserves the sector and rejects an overlapping image.
 
-The example stops after completion or its stop key. Reset the board to run it again.
+When the run function completes or its stop key is pressed, the application returns to its
+UART terminal. Press `r` again to repeat the example. While the run function is active, its own
+menu/data keys apply; `r` only starts a run when the application is at `fpga:>>`.
 Configure with `cmake --build --preset FU2 --target menuconfig`, then build again.
 `CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ` must match the actual FPGA clock. Timeout values ending in
 `_POLLS` are polling budgets, not milliseconds.
