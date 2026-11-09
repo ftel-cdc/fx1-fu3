@@ -24,6 +24,7 @@ extern "C" {
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
 #define NEON_DMA_CONFIG_M2M_WORD 0x84010004UL
+#define NEON_DMA_CONFIG_FIXED_WORD 0x04010004UL
 #define NEON_DMA_CONTROL_M2M 0x3UL
 #define NEON_DMA_MAX_TRANSFER_SIZE 1020UL
 
@@ -67,6 +68,14 @@ neon_status_t neon_dma_start_channel(DMA_TypeDef *instance, const neon_dma_confi
  * Wait for CMD_DONE; timeout_cycles=0 waits indefinitely.
  */
 neon_status_t neon_dma_wait_channel(DMA_TypeDef *instance, uint8_t channel, uint32_t timeout_cycles);
+/**
+ * @brief Check completion without waiting.
+ * @return NEON_OK when done and idle, NEON_BUSY while pending, or an error.
+ * @details Bus/FIFO/AXI timeout errors fail the transfer. The no-progress
+ * watchdog is advisory for peripheral-paced commands, which may legitimately
+ * wait for UART characters longer than its window; it remains fatal for M2M.
+ */
+neon_status_t neon_dma_poll_channel(DMA_TypeDef *instance, uint8_t channel);
 /**
  * @brief Dma fire channel.
  * @param[in] instance Peripheral register instance.

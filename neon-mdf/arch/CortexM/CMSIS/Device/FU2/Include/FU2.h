@@ -610,6 +610,8 @@ typedef struct {
   __IO uint32_t TAR;              /*!< offset 0x38, Transmit Address Register bit[7:0] ADDR        */
   __IO uint32_t LCR_EXT;          /*!< offset 0x3C, Line Extended Control Register bit[0] DLS_E | bit[1] ADDR_MATCH | bit[2] SEND_ADDR | bit[3] TRANSMIT_MODE */
   __I  uint32_t CLKS;             /*!< offset 0x40, Clock Status Register bit[0] CLK_FAILURE | bit[12:1] ADDR_FAILURE | bit[13] CMD_FAILURE; read-to-clear */
+  __IO uint32_t DMA_RX;           /*!< offset 0x44, UART DMA RX control; TRAN_DONE is cleared by reading IIR */
+  __IO uint32_t DMA_TX;           /*!< offset 0x48, UART DMA TX control; TRAN_DONE is cleared by reading IIR */
 } UART_TypeDef;
 
 /*
@@ -3988,6 +3990,40 @@ typedef struct {
 #define UART_CLKS_CMD_FAILURE_Pos           (13U)  /*!< Failed command type: 0=write, 1=read */
 #define UART_CLKS_CMD_FAILURE_Msk           (0x1UL << UART_CLKS_CMD_FAILURE_Pos)
 #define UART_CLKS_CMD_FAILURE               UART_CLKS_CMD_FAILURE_Msk
+
+/* Fields of UART_DMA_RX */
+#define UART_DMA_RX_ENABLE_Pos              (0U)  /*!< Enable RX DMA handshaking */
+#define UART_DMA_RX_ENABLE_Msk              (0x1UL << UART_DMA_RX_ENABLE_Pos)
+#define UART_DMA_RX_ENABLE                  UART_DMA_RX_ENABLE_Msk
+#define UART_DMA_RX_MAX_BURST_LEN_Pos       (1U)  /*!< Singles per burst: 0=2, 1=4, 2=8, 3=16 */
+#define UART_DMA_RX_MAX_BURST_LEN_Msk       (0x3UL << UART_DMA_RX_MAX_BURST_LEN_Pos)
+#define UART_DMA_RX_MAX_BURST_LEN           UART_DMA_RX_MAX_BURST_LEN_Msk
+#define UART_DMA_RX_BURST_MODE_Pos          (3U)  /*!< 0=single, 1=burst */
+#define UART_DMA_RX_BURST_MODE_Msk          (0x1UL << UART_DMA_RX_BURST_MODE_Pos)
+#define UART_DMA_RX_BURST_MODE              UART_DMA_RX_BURST_MODE_Msk
+#define UART_DMA_RX_TOTAL_BYTES_Pos         (4U)  /*!< Number of received UART data bytes */
+#define UART_DMA_RX_TOTAL_BYTES_Msk         (0xFFFFUL << UART_DMA_RX_TOTAL_BYTES_Pos)
+#define UART_DMA_RX_TOTAL_BYTES             UART_DMA_RX_TOTAL_BYTES_Msk
+#define UART_DMA_RX_TRAN_DONE_Pos           (20U)  /*!< RX transfer complete; read IIR to acknowledge */
+#define UART_DMA_RX_TRAN_DONE_Msk           (0x1UL << UART_DMA_RX_TRAN_DONE_Pos)
+#define UART_DMA_RX_TRAN_DONE               UART_DMA_RX_TRAN_DONE_Msk
+
+/* Fields of UART_DMA_TX */
+#define UART_DMA_TX_ENABLE_Pos              (0U)  /*!< Enable TX DMA handshaking */
+#define UART_DMA_TX_ENABLE_Msk              (0x1UL << UART_DMA_TX_ENABLE_Pos)
+#define UART_DMA_TX_ENABLE                  UART_DMA_TX_ENABLE_Msk
+#define UART_DMA_TX_MAX_BURST_LEN_Pos       (1U)  /*!< Singles per burst: 0=2, 1=4, 2=8, 3=16 */
+#define UART_DMA_TX_MAX_BURST_LEN_Msk       (0x3UL << UART_DMA_TX_MAX_BURST_LEN_Pos)
+#define UART_DMA_TX_MAX_BURST_LEN           UART_DMA_TX_MAX_BURST_LEN_Msk
+#define UART_DMA_TX_BURST_MODE_Pos          (3U)  /*!< 0=single, 1=burst */
+#define UART_DMA_TX_BURST_MODE_Msk          (0x1UL << UART_DMA_TX_BURST_MODE_Pos)
+#define UART_DMA_TX_BURST_MODE              UART_DMA_TX_BURST_MODE_Msk
+#define UART_DMA_TX_TOTAL_BYTES_Pos         (4U)  /*!< Number of transmitted UART data bytes */
+#define UART_DMA_TX_TOTAL_BYTES_Msk         (0xFFFFUL << UART_DMA_TX_TOTAL_BYTES_Pos)
+#define UART_DMA_TX_TOTAL_BYTES             UART_DMA_TX_TOTAL_BYTES_Msk
+#define UART_DMA_TX_TRAN_DONE_Pos           (20U)  /*!< TX transfer complete; read IIR to acknowledge */
+#define UART_DMA_TX_TRAN_DONE_Msk           (0x1UL << UART_DMA_TX_TRAN_DONE_Pos)
+#define UART_DMA_TX_TRAN_DONE               UART_DMA_TX_TRAN_DONE_Msk
 
 /* Fields of GPIO_VERSION */
 #define GPIO_VERSION_MINOR_Pos       (0U)  /*!< Minor version number in bits [15:0] */

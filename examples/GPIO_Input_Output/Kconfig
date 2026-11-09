@@ -1,11 +1,2 @@
-menu "GPIO_Input_Output"
+rsource "../cmake/FPGA_Kconfig"
 
-config GPIO_IO_FIXED_CLOCK_HZ
-    int "Fixed FPGA clock (Hz; 0 uses normal SDK clock setup)"
-    range 0 1000000000
-    default 10000000
-    help
-        must match the actual FPGA clock. Use 0 for SDK SystemInit. This clock determines UART0 baud for
-        printf.
-
-endmenu

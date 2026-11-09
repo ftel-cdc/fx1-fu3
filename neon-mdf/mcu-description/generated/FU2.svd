@@ -17824,6 +17824,86 @@ UART0 : 0x440D0000 - 0x440DFFFF (64 KB)
             </field>
           </fields>
         </register>
+        <register>
+          <name>DMA_RX</name>
+          <description>UART DMA RX control; TRAN_DONE is cleared by reading IIR</description>
+          <addressOffset>0x44</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>ENABLE</name>
+              <description>Enable RX DMA handshaking</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>MAX_BURST_LEN</name>
+              <description>Singles per burst: 0=2, 1=4, 2=8, 3=16</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>2</bitWidth>
+            </field>
+            <field>
+              <name>BURST_MODE</name>
+              <description>0=single, 1=burst</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>TOTAL_BYTES</name>
+              <description>Number of received UART data bytes</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>16</bitWidth>
+            </field>
+            <field>
+              <name>TRAN_DONE</name>
+              <description>RX transfer complete; read IIR to acknowledge</description>
+              <bitOffset>20</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>DMA_TX</name>
+          <description>UART DMA TX control; TRAN_DONE is cleared by reading IIR</description>
+          <addressOffset>0x48</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>ENABLE</name>
+              <description>Enable TX DMA handshaking</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>MAX_BURST_LEN</name>
+              <description>Singles per burst: 0=2, 1=4, 2=8, 3=16</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>2</bitWidth>
+            </field>
+            <field>
+              <name>BURST_MODE</name>
+              <description>0=single, 1=burst</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>TOTAL_BYTES</name>
+              <description>Number of transmitted UART data bytes</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>16</bitWidth>
+            </field>
+            <field>
+              <name>TRAN_DONE</name>
+              <description>TX transfer complete; read IIR to acknowledge</description>
+              <bitOffset>20</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+          </fields>
+        </register>
       </registers>
     </peripheral>
     <peripheral>
@@ -18465,6 +18545,86 @@ UART1 : 0x440E0000 - 0x440EFFFF (64 KB)
               <name>CMD_FAILURE</name>
               <description>Failed command type: 0=write, 1=read</description>
               <bitOffset>13</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>DMA_RX</name>
+          <description>UART DMA RX control; TRAN_DONE is cleared by reading IIR</description>
+          <addressOffset>0x44</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>ENABLE</name>
+              <description>Enable RX DMA handshaking</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>MAX_BURST_LEN</name>
+              <description>Singles per burst: 0=2, 1=4, 2=8, 3=16</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>2</bitWidth>
+            </field>
+            <field>
+              <name>BURST_MODE</name>
+              <description>0=single, 1=burst</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>TOTAL_BYTES</name>
+              <description>Number of received UART data bytes</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>16</bitWidth>
+            </field>
+            <field>
+              <name>TRAN_DONE</name>
+              <description>RX transfer complete; read IIR to acknowledge</description>
+              <bitOffset>20</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>DMA_TX</name>
+          <description>UART DMA TX control; TRAN_DONE is cleared by reading IIR</description>
+          <addressOffset>0x48</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>ENABLE</name>
+              <description>Enable TX DMA handshaking</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>MAX_BURST_LEN</name>
+              <description>Singles per burst: 0=2, 1=4, 2=8, 3=16</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>2</bitWidth>
+            </field>
+            <field>
+              <name>BURST_MODE</name>
+              <description>0=single, 1=burst</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>TOTAL_BYTES</name>
+              <description>Number of transmitted UART data bytes</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>16</bitWidth>
+            </field>
+            <field>
+              <name>TRAN_DONE</name>
+              <description>TX transfer complete; read IIR to acknowledge</description>
+              <bitOffset>20</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
           </fields>
@@ -21519,6 +21679,86 @@ UART2 : 0x50050000 - 0x5005FFFF (64 KB)
             </field>
           </fields>
         </register>
+        <register>
+          <name>DMA_RX</name>
+          <description>UART DMA RX control; TRAN_DONE is cleared by reading IIR</description>
+          <addressOffset>0x44</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>ENABLE</name>
+              <description>Enable RX DMA handshaking</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>MAX_BURST_LEN</name>
+              <description>Singles per burst: 0=2, 1=4, 2=8, 3=16</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>2</bitWidth>
+            </field>
+            <field>
+              <name>BURST_MODE</name>
+              <description>0=single, 1=burst</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>TOTAL_BYTES</name>
+              <description>Number of received UART data bytes</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>16</bitWidth>
+            </field>
+            <field>
+              <name>TRAN_DONE</name>
+              <description>RX transfer complete; read IIR to acknowledge</description>
+              <bitOffset>20</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>DMA_TX</name>
+          <description>UART DMA TX control; TRAN_DONE is cleared by reading IIR</description>
+          <addressOffset>0x48</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>ENABLE</name>
+              <description>Enable TX DMA handshaking</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>MAX_BURST_LEN</name>
+              <description>Singles per burst: 0=2, 1=4, 2=8, 3=16</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>2</bitWidth>
+            </field>
+            <field>
+              <name>BURST_MODE</name>
+              <description>0=single, 1=burst</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>TOTAL_BYTES</name>
+              <description>Number of transmitted UART data bytes</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>16</bitWidth>
+            </field>
+            <field>
+              <name>TRAN_DONE</name>
+              <description>TX transfer complete; read IIR to acknowledge</description>
+              <bitOffset>20</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+          </fields>
+        </register>
       </registers>
     </peripheral>
     <peripheral>
@@ -22164,6 +22404,86 @@ UART3 : 0x50060000 - 0x5006FFFF (64 KB)
             </field>
           </fields>
         </register>
+        <register>
+          <name>DMA_RX</name>
+          <description>UART DMA RX control; TRAN_DONE is cleared by reading IIR</description>
+          <addressOffset>0x44</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>ENABLE</name>
+              <description>Enable RX DMA handshaking</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>MAX_BURST_LEN</name>
+              <description>Singles per burst: 0=2, 1=4, 2=8, 3=16</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>2</bitWidth>
+            </field>
+            <field>
+              <name>BURST_MODE</name>
+              <description>0=single, 1=burst</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>TOTAL_BYTES</name>
+              <description>Number of received UART data bytes</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>16</bitWidth>
+            </field>
+            <field>
+              <name>TRAN_DONE</name>
+              <description>RX transfer complete; read IIR to acknowledge</description>
+              <bitOffset>20</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>DMA_TX</name>
+          <description>UART DMA TX control; TRAN_DONE is cleared by reading IIR</description>
+          <addressOffset>0x48</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>ENABLE</name>
+              <description>Enable TX DMA handshaking</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>MAX_BURST_LEN</name>
+              <description>Singles per burst: 0=2, 1=4, 2=8, 3=16</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>2</bitWidth>
+            </field>
+            <field>
+              <name>BURST_MODE</name>
+              <description>0=single, 1=burst</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>TOTAL_BYTES</name>
+              <description>Number of transmitted UART data bytes</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>16</bitWidth>
+            </field>
+            <field>
+              <name>TRAN_DONE</name>
+              <description>TX transfer complete; read IIR to acknowledge</description>
+              <bitOffset>20</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+          </fields>
+        </register>
       </registers>
     </peripheral>
     <peripheral>
@@ -22805,6 +23125,86 @@ UART4 : 0x50070000 - 0x5007FFFF (64 KB)
               <name>CMD_FAILURE</name>
               <description>Failed command type: 0=write, 1=read</description>
               <bitOffset>13</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>DMA_RX</name>
+          <description>UART DMA RX control; TRAN_DONE is cleared by reading IIR</description>
+          <addressOffset>0x44</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>ENABLE</name>
+              <description>Enable RX DMA handshaking</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>MAX_BURST_LEN</name>
+              <description>Singles per burst: 0=2, 1=4, 2=8, 3=16</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>2</bitWidth>
+            </field>
+            <field>
+              <name>BURST_MODE</name>
+              <description>0=single, 1=burst</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>TOTAL_BYTES</name>
+              <description>Number of received UART data bytes</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>16</bitWidth>
+            </field>
+            <field>
+              <name>TRAN_DONE</name>
+              <description>RX transfer complete; read IIR to acknowledge</description>
+              <bitOffset>20</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>DMA_TX</name>
+          <description>UART DMA TX control; TRAN_DONE is cleared by reading IIR</description>
+          <addressOffset>0x48</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>ENABLE</name>
+              <description>Enable TX DMA handshaking</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>MAX_BURST_LEN</name>
+              <description>Singles per burst: 0=2, 1=4, 2=8, 3=16</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>2</bitWidth>
+            </field>
+            <field>
+              <name>BURST_MODE</name>
+              <description>0=single, 1=burst</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>TOTAL_BYTES</name>
+              <description>Number of transmitted UART data bytes</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>16</bitWidth>
+            </field>
+            <field>
+              <name>TRAN_DONE</name>
+              <description>TX transfer complete; read IIR to acknowledge</description>
+              <bitOffset>20</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
           </fields>

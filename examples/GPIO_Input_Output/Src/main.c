@@ -1,78 +1,34 @@
-/**
- * @file main.c
- * @brief Implementation for GPIO input output.
- * @details
- * PB5: button to GND. PB1: active-high output.
- */
-
-/*==================================================================================================
-*                                          INCLUDE FILES
-==================================================================================================*/
-
-#include <stdint.h>
 #include <stdio.h>
-#include "gpio/neon_gpio.h"
+#include "mcu_device.h"
+#include "gpio_input_output.h"
+#include "console/neon_console.h"
 
-/*==================================================================================================
-*                                   PRIVATE FUNCTION PROTOTYPES
-==================================================================================================*/
-
-static void gpio_input_output_check_status(neon_status_t status);
-
-/*==================================================================================================
-*                                         GLOBAL FUNCTIONS
-==================================================================================================*/
-
-/**
- * @brief Initialize the application and run its main loop.
- * @return The application normally runs indefinitely.
- */
 int main(void) {
-    gpio_input_output_check_status(neon_gpio_clock_enable(GPIOB));
-
-    /* Start PB1 low before enabling the output. */
-    neon_gpio_config_t config;
-    neon_gpio_get_default_config(&config);
-    config.pin = NEON_GPIO_PIN_1;
-    config.mode = NEON_GPIO_MODE_OUTPUT;
-    config.initial_state = NEON_GPIO_PIN_RESET;
-    gpio_input_output_check_status(neon_gpio_init(GPIOB, &config));
-
-    /* PB5 is high when released, low when pressed. */
-    neon_gpio_get_default_config(&config);
-    config.pin = NEON_GPIO_PIN_5;
-    config.mode = NEON_GPIO_MODE_INPUT;
-    config.pull = NEON_GPIO_PULL_UP;
-    config.input_sync = NEON_GPIO_INPUT_SYNC_ENABLE;
-    gpio_input_output_check_status(neon_gpio_init(GPIOB, &config));
-
-    printf("[INFO] PB5 button -> PB1 LED\n");
-
-    uint32_t last_state = 2U; /* Force the initial state to be logged. */
-    for (;;) {
-        uint32_t input = neon_gpio_read_pin(GPIOB, NEON_GPIO_PIN_5);
-        if (input != last_state) {
-            last_state = input;
-            if (input == 0U) {
-                neon_gpio_write_pin(GPIOB, NEON_GPIO_PIN_1, 1U);
-                printf("[GPIO] PRESSED -> LED ON\n");
-            } else {
-                neon_gpio_write_pin(GPIOB, NEON_GPIO_PIN_1, 0U);
-                printf("[GPIO] RELEASED -> LED OFF\n");
-            }
-        }
+    printf("\nFU2 GPIO_Input_Output_FPGA\n");
+    neon_uart_handle_t *uart = neon_console_get_uart();
+    if (uart == NULL) {
+        printf("[FAIL] UART0 initialization failed.\n");
+        for (;;) { __WFI(); }
     }
-}
 
-/*==================================================================================================
-*                                        PRIVATE FUNCTIONS
-==================================================================================================*/
-
-static void gpio_input_output_check_status(neon_status_t status) {
-    if (status != NEON_OK) {
-        printf("[ERROR] status=%lu\n", (unsigned long)status);
-        for (;;) {
-            __WFI();
+    printf("Press r to run GPIO_Input_Output_FPGA (no Enter).\n");
+    printf("fpga:>> ");
+    uint32_t skip_lf = 0U;
+    for (;;) {
+        uint32_t key = 0U;
+        if (neon_uart_try_receive(uart, &key) != NEON_OK) { continue; }
+        /* Treat CRLF as one Enter; CR and LF also work on their own. */
+        if (key == '\n' && skip_lf != 0U) { skip_lf = 0U; continue; }
+        skip_lf = key == '\r' ? 1U : 0U;
+        if (key == '\r' || key == '\n') {
+            printf("\nfpga:>> ");
+            continue;
+        }
+        if (key == 'r') {
+            printf("r\n");
+            printf("[RUN] GPIO_Input_Output_FPGA\n");
+            gpio_input_output_run(uart);
+            printf("fpga:>> ");
         }
     }
 }

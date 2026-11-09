@@ -87,6 +87,22 @@ neon_status_t neon_dma_start_channel(DMA_TypeDef *instance, const neon_dma_confi
     return neon_dma_fire_channel(instance, (uint8_t)channel);
 }
 
+/** @copydoc neon_dma_poll_channel */
+neon_status_t neon_dma_poll_channel(DMA_TypeDef *instance, uint8_t channel) {
+    if (!dma_valid_instance(instance) || channel > 7U) { return NEON_INVALID_PARAM; }
+    uint32_t error_mask = DMA_INTERRUPT_MASK & ~1UL;
+    if ((*dma_channel_reg(instance, channel, 0x20U) & 0x001F001FUL) != 0U) {
+        error_mask &= ~(1UL << 12);
+    }
+    uint32_t status = *dma_channel_reg(instance, channel, 0xA0U);
+    if ((status & error_mask) != 0U) { return NEON_ERROR; }
+    if ((status & 1U) != 0U && *dma_channel_reg(instance, channel, 0x48U) == 0U) {
+        __DMB();
+        return NEON_OK;
+    }
+    return NEON_BUSY;
+}
+
 /** @copydoc neon_dma_wait_channel */
 neon_status_t neon_dma_wait_channel(DMA_TypeDef *instance, uint8_t channel, uint32_t timeout_cycles) {
     if (!dma_valid_instance(instance) || channel > 7U) {
@@ -94,13 +110,8 @@ neon_status_t neon_dma_wait_channel(DMA_TypeDef *instance, uint8_t channel, uint
     }
     uint32_t remaining = timeout_cycles;
     do {
-        uint32_t status = *dma_channel_reg(instance, channel, 0xA0U);
-        if ((status & (DMA_INTERRUPT_MASK & ~1UL)) != 0U) {
-            return NEON_ERROR;
-        }
-        if ((status & 1U) != 0U) {
-            return NEON_OK;
-        }
+        neon_status_t status = neon_dma_poll_channel(instance, channel);
+        if (status != NEON_BUSY) { return status; }
     } while (timeout_cycles == 0U || --remaining != 0U);
     return NEON_TIMEOUT;
 }

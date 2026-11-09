@@ -3330,6 +3330,31 @@ peripherals:
           - {name: ADDR_FAILURE, bit_offset: 1, bit_width: 12, description: "Address of the first APB command affected by the clock failure"}
           - {name: CMD_FAILURE,  bit_offset: 13, bit_width: 1, description: "Failed command type: 0=write, 1=read"}
 
+      - name: DMA_RX
+        offset: 0x044
+        size: 32
+        access: rw
+        reset: 0x00000000
+        description: "UART DMA RX control; TRAN_DONE is cleared by reading IIR"
+        fields:
+          - {name: ENABLE, bit_offset: 0, bit_width: 1, description: "Enable RX DMA handshaking"}
+          - {name: MAX_BURST_LEN, bit_offset: 1, bit_width: 2, description: "Singles per burst: 0=2, 1=4, 2=8, 3=16"}
+          - {name: BURST_MODE, bit_offset: 3, bit_width: 1, description: "0=single, 1=burst"}
+          - {name: TOTAL_BYTES, bit_offset: 4, bit_width: 16, description: "Number of received UART data bytes"}
+          - {name: TRAN_DONE, bit_offset: 20, bit_width: 1, description: "RX transfer complete; read IIR to acknowledge"}
+      - name: DMA_TX
+        offset: 0x048
+        size: 32
+        access: rw
+        reset: 0x00000000
+        description: "UART DMA TX control; TRAN_DONE is cleared by reading IIR"
+        fields:
+          - {name: ENABLE, bit_offset: 0, bit_width: 1, description: "Enable TX DMA handshaking"}
+          - {name: MAX_BURST_LEN, bit_offset: 1, bit_width: 2, description: "Singles per burst: 0=2, 1=4, 2=8, 3=16"}
+          - {name: BURST_MODE, bit_offset: 3, bit_width: 1, description: "0=single, 1=burst"}
+          - {name: TOTAL_BYTES, bit_offset: 4, bit_width: 16, description: "Number of transmitted UART data bytes"}
+          - {name: TRAN_DONE, bit_offset: 20, bit_width: 1, description: "TX transfer complete; read IIR to acknowledge"}
+
   - name: UART1
     base: 0x440E0000
     type: UART

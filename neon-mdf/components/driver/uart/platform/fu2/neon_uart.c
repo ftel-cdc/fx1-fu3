@@ -36,6 +36,7 @@ static uint32_t fu2_uart_fcr_shadow[5] = {0U, 0U, 0U, 0U, 0U};
 static neon_uart_handle_t *fu2_uart_owner[5];
 static neon_uart_config_t uart_configs[5];
 static fu2_syscsr_pin_group_t uart_pins[5];
+static uint32_t uart_dma_mask[5];
 
 /*==================================================================================================
 *                                   PRIVATE FUNCTION PROTOTYPES
@@ -106,7 +107,13 @@ void neon_uart_get_default_config(neon_uart_config_t *config) {
 
 /** @copydoc neon_uart_get_state */
 neon_uart_state_t neon_uart_get_state(const neon_uart_handle_t *huart) {
-    return (huart == 0) ? NEON_UART_STATE_RESET : huart->state;
+    if (huart == NULL) { return NEON_UART_STATE_RESET; }
+    if (huart->state == NEON_UART_STATE_READY && uart_is_valid_instance(huart->instance) != 0U) {
+        uint32_t dma = uart_dma_mask[uart_get_index(huart->instance)];
+        if ((dma & (1U << NEON_UART_DMA_RX)) != 0U) { return NEON_UART_STATE_BUSY_RX; }
+        if ((dma & (1U << NEON_UART_DMA_TX)) != 0U) { return NEON_UART_STATE_BUSY_TX; }
+    }
+    return huart->state;
 }
 
 /** @copydoc neon_uart_get_error */
@@ -316,6 +323,7 @@ neon_status_t neon_uart_try_receive(neon_uart_handle_t *huart, uint32_t *data) {
         return NEON_ERROR;
     }
     if ((huart->state != NEON_UART_STATE_READY && huart->state != NEON_UART_STATE_BUSY_TX) ||
+        (uart_dma_mask[uart_get_index(huart->instance)] & (1U << NEON_UART_DMA_RX)) != 0U ||
         (huart->instance->LCR & UART_LCR_DLAB_Msk) != 0U) {
         uart_exit_critical(saved);
         return NEON_BUSY;
@@ -365,6 +373,53 @@ neon_status_t neon_uart_wait_tx_complete(neon_uart_handle_t *huart, uint32_t tim
     }
     uart_release(huart);
     return NEON_OK;
+}
+
+/** @copydoc neon_uart_set_dma */
+neon_status_t neon_uart_set_dma(neon_uart_handle_t *huart, neon_uart_dma_direction_t direction, uint16_t count) {
+    if (huart == NULL || uart_is_valid_instance(huart->instance) == 0U ||
+        (direction != NEON_UART_DMA_RX && direction != NEON_UART_DMA_TX)) {
+        return NEON_INVALID_PARAM;
+    }
+    uint32_t saved = uart_enter_critical();
+    uint32_t index = uart_get_index(huart->instance);
+    if (fu2_uart_owner[index] != huart) {
+        uart_exit_critical(saved);
+        return NEON_ERROR;
+    }
+    if (huart->state != NEON_UART_STATE_READY || (count != 0U && uart_dma_mask[index] != 0U)) {
+        uart_exit_critical(saved);
+        return NEON_BUSY;
+    }
+    if (count != 0U && (uart_configs[index].fifo_state != NEON_UART_FIFO_ENABLE ||
+                       uart_configs[index].word_length != NEON_UART_WORD_LENGTH_8B ||
+                       uart_configs[index].status_source != NEON_UART_STATUS_SOURCE_HARDWARE)) {
+        uart_exit_critical(saved);
+        return NEON_NOT_SUPPORTED;
+    }
+    volatile uint32_t *control = direction == NEON_UART_DMA_RX ? &huart->instance->DMA_RX : &huart->instance->DMA_TX;
+    *control = 0U;
+    neon_status_t status = NEON_OK;
+    if (count != 0U) {
+        /* Reading IIR acknowledges a previous DMA completion. */
+        (void)huart->instance->IIR_FCR;
+        huart->error_code = NEON_UART_ERROR_NONE;
+        huart->clock_status = 0U;
+        uart_dma_mask[index] = 1U << direction;
+        __DMB();
+        *control = ((uint32_t)count << UART_DMA_RX_TOTAL_BYTES_Pos) | UART_DMA_RX_ENABLE_Msk;
+    } else {
+        if (direction == NEON_UART_DMA_RX) {
+            uart_update_receive_errors(huart, huart->instance->LSR);
+            if (huart->error_code != NEON_UART_ERROR_NONE) { status = NEON_ERROR; }
+        }
+        /* Preserve the error snapshot above, then acknowledge DMA/line flags. */
+        (void)huart->instance->IIR_FCR;
+        uart_dma_mask[index] &= ~(1U << direction);
+        __DSB();
+    }
+    uart_exit_critical(saved);
+    return status;
 }
 
 /** @copydoc neon_uart_transmit_words */
@@ -902,6 +957,13 @@ static neon_status_t uart_acquire(neon_uart_handle_t *huart, neon_uart_state_t b
         uart_exit_critical(primask);
         return NEON_BUSY;
     }
+    uint32_t dma = uart_dma_mask[uart_get_index(huart->instance)];
+    if ((busy_state == NEON_UART_STATE_BUSY_CONFIG && dma != 0U) ||
+        (busy_state == NEON_UART_STATE_BUSY_TX && (dma & (1U << NEON_UART_DMA_TX)) != 0U) ||
+        (busy_state == NEON_UART_STATE_BUSY_RX && (dma & (1U << NEON_UART_DMA_RX)) != 0U)) {
+        uart_exit_critical(primask);
+        return NEON_BUSY;
+    }
     huart->state = busy_state;
     uart_exit_critical(primask);
     return NEON_OK;
@@ -915,6 +977,7 @@ static void uart_release(neon_uart_handle_t *huart) {
 
 static void uart_release_owner(neon_uart_handle_t *huart) {
     uint32_t primask = uart_enter_critical();
+    uart_dma_mask[uart_get_index(huart->instance)] = 0U;
     fu2_uart_owner[uart_get_index(huart->instance)] = 0;
     huart->private_context = 0U;
     huart->state = NEON_UART_STATE_RESET;

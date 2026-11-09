@@ -1,82 +1,38 @@
-# GPIO_Input_Output — testcase 2 for FU2
+# GPIO_Input_Output
 
-Read buttons at GPIOB_5 (PB5) and LED control at GPIOB_1 (PB1):
-**press on, release off**. Main loop reads GPIO directly. `printf` reports status via UART0, 19200
-baud, 8N1.
+PB5 button controls PB7 output.
 
-## Connection and operation
+This is an independent FU2 firmware. Its UART terminal waits at boot; press `r` without Enter
+to start the example at the `fpga:>>` prompt.
+Console: UART0, 19200 baud, 8N1. FPGA system clock: 10 MHz by default.
 
-| Signals | configuration in main.c |
-|---|---|
-| PB5 | Input pull-up, press=0, release=1 |
-| PB1 | Output active-high: press=1, release=0; start at 0 |
-| UART0 | Log `printf`, keep PC0/PC1 for TX/RX |
+Source files are in `Src/`, with the terminal entry in `Src/main.c`. Example headers are in `Inc/`.
 
-The button connects the PB5 to the GND. If FPGA/PDI does not pull-up of the PAD, use a pull-up
-resistor outside in accordance with the bank voltage. The PB1 can connect the LED to the resistor or
-measuring device; the header pin depends on the mapping of the flashing PDI. Pins and logic levels
-are written directly in `Src/main.c` for easy readability and correction.
-
-PB1 starts at 0 level. when main read PB5 by 0, PB1 to 1 to turn on the LED; when PB5 by 1, PB1 to 0
-to turn off the LED. Log only prints when the input level sees a change. For example, without
-anti-rebound, so the mechanical button can create multiple logs at press / release.
-
-## Build and configuration
+## Build and load
 
 ```sh
-cd /home/quang-hoang/merge_neon_mdf/CDC_NEON_MDF_merged/examples/GPIO_Input_Output
+cd examples/GPIO_Input_Output_FPGA
 cmake --preset FU2
 cmake --build --preset FU2
+cmake -E env NEON_MDF_SERIAL_PORT=/dev/ttyUSB0 NEON_MDF_SERIAL_BAUD=19200 \
+  NEON_MDF_UART_BYTE_GAP_MS=2 NEON_MDF_UART_LOG=full \
+  cmake --build --preset FU2 --target flash_uart_fu2
 ```
 
-Change clock by:
+Load `build/FU2/fu2_gpio_input_output_image.bin` when selecting an image manually. This file includes the FU2
+128-byte image header; `fu2_gpio_input_output.bin` is the raw payload. Open a serial monitor after the loader
+releases the port. Use the board's UART-download/normal-boot straps as described in
+[FU2 build and boot](../../guide/FU2.md).
 
-```sh
-cmake --build --preset FU2 --target menuconfig
-cmake --preset FU2
-cmake --build --preset FU2
-```
+## Run
 
-configuration clock is in the `GPIO_Input_Output` menu. Default FPGA clock 10 MHz; true clock
-matching required for correct UART baud. Clock value 0 uses SDK startup clock. Keep UART driver on
-to use `printf` with `<stdio.h>`; application does not need to call `neon_console_attach_uart()` or
-manually initialize UART. Change pin, pull or active level by editing `Src/main.c` directly.
+Connect PB5 to a button to GND and PB7 to an LED through a resistor. A pressed button drives PB7 HIGH. Ctrl+C stops.
 
-## flash and view log
-
-The flash file is `build/FU2/gpio_input_output_image.bin`, which has a 128 byte boot header.
-`gpio_input_output.bin` is only payload raw, not directly used with the loader.
-
-On an FPGA connector, replace the serial port and path for that machine:
-
-```sh
-python3 /home/quang-hoang/fu2_fpga/uart_boot_loader.py --port /dev/serial/by-id/usb-Xilinx_VEK280_262502175696-if02-port0 --image /home/quang-hoang/merge_neon_mdf/CDC_NEON_MDF_merged/examples/GPIO_Input_Output/build/FU2/gpio_input_output_image.bin --baud 9600 --byte-gap-ms 2 --no-monitor
-```
-
-Run the loader and reset it according to the board procedure. When the flash is complete, open the terminal:
-
-```sh
-python3 -m serial.tools.miniterm /dev/serial/by-id/usb-Xilinx_VEK280_262502175696-if02-port0 19200 --raw
-```
-
-Press and release the PB5 button. PB1 must be up 1 when pressed and down 0 when released, and log
-output:
-
-```text
-[INFO] PB5 button -> PB1 LED
-[GPIO] RELEASED -> LED OFF
-[GPIO] PRESSED -> LED ON
-[GPIO] RELEASED -> LED OFF
-```
-
-Banner and initial status may have passed before opening terminal; press/release button to receive
-new log. Exit miniterm with `Ctrl+]`.
-
-## Notes
-
-Do not use SysTick, interrupt GPIO, delay, DMA or FreeRTOS. Main reads the node and writes output
-with `neon_gpio_read_pin()` / `neon_gpio_write_pin()`. While UART prints log, main waits; loop
-continues to read the node after printf returns.
-
-Keep PC0/PC1 for UART0 if fixing GPIO pins. Confirm on real FPGA with log same state PB1/LED; build
-results do not confirm line and pad.
+When the run function completes or its stop key is pressed, the application returns to its
+UART terminal. Press `r` again to repeat the example. While the run function is active, its own
+menu/data keys apply; `r` only starts a run when the application is at `fpga:>>`.
+At this prompt, Enter starts a new line and prints `fpga:>>` again. CR, LF and CRLF are
+supported; CRLF produces only one new prompt.
+Configure with `cmake --build --preset FU2 --target menuconfig`, then build again.
+`CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ` must match the actual FPGA clock. Timeout values ending in
+`_POLLS` are polling budgets, not milliseconds.

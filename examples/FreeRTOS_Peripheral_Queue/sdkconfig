@@ -1,0 +1,25 @@
+
+#
+# components/driver
+#
+CONFIG_NEON_MDF_DRIVER_UART=y
+# CONFIG_NEON_MDF_DRIVER_I2C is not set
+# CONFIG_NEON_MDF_DRIVER_CRC is not set
+# CONFIG_NEON_MDF_DRIVER_ADC is not set
+# CONFIG_NEON_MDF_DRIVER_DMA is not set
+# CONFIG_NEON_MDF_DRIVER_SPI is not set
+# CONFIG_NEON_MDF_DRIVER_PWM is not set
+# CONFIG_NEON_MDF_DRIVER_TIM is not set
+# CONFIG_NEON_MDF_DRIVER_RTC is not set
+# CONFIG_NEON_MDF_DRIVER_TRNG is not set
+# CONFIG_NEON_MDF_DRIVER_AES is not set
+# CONFIG_NEON_MDF_DRIVER_QSPI is not set
+# CONFIG_NEON_MDF_DRIVER_WDT is not set
+# end of components/driver
+
+#
+# FU2 example configuration
+#
+CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ=10000000
+CONFIG_FU2_EXAMPLE_RX_TIMEOUT_POLLS=10000
+# end of FU2 example configuration

@@ -1,5 +1,10 @@
 {
   "version": 6,
-  "cmakeMinimumRequired": { "major": 3, "minor": 25 },
-  "include": ["../../neon-mdf/cmake/presets/targets.json"]
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25
+  },
+  "include": [
+    "../cmake/FPGA_CMakePresets.json"
+  ]
 }
