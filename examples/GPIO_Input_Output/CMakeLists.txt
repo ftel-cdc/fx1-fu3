@@ -1,22 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(gpio_input_output C ASM)
+project(fu2_gpio_input_output C ASM)
 
-if(NOT NEON_MDF_PATH)
-  if(DEFINED ENV{NEON_MDF_PATH})
-    set(NEON_MDF_PATH "$ENV{NEON_MDF_PATH}")
-  else()
-    get_filename_component(NEON_MDF_PATH "../../neon-mdf" ABSOLUTE)
-  endif()
-endif()
-include(${NEON_MDF_PATH}/tools/cmake/project.cmake)
-if(NOT NEON_MDF_TARGET STREQUAL "FU2")
-  message(FATAL_ERROR "GPIO_Input_Output currently supports FU2 only")
-endif()
-
-include(${CMAKE_BINARY_DIR}/config/sdkconfig.cmake)
-if(NOT CONFIG_GPIO_IO_FIXED_CLOCK_HZ EQUAL 0)
-  target_compile_definitions(${NEON_MDF_DEVICE_TARGET} PUBLIC
-    FU2_FPGA_FIXED_CLOCK_HZ=${CONFIG_GPIO_IO_FIXED_CLOCK_HZ}UL)
-endif()
-
-neon_mdf_add_executable(gpio_input_output Src/main.c)
+set(FU2_EXAMPLE_SOURCES Src/main.c Src/gpio_input_output.c)
+include(../cmake/fpga_example.cmake)
