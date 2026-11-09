@@ -1,7 +1,6 @@
 /**
  * @file spi_dma.h
- * @brief Testcase skeleton for SPI_DMA.
- * @details Declares the entry point; peripheral behavior will be added later.
+ * @brief SPI0 DMA TX/RX checks using W5500 SRAM.
  */
 
 #ifndef FU2_EXAMPLE_SPI_DMA_H
@@ -15,7 +14,7 @@ extern "C" {
 *                                       FUNCTION PROTOTYPES
 ==================================================================================================*/
 /**
- * @brief Report that SPI_DMA is not implemented yet.
+ * @brief Write a 32-byte pattern using DMA, verify by polling, then read using DMA.
  */
 void spi_dma_run(void);
 

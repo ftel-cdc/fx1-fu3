@@ -45,7 +45,7 @@ SPI_W5500/
 | [I2C_Slave](I2C_Slave/README.md) | TODO skeleton | `fu2_i2c_slave` |
 | [PWM_Output](PWM_Output/README.md) | Implemented | `fu2_pwm_output` |
 | [RTC_Calendar](RTC_Calendar/README.md) | TODO skeleton | `fu2_rtc_calendar` |
-| [SPI_DMA](SPI_DMA/README.md) | TODO skeleton | `fu2_spi_dma` |
+| [SPI_DMA](SPI_DMA/README.md) | Implemented | `fu2_spi_dma` |
 | [SPI_W5500](SPI_W5500/README.md) | Implemented | `fu2_spi_w5500` |
 | [TIM_Periodic_Interrupt](TIM_Periodic_Interrupt/README.md) | Implemented | `fu2_tim_periodic_interrupt` |
 | [TRNG_Read](TRNG_Read/README.md) | TODO skeleton | `fu2_trng_read` |
@@ -53,7 +53,7 @@ SPI_W5500/
 | [UART_ECHO_Polling_FPGA](UART_ECHO_Polling_FPGA/README.md) | Implemented | `fu2_uart_echo_polling` |
 | [UART_RX_Interrupt](UART_RX_Interrupt/README.md) | Implemented | `fu2_uart_rx_interrupt` |
 
-The 9 implemented examples retain their peripheral behavior. The 11 TODO skeletons remain
+The collection includes 10 implemented examples. The 10 TODO skeletons remain
 unimplemented and print their status when started with `r`. `Flash_Read_Write` accesses internal FU2 Flash.
 There is no external SPI/QSPI Flash example in this collection.
 
@@ -80,8 +80,8 @@ cmake --build --preset FU2 --target menuconfig
 cmake --build --preset FU2
 ```
 
-Common build settings are in `cmake/fpga_example.cmake`, `cmake/FPGA_CMakePresets.json` and
-`cmake/FPGA_Kconfig`. They share configuration only; they do not link the examples together.
+Each application keeps its SDK setup, build preset and menu options in its own
+`CMakeLists.txt`, `CMakePresets.json` and `Kconfig`.
 The default fixed FPGA clock is 10 MHz. `CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ` must match the actual
 bitstream; choosing a software value does not change the physical FPGA clock.
 

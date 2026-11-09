@@ -395,6 +395,17 @@ neon_status_t neon_spi_transmit_receive_words(SPI_TypeDef *instance, const uint3
                                               uint16_t count, uint32_t timeout_polls);
 
 /**
+ * @brief Wait for the final legacy-master SPI frame to leave the controller.
+ * @details Stop submitting TX data before calling. With DMA, first wait for
+ * the DMAC command and its bus writes to complete. This waits for SPI DMA TX
+ * completion when enabled, then TX FIFO empty and the conservative final-frame
+ * guard used by polling transfers. SS settings are preserved, including HOLD.
+ * A timeout requires Init/DeInit before another transfer. The budget counts
+ * polling/guard iterations, not milliseconds. Slave/DDR modes are unsupported.
+ */
+neon_status_t neon_spi_wait_tx_complete(SPI_TypeDef *instance, uint32_t timeout_polls);
+
+/**
  * @brief enable SPI interrupt.
  * @param[in] instance Peripheral register instance.
  * @return NEON_OK on success, or a module error/status code.

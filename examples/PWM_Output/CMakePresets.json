@@ -4,7 +4,24 @@
     "major": 3,
     "minor": 25
   },
-  "include": [
-    "../cmake/FPGA_CMakePresets.json"
+  "configurePresets": [
+    {
+      "name": "FU2",
+      "displayName": "FU2 standalone example",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/FU2",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/../../neon-mdf/cmake/toolchain/arm-none-eabi.cmake",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "NEON_MDF_TARGET": "FU2",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "FU2",
+      "configurePreset": "FU2"
+    }
   ]
 }
