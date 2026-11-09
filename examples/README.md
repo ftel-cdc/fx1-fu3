@@ -108,7 +108,8 @@ See [FU2 build and boot](../guide/FU2.md) for the ROM boot contract and supporte
 Interactive examples return on their documented stop key; one-shot examples return after completion.
 The application then prints `fpga:>>` again. Press `r` to repeat without resetting the board.
 While a run is active, its own keys apply: for example, `r` reads SRAM in the SPI/W5500 menu and
-arms RX in the UART DMA menu. At `fpga:>>`, other keys, including CR/LF, are ignored.
+arms RX in the UART DMA menu. At `fpga:>>`, Enter starts a new line and displays the prompt again.
+CR and LF each work as Enter; a CRLF pair produces only one new prompt. Other unused keys are ignored.
 
 ## Hardware verification
 

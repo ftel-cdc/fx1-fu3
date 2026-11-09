@@ -31,6 +31,8 @@ Observe PB7 with an LED or logic analyzer. The expected LED period is 1 second a
 When the run function completes or its stop key is pressed, the application returns to its
 UART terminal. Press `r` again to repeat the example. While the run function is active, its own
 menu/data keys apply; `r` only starts a run when the application is at `fpga:>>`.
+At this prompt, Enter starts a new line and prints `fpga:>>` again. CR, LF and CRLF are
+supported; CRLF produces only one new prompt.
 Configure with `cmake --build --preset FU2 --target menuconfig`, then build again.
 `CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ` must match the actual FPGA clock. Timeout values ending in
 `_POLLS` are polling budgets, not milliseconds.

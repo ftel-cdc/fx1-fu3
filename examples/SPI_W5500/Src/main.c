@@ -13,9 +13,17 @@ int main(void) {
 
     printf("Press r to run SPI_W5500 (no Enter).\n");
     printf("fpga:>> ");
+    uint32_t skip_lf = 0U;
     for (;;) {
         uint32_t key = 0U;
         if (neon_uart_try_receive(uart, &key) != NEON_OK) { continue; }
+        /* Treat CRLF as one Enter; CR and LF also work on their own. */
+        if (key == '\n' && skip_lf != 0U) { skip_lf = 0U; continue; }
+        skip_lf = key == '\r' ? 1U : 0U;
+        if (key == '\r' || key == '\n') {
+            printf("\nfpga:>> ");
+            continue;
+        }
         if (key == 'r') {
             printf("r\n");
             printf("[RUN] SPI_W5500\n");
