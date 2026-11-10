@@ -23215,7 +23215,7 @@ UART4 : 0x50070000 - 0x5007FFFF (64 KB)
       <name>I2C0</name>
       <description>I2C0 - INTER INTEGRATED CIRCUIT
 I2C0 : 0x50080000 - 0x5008FFFF (64 KB)
-Reference: DTI I2C CTRL User Guide Rev 1.0
+Separate TX/RX DMA controls and latched interrupt status.
 </description>
       <baseAddress>0x50080000</baseAddress>
       <addressBlock>
@@ -23270,7 +23270,7 @@ Reference: DTI I2C CTRL User Guide Rev 1.0
         </register>
         <register>
           <name>ICFGR</name>
-          <description>RW I2C Configuration Register bit[0] MASTER_SLAVE | bit[2:1] SPEED_MODE | bit[3] ADDR_MODE | bit[4] SUB_ADDR_EN | bit[5] READ_WRITE | bit[6] STRETCH_EN</description>
+          <description>RW I2C Configuration Register bit[0] MASTER_SLAVE | bit[2:1] SPEED_MODE | bit[3] ADDR_MODE | bit[4] SUB_ADDR_EN | bit[5] READ_WRITE | bit[6] STRETCH_EN | bit[7] HW_AUTO_END</description>
           <addressOffset>0x8</addressOffset>
           <size>32</size>
           <access>read-write</access>
@@ -23310,6 +23310,12 @@ Reference: DTI I2C CTRL User Guide Rev 1.0
               <name>STRETCH_EN</name>
               <description>Enable clock stretching in slave mode</description>
               <bitOffset>6</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>HW_AUTO_END</name>
+              <description>Master automatically generates STOP after the byte count completes</description>
+              <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
           </fields>
@@ -23568,7 +23574,7 @@ Reference: DTI I2C CTRL User Guide Rev 1.0
         </register>
         <register>
           <name>ISR</name>
-          <description>RO I2C Status Register bit[0] BUS_BUSY | bit[1] TRANSFER_DONE | bit[2] ARB_LOST | bit[3] ADDR_NACK | bit[4] DATA_NACK | bit[5] TXFF_FULL | bit[6] TXFF_EMPTY | bit[7] TXFF_PROG_FULL | bit[8] TXFF_PROG_EMPTY | bit[9] RXFF_FULL | bit[10] RXFF_EMPTY | bit[11] RXFF_PROG_FULL | bit[12] RXFF_PROG_EMPTY | bit[13] SCL_STUCK_LOW | bit[14] SDA_STUCK_LOW | bit[15] ALERT_DEC | bit[23:16] PEC_DATA | bit[24] SLAVE_DIR | bit[31:25] ADDR_MATCH</description>
+          <description>RO I2C status; address/data NACK are reported in IITR</description>
           <addressOffset>0x48</addressOffset>
           <size>32</size>
           <access>read-only</access>
@@ -23593,106 +23599,106 @@ Reference: DTI I2C CTRL User Guide Rev 1.0
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>ADDR_NACK</name>
-              <description>Address NACK received</description>
-              <bitOffset>3</bitOffset>
-              <bitWidth>1</bitWidth>
-            </field>
-            <field>
-              <name>DATA_NACK</name>
-              <description>Data NACK received</description>
-              <bitOffset>4</bitOffset>
-              <bitWidth>1</bitWidth>
-            </field>
-            <field>
               <name>TXFF_FULL</name>
               <description>TX FIFO full</description>
-              <bitOffset>5</bitOffset>
+              <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>TXFF_EMPTY</name>
               <description>TX FIFO empty</description>
-              <bitOffset>6</bitOffset>
+              <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>TXFF_PROG_FULL</name>
-              <description>TX FIFO reached the programmable-full threshold</description>
-              <bitOffset>7</bitOffset>
+              <description>TX FIFO reached programmable-full threshold</description>
+              <bitOffset>5</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>TXFF_PROG_EMPTY</name>
-              <description>TX FIFO reached the programmable-empty threshold</description>
-              <bitOffset>8</bitOffset>
+              <description>TX FIFO reached programmable-empty threshold</description>
+              <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>RXFF_FULL</name>
               <description>RX FIFO full</description>
-              <bitOffset>9</bitOffset>
+              <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>RXFF_EMPTY</name>
               <description>RX FIFO empty</description>
-              <bitOffset>10</bitOffset>
+              <bitOffset>8</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>RXFF_PROG_FULL</name>
-              <description>RX FIFO reached the programmable-full threshold</description>
-              <bitOffset>11</bitOffset>
+              <description>RX FIFO reached programmable-full threshold</description>
+              <bitOffset>9</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>RXFF_PROG_EMPTY</name>
-              <description>RX FIFO reached the programmable-empty threshold</description>
-              <bitOffset>12</bitOffset>
+              <description>RX FIFO reached programmable-empty threshold</description>
+              <bitOffset>10</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>SCL_STUCK_LOW</name>
               <description>SCL held low detected</description>
-              <bitOffset>13</bitOffset>
+              <bitOffset>11</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>SDA_STUCK_LOW</name>
               <description>SDA held low detected</description>
-              <bitOffset>14</bitOffset>
+              <bitOffset>12</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>ALERT_DEC</name>
               <description>SMBus ALERT detected</description>
-              <bitOffset>15</bitOffset>
+              <bitOffset>13</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>PEC_DATA</name>
               <description>Current PEC value</description>
-              <bitOffset>16</bitOffset>
+              <bitOffset>14</bitOffset>
               <bitWidth>8</bitWidth>
             </field>
             <field>
               <name>SLAVE_DIR</name>
-              <description>Transaction direction when FU2 is a slave</description>
-              <bitOffset>24</bitOffset>
+              <description>Slave transfer direction</description>
+              <bitOffset>22</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>ADDR_MATCH</name>
-              <description>7-bit address matched in slave mode</description>
-              <bitOffset>25</bitOffset>
+              <description>Matched slave address</description>
+              <bitOffset>23</bitOffset>
               <bitWidth>7</bitWidth>
+            </field>
+            <field>
+              <name>DMA_BUSY_TX</name>
+              <description>TX DMA busy</description>
+              <bitOffset>30</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>DMA_BUSY_RX</name>
+              <description>RX DMA busy</description>
+              <bitOffset>31</bitOffset>
+              <bitWidth>1</bitWidth>
             </field>
           </fields>
         </register>
         <register>
           <name>IIER</name>
-          <description>RW I2C Interrupt Enable Register bit[0] TRANSFER_DONE_EN | bit[1] ADDR_NACK_EN | bit[2] DATA_NACK_EN | bit[3] TXFF_FULL_EN | bit[4] TXFF_EMPTY_EN | bit[5] TXFF_PROG_FULL_EN | bit[6] TXFF_PROG_EMPTY_EN | bit[7] RXFF_FULL_EN | bit[8] RXFF_EMPTY_EN | bit[9] RXFF_PROG_FULL_EN | bit[10] RXFF_PROG_EMPTY_EN | bit[11] SCL_STUCK_LOW_EN | bit[12] SDA_STUCK_LOW_EN | bit[13] PEC_ERR_EN | bit[14] ADD_MATCH_EN | bit[15] ARB_LOST_EN | bit[16] ALERT_DEC_EN | bit[17] STOP_DEC_EN</description>
+          <description>RW I2C Interrupt Enable Register bit[0] TRANSFER_DONE_EN | bit[1] ADDR_NACK_EN | bit[2] DATA_NACK_EN | bit[3] TXFF_FULL_EN | bit[4] TXFF_EMPTY_EN | bit[5] TXFF_PROG_FULL_EN | bit[6] TXFF_PROG_EMPTY_EN | bit[7] RXFF_FULL_EN | bit[8] RXFF_EMPTY_EN | bit[9] RXFF_PROG_FULL_EN | bit[10] RXFF_PROG_EMPTY_EN | bit[11] SCL_STUCK_LOW_EN | bit[12] SDA_STUCK_LOW_EN | bit[13] PEC_ERR_EN | bit[14] ADD_MATCH_EN | bit[15] ARB_LOST_EN | bit[16] ALERT_DEC_EN | bit[17] STOP_DEC_EN | bit[18] DMA_TX_DONE_EN | bit[19] DMA_RX_DONE_EN</description>
           <addressOffset>0x4C</addressOffset>
           <size>32</size>
           <access>read-write</access>
@@ -23700,7 +23706,7 @@ Reference: DTI I2C CTRL User Guide Rev 1.0
           <fields>
             <field>
               <name>TRANSFER_DONE_EN</name>
-              <description>Enable transfer-done interrupt; when enabled, hardware does not generate STOP automatically</description>
+              <description>Enable transfer-done interrupt; master hardware STOP is selected by ICFGR.HW_AUTO_END</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
@@ -23806,11 +23812,23 @@ Reference: DTI I2C CTRL User Guide Rev 1.0
               <bitOffset>17</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
+            <field>
+              <name>DMA_TX_DONE_EN</name>
+              <description>Enable TX DMA-done interrupt</description>
+              <bitOffset>18</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>DMA_RX_DONE_EN</name>
+              <description>Enable RX DMA-done interrupt</description>
+              <bitOffset>19</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
           </fields>
         </register>
         <register>
           <name>IICR</name>
-          <description>RW I2C Interrupt Clear Register bit[0] TRANSFER_DONE_CLR | bit[1] ADDR_NACK_CLR | bit[2] DATA_NACK_CLR | bit[3] TXFF_FULL_CLR | bit[4] TXFF_EMPTY_CLR | bit[5] TXFF_PROG_FULL_CLR | bit[6] TXFF_PROG_EMPTY_CLR | bit[7] RXFF_FULL_CLR | bit[8] RXFF_EMPTY_CLR | bit[9] RXFF_PROG_FULL_CLR | bit[10] RXFF_PROG_EMPTY_CLR | bit[11] SCL_STUCK_LOW_CLR | bit[12] SDA_STUCK_LOW_CLR | bit[13] PEC_ERR_CLR | bit[14] ADD_MATCH_CLR | bit[15] ARB_LOST_CLR | bit[16] ALERT_DEC_CLR | bit[17] STOP_DEC_CLR</description>
+          <description>RW I2C Interrupt Clear Register bit[0] TRANSFER_DONE_CLR | bit[1] ADDR_NACK_CLR | bit[2] DATA_NACK_CLR | bit[3] TXFF_FULL_CLR | bit[4] TXFF_EMPTY_CLR | bit[5] TXFF_PROG_FULL_CLR | bit[6] TXFF_PROG_EMPTY_CLR | bit[7] RXFF_FULL_CLR | bit[8] RXFF_EMPTY_CLR | bit[9] RXFF_PROG_FULL_CLR | bit[10] RXFF_PROG_EMPTY_CLR | bit[11] SCL_STUCK_LOW_CLR | bit[12] SDA_STUCK_LOW_CLR | bit[13] PEC_ERR_CLR | bit[14] ADD_MATCH_CLR | bit[15] ARB_LOST_CLR | bit[16] ALERT_DEC_CLR | bit[17] STOP_DEC_CLR | bit[18] DMA_TX_DONE_CLR | bit[19] DMA_RX_DONE_CLR</description>
           <addressOffset>0x50</addressOffset>
           <size>32</size>
           <access>read-write</access>
@@ -23924,6 +23942,18 @@ Reference: DTI I2C CTRL User Guide Rev 1.0
               <bitOffset>17</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
+            <field>
+              <name>DMA_TX_DONE_CLR</name>
+              <description>Clear TX DMA-done interrupt</description>
+              <bitOffset>18</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>DMA_RX_DONE_CLR</name>
+              <description>Clear RX DMA-done interrupt</description>
+              <bitOffset>19</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
           </fields>
         </register>
         <register>
@@ -24019,31 +24049,77 @@ Reference: DTI I2C CTRL User Guide Rev 1.0
           </fields>
         </register>
         <register>
-          <name>IDER</name>
-          <description>RW I2C DMA Enable Register bit[0] TX_ENABLE | bit[1] RX_ENABLE</description>
+          <name>IDTR</name>
+          <description>I2C TX DMA request control</description>
           <addressOffset>0x68</addressOffset>
           <size>32</size>
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>TX_ENABLE</name>
+              <name>ENABLE</name>
               <description>Enable TX DMA requests</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>RX_ENABLE</name>
-              <description>Enable RX DMA requests</description>
+              <name>MAX_BURST_LEN</name>
+              <description>Singles per burst: 2/4/8/16</description>
               <bitOffset>1</bitOffset>
+              <bitWidth>2</bitWidth>
+            </field>
+            <field>
+              <name>BURST_MODE</name>
+              <description>0=SINGLE, 1=BURST</description>
+              <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>TOTAL_BYTES</name>
+              <description>Total TX DMA bytes</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>8</bitWidth>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>IDRR</name>
+          <description>I2C RX DMA request control</description>
+          <addressOffset>0x6C</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>ENABLE</name>
+              <description>Enable RX DMA requests</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>MAX_BURST_LEN</name>
+              <description>Singles per burst: 2/4/8/16</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>2</bitWidth>
+            </field>
+            <field>
+              <name>BURST_MODE</name>
+              <description>0=SINGLE, 1=BURST</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>TOTAL_BYTES</name>
+              <description>Total RX DMA bytes</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>8</bitWidth>
             </field>
           </fields>
         </register>
         <register>
           <name>ISDIR</name>
           <description>RW I2C Slave Device ID Register bit[23:0] DEV_ID</description>
-          <addressOffset>0x6C</addressOffset>
+          <addressOffset>0x70</addressOffset>
           <size>32</size>
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
@@ -24059,7 +24135,7 @@ Reference: DTI I2C CTRL User Guide Rev 1.0
         <register>
           <name>IIOCR</name>
           <description>RW I2C IO Configuration Register bit[0] ODIS | bit[1] FENA | bit[2] PWRDNH</description>
-          <addressOffset>0x70</addressOffset>
+          <addressOffset>0x74</addressOffset>
           <size>32</size>
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
@@ -24087,7 +24163,7 @@ Reference: DTI I2C CTRL User Guide Rev 1.0
         <register>
           <name>ISMBR</name>
           <description>RW I2C SMBus Control Register bit[0] SMB_EN | bit[1] PEC_EN | bit[2] SF_EN | bit[3] QCMD_EN | bit[4] ALERT_EN | bit[5] ALERT_DEC_CLR | bit[6] PEC_ERR_CLR</description>
-          <addressOffset>0x74</addressOffset>
+          <addressOffset>0x78</addressOffset>
           <size>32</size>
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
@@ -24139,7 +24215,7 @@ Reference: DTI I2C CTRL User Guide Rev 1.0
         <register>
           <name>ICLFT</name>
           <description>RO I2C Clock Failure Detect Register bit[0] CLK_FAILURE | bit[16:1] ADDR_FAILURE | bit[17] CMD_FAILURE</description>
-          <addressOffset>0x78</addressOffset>
+          <addressOffset>0x7C</addressOffset>
           <size>32</size>
           <access>read-only</access>
           <resetValue>0x00000000</resetValue>
@@ -24167,7 +24243,7 @@ Reference: DTI I2C CTRL User Guide Rev 1.0
         <register>
           <name>IITR</name>
           <description>RO I2C Interrupt Status Register</description>
-          <addressOffset>0x7C</addressOffset>
+          <addressOffset>0x80</addressOffset>
           <size>32</size>
           <access>read-only</access>
           <resetValue>0x00000000</resetValue>
@@ -24278,6 +24354,18 @@ Reference: DTI I2C CTRL User Guide Rev 1.0
               <name>STOP_DEC</name>
               <description>STOP-detection interrupt active</description>
               <bitOffset>17</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>DMA_TX_DONE</name>
+              <description>TX DMA-done interrupt active</description>
+              <bitOffset>18</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>DMA_RX_DONE</name>
+              <description>RX DMA-done interrupt active</description>
+              <bitOffset>19</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
           </fields>

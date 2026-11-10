@@ -1,17 +1,17 @@
 #include <stdio.h>
 #include "mcu_device.h"
-#include "i2c_slave.h"
+#include "i2c_eeprom.h"
 #include "console/neon_console.h"
 
 int main(void) {
-    printf("\nFU2 I2C_Slave\n");
+    printf("\nFU2 I2C_EEPROM\n");
     neon_uart_handle_t *uart = neon_console_get_uart();
     if (uart == NULL) {
         printf("[FAIL] UART0 initialization failed.\n");
         for (;;) { __WFI(); }
     }
 
-    printf("Press r to run I2C_Slave (no Enter).\n");
+    printf("Press r to run I2C_EEPROM (no Enter).\n");
     printf("fpga:>> ");
     uint32_t skip_lf = 0U;
     for (;;) {
@@ -26,8 +26,8 @@ int main(void) {
         }
         if (key == 'r') {
             printf("r\n");
-            printf("[RUN] I2C_Slave\n");
-            i2c_slave_run();
+            printf("[RUN] I2C_EEPROM\n");
+            i2c_eeprom_run(uart);
             printf("fpga:>> ");
         }
     }

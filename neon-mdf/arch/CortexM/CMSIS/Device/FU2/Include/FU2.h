@@ -698,12 +698,12 @@ typedef struct {
 /*
  * I2C0 - INTER INTEGRATED CIRCUIT
  * I2C0 : 0x50080000 - 0x5008FFFF (64 KB)
- * Reference: DTI I2C CTRL User Guide Rev 1.0
+ * Separate TX/RX DMA controls and latched interrupt status.
  */
 typedef struct {
   __IO uint32_t IER;              /*!< offset 0x00, RW I2C Enable Register bit[0] ENABLE           */
   __IO uint32_t ICTLR;            /*!< offset 0x04, RW I2C Control Register bit[0] START | bit[1] STOP | bit[2] NACK */
-  __IO uint32_t ICFGR;            /*!< offset 0x08, RW I2C Configuration Register bit[0] MASTER_SLAVE | bit[2:1] SPEED_MODE | bit[3] ADDR_MODE | bit[4] SUB_ADDR_EN | bit[5] READ_WRITE | bit[6] STRETCH_EN */
+  __IO uint32_t ICFGR;            /*!< offset 0x08, RW I2C Configuration Register bit[0] MASTER_SLAVE | bit[2:1] SPEED_MODE | bit[3] ADDR_MODE | bit[4] SUB_ADDR_EN | bit[5] READ_WRITE | bit[6] STRETCH_EN | bit[7] HW_AUTO_END */
   __IO uint32_t ITSAR;            /*!< offset 0x0C, RW I2C Target Slave Address Register bit[9:0] SLAVE_ADDR */
   __IO uint32_t ISRAR;            /*!< offset 0x10, RW I2C Slave Register Address bit[7:0] SLAVE_REG_ADDR */
   __IO uint32_t ITDR;             /*!< offset 0x14, RW I2C Transmit Data Register bit[7:0] TX_DATA */
@@ -719,20 +719,21 @@ typedef struct {
   __IO uint32_t ITTR;             /*!< offset 0x3C, RW I2C TBUF Time Register bit[15:0] TBUF_CNT   */
   __IO uint32_t ISCSLTR;          /*!< offset 0x40, RW I2C SCL Stuck Low Time Register bit[15:0] SCL_STUCK_LOW_CNT */
   __IO uint32_t ISDSLTR;          /*!< offset 0x44, RW I2C SDA Stuck Low Time Register bit[15:0] SDA_STUCK_LOW_CNT */
-  __I  uint32_t ISR;              /*!< offset 0x48, RO I2C Status Register bit[0] BUS_BUSY | bit[1] TRANSFER_DONE | bit[2] ARB_LOST | bit[3] ADDR_NACK | bit[4] DATA_NACK | bit[5] TXFF_FULL | bit[6] TXFF_EMPTY | bit[7] TXFF_PROG_FULL | bit[8] TXFF_PROG_EMPTY | bit[9] RXFF_FULL | bit[10] RXFF_EMPTY | bit[11] RXFF_PROG_FULL | bit[12] RXFF_PROG_EMPTY | bit[13] SCL_STUCK_LOW | bit[14] SDA_STUCK_LOW | bit[15] ALERT_DEC | bit[23:16] PEC_DATA | bit[24] SLAVE_DIR | bit[31:25] ADDR_MATCH */
-  __IO uint32_t IIER;             /*!< offset 0x4C, RW I2C Interrupt Enable Register bit[0] TRANSFER_DONE_EN | bit[1] ADDR_NACK_EN | bit[2] DATA_NACK_EN | bit[3] TXFF_FULL_EN | bit[4] TXFF_EMPTY_EN | bit[5] TXFF_PROG_FULL_EN | bit[6] TXFF_PROG_EMPTY_EN | bit[7] RXFF_FULL_EN | bit[8] RXFF_EMPTY_EN | bit[9] RXFF_PROG_FULL_EN | bit[10] RXFF_PROG_EMPTY_EN | bit[11] SCL_STUCK_LOW_EN | bit[12] SDA_STUCK_LOW_EN | bit[13] PEC_ERR_EN | bit[14] ADD_MATCH_EN | bit[15] ARB_LOST_EN | bit[16] ALERT_DEC_EN | bit[17] STOP_DEC_EN */
-  __IO uint32_t IICR;             /*!< offset 0x50, RW I2C Interrupt Clear Register bit[0] TRANSFER_DONE_CLR | bit[1] ADDR_NACK_CLR | bit[2] DATA_NACK_CLR | bit[3] TXFF_FULL_CLR | bit[4] TXFF_EMPTY_CLR | bit[5] TXFF_PROG_FULL_CLR | bit[6] TXFF_PROG_EMPTY_CLR | bit[7] RXFF_FULL_CLR | bit[8] RXFF_EMPTY_CLR | bit[9] RXFF_PROG_FULL_CLR | bit[10] RXFF_PROG_EMPTY_CLR | bit[11] SCL_STUCK_LOW_CLR | bit[12] SDA_STUCK_LOW_CLR | bit[13] PEC_ERR_CLR | bit[14] ADD_MATCH_CLR | bit[15] ARB_LOST_CLR | bit[16] ALERT_DEC_CLR | bit[17] STOP_DEC_CLR */
+  __I  uint32_t ISR;              /*!< offset 0x48, RO I2C status; address/data NACK are reported in IITR */
+  __IO uint32_t IIER;             /*!< offset 0x4C, RW I2C Interrupt Enable Register bit[0] TRANSFER_DONE_EN | bit[1] ADDR_NACK_EN | bit[2] DATA_NACK_EN | bit[3] TXFF_FULL_EN | bit[4] TXFF_EMPTY_EN | bit[5] TXFF_PROG_FULL_EN | bit[6] TXFF_PROG_EMPTY_EN | bit[7] RXFF_FULL_EN | bit[8] RXFF_EMPTY_EN | bit[9] RXFF_PROG_FULL_EN | bit[10] RXFF_PROG_EMPTY_EN | bit[11] SCL_STUCK_LOW_EN | bit[12] SDA_STUCK_LOW_EN | bit[13] PEC_ERR_EN | bit[14] ADD_MATCH_EN | bit[15] ARB_LOST_EN | bit[16] ALERT_DEC_EN | bit[17] STOP_DEC_EN | bit[18] DMA_TX_DONE_EN | bit[19] DMA_RX_DONE_EN */
+  __IO uint32_t IICR;             /*!< offset 0x50, RW I2C Interrupt Clear Register bit[0] TRANSFER_DONE_CLR | bit[1] ADDR_NACK_CLR | bit[2] DATA_NACK_CLR | bit[3] TXFF_FULL_CLR | bit[4] TXFF_EMPTY_CLR | bit[5] TXFF_PROG_FULL_CLR | bit[6] TXFF_PROG_EMPTY_CLR | bit[7] RXFF_FULL_CLR | bit[8] RXFF_EMPTY_CLR | bit[9] RXFF_PROG_FULL_CLR | bit[10] RXFF_PROG_EMPTY_CLR | bit[11] SCL_STUCK_LOW_CLR | bit[12] SDA_STUCK_LOW_CLR | bit[13] PEC_ERR_CLR | bit[14] ADD_MATCH_CLR | bit[15] ARB_LOST_CLR | bit[16] ALERT_DEC_CLR | bit[17] STOP_DEC_CLR | bit[18] DMA_TX_DONE_CLR | bit[19] DMA_RX_DONE_CLR */
   __IO uint32_t IBCER;            /*!< offset 0x54, RW I2C Bus Clear Enable Register bit[0] BUS_CLR */
   __IO uint32_t IDIER;            /*!< offset 0x58, RW I2C Device ID Enable Register bit[0] DEV_ID */
   __IO uint32_t ISRER;            /*!< offset 0x5C, RW I2C Software Reset Enable Register bit[0] SW_RESET */
   __IO uint32_t ITFTLR;           /*!< offset 0x60, RW I2C TX FIFO Threshold Level bit[3:0] PROG_FLVL | bit[7:4] PROG_ELVL */
   __IO uint32_t IRFTLR;           /*!< offset 0x64, RW I2C RX FIFO Threshold Level bit[3:0] PROG_FLVL | bit[7:4] PROG_ELVL */
-  __IO uint32_t IDER;             /*!< offset 0x68, RW I2C DMA Enable Register bit[0] TX_ENABLE | bit[1] RX_ENABLE */
-  __IO uint32_t ISDIR;            /*!< offset 0x6C, RW I2C Slave Device ID Register bit[23:0] DEV_ID */
-  __IO uint32_t IIOCR;            /*!< offset 0x70, RW I2C IO Configuration Register bit[0] ODIS | bit[1] FENA | bit[2] PWRDNH */
-  __IO uint32_t ISMBR;            /*!< offset 0x74, RW I2C SMBus Control Register bit[0] SMB_EN | bit[1] PEC_EN | bit[2] SF_EN | bit[3] QCMD_EN | bit[4] ALERT_EN | bit[5] ALERT_DEC_CLR | bit[6] PEC_ERR_CLR */
-  __I  uint32_t ICLFT;            /*!< offset 0x78, RO I2C Clock Failure Detect Register bit[0] CLK_FAILURE | bit[16:1] ADDR_FAILURE | bit[17] CMD_FAILURE */
-  __I  uint32_t IITR;             /*!< offset 0x7C, RO I2C Interrupt Status Register               */
+  __IO uint32_t IDTR;             /*!< offset 0x68, I2C TX DMA request control                     */
+  __IO uint32_t IDRR;             /*!< offset 0x6C, I2C RX DMA request control                     */
+  __IO uint32_t ISDIR;            /*!< offset 0x70, RW I2C Slave Device ID Register bit[23:0] DEV_ID */
+  __IO uint32_t IIOCR;            /*!< offset 0x74, RW I2C IO Configuration Register bit[0] ODIS | bit[1] FENA | bit[2] PWRDNH */
+  __IO uint32_t ISMBR;            /*!< offset 0x78, RW I2C SMBus Control Register bit[0] SMB_EN | bit[1] PEC_EN | bit[2] SF_EN | bit[3] QCMD_EN | bit[4] ALERT_EN | bit[5] ALERT_DEC_CLR | bit[6] PEC_ERR_CLR */
+  __I  uint32_t ICLFT;            /*!< offset 0x7C, RO I2C Clock Failure Detect Register bit[0] CLK_FAILURE | bit[16:1] ADDR_FAILURE | bit[17] CMD_FAILURE */
+  __I  uint32_t IITR;             /*!< offset 0x80, RO I2C Interrupt Status Register               */
 } I2C_TypeDef;
 
 /*
@@ -4473,12 +4474,12 @@ typedef struct {
 #define CRM_CRM_INT_Msk                           (0x1UL << CRM_CRM_INT_Pos)
 #define CRM_CRM_INT                               CRM_CRM_INT_Msk
 
-/* Fields of I2C_IER */
+/* Schools of I2C_IER */
 #define I2C_IER_ENABLE_Pos                   (0U)  /*!< Enable the I2C controller */
 #define I2C_IER_ENABLE_Msk                   (0x1UL << I2C_IER_ENABLE_Pos)
 #define I2C_IER_ENABLE                       I2C_IER_ENABLE_Msk
 
-/* Fields of I2C_ICTLR */
+/* Schools of I2C_ICTLR */
 #define I2C_ICTLR_START_Pos                  (0U)  /*!< Request START generation; hardware clears the bit after accepting the request */
 #define I2C_ICTLR_START_Msk                  (0x1UL << I2C_ICTLR_START_Pos)
 #define I2C_ICTLR_START                      I2C_ICTLR_START_Msk
@@ -4489,7 +4490,7 @@ typedef struct {
 #define I2C_ICTLR_NACK_Msk                   (0x1UL << I2C_ICTLR_NACK_Pos)
 #define I2C_ICTLR_NACK                       I2C_ICTLR_NACK_Msk
 
-/* Fields of I2C_ICFGR */
+/* Schools of I2C_ICFGR */
 #define I2C_ICFGR_MASTER_SLAVE_Pos           (0U)  /*!< Select role: 0=slave, 1=master */
 #define I2C_ICFGR_MASTER_SLAVE_Msk           (0x1UL << I2C_ICFGR_MASTER_SLAVE_Pos)
 #define I2C_ICFGR_MASTER_SLAVE               I2C_ICFGR_MASTER_SLAVE_Msk
@@ -4508,38 +4509,41 @@ typedef struct {
 #define I2C_ICFGR_STRETCH_EN_Pos             (6U)  /*!< Enable clock stretching in slave mode */
 #define I2C_ICFGR_STRETCH_EN_Msk             (0x1UL << I2C_ICFGR_STRETCH_EN_Pos)
 #define I2C_ICFGR_STRETCH_EN                 I2C_ICFGR_STRETCH_EN_Msk
+#define I2C_ICFGR_HW_AUTO_END_Pos            (7U)  /*!< Master automatically generates STOP after the byte count completes */
+#define I2C_ICFGR_HW_AUTO_END_Msk            (0x1UL << I2C_ICFGR_HW_AUTO_END_Pos)
+#define I2C_ICFGR_HW_AUTO_END                I2C_ICFGR_HW_AUTO_END_Msk
 
-/* Fields of I2C_ITSAR */
+/* Schools of I2C_ITSAR */
 #define I2C_ITSAR_SLAVE_ADDR_Pos             (0U)  /*!< 7- or 10-bit slave address, excluding the R/W bit */
 #define I2C_ITSAR_SLAVE_ADDR_Msk             (0x3FFUL << I2C_ITSAR_SLAVE_ADDR_Pos)
 #define I2C_ITSAR_SLAVE_ADDR                 I2C_ITSAR_SLAVE_ADDR_Msk
 
-/* Fields of I2C_ISRAR */
+/* Schools of I2C_ISRAR */
 #define I2C_ISRAR_SLAVE_REG_ADDR_Pos         (0U)  /*!< 8-bit register address for a combined memory-read transaction */
 #define I2C_ISRAR_SLAVE_REG_ADDR_Msk         (0xFFUL << I2C_ISRAR_SLAVE_REG_ADDR_Pos)
 #define I2C_ISRAR_SLAVE_REG_ADDR             I2C_ISRAR_SLAVE_REG_ADDR_Msk
 
-/* Fields of I2C_ITDR */
+/* Schools of I2C_ITDR */
 #define I2C_ITDR_TX_DATA_Pos                 (0U)  /*!< Transmit data; writing the register pushes the TX FIFO */
 #define I2C_ITDR_TX_DATA_Msk                 (0xFFUL << I2C_ITDR_TX_DATA_Pos)
 #define I2C_ITDR_TX_DATA                     I2C_ITDR_TX_DATA_Msk
 
-/* Fields of I2C_IRDR */
+/* Schools of I2C_IRDR */
 #define I2C_IRDR_RX_DATA_Pos                 (0U)  /*!< Receive data; reading the register pops the RX FIFO */
 #define I2C_IRDR_RX_DATA_Msk                 (0xFFUL << I2C_IRDR_RX_DATA_Pos)
 #define I2C_IRDR_RX_DATA                     I2C_IRDR_RX_DATA_Msk
 
-/* Fields of I2C_IBCR */
+/* Schools of I2C_IBCR */
 #define I2C_IBCR_BYTE_COUNT_Pos              (0U)  /*!< Number of bytes transmitted/received in the transaction; hardware encoding range 0..255 */
 #define I2C_IBCR_BYTE_COUNT_Msk              (0xFFUL << I2C_IBCR_BYTE_COUNT_Pos)
 #define I2C_IBCR_BYTE_COUNT                  I2C_IBCR_BYTE_COUNT_Msk
 
-/* Fields of I2C_ISPTR */
+/* Schools of I2C_ISPTR */
 #define I2C_ISPTR_SPIKE_CNT_Pos              (0U)  /*!< Number of i2c_clk cycles used for spike filtering */
 #define I2C_ISPTR_SPIKE_CNT_Msk              (0xFFFFUL << I2C_ISPTR_SPIKE_CNT_Pos)
 #define I2C_ISPTR_SPIKE_CNT                  I2C_ISPTR_SPIKE_CNT_Msk
 
-/* Fields of I2C_ISLTR */
+/* Schools of I2C_ISLTR */
 #define I2C_ISLTR_SCL_LOW_CNT_Pos            (0U)  /*!< Number of SCL-low cycles for SS/FS/FSP/UFS */
 #define I2C_ISLTR_SCL_LOW_CNT_Msk            (0xFFFFUL << I2C_ISLTR_SCL_LOW_CNT_Pos)
 #define I2C_ISLTR_SCL_LOW_CNT                I2C_ISLTR_SCL_LOW_CNT_Msk
@@ -4547,7 +4551,7 @@ typedef struct {
 #define I2C_ISLTR_SCL_LOW_CNT_HS_Msk         (0xFFFFUL << I2C_ISLTR_SCL_LOW_CNT_HS_Pos)
 #define I2C_ISLTR_SCL_LOW_CNT_HS             I2C_ISLTR_SCL_LOW_CNT_HS_Msk
 
-/* Fields of I2C_ISHTR */
+/* Schools of I2C_ISHTR */
 #define I2C_ISHTR_SCL_HIGH_CNT_Pos           (0U)  /*!< Programmed SCL-high duration for SS/FS/FSP/UFS */
 #define I2C_ISHTR_SCL_HIGH_CNT_Msk           (0xFFFFUL << I2C_ISHTR_SCL_HIGH_CNT_Pos)
 #define I2C_ISHTR_SCL_HIGH_CNT               I2C_ISHTR_SCL_HIGH_CNT_Msk
@@ -4555,42 +4559,42 @@ typedef struct {
 #define I2C_ISHTR_SCL_HIGH_CNT_HS_Msk        (0xFFFFUL << I2C_ISHTR_SCL_HIGH_CNT_HS_Pos)
 #define I2C_ISHTR_SCL_HIGH_CNT_HS            I2C_ISHTR_SCL_HIGH_CNT_HS_Msk
 
-/* Fields of I2C_ISSTR */
+/* Schools of I2C_ISSTR */
 #define I2C_ISSTR_START_SETUP_CNT_Pos        (0U)  /*!< Number of START setup cycles */
 #define I2C_ISSTR_START_SETUP_CNT_Msk        (0xFFFFUL << I2C_ISSTR_START_SETUP_CNT_Pos)
 #define I2C_ISSTR_START_SETUP_CNT            I2C_ISSTR_START_SETUP_CNT_Msk
 
-/* Fields of I2C_ISTHTR */
+/* Schools of I2C_ISTHTR */
 #define I2C_ISTHTR_START_HOLD_CNT_Pos        (0U)  /*!< Number of START hold cycles */
 #define I2C_ISTHTR_START_HOLD_CNT_Msk        (0xFFFFUL << I2C_ISTHTR_START_HOLD_CNT_Pos)
 #define I2C_ISTHTR_START_HOLD_CNT            I2C_ISTHTR_START_HOLD_CNT_Msk
 
-/* Fields of I2C_ISPSTR */
+/* Schools of I2C_ISPSTR */
 #define I2C_ISPSTR_STOP_SETUP_CNT_Pos        (0U)  /*!< Number of STOP setup cycles */
 #define I2C_ISPSTR_STOP_SETUP_CNT_Msk        (0xFFFFUL << I2C_ISPSTR_STOP_SETUP_CNT_Pos)
 #define I2C_ISPSTR_STOP_SETUP_CNT            I2C_ISPSTR_STOP_SETUP_CNT_Msk
 
-/* Fields of I2C_ISDHTR */
+/* Schools of I2C_ISDHTR */
 #define I2C_ISDHTR_SDA_HOLD_CNT_Pos          (0U)  /*!< Number of SDA hold cycles */
 #define I2C_ISDHTR_SDA_HOLD_CNT_Msk          (0xFFFFUL << I2C_ISDHTR_SDA_HOLD_CNT_Pos)
 #define I2C_ISDHTR_SDA_HOLD_CNT              I2C_ISDHTR_SDA_HOLD_CNT_Msk
 
-/* Fields of I2C_ITTR */
+/* Schools of I2C_ITTR */
 #define I2C_ITTR_TBUF_CNT_Pos                (0U)  /*!< Number of bus-free cycles */
 #define I2C_ITTR_TBUF_CNT_Msk                (0xFFFFUL << I2C_ITTR_TBUF_CNT_Pos)
 #define I2C_ITTR_TBUF_CNT                    I2C_ITTR_TBUF_CNT_Msk
 
-/* Fields of I2C_ISCSLTR */
+/* Schools of I2C_ISCSLTR */
 #define I2C_ISCSLTR_SCL_STUCK_LOW_CNT_Pos    (0U)  /*!< Number of cycles before reporting SCL stuck-low */
 #define I2C_ISCSLTR_SCL_STUCK_LOW_CNT_Msk    (0xFFFFUL << I2C_ISCSLTR_SCL_STUCK_LOW_CNT_Pos)
 #define I2C_ISCSLTR_SCL_STUCK_LOW_CNT        I2C_ISCSLTR_SCL_STUCK_LOW_CNT_Msk
 
-/* Fields of I2C_ISDSLTR */
+/* Schools of I2C_ISDSLTR */
 #define I2C_ISDSLTR_SDA_STUCK_LOW_CNT_Pos    (0U)  /*!< Number of cycles before reporting SDA stuck-low */
 #define I2C_ISDSLTR_SDA_STUCK_LOW_CNT_Msk    (0xFFFFUL << I2C_ISDSLTR_SDA_STUCK_LOW_CNT_Pos)
 #define I2C_ISDSLTR_SDA_STUCK_LOW_CNT        I2C_ISDSLTR_SDA_STUCK_LOW_CNT_Msk
 
-/* Fields of I2C_ISR */
+/* Schools of I2C_ISR */
 #define I2C_ISR_BUS_BUSY_Pos                 (0U)  /*!< I2C bus busy */
 #define I2C_ISR_BUS_BUSY_Msk                 (0x1UL << I2C_ISR_BUS_BUSY_Pos)
 #define I2C_ISR_BUS_BUSY                     I2C_ISR_BUS_BUSY_Msk
@@ -4600,57 +4604,57 @@ typedef struct {
 #define I2C_ISR_ARB_LOST_Pos                 (2U)  /*!< Master lost arbitration */
 #define I2C_ISR_ARB_LOST_Msk                 (0x1UL << I2C_ISR_ARB_LOST_Pos)
 #define I2C_ISR_ARB_LOST                     I2C_ISR_ARB_LOST_Msk
-#define I2C_ISR_ADDR_NACK_Pos                (3U)  /*!< Address NACK received */
-#define I2C_ISR_ADDR_NACK_Msk                (0x1UL << I2C_ISR_ADDR_NACK_Pos)
-#define I2C_ISR_ADDR_NACK                    I2C_ISR_ADDR_NACK_Msk
-#define I2C_ISR_DATA_NACK_Pos                (4U)  /*!< Data NACK received */
-#define I2C_ISR_DATA_NACK_Msk                (0x1UL << I2C_ISR_DATA_NACK_Pos)
-#define I2C_ISR_DATA_NACK                    I2C_ISR_DATA_NACK_Msk
-#define I2C_ISR_TXFF_FULL_Pos                (5U)  /*!< TX FIFO full */
+#define I2C_ISR_TXFF_FULL_Pos                (3U)  /*!< TX FIFO full */
 #define I2C_ISR_TXFF_FULL_Msk                (0x1UL << I2C_ISR_TXFF_FULL_Pos)
 #define I2C_ISR_TXFF_FULL                    I2C_ISR_TXFF_FULL_Msk
-#define I2C_ISR_TXFF_EMPTY_Pos               (6U)  /*!< TX FIFO empty */
+#define I2C_ISR_TXFF_EMPTY_Pos               (4U)  /*!< TX FIFO empty */
 #define I2C_ISR_TXFF_EMPTY_Msk               (0x1UL << I2C_ISR_TXFF_EMPTY_Pos)
 #define I2C_ISR_TXFF_EMPTY                   I2C_ISR_TXFF_EMPTY_Msk
-#define I2C_ISR_TXFF_PROG_FULL_Pos           (7U)  /*!< TX FIFO reached the programmable-full threshold */
+#define I2C_ISR_TXFF_PROG_FULL_Pos           (5U)  /*!< TX FIFO reached programmable-full threshold */
 #define I2C_ISR_TXFF_PROG_FULL_Msk           (0x1UL << I2C_ISR_TXFF_PROG_FULL_Pos)
 #define I2C_ISR_TXFF_PROG_FULL               I2C_ISR_TXFF_PROG_FULL_Msk
-#define I2C_ISR_TXFF_PROG_EMPTY_Pos          (8U)  /*!< TX FIFO reached the programmable-empty threshold */
+#define I2C_ISR_TXFF_PROG_EMPTY_Pos          (6U)  /*!< TX FIFO reached programmable-empty threshold */
 #define I2C_ISR_TXFF_PROG_EMPTY_Msk          (0x1UL << I2C_ISR_TXFF_PROG_EMPTY_Pos)
 #define I2C_ISR_TXFF_PROG_EMPTY              I2C_ISR_TXFF_PROG_EMPTY_Msk
-#define I2C_ISR_RXFF_FULL_Pos                (9U)  /*!< RX FIFO full */
+#define I2C_ISR_RXFF_FULL_Pos                (7U)  /*!< RX FIFO full */
 #define I2C_ISR_RXFF_FULL_Msk                (0x1UL << I2C_ISR_RXFF_FULL_Pos)
 #define I2C_ISR_RXFF_FULL                    I2C_ISR_RXFF_FULL_Msk
-#define I2C_ISR_RXFF_EMPTY_Pos               (10U)  /*!< RX FIFO empty */
+#define I2C_ISR_RXFF_EMPTY_Pos               (8U)  /*!< RX FIFO empty */
 #define I2C_ISR_RXFF_EMPTY_Msk               (0x1UL << I2C_ISR_RXFF_EMPTY_Pos)
 #define I2C_ISR_RXFF_EMPTY                   I2C_ISR_RXFF_EMPTY_Msk
-#define I2C_ISR_RXFF_PROG_FULL_Pos           (11U)  /*!< RX FIFO reached the programmable-full threshold */
+#define I2C_ISR_RXFF_PROG_FULL_Pos           (9U)  /*!< RX FIFO reached programmable-full threshold */
 #define I2C_ISR_RXFF_PROG_FULL_Msk           (0x1UL << I2C_ISR_RXFF_PROG_FULL_Pos)
 #define I2C_ISR_RXFF_PROG_FULL               I2C_ISR_RXFF_PROG_FULL_Msk
-#define I2C_ISR_RXFF_PROG_EMPTY_Pos          (12U)  /*!< RX FIFO reached the programmable-empty threshold */
+#define I2C_ISR_RXFF_PROG_EMPTY_Pos          (10U)  /*!< RX FIFO reached programmable-empty threshold */
 #define I2C_ISR_RXFF_PROG_EMPTY_Msk          (0x1UL << I2C_ISR_RXFF_PROG_EMPTY_Pos)
 #define I2C_ISR_RXFF_PROG_EMPTY              I2C_ISR_RXFF_PROG_EMPTY_Msk
-#define I2C_ISR_SCL_STUCK_LOW_Pos            (13U)  /*!< SCL held low detected */
+#define I2C_ISR_SCL_STUCK_LOW_Pos            (11U)  /*!< SCL held low detected */
 #define I2C_ISR_SCL_STUCK_LOW_Msk            (0x1UL << I2C_ISR_SCL_STUCK_LOW_Pos)
 #define I2C_ISR_SCL_STUCK_LOW                I2C_ISR_SCL_STUCK_LOW_Msk
-#define I2C_ISR_SDA_STUCK_LOW_Pos            (14U)  /*!< SDA held low detected */
+#define I2C_ISR_SDA_STUCK_LOW_Pos            (12U)  /*!< SDA held low detected */
 #define I2C_ISR_SDA_STUCK_LOW_Msk            (0x1UL << I2C_ISR_SDA_STUCK_LOW_Pos)
 #define I2C_ISR_SDA_STUCK_LOW                I2C_ISR_SDA_STUCK_LOW_Msk
-#define I2C_ISR_ALERT_DEC_Pos                (15U)  /*!< SMBus ALERT detected */
+#define I2C_ISR_ALERT_DEC_Pos                (13U)  /*!< SMBus ALERT detected */
 #define I2C_ISR_ALERT_DEC_Msk                (0x1UL << I2C_ISR_ALERT_DEC_Pos)
 #define I2C_ISR_ALERT_DEC                    I2C_ISR_ALERT_DEC_Msk
-#define I2C_ISR_PEC_DATA_Pos                 (16U)  /*!< Current PEC value */
+#define I2C_ISR_PEC_DATA_Pos                 (14U)  /*!< Current PEC value */
 #define I2C_ISR_PEC_DATA_Msk                 (0xFFUL << I2C_ISR_PEC_DATA_Pos)
 #define I2C_ISR_PEC_DATA                     I2C_ISR_PEC_DATA_Msk
-#define I2C_ISR_SLAVE_DIR_Pos                (24U)  /*!< Transaction direction when FU2 is a slave */
+#define I2C_ISR_SLAVE_DIR_Pos                (22U)  /*!< Slave transfer direction */
 #define I2C_ISR_SLAVE_DIR_Msk                (0x1UL << I2C_ISR_SLAVE_DIR_Pos)
 #define I2C_ISR_SLAVE_DIR                    I2C_ISR_SLAVE_DIR_Msk
-#define I2C_ISR_ADDR_MATCH_Pos               (25U)  /*!< 7-bit address matched in slave mode */
+#define I2C_ISR_ADDR_MATCH_Pos               (23U)  /*!< Matched slave address */
 #define I2C_ISR_ADDR_MATCH_Msk               (0x7FUL << I2C_ISR_ADDR_MATCH_Pos)
 #define I2C_ISR_ADDR_MATCH                   I2C_ISR_ADDR_MATCH_Msk
+#define I2C_ISR_DMA_BUSY_TX_Pos              (30U)  /*!< TX DMA busy */
+#define I2C_ISR_DMA_BUSY_TX_Msk              (0x1UL << I2C_ISR_DMA_BUSY_TX_Pos)
+#define I2C_ISR_DMA_BUSY_TX                  I2C_ISR_DMA_BUSY_TX_Msk
+#define I2C_ISR_DMA_BUSY_RX_Pos              (31U)  /*!< RX DMA busy */
+#define I2C_ISR_DMA_BUSY_RX_Msk              (0x1UL << I2C_ISR_DMA_BUSY_RX_Pos)
+#define I2C_ISR_DMA_BUSY_RX                  I2C_ISR_DMA_BUSY_RX_Msk
 
-/* Fields of I2C_IIER */
-#define I2C_IIER_TRANSFER_DONE_EN_Pos        (0U)  /*!< Enable transfer-done interrupt; when enabled, hardware does not generate STOP automatically */
+/* Schools of I2C_IIER */
+#define I2C_IIER_TRANSFER_DONE_EN_Pos        (0U)  /*!< Enable transfer-done interrupt; master hardware STOP is selected by ICFGR.HW_AUTO_END */
 #define I2C_IIER_TRANSFER_DONE_EN_Msk        (0x1UL << I2C_IIER_TRANSFER_DONE_EN_Pos)
 #define I2C_IIER_TRANSFER_DONE_EN            I2C_IIER_TRANSFER_DONE_EN_Msk
 #define I2C_IIER_ADDR_NACK_EN_Pos            (1U)  /*!< Enable interrupt for address-NACK */
@@ -4704,8 +4708,14 @@ typedef struct {
 #define I2C_IIER_STOP_DEC_EN_Pos             (17U)  /*!< Enable the STOP-detection interrupt */
 #define I2C_IIER_STOP_DEC_EN_Msk             (0x1UL << I2C_IIER_STOP_DEC_EN_Pos)
 #define I2C_IIER_STOP_DEC_EN                 I2C_IIER_STOP_DEC_EN_Msk
+#define I2C_IIER_DMA_TX_DONE_EN_Pos          (18U)  /*!< Enable TX DMA-done interrupt */
+#define I2C_IIER_DMA_TX_DONE_EN_Msk          (0x1UL << I2C_IIER_DMA_TX_DONE_EN_Pos)
+#define I2C_IIER_DMA_TX_DONE_EN              I2C_IIER_DMA_TX_DONE_EN_Msk
+#define I2C_IIER_DMA_RX_DONE_EN_Pos          (19U)  /*!< Enable RX DMA-done interrupt */
+#define I2C_IIER_DMA_RX_DONE_EN_Msk          (0x1UL << I2C_IIER_DMA_RX_DONE_EN_Pos)
+#define I2C_IIER_DMA_RX_DONE_EN              I2C_IIER_DMA_RX_DONE_EN_Msk
 
-/* Fields of I2C_IICR */
+/* Schools of I2C_IICR */
 #define I2C_IICR_TRANSFER_DONE_CLR_Pos       (0U)  /*!< Clear the transfer-done */
 #define I2C_IICR_TRANSFER_DONE_CLR_Msk       (0x1UL << I2C_IICR_TRANSFER_DONE_CLR_Pos)
 #define I2C_IICR_TRANSFER_DONE_CLR           I2C_IICR_TRANSFER_DONE_CLR_Msk
@@ -4760,23 +4770,29 @@ typedef struct {
 #define I2C_IICR_STOP_DEC_CLR_Pos            (17U)  /*!< Clear the STOP-detection flag */
 #define I2C_IICR_STOP_DEC_CLR_Msk            (0x1UL << I2C_IICR_STOP_DEC_CLR_Pos)
 #define I2C_IICR_STOP_DEC_CLR                I2C_IICR_STOP_DEC_CLR_Msk
+#define I2C_IICR_DMA_TX_DONE_CLR_Pos         (18U)  /*!< Clear TX DMA-done interrupt */
+#define I2C_IICR_DMA_TX_DONE_CLR_Msk         (0x1UL << I2C_IICR_DMA_TX_DONE_CLR_Pos)
+#define I2C_IICR_DMA_TX_DONE_CLR             I2C_IICR_DMA_TX_DONE_CLR_Msk
+#define I2C_IICR_DMA_RX_DONE_CLR_Pos         (19U)  /*!< Clear RX DMA-done interrupt */
+#define I2C_IICR_DMA_RX_DONE_CLR_Msk         (0x1UL << I2C_IICR_DMA_RX_DONE_CLR_Pos)
+#define I2C_IICR_DMA_RX_DONE_CLR             I2C_IICR_DMA_RX_DONE_CLR_Msk
 
-/* Fields of I2C_IBCER */
+/* Schools of I2C_IBCER */
 #define I2C_IBCER_BUS_CLR_Pos                (0U)  /*!< Enable the bus-clear procedure */
 #define I2C_IBCER_BUS_CLR_Msk                (0x1UL << I2C_IBCER_BUS_CLR_Pos)
 #define I2C_IBCER_BUS_CLR                    I2C_IBCER_BUS_CLR_Msk
 
-/* Fields of I2C_IDIER */
+/* Schools of I2C_IDIER */
 #define I2C_IDIER_DEV_ID_Pos                 (0U)  /*!< Enable the Device ID read operation */
 #define I2C_IDIER_DEV_ID_Msk                 (0x1UL << I2C_IDIER_DEV_ID_Pos)
 #define I2C_IDIER_DEV_ID                     I2C_IDIER_DEV_ID_Msk
 
-/* Fields of I2C_ISRER */
+/* Schools of I2C_ISRER */
 #define I2C_ISRER_SW_RESET_Pos               (0U)  /*!< Enable software reset via general call */
 #define I2C_ISRER_SW_RESET_Msk               (0x1UL << I2C_ISRER_SW_RESET_Pos)
 #define I2C_ISRER_SW_RESET                   I2C_ISRER_SW_RESET_Msk
 
-/* Fields of I2C_ITFTLR */
+/* Schools of I2C_ITFTLR */
 #define I2C_ITFTLR_PROG_FLVL_Pos             (0U)  /*!< Programmable-full threshold of the TX FIFO */
 #define I2C_ITFTLR_PROG_FLVL_Msk             (0xFUL << I2C_ITFTLR_PROG_FLVL_Pos)
 #define I2C_ITFTLR_PROG_FLVL                 I2C_ITFTLR_PROG_FLVL_Msk
@@ -4784,7 +4800,7 @@ typedef struct {
 #define I2C_ITFTLR_PROG_ELVL_Msk             (0xFUL << I2C_ITFTLR_PROG_ELVL_Pos)
 #define I2C_ITFTLR_PROG_ELVL                 I2C_ITFTLR_PROG_ELVL_Msk
 
-/* Fields of I2C_IRFTLR */
+/* Schools of I2C_IRFTLR */
 #define I2C_IRFTLR_PROG_FLVL_Pos             (0U)  /*!< Programmable-full threshold of the RX FIFO */
 #define I2C_IRFTLR_PROG_FLVL_Msk             (0xFUL << I2C_IRFTLR_PROG_FLVL_Pos)
 #define I2C_IRFTLR_PROG_FLVL                 I2C_IRFTLR_PROG_FLVL_Msk
@@ -4792,20 +4808,40 @@ typedef struct {
 #define I2C_IRFTLR_PROG_ELVL_Msk             (0xFUL << I2C_IRFTLR_PROG_ELVL_Pos)
 #define I2C_IRFTLR_PROG_ELVL                 I2C_IRFTLR_PROG_ELVL_Msk
 
-/* Fields of I2C_IDER */
-#define I2C_IDER_TX_ENABLE_Pos               (0U)  /*!< Enable TX DMA requests */
-#define I2C_IDER_TX_ENABLE_Msk               (0x1UL << I2C_IDER_TX_ENABLE_Pos)
-#define I2C_IDER_TX_ENABLE                   I2C_IDER_TX_ENABLE_Msk
-#define I2C_IDER_RX_ENABLE_Pos               (1U)  /*!< Enable RX DMA requests */
-#define I2C_IDER_RX_ENABLE_Msk               (0x1UL << I2C_IDER_RX_ENABLE_Pos)
-#define I2C_IDER_RX_ENABLE                   I2C_IDER_RX_ENABLE_Msk
+/* Schools of I2C_IDTR */
+#define I2C_IDTR_ENABLE_Pos                  (0U)  /*!< Enable TX DMA requests */
+#define I2C_IDTR_ENABLE_Msk                  (0x1UL << I2C_IDTR_ENABLE_Pos)
+#define I2C_IDTR_ENABLE                      I2C_IDTR_ENABLE_Msk
+#define I2C_IDTR_MAX_BURST_LEN_Pos           (1U)  /*!< Singles per burst: 2/4/8/16 */
+#define I2C_IDTR_MAX_BURST_LEN_Msk           (0x3UL << I2C_IDTR_MAX_BURST_LEN_Pos)
+#define I2C_IDTR_MAX_BURST_LEN               I2C_IDTR_MAX_BURST_LEN_Msk
+#define I2C_IDTR_BURST_MODE_Pos              (3U)  /*!< 0=SINGLE, 1=BURST */
+#define I2C_IDTR_BURST_MODE_Msk              (0x1UL << I2C_IDTR_BURST_MODE_Pos)
+#define I2C_IDTR_BURST_MODE                  I2C_IDTR_BURST_MODE_Msk
+#define I2C_IDTR_TOTAL_BYTES_Pos             (4U)  /*!< Total TX DMA bytes */
+#define I2C_IDTR_TOTAL_BYTES_Msk             (0xFFUL << I2C_IDTR_TOTAL_BYTES_Pos)
+#define I2C_IDTR_TOTAL_BYTES                 I2C_IDTR_TOTAL_BYTES_Msk
 
-/* Fields of I2C_ISDIR */
+/* Schools of I2C_IDRR */
+#define I2C_IDRR_ENABLE_Pos                  (0U)  /*!< Enable RX DMA requests */
+#define I2C_IDRR_ENABLE_Msk                  (0x1UL << I2C_IDRR_ENABLE_Pos)
+#define I2C_IDRR_ENABLE                      I2C_IDRR_ENABLE_Msk
+#define I2C_IDRR_MAX_BURST_LEN_Pos           (1U)  /*!< Singles per burst: 2/4/8/16 */
+#define I2C_IDRR_MAX_BURST_LEN_Msk           (0x3UL << I2C_IDRR_MAX_BURST_LEN_Pos)
+#define I2C_IDRR_MAX_BURST_LEN               I2C_IDRR_MAX_BURST_LEN_Msk
+#define I2C_IDRR_BURST_MODE_Pos              (3U)  /*!< 0=SINGLE, 1=BURST */
+#define I2C_IDRR_BURST_MODE_Msk              (0x1UL << I2C_IDRR_BURST_MODE_Pos)
+#define I2C_IDRR_BURST_MODE                  I2C_IDRR_BURST_MODE_Msk
+#define I2C_IDRR_TOTAL_BYTES_Pos             (4U)  /*!< Total RX DMA bytes */
+#define I2C_IDRR_TOTAL_BYTES_Msk             (0xFFUL << I2C_IDRR_TOTAL_BYTES_Pos)
+#define I2C_IDRR_TOTAL_BYTES                 I2C_IDRR_TOTAL_BYTES_Msk
+
+/* Schools of I2C_ISDIR */
 #define I2C_ISDIR_DEV_ID_Pos                 (0U)  /*!< 24-bit slave Device ID */
 #define I2C_ISDIR_DEV_ID_Msk                 (0xFFFFFFUL << I2C_ISDIR_DEV_ID_Pos)
 #define I2C_ISDIR_DEV_ID                     I2C_ISDIR_DEV_ID_Msk
 
-/* Fields of I2C_IIOCR */
+/* Schools of I2C_IIOCR */
 #define I2C_IIOCR_ODIS_Pos                   (0U)  /*!< Control output disable of the I2C I/O cell */
 #define I2C_IIOCR_ODIS_Msk                   (0x1UL << I2C_IIOCR_ODIS_Pos)
 #define I2C_IIOCR_ODIS                       I2C_IIOCR_ODIS_Msk
@@ -4816,7 +4852,7 @@ typedef struct {
 #define I2C_IIOCR_PWRDNH_Msk                 (0x1UL << I2C_IIOCR_PWRDNH_Pos)
 #define I2C_IIOCR_PWRDNH                     I2C_IIOCR_PWRDNH_Msk
 
-/* Fields of I2C_ISMBR */
+/* Schools of I2C_ISMBR */
 #define I2C_ISMBR_SMB_EN_Pos                 (0U)  /*!< Enable SMBus */
 #define I2C_ISMBR_SMB_EN_Msk                 (0x1UL << I2C_ISMBR_SMB_EN_Pos)
 #define I2C_ISMBR_SMB_EN                     I2C_ISMBR_SMB_EN_Msk
@@ -4839,7 +4875,7 @@ typedef struct {
 #define I2C_ISMBR_PEC_ERR_CLR_Msk            (0x1UL << I2C_ISMBR_PEC_ERR_CLR_Pos)
 #define I2C_ISMBR_PEC_ERR_CLR                I2C_ISMBR_PEC_ERR_CLR_Msk
 
-/* Fields of I2C_ICLFT */
+/* Schools of I2C_ICLFT */
 #define I2C_ICLFT_CLK_FAILURE_Pos            (0U)  /*!< Clock failure detected */
 #define I2C_ICLFT_CLK_FAILURE_Msk            (0x1UL << I2C_ICLFT_CLK_FAILURE_Pos)
 #define I2C_ICLFT_CLK_FAILURE                I2C_ICLFT_CLK_FAILURE_Msk
@@ -4850,7 +4886,7 @@ typedef struct {
 #define I2C_ICLFT_CMD_FAILURE_Msk            (0x1UL << I2C_ICLFT_CMD_FAILURE_Pos)
 #define I2C_ICLFT_CMD_FAILURE                I2C_ICLFT_CMD_FAILURE_Msk
 
-/* Fields of I2C_IITR */
+/* Schools of I2C_IITR */
 #define I2C_IITR_TRANSFER_DONE_Pos           (0U)  /*!< Interrupt transfer-done active */
 #define I2C_IITR_TRANSFER_DONE_Msk           (0x1UL << I2C_IITR_TRANSFER_DONE_Pos)
 #define I2C_IITR_TRANSFER_DONE               I2C_IITR_TRANSFER_DONE_Msk
@@ -4905,6 +4941,12 @@ typedef struct {
 #define I2C_IITR_STOP_DEC_Pos                (17U)  /*!< STOP-detection interrupt active */
 #define I2C_IITR_STOP_DEC_Msk                (0x1UL << I2C_IITR_STOP_DEC_Pos)
 #define I2C_IITR_STOP_DEC                    I2C_IITR_STOP_DEC_Msk
+#define I2C_IITR_DMA_TX_DONE_Pos             (18U)  /*!< TX DMA-done interrupt active */
+#define I2C_IITR_DMA_TX_DONE_Msk             (0x1UL << I2C_IITR_DMA_TX_DONE_Pos)
+#define I2C_IITR_DMA_TX_DONE                 I2C_IITR_DMA_TX_DONE_Msk
+#define I2C_IITR_DMA_RX_DONE_Pos             (19U)  /*!< RX DMA-done interrupt active */
+#define I2C_IITR_DMA_RX_DONE_Msk             (0x1UL << I2C_IITR_DMA_RX_DONE_Pos)
+#define I2C_IITR_DMA_RX_DONE                 I2C_IITR_DMA_RX_DONE_Msk
 
 /* Fields of ADC_CTRL */
 #define ADC_CTRL_ADC_EN_Pos                (0U)  /*!< Enable ADC conversion */

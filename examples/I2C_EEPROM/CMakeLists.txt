@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(fu2_i2c_slave C ASM)
+project(fu2_i2c_eeprom C ASM)
 
 if(NOT NEON_MDF_PATH)
   if(DEFINED ENV{NEON_MDF_PATH})
@@ -22,6 +22,6 @@ endif()
 
 neon_mdf_add_executable(${PROJECT_NAME}
   Src/main.c
-  Src/i2c_slave.c
+  Src/i2c_eeprom.c
 )
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Inc)

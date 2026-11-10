@@ -3833,7 +3833,7 @@ peripherals:
     description: |
       I2C0 - INTER INTEGRATED CIRCUIT
       I2C0 : 0x50080000 - 0x5008FFFF (64 KB)
-      Reference: DTI I2C CTRL User Guide Rev 1.0
+      Separate TX/RX DMA controls and latched interrupt status.
     registers:
       - name: IER
         offset: 0x000
@@ -3858,7 +3858,7 @@ peripherals:
         size: 32
         access: rw
         reset: 0x00000000
-        description: "RW I2C Configuration Register bit[0] MASTER_SLAVE | bit[2:1] SPEED_MODE | bit[3] ADDR_MODE | bit[4] SUB_ADDR_EN | bit[5] READ_WRITE | bit[6] STRETCH_EN"
+        description: "RW I2C Configuration Register bit[0] MASTER_SLAVE | bit[2:1] SPEED_MODE | bit[3] ADDR_MODE | bit[4] SUB_ADDR_EN | bit[5] READ_WRITE | bit[6] STRETCH_EN | bit[7] HW_AUTO_END"
         fields:
           - {name: MASTER_SLAVE, bit_offset: 0, bit_width: 1, description: "Select role: 0=slave, 1=master"}
           - {name: SPEED_MODE,   bit_offset: 1, bit_width: 2, description: "Speed mode: SS/FS, FSP, HS or UFS"}
@@ -3866,6 +3866,7 @@ peripherals:
           - {name: SUB_ADDR_EN,  bit_offset: 4, bit_width: 1, description: "Enable the 8-bit subaddress phase and repeated START when reading a register"}
           - {name: READ_WRITE,   bit_offset: 5, bit_width: 1, description: "Master transfer direction: 0=write, 1=read"}
           - {name: STRETCH_EN,   bit_offset: 6, bit_width: 1, description: "Enable clock stretching in slave mode"}
+          - {name: HW_AUTO_END, bit_offset: 7, bit_width: 1, description: "Master automatically generates STOP after the byte count completes"}
       - name: ITSAR
         offset: 0x00C
         size: 32
@@ -3993,35 +3994,35 @@ peripherals:
         size: 32
         access: ro
         reset: 0x00000000
-        description: "RO I2C Status Register bit[0] BUS_BUSY | bit[1] TRANSFER_DONE | bit[2] ARB_LOST | bit[3] ADDR_NACK | bit[4] DATA_NACK | bit[5] TXFF_FULL | bit[6] TXFF_EMPTY | bit[7] TXFF_PROG_FULL | bit[8] TXFF_PROG_EMPTY | bit[9] RXFF_FULL | bit[10] RXFF_EMPTY | bit[11] RXFF_PROG_FULL | bit[12] RXFF_PROG_EMPTY | bit[13] SCL_STUCK_LOW | bit[14] SDA_STUCK_LOW | bit[15] ALERT_DEC | bit[23:16] PEC_DATA | bit[24] SLAVE_DIR | bit[31:25] ADDR_MATCH"
+        description: "RO I2C status; address/data NACK are reported in IITR"
         fields:
-          - {name: BUS_BUSY,          bit_offset: 0,  bit_width: 1, description: "I2C bus busy"}
-          - {name: TRANSFER_DONE,     bit_offset: 1,  bit_width: 1, description: "All BYTE_COUNT bytes completed"}
-          - {name: ARB_LOST,          bit_offset: 2,  bit_width: 1, description: "Master lost arbitration"}
-          - {name: ADDR_NACK,         bit_offset: 3,  bit_width: 1, description: "Address NACK received"}
-          - {name: DATA_NACK,         bit_offset: 4,  bit_width: 1, description: "Data NACK received"}
-          - {name: TXFF_FULL,         bit_offset: 5,  bit_width: 1, description: "TX FIFO full"}
-          - {name: TXFF_EMPTY,        bit_offset: 6,  bit_width: 1, description: "TX FIFO empty"}
-          - {name: TXFF_PROG_FULL,    bit_offset: 7,  bit_width: 1, description: "TX FIFO reached the programmable-full threshold"}
-          - {name: TXFF_PROG_EMPTY,   bit_offset: 8,  bit_width: 1, description: "TX FIFO reached the programmable-empty threshold"}
-          - {name: RXFF_FULL,         bit_offset: 9,  bit_width: 1, description: "RX FIFO full"}
-          - {name: RXFF_EMPTY,        bit_offset: 10, bit_width: 1, description: "RX FIFO empty"}
-          - {name: RXFF_PROG_FULL,    bit_offset: 11, bit_width: 1, description: "RX FIFO reached the programmable-full threshold"}
-          - {name: RXFF_PROG_EMPTY,   bit_offset: 12, bit_width: 1, description: "RX FIFO reached the programmable-empty threshold"}
-          - {name: SCL_STUCK_LOW,     bit_offset: 13, bit_width: 1, description: "SCL held low detected"}
-          - {name: SDA_STUCK_LOW,     bit_offset: 14, bit_width: 1, description: "SDA held low detected"}
-          - {name: ALERT_DEC,         bit_offset: 15, bit_width: 1, description: "SMBus ALERT detected"}
-          - {name: PEC_DATA,          bit_offset: 16, bit_width: 8, description: "Current PEC value"}
-          - {name: SLAVE_DIR,         bit_offset: 24, bit_width: 1, description: "Transaction direction when FU2 is a slave"}
-          - {name: ADDR_MATCH,        bit_offset: 25, bit_width: 7, description: "7-bit address matched in slave mode"}
+          - {name: BUS_BUSY, bit_offset: 0, bit_width: 1, description: "I2C bus busy"}
+          - {name: TRANSFER_DONE, bit_offset: 1, bit_width: 1, description: "All BYTE_COUNT bytes completed"}
+          - {name: ARB_LOST, bit_offset: 2, bit_width: 1, description: "Master lost arbitration"}
+          - {name: TXFF_FULL, bit_offset: 3, bit_width: 1, description: "TX FIFO full"}
+          - {name: TXFF_EMPTY, bit_offset: 4, bit_width: 1, description: "TX FIFO empty"}
+          - {name: TXFF_PROG_FULL, bit_offset: 5, bit_width: 1, description: "TX FIFO reached programmable-full threshold"}
+          - {name: TXFF_PROG_EMPTY, bit_offset: 6, bit_width: 1, description: "TX FIFO reached programmable-empty threshold"}
+          - {name: RXFF_FULL, bit_offset: 7, bit_width: 1, description: "RX FIFO full"}
+          - {name: RXFF_EMPTY, bit_offset: 8, bit_width: 1, description: "RX FIFO empty"}
+          - {name: RXFF_PROG_FULL, bit_offset: 9, bit_width: 1, description: "RX FIFO reached programmable-full threshold"}
+          - {name: RXFF_PROG_EMPTY, bit_offset: 10, bit_width: 1, description: "RX FIFO reached programmable-empty threshold"}
+          - {name: SCL_STUCK_LOW, bit_offset: 11, bit_width: 1, description: "SCL held low detected"}
+          - {name: SDA_STUCK_LOW, bit_offset: 12, bit_width: 1, description: "SDA held low detected"}
+          - {name: ALERT_DEC, bit_offset: 13, bit_width: 1, description: "SMBus ALERT detected"}
+          - {name: PEC_DATA, bit_offset: 14, bit_width: 8, description: "Current PEC value"}
+          - {name: SLAVE_DIR, bit_offset: 22, bit_width: 1, description: "Slave transfer direction"}
+          - {name: ADDR_MATCH, bit_offset: 23, bit_width: 7, description: "Matched slave address"}
+          - {name: DMA_BUSY_TX, bit_offset: 30, bit_width: 1, description: "TX DMA busy"}
+          - {name: DMA_BUSY_RX, bit_offset: 31, bit_width: 1, description: "RX DMA busy"}
       - name: IIER
         offset: 0x04C
         size: 32
         access: rw
         reset: 0x00000000
-        description: "RW I2C Interrupt Enable Register bit[0] TRANSFER_DONE_EN | bit[1] ADDR_NACK_EN | bit[2] DATA_NACK_EN | bit[3] TXFF_FULL_EN | bit[4] TXFF_EMPTY_EN | bit[5] TXFF_PROG_FULL_EN | bit[6] TXFF_PROG_EMPTY_EN | bit[7] RXFF_FULL_EN | bit[8] RXFF_EMPTY_EN | bit[9] RXFF_PROG_FULL_EN | bit[10] RXFF_PROG_EMPTY_EN | bit[11] SCL_STUCK_LOW_EN | bit[12] SDA_STUCK_LOW_EN | bit[13] PEC_ERR_EN | bit[14] ADD_MATCH_EN | bit[15] ARB_LOST_EN | bit[16] ALERT_DEC_EN | bit[17] STOP_DEC_EN"
+        description: "RW I2C Interrupt Enable Register bit[0] TRANSFER_DONE_EN | bit[1] ADDR_NACK_EN | bit[2] DATA_NACK_EN | bit[3] TXFF_FULL_EN | bit[4] TXFF_EMPTY_EN | bit[5] TXFF_PROG_FULL_EN | bit[6] TXFF_PROG_EMPTY_EN | bit[7] RXFF_FULL_EN | bit[8] RXFF_EMPTY_EN | bit[9] RXFF_PROG_FULL_EN | bit[10] RXFF_PROG_EMPTY_EN | bit[11] SCL_STUCK_LOW_EN | bit[12] SDA_STUCK_LOW_EN | bit[13] PEC_ERR_EN | bit[14] ADD_MATCH_EN | bit[15] ARB_LOST_EN | bit[16] ALERT_DEC_EN | bit[17] STOP_DEC_EN | bit[18] DMA_TX_DONE_EN | bit[19] DMA_RX_DONE_EN"
         fields:
-          - {name: TRANSFER_DONE_EN,   bit_offset: 0,  bit_width: 1, description: "Enable transfer-done interrupt; when enabled, hardware does not generate STOP automatically"}
+          - {name: TRANSFER_DONE_EN,   bit_offset: 0,  bit_width: 1, description: "Enable transfer-done interrupt; master hardware STOP is selected by ICFGR.HW_AUTO_END"}
           - {name: ADDR_NACK_EN,       bit_offset: 1,  bit_width: 1, description: "Enable interrupt for address-NACK"}
           - {name: DATA_NACK_EN,       bit_offset: 2,  bit_width: 1, description: "Enable interrupt for data-NACK"}
           - {name: TXFF_FULL_EN,       bit_offset: 3,  bit_width: 1, description: "Enable interrupt for TX FIFO full"}
@@ -4039,12 +4040,14 @@ peripherals:
           - {name: ARB_LOST_EN,        bit_offset: 15, bit_width: 1, description: "Enable interrupt for arbitration-lost"}
           - {name: ALERT_DEC_EN,       bit_offset: 16, bit_width: 1, description: "Enable interrupt for SMBus ALERT"}
           - {name: STOP_DEC_EN,        bit_offset: 17, bit_width: 1, description: "Enable the STOP-detection interrupt"}
+          - {name: DMA_TX_DONE_EN,     bit_offset: 18, bit_width: 1, description: "Enable TX DMA-done interrupt"}
+          - {name: DMA_RX_DONE_EN,     bit_offset: 19, bit_width: 1, description: "Enable RX DMA-done interrupt"}
       - name: IICR
         offset: 0x050
         size: 32
         access: rw
         reset: 0x00000000
-        description: "RW I2C Interrupt Clear Register bit[0] TRANSFER_DONE_CLR | bit[1] ADDR_NACK_CLR | bit[2] DATA_NACK_CLR | bit[3] TXFF_FULL_CLR | bit[4] TXFF_EMPTY_CLR | bit[5] TXFF_PROG_FULL_CLR | bit[6] TXFF_PROG_EMPTY_CLR | bit[7] RXFF_FULL_CLR | bit[8] RXFF_EMPTY_CLR | bit[9] RXFF_PROG_FULL_CLR | bit[10] RXFF_PROG_EMPTY_CLR | bit[11] SCL_STUCK_LOW_CLR | bit[12] SDA_STUCK_LOW_CLR | bit[13] PEC_ERR_CLR | bit[14] ADD_MATCH_CLR | bit[15] ARB_LOST_CLR | bit[16] ALERT_DEC_CLR | bit[17] STOP_DEC_CLR"
+        description: "RW I2C Interrupt Clear Register bit[0] TRANSFER_DONE_CLR | bit[1] ADDR_NACK_CLR | bit[2] DATA_NACK_CLR | bit[3] TXFF_FULL_CLR | bit[4] TXFF_EMPTY_CLR | bit[5] TXFF_PROG_FULL_CLR | bit[6] TXFF_PROG_EMPTY_CLR | bit[7] RXFF_FULL_CLR | bit[8] RXFF_EMPTY_CLR | bit[9] RXFF_PROG_FULL_CLR | bit[10] RXFF_PROG_EMPTY_CLR | bit[11] SCL_STUCK_LOW_CLR | bit[12] SDA_STUCK_LOW_CLR | bit[13] PEC_ERR_CLR | bit[14] ADD_MATCH_CLR | bit[15] ARB_LOST_CLR | bit[16] ALERT_DEC_CLR | bit[17] STOP_DEC_CLR | bit[18] DMA_TX_DONE_CLR | bit[19] DMA_RX_DONE_CLR"
         fields:
           - {name: TRANSFER_DONE_CLR,   bit_offset: 0,  bit_width: 1, description: "Clear the transfer-done"}
           - {name: ADDR_NACK_CLR,       bit_offset: 1,  bit_width: 1, description: "Clear the address-NACK"}
@@ -4064,6 +4067,8 @@ peripherals:
           - {name: ARB_LOST_CLR,        bit_offset: 15, bit_width: 1, description: "Clear the arbitration-lost"}
           - {name: ALERT_DEC_CLR,       bit_offset: 16, bit_width: 1, description: "Clear the SMBus ALERT"}
           - {name: STOP_DEC_CLR,        bit_offset: 17, bit_width: 1, description: "Clear the STOP-detection flag"}
+          - {name: DMA_TX_DONE_CLR,     bit_offset: 18, bit_width: 1, description: "Clear TX DMA-done interrupt"}
+          - {name: DMA_RX_DONE_CLR,     bit_offset: 19, bit_width: 1, description: "Clear RX DMA-done interrupt"}
       - name: IBCER
         offset: 0x054
         size: 32
@@ -4106,17 +4111,30 @@ peripherals:
         fields:
           - {name: PROG_FLVL, bit_offset: 0, bit_width: 4, description: "Programmable-full threshold of the RX FIFO"}
           - {name: PROG_ELVL, bit_offset: 4, bit_width: 4, description: "Programmable-empty threshold of the RX FIFO"}
-      - name: IDER
+      - name: IDTR
         offset: 0x068
         size: 32
         access: rw
         reset: 0x00000000
-        description: "RW I2C DMA Enable Register bit[0] TX_ENABLE | bit[1] RX_ENABLE"
+        description: "I2C TX DMA request control"
         fields:
-          - {name: TX_ENABLE, bit_offset: 0, bit_width: 1, description: "Enable TX DMA requests"}
-          - {name: RX_ENABLE, bit_offset: 1, bit_width: 1, description: "Enable RX DMA requests"}
-      - name: ISDIR
+          - {name: ENABLE, bit_offset: 0, bit_width: 1, description: "Enable TX DMA requests"}
+          - {name: MAX_BURST_LEN, bit_offset: 1, bit_width: 2, description: "Singles per burst: 2/4/8/16"}
+          - {name: BURST_MODE, bit_offset: 3, bit_width: 1, description: "0=SINGLE, 1=BURST"}
+          - {name: TOTAL_BYTES, bit_offset: 4, bit_width: 8, description: "Total TX DMA bytes"}
+      - name: IDRR
         offset: 0x06C
+        size: 32
+        access: rw
+        reset: 0x00000000
+        description: "I2C RX DMA request control"
+        fields:
+          - {name: ENABLE, bit_offset: 0, bit_width: 1, description: "Enable RX DMA requests"}
+          - {name: MAX_BURST_LEN, bit_offset: 1, bit_width: 2, description: "Singles per burst: 2/4/8/16"}
+          - {name: BURST_MODE, bit_offset: 3, bit_width: 1, description: "0=SINGLE, 1=BURST"}
+          - {name: TOTAL_BYTES, bit_offset: 4, bit_width: 8, description: "Total RX DMA bytes"}
+      - name: ISDIR
+        offset: 0x070
         size: 32
         access: rw
         reset: 0x00000000
@@ -4124,7 +4142,7 @@ peripherals:
         fields:
           - {name: DEV_ID, bit_offset: 0, bit_width: 24, description: "24-bit slave Device ID"}
       - name: IIOCR
-        offset: 0x070
+        offset: 0x074
         size: 32
         access: rw
         reset: 0x00000000
@@ -4134,7 +4152,7 @@ peripherals:
           - {name: FENA,  bit_offset: 1, bit_width: 1, description: "Force output enable of the I2C I/O cell"}
           - {name: PWRDNH, bit_offset: 2, bit_width: 1, description: "Control power-down of the I2C I/O cell"}
       - name: ISMBR
-        offset: 0x074
+        offset: 0x078
         size: 32
         access: rw
         reset: 0x00000000
@@ -4148,7 +4166,7 @@ peripherals:
           - {name: ALERT_DEC_CLR, bit_offset: 5, bit_width: 1, description: "Clear the ALERT-detect status"}
           - {name: PEC_ERR_CLR,   bit_offset: 6, bit_width: 1, description: "Clear the PEC-error status"}
       - name: ICLFT
-        offset: 0x078
+        offset: 0x07C
         size: 32
         access: ro
         reset: 0x00000000
@@ -4158,7 +4176,7 @@ peripherals:
           - {name: ADDR_FAILURE, bit_offset: 1,  bit_width: 16, description: "Register address for the failed transaction"}
           - {name: CMD_FAILURE,  bit_offset: 17, bit_width: 1,  description: "Command causing the failure: 0=write, 1=read"}
       - name: IITR
-        offset: 0x07C
+        offset: 0x080
         size: 32
         access: ro
         reset: 0x00000000
@@ -4182,6 +4200,8 @@ peripherals:
           - {name: ARB_LOST,        bit_offset: 15, bit_width: 1, description: "Interrupt arbitration-lost active"}
           - {name: ALERT_DEC,       bit_offset: 16, bit_width: 1, description: "Interrupt SMBus ALERT active"}
           - {name: STOP_DEC,        bit_offset: 17, bit_width: 1, description: "STOP-detection interrupt active"}
+          - {name: DMA_TX_DONE,     bit_offset: 18, bit_width: 1, description: "TX DMA-done interrupt active"}
+          - {name: DMA_RX_DONE,     bit_offset: 19, bit_width: 1, description: "RX DMA-done interrupt active"}
 
   - name: SPI1
     base: 0x50090000
