@@ -137,6 +137,13 @@ def generate_riscv(device):
     "CMSIS" - ARM shell, does not apply to RISC-V) and uses 3 backends in backends/riscv/
     (gen_riscv_header/gen_linker_script/gen_startup) seen because backends/cortex_m/. gen_svd.py
     shares a generic element xi (see docstring of no)."""
+    # FX1 uses its local CLINT/PLIC BSP, not the WCH PFIC startup generator.
+    if device.family == "FX1":
+        from backends.riscv import gen_fx1_bsp
+        if device.cpu.extra.get("bsp_provider") != "fx1-vp":
+            raise DeviceDescriptionError("FX1 requires cpu.bsp_provider: fx1-vp")
+        return gen_fx1_bsp.generate(device, REPO_ROOT)
+
     from backends.riscv import gen_riscv_header, gen_linker_script, gen_startup
     from backends.cortex_m import gen_svd
 

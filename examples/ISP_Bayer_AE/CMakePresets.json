@@ -1,0 +1,19 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "FX1",
+      "displayName": "FX1 - ftel_isp Bayer/AEC init",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/FX1",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/../../neon-mdf/cmake/toolchain/riscv-fx1.cmake",
+        "NEON_MDF_TARGET": "FX1",
+        "NEON_FX1_SAVE_FPU_CONTEXT": "ON",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [{"name": "FX1", "configurePreset": "FX1"}]
+}

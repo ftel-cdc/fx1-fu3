@@ -6,6 +6,7 @@ backend (backends/cortex_m/, backends/riscv/) is responsible for knowing
 which cpu.* fields it needs.
 """
 from dataclasses import dataclass, field
+from typing import Optional
 
 
 @dataclass
@@ -14,6 +15,8 @@ class Field:
     bit_offset: int
     bit_width: int
     description: str = ""
+    access: Optional[str] = None
+    reset: Optional[int] = None
 
 
 @dataclass

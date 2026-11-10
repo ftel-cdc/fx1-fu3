@@ -81,6 +81,8 @@ def load_device(path: str, profile: str = "normal") -> model.Device:
                         bit_offset=_require(fl, "bit_offset", f"{fields_ctx}[{k}]"),
                         bit_width=_require(fl, "bit_width", f"{fields_ctx}[{k}]"),
                         description=fl.get("description", ""),
+                        access=fl.get("access"),
+                        reset=fl.get("reset"),
                     )
                     for k, fl in enumerate(raw_fields)
                 ]

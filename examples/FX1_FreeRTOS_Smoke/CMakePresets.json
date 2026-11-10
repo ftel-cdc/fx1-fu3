@@ -1,0 +1,21 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "FX1_VP",
+      "displayName": "FX1 VP v3.0 / FreeRTOS / RV32IMAFC",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/FX1_VP",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/../../neon-mdf/cmake/toolchain/riscv-fx1.cmake",
+        "NEON_MDF_TARGET": "FX1_VP",
+        "NEON_FX1_SAVE_FPU_CONTEXT": "ON",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {"name": "FX1_VP", "configurePreset": "FX1_VP"}
+  ]
+}

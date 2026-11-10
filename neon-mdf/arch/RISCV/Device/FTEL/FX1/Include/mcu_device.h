@@ -1,4 +1,2 @@
-#ifndef NEON_FX1_DEVICE_H
-#define NEON_FX1_DEVICE_H
-#include "fx1_fw.h"
-#endif
+/* Sinh tu FX1.yaml. */
+#include "FX1.h"

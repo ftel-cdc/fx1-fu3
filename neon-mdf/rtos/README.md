@@ -13,6 +13,12 @@
     CH32V003F4P6: there is no CLINT, so the application configures the tick
     timer and `mtvec`; see the same guide.
 
+  FX1 uses the same RISC-V kernel port with the CLINT chip extension,
+  plus local PLIC/FPU integration in `port/fx1/`. The optional ISP service
+  lives in `services/ftel_isp/`; it owns ISP access through a worker task,
+  queue/tickets and interrupt notifications. Build/run commands and scope:
+  [FX1 FreeRTOS](../../guide/FX1_FREERTOS.md).
+
   **Current status:** this is a **plain vendored copy**, not an active Git
   submodule; the original repository had not been initialized with `git init`.
   To convert it to a submodule after initializing this repository:

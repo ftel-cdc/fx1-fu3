@@ -14,9 +14,6 @@
 # each app is now a standalone CMake project (see tools/cmake/project.cmake), this is naturally
 # true, no longer risking many FreeRTOS apps to build together once configured as before.
 function(neon_mdf_add_freertos TARGET_NAME CONFIG_DIR)
-  if(TARGET_NAME STREQUAL "FX1")
-    message(FATAL_ERROR "FX1 currently supports bare-metal only; FreeRTOS tick/trap integration is not ported")
-  endif()
   if(TARGET freertos_kernel)
     return()
   endif()
@@ -26,6 +23,7 @@ function(neon_mdf_add_freertos TARGET_NAME CONFIG_DIR)
   endif()
 
   set(_arch ${NEON_MDF_TARGET_${TARGET_NAME}_ARCH})
+  set(_family ${NEON_MDF_TARGET_${TARGET_NAME}_FAMILY})
   if(NOT _arch)
     message(FATAL_ERROR "neon_mdf_add_freertos: target '${TARGET_NAME}' has not been periodized in cmake/mcu_variants.cmake")
   endif()
@@ -42,6 +40,10 @@ function(neon_mdf_add_freertos TARGET_NAME CONFIG_DIR)
   elseif(_arch STREQUAL "cortex-m4")
     set(_freertos_port GCC_ARM_CM4F)
     set(_freertos_fpu ${NEON_MDF_TARGET_${TARGET_NAME}_FPU})
+  elseif(_family STREQUAL "FX1")
+    # FX1 has CLINT/PLIC, separate from the existing WCH PFIC backend.
+    set(_freertos_port GCC_RISC_V_GENERIC)
+    set(FREERTOS_RISCV_EXTENSION RISCV_MTIME_CLINT_no_extensions CACHE STRING "" FORCE)
   elseif(_arch MATCHES "^riscv")
     # QingKe V2A (CH32V003) without CLINT (Core Local Interrupter of RISC-V) - real verified via QingKeV2
     # Processor Manual V1.0 (real from ch405-labs.com, compare this to mtvec/mcause/PFIC, do not
@@ -76,10 +78,35 @@ function(neon_mdf_add_freertos TARGET_NAME CONFIG_DIR)
       ${NEON_MDF_PATH}/components/driver)
   endif()
 
+  if(_family STREQUAL "FX1")
+    target_include_directories(freertos_config INTERFACE
+      ${NEON_MDF_PATH}/rtos/include
+      ${NEON_MDF_PATH}/arch/RISCV/Device/FTEL/FX1/Include)
+    target_compile_definitions(freertos_config INTERFACE
+      NEON_MDF_FREERTOS_ARCH_RISCV=1 NEON_MDF_FREERTOS_HAS_FPU=1)
+  endif()
+
   set(FREERTOS_PORT ${_freertos_port} CACHE STRING "" FORCE)
   set(FREERTOS_HEAP 4 CACHE STRING "" FORCE)
 
   add_subdirectory(${NEON_MDF_PATH}/rtos/FreeRTOS-Kernel ${CMAKE_BINARY_DIR}/FreeRTOS-Kernel)
+
+  if(_family STREQUAL "FX1")
+    # Đặt archive BSP sau kernel để resolve libc kể cả khi app không gọi memset.
+    target_link_libraries(freertos_kernel PUBLIC ${NEON_MDF_DEVICE_TARGET})
+    # Smoke cho thấy đường configENABLE_FPU=1 của bản kernel hiện có mất
+    # thanh ghi FP trên VP. Dùng hook lưu đủ FP mỗi trap như BSP tham chiếu.
+    # configENABLE_FPU phải bằng 0 để không lưu hai lần.
+    option(NEON_FX1_SAVE_FPU_CONTEXT "Luu FPU FX1 qua chip extension (OFF chi de negative control)" ON)
+    if(NEON_FX1_SAVE_FPU_CONTEXT)
+      set(_fx1_chip_dir ${CMAKE_CURRENT_BINARY_DIR}/fx1-chip-extension)
+      file(MAKE_DIRECTORY ${_fx1_chip_dir})
+      configure_file(
+        ${NEON_MDF_PATH}/rtos/port/fx1/freertos_risc_v_chip_specific_extensions.h
+        ${_fx1_chip_dir}/freertos_risc_v_chip_specific_extensions.h COPYONLY)
+      target_include_directories(freertos_kernel_port BEFORE PRIVATE ${_fx1_chip_dir})
+    endif()
+  endif()
 
   if(_arch MATCHES "^riscv")
     # freertos_kernel (croutine/list/queue/tasks/timers/.../heap_4.c - C
@@ -90,8 +117,16 @@ function(neon_mdf_add_freertos TARGET_NAME CONFIG_DIR)
     include(${NEON_MDF_PATH}/cmake/arch/riscv.cmake)
     string(REPLACE "riscv-" "" _riscv_isa ${_arch})
     set(_riscv_abi ${NEON_MDF_TARGET_${TARGET_NAME}_ABI})
-    neon_mdf_apply_riscv_arch(freertos_kernel ${_riscv_isa} ${_riscv_abi})
-    neon_mdf_apply_riscv_arch(freertos_kernel_port ${_riscv_isa} ${_riscv_abi})
+    if(_family STREQUAL "FX1")
+      # FX1 supplies its full ISA already; keep other targets' helper unchanged.
+      foreach(_target freertos_kernel freertos_kernel_port)
+        target_compile_options(${_target} PUBLIC -march=${_riscv_isa} -mabi=${_riscv_abi})
+        target_link_options(${_target} PUBLIC -march=${_riscv_isa} -mabi=${_riscv_abi})
+      endforeach()
+    else()
+      neon_mdf_apply_riscv_arch(freertos_kernel ${_riscv_isa} ${_riscv_abi})
+      neon_mdf_apply_riscv_arch(freertos_kernel_port ${_riscv_isa} ${_riscv_abi})
+    endif()
 
     # FreeRTOS-Kernel core (vendor) using unregulated memcpy/memset/strlen
     # KIEN (heap_4.c/tasks.c/queue.c/...) - toolchain RISC-V bare-metal
@@ -101,7 +136,9 @@ function(neon_mdf_add_freertos TARGET_NAME CONFIG_DIR)
     # newlib, do not use this shim).
     target_include_directories(freertos_kernel PRIVATE ${NEON_MDF_PATH}/arch/RISCV/Core/Inc/libc_shim)
     target_include_directories(freertos_kernel_port PRIVATE ${NEON_MDF_PATH}/arch/RISCV/Core/Inc/libc_shim)
-    target_sources(freertos_kernel PRIVATE ${NEON_MDF_PATH}/arch/RISCV/Core/Src/riscv_libc_shim.c)
+    if(NOT _family STREQUAL "FX1")
+      target_sources(freertos_kernel PRIVATE ${NEON_MDF_PATH}/arch/RISCV/Core/Src/riscv_libc_shim.c)
+    endif()
   else()
     include(${NEON_MDF_PATH}/cmake/arch/cortex-m.cmake)
     # FPU flag must be traced to both targets (port ARM_CM4F uses real VFP in port.c/portasm.c - missing
@@ -109,4 +146,32 @@ function(neon_mdf_add_freertos TARGET_NAME CONFIG_DIR)
     neon_mdf_apply_cortex_m_arch(freertos_kernel ${_arch} ${_freertos_fpu})
     neon_mdf_apply_cortex_m_arch(freertos_kernel_port ${_arch} ${_freertos_fpu})
   endif()
+  # API liên kết dùng chung; FX1 bổ sung cầu nối trap/PLIC cho ứng dụng.
+  add_library(neon_mdf_freertos INTERFACE)
+  target_link_libraries(neon_mdf_freertos INTERFACE freertos_kernel)
+  if(_family STREQUAL "FX1")
+    target_sources(neon_mdf_freertos INTERFACE
+      ${NEON_MDF_PATH}/rtos/port/fx1/neon_freertos_fx1.c)
+    target_include_directories(neon_mdf_freertos INTERFACE
+      ${NEON_MDF_PATH}/rtos/port/fx1)
+  endif()
+  add_library(neon_mdf::freertos ALIAS neon_mdf_freertos)
+endfunction()
+
+# Service ISP dùng FreeRTOS; gọi sau khi tạo kernel và bật component ftel_isp.
+# Lõi driver trong components/ không đăng ký hoặc liên kết service OS.
+function(neon_mdf_add_isp_freertos)
+  if(TARGET neon_mdf::ftel_isp_freertos)
+    return()
+  endif()
+  if(NOT TARGET neon_mdf::freertos)
+    message(FATAL_ERROR "Goi neon_mdf_add_freertos truoc neon_mdf_add_isp_freertos")
+  endif()
+  if(NOT TARGET neon_mdf::ftel_isp)
+    message(FATAL_ERROR "Bat NEON_MDF_ENABLE_FTEL_ISP truoc neon_mdf_add_isp_freertos")
+  endif()
+  # Retained frame counters are supported only in builds using this service.
+  target_compile_definitions(neon_mdf_ftel_isp PRIVATE ISP_STREAM_ALLOW_RETAINED_COUNTS=1)
+  add_subdirectory("${NEON_MDF_PATH}/rtos/services/ftel_isp"
+                   "${CMAKE_CURRENT_BINARY_DIR}/ftel-isp-freertos")
 endfunction()

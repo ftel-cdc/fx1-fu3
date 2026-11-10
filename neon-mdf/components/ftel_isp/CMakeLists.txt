@@ -1,4 +1,4 @@
-if(NOT NEON_MDF_TARGET STREQUAL "FX1")
+if(NOT NEON_MDF_TARGET_${NEON_MDF_TARGET}_FAMILY STREQUAL "FX1")
   message(FATAL_ERROR "ftel_isp currently requires the FX1 platform")
 endif()
 add_library(neon_mdf_ftel_isp STATIC
@@ -33,3 +33,11 @@ target_link_libraries(neon_mdf_ftel_isp PUBLIC ${NEON_MDF_DEVICE_TARGET} neon_md
 target_compile_definitions(neon_mdf_ftel_isp PUBLIC
   ISP_BASE=FX1_ISP_CSR_BASE ISP_CHECK_RECOVERY_IDLE=1 COMMON_RECOVERY_STATUS_BUSY=1u)
 target_compile_options(neon_mdf_ftel_isp PUBLIC -include fx1/fx1_memory_map.h)
+
+# OS-independent API used by the optional FreeRTOS service.
+add_library(neon_mdf::ftel_isp ALIAS neon_mdf_ftel_isp)
+target_sources(neon_mdf_ftel_isp PRIVATE
+  pipeline/ftel_isp_bayer_aec.c pipeline/ftel_isp_frame.c
+  platform/fx1/ftel_isp_platform.c)
+target_include_directories(neon_mdf_ftel_isp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include"
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/pipeline")

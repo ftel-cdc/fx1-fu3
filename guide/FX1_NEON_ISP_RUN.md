@@ -5,22 +5,19 @@ App: `examples/FX1_ISP_Image`. Dùng thư viện Neon và tuning riêng tại
 
 ## 1. Chuẩn bị
 
-Cần CMake ≥ 3.25, Ninja, GCC RISC-V, Python có `kconfiglib` và `Pillow`.
-Đổi đường dẫn dưới đây theo máy của bạn:
-
-```sh
-export NEON_WORKSPACE=/home/hieurose/Neon_fx1_test
-export PATH="/opt/toolchains/riscv-none-elf/bin:$PATH"
-```
+Thực hiện [bước chuẩn bị terminal](FX1_FREERTOS.md#1-chuẩn-bị-terminal) từ
+gốc SDK: Python local, compiler trên PATH và các biến `SDK_ROOT`,
+`VP_ROOT`, `RAW_FILE`, `FX1_PYTHON`. Bước này dùng chung cho hai app ảnh.
+Build ELF không cần repo VP hoặc ảnh RAW.
 
 ## 2. Sửa profile và build
 
 Sửa `examples/FX1_ISP_Image/profile/profile.csrw` nếu cần, rồi chạy:
 
 ```sh
-cd "$NEON_WORKSPACE/neon_mdf-feature-porting_fx1/examples/FX1_ISP_Image"
+cd "$SDK_ROOT/examples/FX1_ISP_Image"
 python3 tools/generate_profile.py
-cmake --preset FX1
+cmake --preset FX1 -DNEON_MDF_PYTHON3="$FX1_PYTHON"
 cmake --build --preset FX1
 ```
 
@@ -33,10 +30,9 @@ Hoặc dùng `make build` để thực hiện cùng ba bước.
 ## 3. Chạy ảnh
 
 ```sh
-cd "$NEON_WORKSPACE"
-./fx1-dev/vp_neon/run_vp_neon \
-  neon_mdf-feature-porting_fx1/examples/FX1_ISP_Image/build/FX1/fx1_isp_image.elf \
-  D65_raw_2688x1520_5376.raw
+"$VP_ROOT/vp_neon/run_vp_neon" \
+  "$SDK_ROOT/examples/FX1_ISP_Image/build/FX1/fx1_isp_image.elf" \
+  "$RAW_FILE"
 ```
 
 Hai tham số là **ELF** và **RAW gốc**. Thay đường dẫn RAW để chạy ảnh khác.
@@ -45,7 +41,7 @@ Script tự chuyển RAW, chạy VP và xuất PNG; không cần copy ELF hay ch
 
 ## 4. Xem kết quả
 
-Mở `fx1-dev/vp_neon/result/output.png`.
+Mở `$VP_ROOT/vp_neon/result/output.png`.
 
 Cùng thư mục có `output.nv12`, `y.bin`, `uv.bin`, `input.isp16`, `vp.log`
 và `report.json`. Terminal phải báo **PASS**; nếu lỗi, xem `vp.log`.
@@ -58,7 +54,7 @@ có thể cần tuning khác.
 ## 5. Clean
 
 ```sh
-cd "$NEON_WORKSPACE/neon_mdf-feature-porting_fx1/examples/FX1_ISP_Image"
+cd "$SDK_ROOT/examples/FX1_ISP_Image"
 make clean
 ```
 
@@ -90,7 +86,7 @@ bản xem trước. Vì vậy chỉ chạy build cũng không dùng nhầm tunin
 Muốn build profile khác mà giữ profile mặc định:
 
 ```sh
-cmake --preset FX1 -B build/custom -DFX1_ISP_PROFILE=/duong/dan/profile.csrw
+cmake --preset FX1 -B build/custom -DFX1_ISP_PROFILE="$SDK_ROOT/examples/FX1_ISP_Image/profile/profile.csrw"
 cmake --build build/custom
 ```
 

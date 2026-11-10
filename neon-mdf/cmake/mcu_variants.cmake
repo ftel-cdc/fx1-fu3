@@ -7,8 +7,15 @@
 
 set(NEON_MDF_TARGET_FX1_ARCH riscv-rv32imafc_zicsr_zifencei)
 set(NEON_MDF_TARGET_FX1_FAMILY FX1)
+set(NEON_MDF_TARGET_FX1_VENDOR FTEL)
+set(NEON_MDF_TARGET_FX1_ABI ilp32f)
+# FX1_VP is the smoke-test alias of the same local FX1 BSP.
+set(NEON_MDF_TARGET_FX1_VP_ARCH riscv-rv32imafc_zicsr_zifencei)
+set(NEON_MDF_TARGET_FX1_VP_FAMILY FX1)
+set(NEON_MDF_TARGET_FX1_VP_VENDOR FTEL)
+set(NEON_MDF_TARGET_FX1_VP_ABI ilp32f)
 
-set(NEON_MDF_KNOWN_TARGETS FX1 FU2 STM32F103CB WEACT_F412 CH32V003F4P6)
+set(NEON_MDF_KNOWN_TARGETS FX1 FX1_VP FU2 STM32F103CB WEACT_F412 CH32V003F4P6)
 
 set(NEON_MDF_TARGET_FU2_ARCH   cortex-m0)
 set(NEON_MDF_TARGET_FU2_FAMILY FU2)
@@ -48,7 +55,7 @@ set(NEON_MDF_TARGET_CH32V003F4P6_ABI    ilp32e)
 # after editing the .yaml file, re-run cmake configure for the header to be created again. Simple
 # enough to use at the current stage.
 function(neon_mdf_configure_target TARGET_NAME)
-  if(TARGET_NAME STREQUAL "FX1")
+  if(NEON_MDF_TARGET_${TARGET_NAME}_FAMILY STREQUAL "FX1")
     include(${NEON_MDF_PATH}/cmake/fx1.cmake)
     return()
   endif()

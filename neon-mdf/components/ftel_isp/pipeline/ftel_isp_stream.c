@@ -89,6 +89,10 @@ static bool dma_configuration_matches(const isp_config_t *cfg, uint8_t outputs)
 
 isp_status_t isp_stream_start(isp_stream_t *stream, const isp_config_t *cfg, const isp_wait_t *wait)
 {
+#if defined(ISP_STREAM_ALLOW_RETAINED_COUNTS) && ISP_STREAM_ALLOW_RETAINED_COUNTS
+    static bool started;
+    static uint32_t last_recovery_sequence;
+#endif
     if (!stream || !cfg) return ISP_E_PARAM;
     if (stream->state != ISP_STREAM_CLOSED) return ISP_E_STATE;
     isp_status_t st = isp_validate_config(cfg);
@@ -102,10 +106,18 @@ isp_status_t isp_stream_start(isp_stream_t *stream, const isp_config_t *cfg, con
         (REG_RD(R_DMA_CTRL) & DMA_CTRL_ENABLE_MASK)) return ISP_E_NOT_IDLE;
     dma_frame_status_t s;
     dma_read_frame_status(&s);
+#if defined(ISP_STREAM_ALLOW_RETAINED_COUNTS) && ISP_STREAM_ALLOW_RETAINED_COUNTS
+    /* FreeRTOS may submit another job after reset with retained DMA counters. */
+    if (s.input_valid || (s.recovery_status & 3u) != COMMON_RECOVERY_STATUS_DONE ||
+        (started && s.recovery_sequence == last_recovery_sequence)) return ISP_E_STATE;
+    for (unsigned c = 0; c < 3; c++)
+        if (s.output_free[c] || s.output_done[c]) return ISP_E_STATE;
+#else
     /* Chỉ nhận vòng slot mới sau init/reset, không đoán head từ số DONE của một stream cũ. */
     if (s.input_count) return ISP_E_STATE;
     for (unsigned c = 0; c < 3; c++)
         if (s.output_free[c] || s.output_done[c] || s.output_count[c]) return ISP_E_STATE;
+#endif
     if (s.errors || (s.common_irq & 2u) || (s.output_irq & 0x70u) || isp_tune_error_set())
         return ISP_E_IO;
     if (!dma_configuration_matches(cfg, outputs)) return ISP_E_STATE;
@@ -120,6 +132,10 @@ isp_status_t isp_stream_start(isp_stream_t *stream, const isp_config_t *cfg, con
     }
     *stream = (isp_stream_t){.state = ISP_STREAM_READY, .outputs = outputs,
                             .recovery_sequence = s.recovery_sequence};
+#if defined(ISP_STREAM_ALLOW_RETAINED_COUNTS) && ISP_STREAM_ALLOW_RETAINED_COUNTS
+    last_recovery_sequence = s.recovery_sequence;
+    started = true;
+#endif
     return ISP_OK;
 }
 

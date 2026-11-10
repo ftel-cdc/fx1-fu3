@@ -149,3 +149,15 @@ MATCHES "^riscv"` as template.
 7. Build + verify real on board (not believe clean build) — runs 2 minimum preemptive tasks (same as
    `examples/FreeRTOS_Blinky`) to prove scheduler/tick/context-switch works real, not just compile
    through.
+
+
+## FX1: CLINT/PLIC and ISP service
+
+FX1 uses `GCC_RISC_V_GENERIC`, the CLINT tick and the local extension in
+`neon-mdf/rtos/port/fx1/`. PLIC interrupt dispatch notifies the ISP worker;
+`neon-mdf/rtos/services/ftel_isp/` manages jobs, buffer ownership and recovery.
+Keep `NEON_FX1_SAVE_FPU_CONTEXT=ON` and `configENABLE_FPU=0` for the validated
+FX1 port. Other targets retain their existing port selection.
+
+See [FX1 FreeRTOS](FX1_FREERTOS.md) for the portable environment setup,
+ELF builds, VP runs, expected PASS markers and the list of source files.

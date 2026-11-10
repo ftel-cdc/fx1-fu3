@@ -25,6 +25,7 @@ and [how they apply to Neon MDF](guide/NEON_MDF_Source_Format_Guideline.md).
 | `FU2` | FPT Telecom | Cortex-M0, up to 60MHz | 512KB | 128KB | RTL BootROM v5 | Register map v8; build/link and MMIO emulation checked; FPGA timing requires hardware measurements |
 | `WEACT_F412` | STMicroelectronics (STM32F412RET6) | Cortex-M4F, 100MHz | 512KB | 256KB | Yes | **Hardware-verified**; the main hardware test board |
 | `CH32V003F4P6` | WCH | RISC-V QingKe V2A (RV32EC), 48MHz | 16KB | 2KB | Application-dependent; see below | Build/link verified; **not yet run on hardware** |
+| `FX1` / `FX1_VP` | FTEL | RV32IMAFC, ilp32f | ELF in DDR | Local BSP layout | Not ported for FX1 | Bare-metal image and FreeRTOS smoke/ISP checks on VP |
 
 ## Directory structure
 
@@ -141,6 +142,10 @@ FreeRTOS version overwrites one fixed slot without A/B switching or rollback.
 BootROM image, without OTA.
 
 ## FreeRTOS
+
+FX1 now includes a CLINT/PLIC FreeRTOS port, an ISP worker service and
+RAW-image/service/smoke examples. See [FX1 FreeRTOS](guide/FX1_FREERTOS.md).
+The existing bare-metal image example and its tuning are retained.
 
 `FreeRTOS_Blinky` supports all three targets using upstream FreeRTOS ports:
 
@@ -260,11 +265,10 @@ See `guide/AddNewMCU.md` for the full procedure:
 
 ## FX1 ISP
 
-The FX1 target and ISP component build independently with the `FX1` preset.
-See [the Neon ISP run guide](guide/FX1_NEON_ISP_RUN.md) for the retained
-FX1_ISP_Image app, ELF/MAP/BIN artifacts and VP instructions.
+The `FX1` preset builds firmware with local startup/linker/BSP; VP is only
+required to run the ELF. Start with [FX1 Quickstart](guide/FX1_Quickstart.md).
 
-## FX1 ISP application
-
-Use [FX1_ISP_Image](examples/FX1_ISP_Image/README.md) and the
-[run guide](guide/FX1_NEON_ISP_RUN.md). The other FX1 examples were removed.
+- Bare-metal image: [FX1_ISP_Image](examples/FX1_ISP_Image/README.md) and
+  [image run guide](guide/FX1_NEON_ISP_RUN.md).
+- FreeRTOS: [FX1 FreeRTOS](guide/FX1_FREERTOS.md), covering the port,
+  ISP worker service, init/AEC checks, smoke and the RAW-image example.

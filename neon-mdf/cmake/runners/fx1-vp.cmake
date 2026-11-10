@@ -1,0 +1,13 @@
+# Chỉ chọn executable khi ứng dụng muốn chạy VP; không tham gia build BSP.
+include_guard(GLOBAL)
+set(_fx1_vp_default "$ENV{NEON_FX1_VP_EXECUTABLE}")
+if(NOT _fx1_vp_default)
+  set(_fx1_vp_default "$ENV{FX1_VP_BINARY}")
+endif()
+if(NOT _fx1_vp_default)
+  find_program(_fx1_vp_on_path NAMES fx1_soc)
+  if(_fx1_vp_on_path)
+    set(_fx1_vp_default "${_fx1_vp_on_path}")
+  endif()
+endif()
+set(NEON_FX1_VP_EXECUTABLE "${_fx1_vp_default}" CACHE FILEPATH "VP tùy chọn cho run-*; không cần để build ELF")
