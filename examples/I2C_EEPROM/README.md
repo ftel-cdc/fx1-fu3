@@ -40,6 +40,7 @@ Press `r` at `fpga:>>`, then choose one key:
 |---|---|
 | `s` | Scan all 128 7-bit addresses, `00..7F`; display ACK/NACK map |
 | `a` | Write `2A 00` at EEPROM offset `0000`, wait 6 ms, read and compare |
+| `d` | Probe memory-address width using two different patterns at `0010` and `0020` |
 | `r` | Read 64-byte blocks over `0000..7FFF`, dump 16 bytes per row, wrap and repeat |
 | `t` | Read the original contents, overwrite all 32 KiB with a PRNG pattern, read and verify every byte |
 | `q` / Ctrl+C | Stop a long operation after its current block; at the menu, return to `fpga:>>` |
@@ -58,8 +59,24 @@ A successful two-byte test prints:
 ```text
 [WRITE] mem=0000 data=2A 00; wait 6 ms, then read.
 [READ] 2A 00 [PASS]
-[MENU] s/a/r/t or q to exit.
+[MENU] s/a/d/r/t or q to exit.
 ```
+
+The `d` probe sends two-byte memory addresses. It writes `A5 3C 69 96` at `0010`
+and `5A C3 96 69` at `0020`, then reads both locations. **It does not restore data.**
+On a conventional two-byte-address EEPROM, it overwrites `0010..0013` and
+`0020..0023`. On a one-byte-address EEPROM, both writes instead target `0000..0004`:
+the second address byte becomes data, and the second pattern overwrites the first.
+The probe waits 6 ms after every write phase, including each read's pointer phase.
+
+If both locations retain their separate patterns, two-byte addressing works at those
+locations. If both reads return pattern B, one-byte addressing is likely; faulty
+address decoding or bus behavior can also cause aliasing. Other data or transport
+errors are inconclusive. Confirm the IC marking before changing the address width,
+capacity or page size. The probe does not change configuration automatically.
+A single write/read comparison can pass with the wrong address width, so use both
+locations. This probe assumes conventional sequential EEPROM behavior, not arbitrary
+I2C devices or EEPROMs with a different protocol/write-cycle time.
 
 The full test reads the original contents in 64-byte blocks, then writes 32-byte blocks without
 crossing a 64-byte page boundary. A xorshift32 generator provides a new pattern per run. Each

@@ -107,6 +107,60 @@ static neon_status_t scan(void) {
     return NEON_OK;
 }
 
+static neon_status_t address_probe(void) {
+    uint32_t pattern_a[4] = {0xA5U, 0x3CU, 0x69U, 0x96U};
+    uint32_t pattern_b[4] = {0x5AU, 0xC3U, 0x96U, 0x69U};
+    uint32_t readback[2][4] = {{0U}};
+    printf("[ADDR] Test two-byte memory addressing on device %02X.\n", DEVICE_ADDRESS);
+    printf("[ADDR] Overwrites 0010..0013 and 0020..0023 on a two-byte-address EEPROM;\n");
+    printf("[ADDR] or 0000..0004 on a one-byte-address EEPROM. No restore.\n");
+    printf("[ADDR] WRITE A:\n");
+    dump(0x10U, pattern_a, 4U);
+    neon_status_t status = eeprom_write(0x10U, pattern_a, 4U);
+    if (status != NEON_OK) { return status; }
+    printf("[ADDR] WRITE B:\n");
+    dump(0x20U, pattern_b, 4U);
+    status = eeprom_write(0x20U, pattern_b, 4U);
+    if (status != NEON_OK) { return status; }
+
+    for (uint32_t test = 0U; test < 2U; ++test) {
+        uint32_t address = test == 0U ? 0x10U : 0x20U;
+        uint32_t pointer = address << 8U; /* Send 00, then 10 or 20. */
+        uint32_t packed = 0U;
+        printf("[ADDR] READ %04lX:\n", (unsigned long)address);
+        status = neon_i2c_master_transmit(&i2c, DEVICE_ADDRESS,
+            (const uint8_t *)&pointer, 2U, TIMEOUT);
+        /* On a one-byte-address EEPROM the second pointer byte writes data.
+         * Wait even after an error, in case STOP committed that byte. */
+        neon_status_t delay = write_delay();
+        if (status != NEON_OK) { return status; }
+        if (delay != NEON_OK) { return delay; }
+        status = neon_i2c_master_receive(&i2c, DEVICE_ADDRESS, (uint8_t *)&packed, 4U, TIMEOUT);
+        if (status != NEON_OK) { return status; }
+        for (uint32_t i = 0U; i < 4U; ++i) {
+            readback[test][i] = (packed >> (8U * i)) & 0xFFU;
+        }
+        dump(address, readback[test], 4U);
+    }
+
+    uint32_t matches_a = 1U, matches_b = 1U, first_is_b = 1U;
+    for (uint32_t i = 0U; i < 4U; ++i) {
+        if (readback[0][i] != pattern_a[i]) { matches_a = 0U; }
+        if (readback[1][i] != pattern_b[i]) { matches_b = 0U; }
+        if (readback[0][i] != pattern_b[i]) { first_is_b = 0U; }
+    }
+    if (matches_a && matches_b) {
+        printf("[ADDR] RESULT: 2-BYTE addressing works at both tested locations.\n");
+    } else if (first_is_b && matches_b) {
+        printf("[ADDR] RESULT: both locations returned B; likely 1-BYTE addressing.\n");
+        printf("[ADDR] Memory/bus aliasing can give the same result; confirm the IC marking.\n");
+    } else {
+        printf("[ADDR] RESULT: INCONCLUSIVE; data mismatch, check IC, WP and I2C signals.\n");
+    }
+    printf("[ADDR] This test does not identify capacity/page size or change the configuration.\n");
+    return NEON_OK;
+}
+
 static neon_status_t full_test(neon_uart_handle_t *uart) {
     uint32_t data[READ_SIZE], expected[WRITE_SIZE];
     uint32_t seed = SysTick->VAL;
@@ -181,6 +235,7 @@ void i2c_eeprom_run(neon_uart_handle_t *uart) {
     printf("[I2C0] Master, target SCL=100 kHz, EEPROM address=%02X.\n", DEVICE_ADDRESS);
     printf("[PINS] SDA=PMOD_IO6 SCL=PMOD_IO2; pull-ups, common GND, WP LOW for writes.\n");
     printf(" s: scan 00..7F | a: write/read 2A 00 at 0000\n");
+    printf(" d: memory address-width test (overwrites small regions, no restore)\n");
     printf(" r: continuous 64-byte read | t: overwrite/verify ALL 32 KiB\n");
     printf(" q/Ctrl+C: stop a long test or return to fpga:>>\n");
     printf("[READY] I2C_EEPROM menu, no Enter needed.\n");
@@ -211,12 +266,13 @@ void i2c_eeprom_run(neon_uart_handle_t *uart) {
             }
             printf("[READ LOOP] Completed blocks=%lu.\n", (unsigned long)blocks);
         } else if (key == 't') { status = full_test(uart); }
+        else if (key == 'd') { status = address_probe(); }
         else { continue; }
         if (status != NEON_OK) {
             printf("[FAIL] I2C status=%lu error=0x%08lX; check address, wiring, pull-ups and WP.\n",
                 (unsigned long)status, (unsigned long)neon_i2c_get_error(&i2c));
         }
-        printf("[MENU] s/a/r/t or q to exit.\n");
+        printf("[MENU] s/a/d/r/t or q to exit.\n");
     }
     neon_i2c_deinit(&i2c);
     SysTick->CTRL = 0U;
