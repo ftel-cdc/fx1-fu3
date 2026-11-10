@@ -97,7 +97,8 @@ not milliseconds. The driver default calculates standard-mode 100 kHz timing fro
 current FU2 clock; the example does not duplicate the timing calculation.
 
 The example calls NEON I2C APIs for all bus transfers. The driver configures clock/reset and
-SDA/SCL pin routing. EEPROM addressed reads use a two-byte pointer write with STOP, followed
+SDA/SCL pin routing. TX preloads up to 32 bytes into the FIFO before START, then streams
+the remaining bytes. EEPROM addressed reads use a two-byte pointer write with STOP, followed
 by a read with another START/STOP. The last read byte is NACKed by the master. It uses polling;
 no I2C ISR or DMA is needed.
 
