@@ -14,7 +14,7 @@ Console: UART0, 19200 baud, 8N1. Default FPGA clock: 10 MHz; target SCL: 100 kHz
 | Board-compatible supply | VCC, pin 8 |
 
 The bitstream must route PMOD_IO6/IO2 to I2C0. SDA/SCL need external pull-ups to the IO supply.
-A0/A1/A2 all LOW select address `0x50`; these pins select addresses `0x50..0x57`. Keep WP LOW
+A0/A1/A2 all HIGH select the default address `0x57`; these pins select addresses `0x50..0x57`. Keep WP LOW
 for writes. This example assumes a 32 KiB AT24C256 with a 16-bit memory address and 64-byte pages.
 
 ## Build and load
@@ -50,7 +50,7 @@ bytes already written in place. Neither operation runs automatically at boot or 
 
 Scan uses one-byte reads and includes reserved addresses. A scan can advance a device's pointer
 or trigger read side effects. ACK identifies an address response and does not identify EEPROM
-model/capacity. Read/write tests always use `CONFIG_I2C_EEPROM_ADDRESS`, default `0x50`.
+model/capacity. Read/write tests always use `CONFIG_I2C_EEPROM_ADDRESS`, default `0x57`.
 The configured address is not changed by scanning.
 
 A successful two-byte test prints:

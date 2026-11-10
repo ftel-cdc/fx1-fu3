@@ -19,7 +19,7 @@ menu "I2C EEPROM example"
 config I2C_EEPROM_ADDRESS
     hex "AT24C256 7-bit device address"
     range 0x50 0x57
-    default 0x50
+    default 0x57
 
 config I2C_EEPROM_TIMEOUT_POLLS
     int "Polling budget per I2C transfer or EEPROM delay"
