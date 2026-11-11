@@ -41,6 +41,7 @@ Press `r` at `fpga:>>`, then choose one key:
 | `s` | Scan all 128 7-bit addresses, `00..7F`; display ACK/NACK map |
 | `a` | Write `2A 00` at EEPROM offset `0000`, wait 6 ms, read and compare |
 | `d` | Probe memory-address width using two different patterns at `0010` and `0020` |
+| `l` | Read-length diagnostics at `0000`: 1/2/4/8/16/31/32/33/64 bytes; stop on the first error |
 | `r` | Read 64-byte blocks over `0000..7FFF`, dump 16 bytes per row, wrap and repeat |
 | `t` | Read the original contents, overwrite all 32 KiB with a PRNG pattern, read and verify every byte |
 | `q` / Ctrl+C | Stop a long operation after its current block; at the menu, return to `fpga:>>` |
@@ -59,7 +60,7 @@ A successful two-byte test prints:
 ```text
 [WRITE] mem=0000 data=2A 00; wait 6 ms, then read.
 [READ] 2A 00 [PASS]
-[MENU] s/a/d/r/t or q to exit.
+[MENU] s/a/d/l/r/t or q to exit.
 ```
 
 The `d` probe sends two-byte memory addresses. It writes `A5 3C 69 96` at `0010`
@@ -77,6 +78,14 @@ capacity or page size. The probe does not change configuration automatically.
 A single write/read comparison can pass with the wrong address width, so use both
 locations. This probe assumes conventional sequential EEPROM behavior, not arbitrary
 I2C devices or EEPROMs with a different protocol/write-cycle time.
+
+For `l`, confirm the EEPROM uses two-byte memory addresses first: it sends a two-byte
+pointer before each read and does not send payload data. On a one-byte-address device,
+that second pointer byte can instead write data. Temporary RX diagnostics print the
+number of bytes copied and the raw ISR/IITR error snapshot before flags are cleared.
+The register/control snapshots are captured before recovery; logs are printed after
+recovery, never between FIFO reads. UART output makes `elapsed_ticks` on a failed read
+include the diagnostic-print time, so it is not an exact bus-duration measurement.
 
 The full test reads the original contents in 64-byte blocks, then writes 32-byte blocks without
 crossing a 64-byte page boundary. A xorshift32 generator provides a new pattern per run. Each

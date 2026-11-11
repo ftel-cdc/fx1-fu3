@@ -35,8 +35,15 @@ static neon_status_t eeprom_read(uint32_t address, uint32_t *data, uint32_t coun
     uint32_t packed[READ_SIZE / 4U] = {0U};
     neon_status_t status = neon_i2c_master_transmit(&i2c, DEVICE_ADDRESS,
         (const uint8_t *)&pointer, 2U, TIMEOUT);
+    if (status != NEON_OK) {
+        printf("[READ] Pointer write failed at %04lX.\n", (unsigned long)address);
+    }
     if (status == NEON_OK) {
         status = neon_i2c_master_receive(&i2c, DEVICE_ADDRESS, (uint8_t *)packed, count, TIMEOUT);
+        if (status != NEON_OK) {
+            printf("[READ] RX failed at %04lX, requested=%lu bytes.\n",
+                (unsigned long)address, (unsigned long)count);
+        }
     }
     if (status == NEON_OK) {
         for (uint32_t i = 0U; i < count; ++i) {
@@ -161,6 +168,22 @@ static neon_status_t address_probe(void) {
     return NEON_OK;
 }
 
+static neon_status_t read_lengths(void) {
+    const uint32_t sizes[] = {1U, 2U, 4U, 8U, 16U, 31U, 32U, 33U, 64U};
+    uint32_t data[READ_SIZE];
+    printf("[LENGTH] Two-byte pointer at 0000, then read each size; no payload writes.\n");
+    for (uint32_t i = 0U; i < sizeof(sizes) / sizeof(sizes[0]); ++i) {
+        uint32_t start = SysTick->VAL;
+        neon_status_t status = eeprom_read(0U, data, sizes[i]);
+        uint32_t ticks = (start - SysTick->VAL) & TICK_MASK;
+        printf("[LENGTH] bytes=%lu status=%lu error=%08lX elapsed_ticks=%lu\n",
+            (unsigned long)sizes[i], (unsigned long)status,
+            (unsigned long)neon_i2c_get_error(&i2c), (unsigned long)ticks);
+        if (status != NEON_OK) { return status; }
+    }
+    return NEON_OK;
+}
+
 static neon_status_t full_test(neon_uart_handle_t *uart) {
     uint32_t data[READ_SIZE], expected[WRITE_SIZE];
     uint32_t seed = SysTick->VAL;
@@ -236,6 +259,7 @@ void i2c_eeprom_run(neon_uart_handle_t *uart) {
     printf("[PINS] SDA=PMOD_IO6 SCL=PMOD_IO2; pull-ups, common GND, WP LOW for writes.\n");
     printf(" s: scan 00..7F | a: write/read 2A 00 at 0000\n");
     printf(" d: memory address-width test (overwrites small regions, no restore)\n");
+    printf(" l: read-length diagnostics, 1/2/4/8/16/31/32/33/64 bytes\n");
     printf(" r: continuous 64-byte read | t: overwrite/verify ALL 32 KiB\n");
     printf(" q/Ctrl+C: stop a long test or return to fpga:>>\n");
     printf("[READY] I2C_EEPROM menu, no Enter needed.\n");
@@ -267,12 +291,13 @@ void i2c_eeprom_run(neon_uart_handle_t *uart) {
             printf("[READ LOOP] Completed blocks=%lu.\n", (unsigned long)blocks);
         } else if (key == 't') { status = full_test(uart); }
         else if (key == 'd') { status = address_probe(); }
+        else if (key == 'l') { status = read_lengths(); }
         else { continue; }
         if (status != NEON_OK) {
             printf("[FAIL] I2C status=%lu error=0x%08lX; check address, wiring, pull-ups and WP.\n",
                 (unsigned long)status, (unsigned long)neon_i2c_get_error(&i2c));
         }
-        printf("[MENU] s/a/d/r/t or q to exit.\n");
+        printf("[MENU] s/a/d/l/r/t or q to exit.\n");
     }
     neon_i2c_deinit(&i2c);
     SysTick->CTRL = 0U;

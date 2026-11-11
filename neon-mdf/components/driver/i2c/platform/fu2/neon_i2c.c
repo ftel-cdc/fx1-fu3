@@ -12,6 +12,7 @@
 ==================================================================================================*/
 
 #include "i2c/neon_i2c.h"
+#include <stdio.h>
 #include <string.h>
 
 #include "crm/neon_crm.h"
@@ -38,6 +39,9 @@
 static neon_i2c_handle_t *fu2_i2c_owner;
 static neon_i2c_config_t i2c_active_config;
 static fu2_syscsr_pin_group_t i2c_pins;
+/* Temporary RX diagnostics: preserve flags before IICR clears the error. */
+static uint32_t i2c_error_isr;
+static uint32_t i2c_error_iitr;
 
 static neon_status_t i2c_reset_pin_route(void);
 
@@ -1184,6 +1188,8 @@ static neon_status_t i2c_check_transfer_error(neon_i2c_handle_t *hi2c) {
         clear |= I2C_IICR_PEC_ERR_CLR_Msk;
     }
     if (code == 0U) { return NEON_OK; }
+    i2c_error_isr = status;
+    i2c_error_iitr = interrupt;
     hi2c->error_code |= code;
     i2c_pulse_interrupt_clear(hi2c->instance, clear);
     return NEON_ERROR;
@@ -1499,8 +1505,11 @@ static neon_status_t i2c_master_read_core(neon_i2c_handle_t *hi2c, uint32_t addr
     uint32_t irq_pending = NVIC_GetPendingIRQ(I2C0_IRQn);
     /* IITR events must remain enabled for polling without invoking a user ISR. */
     NVIC_DisableIRQ(I2C0_IRQn);
-    uint16_t index;
+    uint16_t index = 0U;
     uint32_t transfer_started = 0U;
+    uint32_t failed_ctrl = 0U, failed_cfg = 0U, failed_count = 0U;
+    i2c_error_isr = 0U;
+    i2c_error_iitr = 0U;
 
     status = i2c_prepare_master(hi2c, address, size, NEON_I2C_DIRECTION_READ, use_sub_address, sub_address,
                                 &timeout_polls, &saved_interrupts);
@@ -1509,23 +1518,40 @@ static neon_status_t i2c_master_read_core(neon_i2c_handle_t *hi2c, uint32_t addr
         transfer_started = 1U;
         status = i2c_wait_start_consumed(hi2c, &timeout_polls);
     }
-    for (index = 0U; (index < size) && (status == NEON_OK); index++) {
+    while ((index < size) && (status == NEON_OK)) {
         status = i2c_wait_rx_data(hi2c, &timeout_polls);
         if (status == NEON_OK) {
             const uint32_t result_word = (uint8_t)(hi2c->instance->IRDR & I2C_IRDR_RX_DATA_Msk);
             memcpy(&data[index], &result_word, 1U);
+            ++index;
         }
     }
     if (status == NEON_OK) {
         status = i2c_finish_polling_transfer(hi2c, &timeout_polls, &transfer_started);
     }
     if (status != NEON_OK) {
+        if (i2c_error_isr == 0U && i2c_error_iitr == 0U) {
+            i2c_error_isr = hi2c->instance->ISR;
+            i2c_error_iitr = hi2c->instance->IITR;
+        }
+        failed_ctrl = hi2c->instance->ICTLR;
+        failed_cfg = hi2c->instance->ICFGR;
+        failed_count = hi2c->instance->IBCR;
         i2c_abort_master(hi2c, transfer_started);
     }
     if (hi2c->state != NEON_I2C_STATE_FAULT) {
         hi2c->instance->ICFGR = (hi2c->instance->ICFGR & ~I2C_ICFGR_HW_AUTO_END_Msk) | saved_auto_end;
     }
     i2c_restore_polling_irq(hi2c, saved_interrupts, irq_enabled, irq_pending);
+    /* Print only after STOP/recovery so UART logging does not delay FIFO service. */
+    if (status != NEON_OK && (hi2c->error_code & ~NEON_I2C_ERROR_ADDRESS_NACK) != 0U) {
+        printf("[I2C RX] received=%lu/%lu ISR=%08lX IITR=%08lX CTRL=%08lX\n",
+            (unsigned long)index, (unsigned long)size, (unsigned long)i2c_error_isr,
+            (unsigned long)i2c_error_iitr, (unsigned long)failed_ctrl);
+        printf("[I2C RX] CFG=%08lX COUNT=%lu SCL_LIMIT=%lu SDA_LIMIT=%lu\n",
+            (unsigned long)failed_cfg, (unsigned long)failed_count,
+            (unsigned long)hi2c->instance->ISCSLTR, (unsigned long)hi2c->instance->ISDSLTR);
+    }
     return status;
 }
 
