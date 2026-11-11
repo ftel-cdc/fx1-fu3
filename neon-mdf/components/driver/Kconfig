@@ -91,12 +91,13 @@ config NEON_MDF_DRIVER_AES
         FU2 AES-128: ECB/CBC/CTR, key/IV and polling READY/DONE.
 
 config NEON_MDF_DRIVER_QSPI
-    bool "Compile QSPI driver (qspi/neon_qspi_fu2.c)"
+    bool "Compile QSPI driver"
     default y
     help
-        QSPI driver included Indirect mode (NEON_QSPI_Init/SendCommand/ WriteData/ReadData) -
-        Init/DeInit/SendCommand real port from src_fu2/fu2_dti_qspi.c. Only control via APB window,
-        not memory-mapped mode (XiP).
+        FU2 QSPI SDR: Single/Dual/Quad command phases, FIFO polling,
+        transfer completion, abort and memory-mapped reads.
+        Flash erase/program, QE and status commands are supplied by the application.
+        Automatic status-polling, DDR and DMA APIs are not implemented.
 
 config NEON_MDF_DRIVER_WDT
     bool "Compile watchdog driver (wdt/neon_wdt_fu2.c)"

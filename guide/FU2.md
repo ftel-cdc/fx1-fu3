@@ -319,9 +319,57 @@ used only as internal counters and other APIs without a mapped pin function
 do not change SYSCSR pin routing.
 
 UART enforces one initialized handle per instance. DeInit releases ownership;
-initialization failures release it too. QSPI config selects mode 0/SDR and both
-config/SendCommand return BUSY while a transaction is active. RTC years use all
-four BCD digits (1..9999), with calendar validation in SetDate.
+initialization failures release it too. RTC years use all four BCD digits
+(1..9999), with calendar validation in SetDate.
+
+QSPI supports SDR mode 0/3, Single/Dual/Quad phases, 1..4-byte addresses,
+alternate bytes and memory-mapped reads. Zero-initialize command structures;
+zero address size retains the three-byte default. Rebuild all users after
+the configuration and command structure changes.
+
+For an indirect transfer, call `neon_qspi_send_command()`, then pump the FIFO
+with `neon_qspi_transmit_words()` or `neon_qspi_receive_words()`, then call
+`neon_qspi_wait_complete()`. Buffers contain aligned packed words, low serial
+byte first, and must have room for `ceil(data_length / 4)` words. The driver
+converts logical byte counts to `DLR = data_length - 1`, checks FIFO full/empty,
+and requires TC plus an idle controller before reporting completion. Legacy
+`neon_qspi_wait_ready()` also finishes a pending command; the hardware BUSY
+bit alone does not prove completion. After a timeout, abort before starting
+another command. A failed partial buffer transfer leaves data pending; abort
+it rather than restarting the same buffer from its first word.
+
+For example, read a three-byte JEDEC ID after successful initialization:
+
+```c
+neon_qspi_command_t command = {
+    .instruction = 0x9FU,
+    .instruction_lines = NEON_QSPI_LINES_1,
+    .data_lines = NEON_QSPI_LINES_1,
+    .data_length = 3U,
+    .receive_enable = 1U,
+};
+uint32_t id = 0U; /* Wire bytes occupy bits 7:0, 15:8 and 23:16. */
+neon_status_t status = neon_qspi_send_command(QSPI_APB, &command);
+if (status == NEON_OK) {
+    status = neon_qspi_receive_words(QSPI_APB, &id, 100000U);
+}
+if (status == NEON_OK) {
+    status = neon_qspi_wait_complete(QSPI_APB, 100000U);
+}
+```
+
+Command-only frames temporarily use at least divider /32 and observe their
+start before returning, even without TC. The start wait is bounded by
+`NEON_QSPI_COMMAND_START_TIMEOUT_POLLS`. Successful completion or abort restores the
+selected divider. Controller completion does not indicate the end of a NOR
+erase/program cycle: the application must still read the chip's status/WIP.
+
+Configure the NOR protocol/QE first, then use
+`neon_qspi_enable_memory_mapped()` and read aligned words from the QSPI_XIP
+window. `neon_qspi_abort()` flushes FIFOs and returns to indirect mode before
+reconfiguration or DeInit. The code, constants, and other bus masters must
+not access QSPI memory while changing/aborting its configuration. Automatic
+status-polling, DDR and DMA transfers are not implemented by these APIs.
 
 TIM status is read-only and read-to-clear, as confirmed for the FPGA:
 `STT_CH0` is at offset `0x4C`, `STT_CH1` at `0x50`. `GetActiveFlags` reads
