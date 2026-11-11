@@ -111,6 +111,10 @@ the remaining bytes. EEPROM addressed reads use a two-byte pointer write with ST
 by a read with another START/STOP. The last read byte is NACKed by the master. It uses polling;
 no I2C ISR or DMA is needed.
 
+During RX, the driver sends STOP when hardware reports transfer DONE, even if the CPU
+has not yet copied every FIFO byte to RAM. STOP preserves unread RX data. The driver
+then drains the remaining bytes without keeping SCL LOW in the software-end state.
+
 If error bit `NEON_I2C_ERROR_RECOVERY_REQUIRED` (`0x100`) is set, STOP/bus cleanup
 did not finish. Further transfers are blocked. Fix the wiring/device holding the bus,
 press `q` to close the menu, then `r` to configure I2C0 again.

@@ -306,6 +306,8 @@ neon_status_t neon_i2c_deinit(neon_i2c_handle_t *hi2c);
  * the previous interrupt-enable and hardware-end settings are restored on normal completion.
  * TX preloads up to one FIFO (including the mem_write register prefix) before START,
  * then feeds any remaining bytes while the transfer runs.
+ * RX sends STOP as soon as hardware reports DONE, then copies any unread FIFO bytes
+ * to RAM. DONE describes bus completion, not RAM-copy completion; STOP preserves the FIFO.
  * timeout_polls is the polling budget for the transfer, not milliseconds. Error cleanup
  * can take up to 10000 additional polls while waiting for STOP and bus release. A failed
  * cleanup leaves NEON_I2C_STATE_FAULT and NEON_I2C_ERROR_RECOVERY_REQUIRED;

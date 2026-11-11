@@ -72,8 +72,11 @@ static neon_status_t i2c_consume_timeout(neon_i2c_handle_t *hi2c, uint32_t *time
 static neon_status_t i2c_wait_bus_idle(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls, uint8_t check_error);
 static neon_status_t i2c_wait_start_consumed(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls);
 static neon_status_t i2c_wait_tx_space(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls);
-static neon_status_t i2c_wait_rx_data(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls);
+static neon_status_t i2c_wait_rx_data(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls,
+                                     uint32_t *transfer_started);
 static neon_status_t i2c_wait_transfer_done(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls);
+static neon_status_t i2c_stop_master(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls,
+                                    uint32_t *transfer_started);
 static neon_status_t i2c_acquire(neon_i2c_handle_t *hi2c, neon_i2c_state_t state);
 static void i2c_release(neon_i2c_handle_t *hi2c);
 static void i2c_flush_fifos(I2C_TypeDef *instance);
@@ -1289,20 +1292,31 @@ static neon_status_t i2c_wait_tx_space(neon_i2c_handle_t *hi2c, uint32_t *timeou
     return i2c_check_transfer_error(hi2c);
 }
 
-static neon_status_t i2c_wait_rx_data(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls) {
+static neon_status_t i2c_wait_rx_data(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls,
+                                     uint32_t *transfer_started) {
     neon_status_t status;
 
-    while ((hi2c->instance->ISR & I2C_ISR_RXFF_EMPTY_Msk) != 0U) {
+    for (;;) {
         status = i2c_check_transfer_error(hi2c);
         if (status != NEON_OK) {
             return status;
+        }
+        /* DONE counts bytes received from the bus, not bytes copied to RAM.
+         * Release SCL promptly; STOP preserves the unread RX FIFO contents. */
+        if (*transfer_started != 0U &&
+            (((hi2c->instance->ISR & I2C_ISR_TRANSFER_DONE_Msk) != 0U) ||
+             ((hi2c->instance->IITR & I2C_IITR_TRANSFER_DONE_Msk) != 0U))) {
+            status = i2c_stop_master(hi2c, timeout_polls, transfer_started);
+            if (status != NEON_OK) { return status; }
+        }
+        if ((hi2c->instance->ISR & I2C_ISR_RXFF_EMPTY_Msk) == 0U) {
+            return NEON_OK;
         }
         status = i2c_consume_timeout(hi2c, timeout_polls);
         if (status != NEON_OK) {
             return status;
         }
     }
-    return i2c_check_transfer_error(hi2c);
 }
 
 static neon_status_t i2c_wait_transfer_done(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls) {
@@ -1414,22 +1428,26 @@ static neon_status_t i2c_prepare_master(neon_i2c_handle_t *hi2c, uint32_t addres
     return NEON_OK;
 }
 
+static neon_status_t i2c_stop_master(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls,
+                                    uint32_t *transfer_started) {
+    hi2c->instance->ICTLR |= I2C_ICTLR_STOP_Msk;
+    while ((hi2c->instance->ICTLR & I2C_ICTLR_STOP_Msk) != 0U) {
+        neon_status_t status = i2c_consume_timeout(hi2c, timeout_polls);
+        if (status != NEON_OK) { return status; }
+    }
+    *transfer_started = 0U;
+    return i2c_wait_bus_idle(hi2c, timeout_polls, 1U);
+}
+
 static neon_status_t i2c_finish_polling_transfer(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls,
                                                  uint32_t *transfer_started) {
-    neon_status_t status;
+    neon_status_t status = NEON_OK;
 
-    status = i2c_wait_transfer_done(hi2c, timeout_polls);
-    if (status == NEON_OK) {
-        /* With hardware-end off and DONE enabled, the controller owns the
-         * bus until this STOP. This also works on hardware-end RTL variants. */
-        hi2c->instance->ICTLR |= I2C_ICTLR_STOP_Msk;
-        while ((hi2c->instance->ICTLR & I2C_ICTLR_STOP_Msk) != 0U) {
-            status = i2c_consume_timeout(hi2c, timeout_polls);
-            if (status != NEON_OK) { break; }
-        }
+    /* RX may have already stopped on DONE, then drained the remaining FIFO. */
+    if (*transfer_started != 0U) {
+        status = i2c_wait_transfer_done(hi2c, timeout_polls);
         if (status == NEON_OK) {
-            *transfer_started = 0U;
-            status = i2c_wait_bus_idle(hi2c, timeout_polls, 1U);
+            status = i2c_stop_master(hi2c, timeout_polls, transfer_started);
         }
     }
     i2c_pulse_interrupt_clear(hi2c->instance, I2C_IICR_TRANSFER_DONE_CLR_Msk);
@@ -1519,7 +1537,7 @@ static neon_status_t i2c_master_read_core(neon_i2c_handle_t *hi2c, uint32_t addr
         status = i2c_wait_start_consumed(hi2c, &timeout_polls);
     }
     while ((index < size) && (status == NEON_OK)) {
-        status = i2c_wait_rx_data(hi2c, &timeout_polls);
+        status = i2c_wait_rx_data(hi2c, &timeout_polls, &transfer_started);
         if (status == NEON_OK) {
             const uint32_t result_word = (uint8_t)(hi2c->instance->IRDR & I2C_IRDR_RX_DATA_Msk);
             memcpy(&data[index], &result_word, 1U);
