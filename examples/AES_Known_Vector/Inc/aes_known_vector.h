@@ -1,7 +1,8 @@
 /**
  * @file aes_known_vector.h
  * @brief Testcase skeleton for AES_Known_Vector.
- * @details Declares the entry point; peripheral behavior will be added later.
+ * @details
+ * Declares the entry point; peripheral behavior will be added later.
  */
 
 #ifndef FU2_EXAMPLE_AES_KNOWN_VECTOR_H

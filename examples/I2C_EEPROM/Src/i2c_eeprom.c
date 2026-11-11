@@ -1,10 +1,22 @@
-/** @file i2c_eeprom.c
+/**
+ * @file i2c_eeprom.c
  * @brief I2C0 master checks with an AT24C256 EEPROM.
+ * @details
+ * I2C0 EEPROM scan, bounded reads and a one-KiB write/read verification test.
  */
+
+/*==================================================================================================
+*                                          INCLUDE FILES
+==================================================================================================*/
+
 #include "i2c_eeprom.h"
 #include "i2c/neon_i2c.h"
 #include "sdkconfig.h"
 #include <stdio.h>
+
+/*==================================================================================================
+*                                        DEFINES AND MACROS
+==================================================================================================*/
 
 #ifndef CONFIG_NEON_MDF_DRIVER_I2C
 #error "I2C_EEPROM requires the I2C driver"
@@ -13,12 +25,26 @@
 #define TIMEOUT CONFIG_I2C_EEPROM_TIMEOUT_POLLS
 #define DEVICE_ADDRESS CONFIG_I2C_EEPROM_ADDRESS
 #define EEPROM_SIZE 32768U
+#define READ_TEST_SIZE 256U
+#define TEST_SIZE 1024U
 #define READ_SIZE 64U
 #define WRITE_SIZE 32U
 #define TICK_MASK 0x00FFFFFFU
 
+/*==================================================================================================
+*                                         LOCAL VARIABLES
+==================================================================================================*/
+
 static neon_i2c_handle_t i2c;
 
+/*==================================================================================================
+*                                        PRIVATE FUNCTIONS
+==================================================================================================*/
+
+/**
+ * @brief Wait six milliseconds for an EEPROM write cycle.
+ * @return NEON_OK after the delay, or NEON_TIMEOUT if the polling budget expires.
+ */
 static neon_status_t write_delay(void) {
     uint32_t start = SysTick->VAL;
     uint32_t cycles = (SystemCoreClock / 1000U) * 6U;
@@ -29,7 +55,15 @@ static neon_status_t write_delay(void) {
     return NEON_OK;
 }
 
-/* Logical bytes occupy uint32_t elements. Pack/unpack only at the byte-API boundary. */
+/**
+ * @brief Read bytes using a two-byte EEPROM memory address.
+ * @param[in] address First EEPROM byte offset.
+ * @param[out] data Aligned word array; each element receives one logical byte.
+ * @param[in] count Number of bytes, at most READ_SIZE.
+ * @return I2C transfer status.
+ * @details
+ * Logical bytes occupy uint32_t elements. Pack/unpack only at the byte-API boundary.
+ */
 static neon_status_t eeprom_read(uint32_t address, uint32_t *data, uint32_t count) {
     uint32_t pointer = (address >> 8) | ((address & 0xFFU) << 8);
     uint32_t packed[READ_SIZE / 4U] = {0U};
@@ -46,6 +80,13 @@ static neon_status_t eeprom_read(uint32_t address, uint32_t *data, uint32_t coun
     return status;
 }
 
+/**
+ * @brief Write an EEPROM block within one page and wait for its write cycle.
+ * @param[in] address First EEPROM byte offset.
+ * @param[in] data Word array containing one logical byte per element.
+ * @param[in] count Payload bytes, at most WRITE_SIZE and within one EEPROM page.
+ * @return Transfer error, or the write-delay status after a successful transfer.
+ */
 static neon_status_t eeprom_write(uint32_t address, const uint32_t *data, uint32_t count) {
     /* Callers use at most 32 bytes, aligned within the EEPROM's 64-byte pages. */
     uint32_t packed[(WRITE_SIZE + 2U + 3U) / 4U] = {0U};
@@ -61,6 +102,12 @@ static neon_status_t eeprom_write(uint32_t address, const uint32_t *data, uint32
     return status == NEON_OK ? delay : status;
 }
 
+/**
+ * @brief Print logical bytes as sixteen-column hexadecimal rows.
+ * @param[in] address EEPROM offset printed at the start of each row.
+ * @param[in] data Word array containing one logical byte per element.
+ * @param[in] count Number of logical bytes to print.
+ */
 static void dump(uint32_t address, const uint32_t *data, uint32_t count) {
     for (uint32_t i = 0U; i < count; ++i) {
         if ((i % 16U) == 0U) { printf("%04lX: ", (unsigned long)(address + i)); }
@@ -69,11 +116,21 @@ static void dump(uint32_t address, const uint32_t *data, uint32_t count) {
     }
 }
 
+/**
+ * @brief Consume one pending console character and detect cancellation.
+ * @param[in,out] uart Initialized console UART handle.
+ * @return Nonzero for q or Ctrl+C; other received characters are consumed and ignored.
+ */
 static uint32_t cancelled(neon_uart_handle_t *uart) {
     uint32_t key = 0U;
     return neon_uart_try_receive(uart, &key) == NEON_OK && (key == 'q' || key == 3U);
 }
 
+/**
+ * @brief Advance a xorshift32 sequence and return its low byte.
+ * @param[in,out] state Nonzero generator state.
+ * @return Next logical byte in the reproducible sequence.
+ */
 static uint32_t next_byte(uint32_t *state) {
     uint32_t x = *state;
     x ^= x << 13;
@@ -83,6 +140,10 @@ static uint32_t next_byte(uint32_t *state) {
     return x & 0xFFU;
 }
 
+/**
+ * @brief Probe all seven-bit I2C addresses with one-byte reads.
+ * @return NEON_OK when scanning finishes, otherwise the transport error.
+ */
 static neon_status_t scan(void) {
     uint32_t byte = 0U, ack = 0U;
     printf("[SCAN] 7-bit 00..7F; one-byte reads, hex=ACK, --=NACK.\n");
@@ -107,48 +168,64 @@ static neon_status_t scan(void) {
     return NEON_OK;
 }
 
-static neon_status_t full_test(neon_uart_handle_t *uart) {
+/**
+ * @brief Write and verify the first TEST_SIZE bytes with a reproducible pattern.
+ * @param[in,out] uart Console UART used to check q or Ctrl+C between blocks.
+ * @return Transport status; verification and cancellation results are printed.
+ * @details
+ * Overwrites the test region without restoring it. Only a sample and the first eight
+ * mismatches are printed; every byte in the test region is compared.
+ */
+static neon_status_t write_read_test(neon_uart_handle_t *uart) {
     uint32_t data[READ_SIZE], expected[WRITE_SIZE];
     uint32_t seed = SysTick->VAL;
     if (seed == 0U) { seed = 0x46553201U; }
     uint32_t state = seed, written = 0U, checked = 0U, mismatches = 0U, complete = 0U;
     neon_status_t status = NEON_OK;
-    printf("[TEST] Overwrite ALL 32 KiB, no restore; q/Ctrl+C aborts after a block.\n");
-    printf("[READ ORIGINAL] 0000..7FFF, 64-byte blocks.\n");
-    for (uint32_t address = 0U; address < EEPROM_SIZE; address += READ_SIZE) {
-        if (cancelled(uart)) { goto aborted; }
-        status = eeprom_read(address, data, READ_SIZE);
-        if (status != NEON_OK) { goto finished; }
-        dump(address, data, READ_SIZE);
-    }
+    printf("[TEST] Write/verify %lu bytes at 0000..%04lX, no restore.\n",
+        (unsigned long)TEST_SIZE, (unsigned long)(TEST_SIZE - 1U));
+    printf("[TEST] q/Ctrl+C aborts after a block.\n");
     printf("[WRITE] xorshift32 seed=%08lX, 32-byte blocks, 6 ms write delay.\n", (unsigned long)seed);
-    for (uint32_t address = 0U; address < EEPROM_SIZE; address += WRITE_SIZE) {
+    for (uint32_t address = 0U; address < TEST_SIZE; address += WRITE_SIZE) {
         if (cancelled(uart)) { goto aborted; }
         for (uint32_t i = 0U; i < WRITE_SIZE; ++i) { expected[i] = next_byte(&state); }
         status = eeprom_write(address, expected, WRITE_SIZE);
         if (status != NEON_OK) { goto finished; }
         written += WRITE_SIZE;
-        if ((written % 1024U) == 0U) { printf("[WRITE] %lu/32768\n", (unsigned long)written); }
+        if ((written % 256U) == 0U) {
+            printf("[WRITE] %lu/%lu\n", (unsigned long)written, (unsigned long)TEST_SIZE);
+        }
     }
     state = seed;
     printf("[VERIFY] Read 64-byte blocks and compare every byte.\n");
-    for (uint32_t address = 0U; address < EEPROM_SIZE; address += READ_SIZE) {
+    for (uint32_t address = 0U; address < TEST_SIZE; address += READ_SIZE) {
         if (cancelled(uart)) { goto aborted; }
         status = eeprom_read(address, data, READ_SIZE);
         if (status != NEON_OK) { goto finished; }
-        dump(address, data, READ_SIZE);
+        if (address == 0U) {
+            printf("[SAMPLE] First 64 bytes:\n");
+            dump(address, data, READ_SIZE);
+        }
         for (uint32_t i = 0U; i < READ_SIZE; ++i) {
             uint32_t wanted = next_byte(&state);
             if (data[i] != wanted) {
                 ++mismatches;
-                printf("[FAIL] mem=%04lX expected=%02lX received=%02lX\n",
-                    (unsigned long)(address + i), (unsigned long)wanted, (unsigned long)data[i]);
+                if (mismatches <= 8U) {
+                    printf("[FAIL] mem=%04lX expected=%02lX received=%02lX\n",
+                        (unsigned long)(address + i), (unsigned long)wanted, (unsigned long)data[i]);
+                } else if (mismatches == 9U) {
+                    printf("[VERIFY] Further mismatch details omitted; all bytes are still checked.\n");
+                }
             }
         }
         checked += READ_SIZE;
     }
     complete = 1U;
-    printf("[VERIFY] %s\n", mismatches == 0U ? "[PASS] 32768 bytes match" : "[FAIL] data mismatch");
+    if (mismatches == 0U) {
+        printf("[VERIFY] [PASS] %lu bytes match\n", (unsigned long)TEST_SIZE);
+    } else {
+        printf("[VERIFY] [FAIL] data mismatch\n");
+    }
     goto finished;
 aborted:
     printf("[ABORT] EEPROM test incomplete; written bytes retain the test pattern.\n");
@@ -159,6 +236,11 @@ finished:
     return status;
 }
 
+/*==================================================================================================
+*                                         GLOBAL FUNCTIONS
+==================================================================================================*/
+
+/** @copydoc i2c_eeprom_run */
 void i2c_eeprom_run(neon_uart_handle_t *uart) {
     if ((SysTick->CTRL & SysTick_CTRL_ENABLE_Msk) != 0U) {
         printf("[FAIL] SysTick is already in use.\n");
@@ -179,9 +261,11 @@ void i2c_eeprom_run(neon_uart_handle_t *uart) {
     SysTick->VAL = 0U;
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
     printf("[I2C0] Master, target SCL=100 kHz, EEPROM address=%02X.\n", DEVICE_ADDRESS);
+    printf("[EEPROM] Capacity=%lu bytes; quick tests use only the beginning of memory.\n",
+        (unsigned long)EEPROM_SIZE);
     printf("[PINS] SDA=PMOD_IO6 SCL=PMOD_IO2; pull-ups, common GND, WP LOW for writes.\n");
     printf(" s: scan 00..7F | a: write/read 2A 00 at 0000\n");
-    printf(" r: continuous 64-byte read | t: overwrite/verify ALL 32 KiB\n");
+    printf(" r: read 256 bytes once | t: write/verify first 1 KiB, no restore\n");
     printf(" q/Ctrl+C: stop a long test or return to fpga:>>\n");
     printf("[READY] I2C_EEPROM menu, no Enter needed.\n");
     for (;;) {
@@ -200,17 +284,18 @@ void i2c_eeprom_run(neon_uart_handle_t *uart) {
                     rx[0] == tx[0] && rx[1] == tx[1] ? "[PASS]" : "[FAIL] expected 2A 00");
             }
         } else if (key == 'r') {
-            uint32_t data[READ_SIZE], address = 0U, blocks = 0U;
-            printf("[READ LOOP] 0000..7FFF, blocks of 64; q/Ctrl+C stops.\n");
-            while (!cancelled(uart)) {
+            uint32_t data[READ_SIZE], read = 0U;
+            printf("[READ] 0000..%04lX once, 64-byte blocks; q/Ctrl+C stops.\n",
+                (unsigned long)(READ_TEST_SIZE - 1U));
+            for (uint32_t address = 0U; address < READ_TEST_SIZE; address += READ_SIZE) {
+                if (cancelled(uart)) { break; }
                 status = eeprom_read(address, data, READ_SIZE);
                 if (status != NEON_OK) { break; }
                 dump(address, data, READ_SIZE);
-                ++blocks;
-                address = (address + READ_SIZE) % EEPROM_SIZE;
+                read += READ_SIZE;
             }
-            printf("[READ LOOP] Completed blocks=%lu.\n", (unsigned long)blocks);
-        } else if (key == 't') { status = full_test(uart); }
+            printf("[READ] Completed bytes=%lu/%lu.\n", (unsigned long)read, (unsigned long)READ_TEST_SIZE);
+        } else if (key == 't') { status = write_read_test(uart); }
         else { continue; }
         if (status != NEON_OK) {
             printf("[FAIL] I2C status=%lu error=0x%08lX; check address, wiring, pull-ups and WP.\n",

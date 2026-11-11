@@ -1,7 +1,8 @@
 /**
  * @file crc_known_vector.c
  * @brief Testcase skeleton for CRC_Known_Vector.
- * @details Peripheral behavior will be added later.
+ * @details
+ * Peripheral behavior will be added later.
  */
 
 /*==================================================================================================

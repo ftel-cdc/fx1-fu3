@@ -1,13 +1,23 @@
 /**
  * @file spi_w5500.c
  * @brief SPI0 master <-> W5500 register and SRAM checks.
- * @details Uses Neon SPI APIs; the driver configures the SPI0 pins.
+ * @details
+ * Uses Neon SPI APIs; the driver configures the SPI0 pins.
  * SPI checks only: no IP address, sockets, DMA, IRQ or LAN cable required.
  */
+
+/*==================================================================================================
+*                                          INCLUDE FILES
+==================================================================================================*/
+
 #include "spi_w5500.h"
 #include "sdkconfig.h"
 #include "spi/neon_spi.h"
 #include <stdio.h>
+
+/*==================================================================================================
+*                                        DEFINES AND MACROS
+==================================================================================================*/
 
 #ifndef CONFIG_NEON_MDF_DRIVER_SPI
 #error "SPI_W5500 requires CONFIG_NEON_MDF_DRIVER_SPI=y"
@@ -21,13 +31,26 @@
 #define W5500_VERSIONR 0x0039U
 #define SYSTICK_MASK 0x00FFFFFFU
 
+/*==================================================================================================
+*                                         LOCAL VARIABLES
+==================================================================================================*/
+
 static neon_spi_config_t g_spi_config;
 static uint32_t g_mode;
 static uint32_t g_sck_hz;
 static uint32_t g_last_tick;
 static uint32_t g_elapsed;
 
-/* SysTick runs without interrupts. Sample more often than a 24-bit wrap. */
+/*==================================================================================================
+*                                        PRIVATE FUNCTIONS
+==================================================================================================*/
+
+/**
+ * @brief Accumulate elapsed core-clock ticks from the polled SysTick counter.
+ * @return Accumulated ticks modulo 2^32.
+ * @details
+ * SysTick runs without interrupts. Sample more often than a 24-bit wrap.
+ */
 static uint32_t spi_w5500_ticks(void) {
     uint32_t now = SysTick->VAL & SYSTICK_MASK;
     g_elapsed += (g_last_tick - now) & SYSTICK_MASK;
@@ -35,6 +58,11 @@ static uint32_t spi_w5500_ticks(void) {
     return g_elapsed;
 }
 
+/**
+ * @brief Wait with the polled SysTick counter and a bounded polling budget.
+ * @param[in] ms Delay in milliseconds.
+ * @return One when the delay completes, zero if the timebase stops advancing.
+ */
 static int spi_w5500_delay_ms(uint32_t ms) {
     while (ms-- != 0U) {
         uint32_t start = spi_w5500_ticks();
@@ -49,6 +77,12 @@ static int spi_w5500_delay_ms(uint32_t ms) {
     return 1;
 }
 
+/**
+ * @brief Configure SPI0 mode, requested SCK and the default W5500 timing.
+ * @param[in] mode SPI mode 0 or 3.
+ * @param[in] requested_hz Requested SCK frequency in hertz.
+ * @return One on successful configuration, zero on failure.
+ */
 static int spi_w5500_configure(uint32_t mode, uint32_t requested_hz) {
     neon_spi_get_default_config(&g_spi_config);
     g_spi_config.clock_polarity = mode == 3U ? NEON_SPI_POLARITY_HIGH : NEON_SPI_POLARITY_LOW;
@@ -76,8 +110,17 @@ static int spi_w5500_configure(uint32_t mode, uint32_t requested_hz) {
     return 1;
 }
 
-/* Common-register VDM frame: addr_hi, addr_lo, control, data/dummy.
- * One 32-bit transfer holds SS0 LOW across all four bytes. Write RX is not ACK. */
+/**
+ * @brief Read or write one W5500 common-register byte in a single SPI frame.
+ * @param[in] address W5500 common-register address.
+ * @param[in] write Nonzero for WRITE, zero for READ.
+ * @param[in] data Byte value used by a WRITE.
+ * @param[out] result Low received byte; WRITE responses are not acknowledgements.
+ * @return One on transfer success, zero on failure.
+ * @details
+ * The VDM frame contains addr_hi, addr_lo, control and data/dummy.
+ * One 32-bit transfer holds SS0 LOW across all four bytes. Write RX is not ACK.
+ */
 static int w5500_access8(uint32_t address, uint32_t write, uint32_t data, uint32_t *result) {
     uint32_t tx = (address << 16) | (write != 0U ? 0x0400U : 0U) | (data & 0xFFU);
     uint32_t rx = 0U;
@@ -97,6 +140,10 @@ static int w5500_access8(uint32_t address, uint32_t write, uint32_t data, uint32
     return 1;
 }
 
+/**
+ * @brief Read VERSIONR and check for the expected W5500 version value.
+ * @return One when VERSIONR is 0x04, otherwise zero.
+ */
 static int w5500_version(void) {
     uint32_t version = 0U;
     if (!w5500_access8(W5500_VERSIONR, 0U, 0U, &version)) {
@@ -107,6 +154,10 @@ static int w5500_version(void) {
     return version == 0x04U;
 }
 
+/**
+ * @brief Request a W5500 software reset and check MR and VERSIONR afterwards.
+ * @return One when reset is confirmed, otherwise zero.
+ */
 static int w5500_soft_reset(void) {
     uint32_t mr = 0U;
     printf("[RESET] W5500 software reset via SPI, MR=0x80.\n");
@@ -137,6 +188,10 @@ static int w5500_soft_reset(void) {
     return 0;
 }
 
+/**
+ * @brief Wait for module power-on, check VERSIONR and perform a software reset.
+ * @return One when initialization is confirmed, otherwise zero.
+ */
 static int w5500_init_chip(void) {
     printf("[INIT] Wait 560 ms for module power-on/reset circuitry.\n");
     if (!spi_w5500_delay_ms(560U) || !w5500_version()) {
@@ -145,6 +200,9 @@ static int w5500_init_chip(void) {
     return w5500_soft_reset();
 }
 
+/**
+ * @brief Read and print W5500 version, PHY and retry-register values.
+ */
 static void w5500_info(void) {
     uint32_t mr, phy, high, low, rcr;
     if (!w5500_version() || !w5500_access8(W5500_MR, 0U, 0U, &mr) ||
@@ -157,6 +215,9 @@ static void w5500_info(void) {
            (unsigned long)((high << 8) | low), (unsigned long)rcr);
 }
 
+/**
+ * @brief Write two RCR patterns, check readback and restore its original value.
+ */
 static void w5500_ping_pong(void) {
     uint32_t saved = 0U, first = 0U, second = 0U, restored = 0U, ignored = 0U;
     if (!w5500_version() || !w5500_access8(W5500_RCR, 0U, 0U, &saved)) {
@@ -174,6 +235,11 @@ static void w5500_ping_pong(void) {
            transferred && first == 0x55U && second == 0xAAU && restore_ok ? "[PASS]" : "[FAIL]");
 }
 
+/**
+ * @brief Read thirty-two socket-0 TX SRAM bytes while holding CS across the frame.
+ * @param[out] data Word array with room for thirty-two logical bytes.
+ * @return One after a complete transfer, zero after failure and an SPI reset attempt.
+ */
 static int w5500_read_sram32(uint32_t *data) {
     uint32_t tx[8] = {0x00001000U}, rx[8];
     neon_status_t status = neon_spi_set_slave_select_control(SPI0, NEON_SPI_SS_MODE_MANUAL,
@@ -210,6 +276,9 @@ failed:
     return 0;
 }
 
+/**
+ * @brief Read and print thirty-two bytes from socket-0 TX SRAM.
+ */
 static void w5500_read32(void) {
     uint32_t data[32];
     if (!w5500_read_sram32(data)) {
@@ -226,7 +295,11 @@ static void w5500_read32(void) {
     }
 }
 
-/* CRC-32/ISO-HDLC over the 32 received bytes, stored as aligned words. */
+/**
+ * @brief Calculate CRC-32/ISO-HDLC over thirty-two logical SRAM bytes.
+ * @param[in] data Word array containing the thirty-two received bytes.
+ * @return CRC-32 value.
+ */
 static uint32_t w5500_crc32(const uint32_t *data) {
     uint32_t crc = 0xFFFFFFFFU;
     for (uint32_t index = 0U; index < 32U; ++index) {
@@ -238,8 +311,14 @@ static uint32_t w5500_crc32(const uint32_t *data) {
     return ~crc;
 }
 
-/* Returns 1 after a full sweep, 0 on an unstable baseline/configuration error,
- * and -1 when the user cancels. All cases share the first validated CRC. */
+/**
+ * @brief Sweep inter-byte gaps using repeated SRAM reads and a shared CRC reference.
+ * @param[in,out] uart Console UART used to detect cancellation.
+ * @param[in,out] reference_crc CRC baseline shared by all configurations.
+ * @param[in] make_reference Nonzero to establish and validate the first baseline.
+ * @return One for a complete sweep, zero for a baseline/configuration failure,
+ * or -1 when the user cancels.
+ */
 static int w5500_b2b_sweep(neon_uart_handle_t *uart, uint32_t *reference_crc, uint32_t make_reference) {
     uint32_t data[32], have_reference = make_reference == 0U, minimum = 11U;
     const uint32_t tries = CONFIG_SPI_W5500_B2B_TRIES;
@@ -313,6 +392,10 @@ static int w5500_b2b_sweep(neon_uart_handle_t *uart, uint32_t *reference_crc, ui
     return 1;
 }
 
+/**
+ * @brief Run read-only B2B sweeps across SPI modes and requested clock frequencies.
+ * @param[in,out] uart Console UART used to detect cancellation.
+ */
 static void w5500_b2b_test(neon_uart_handle_t *uart) {
     neon_spi_config_t saved_config = g_spi_config;
     uint32_t saved_mode = g_mode, saved_hz = g_sck_hz;
@@ -361,6 +444,9 @@ restore:
     }
 }
 
+/**
+ * @brief Read common registers in modes 0 and 3 at two conservative SCK rates.
+ */
 static void w5500_diagnose(void) {
     uint32_t saved_mode = g_mode, saved_hz = g_sck_hz, value = 0U;
     printf("[DIAG] Read-only probes, mode 0/3 at 1 MHz/100 kHz.\n");
@@ -377,6 +463,9 @@ static void w5500_diagnose(void) {
     printf("[DIAG] Selected mode/speed restored.\n");
 }
 
+/**
+ * @brief Print the single-key W5500 test menu.
+ */
 static void spi_w5500_help(void) {
     printf("\n i: init/reset W5500 | t: info | p: SPI write/read/restore RCR\n");
     printf(" s: software reset W5500 via SPI (no VERSION precheck, auto OFF)\n");
@@ -388,6 +477,11 @@ static void spi_w5500_help(void) {
     printf(" Ctrl+C or q: stop the example\n\n");
 }
 
+/*==================================================================================================
+*                                         GLOBAL FUNCTIONS
+==================================================================================================*/
+
+/** @copydoc spi_w5500_run */
 void spi_w5500_run(neon_uart_handle_t *uart) {
     /* Borrow an idle SysTick without changing the CPU interrupt mask. */
     uint32_t saved_ctrl = SysTick->CTRL;

@@ -1,7 +1,8 @@
 /**
  * @file adc_sampling.h
  * @brief Testcase skeleton for ADC_Sampling.
- * @details Declares the entry point; peripheral behavior will be added later.
+ * @details
+ * Declares the entry point; peripheral behavior will be added later.
  */
 
 #ifndef FU2_EXAMPLE_ADC_SAMPLING_H

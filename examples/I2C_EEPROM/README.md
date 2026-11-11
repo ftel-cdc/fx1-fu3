@@ -40,13 +40,14 @@ Press `r` at `fpga:>>`, then choose one key:
 |---|---|
 | `s` | Scan all 128 7-bit addresses, `00..7F`; display ACK/NACK map |
 | `a` | Write `2A 00` at EEPROM offset `0000`, wait 6 ms, read and compare |
-| `r` | Read 64-byte blocks over `0000..7FFF`, dump 16 bytes per row, wrap and repeat |
-| `t` | Read the original contents, overwrite all 32 KiB with a PRNG pattern, read and verify every byte |
+| `r` | Read `0000..00FF` once in four 64-byte blocks, dump 16 bytes per row, return to the menu |
+| `t` | Overwrite and verify the first 1 KiB (`0000..03FF`) with a PRNG pattern |
 | `q` / Ctrl+C | Stop a long operation after its current block; at the menu, return to `fpga:>>` |
 
-`a` overwrites EEPROM bytes `0000..0001`. **`t` overwrites all 32768 bytes and does not restore
-old contents.** The initial dump is for inspection and is not a backup. Stopping `t` leaves the
-bytes already written in place. Neither operation runs automatically at boot or menu entry.
+`a` overwrites EEPROM bytes `0000..0001`. **`t` overwrites bytes `0000..03FF` and does not restore
+old contents.** Stopping `t` leaves the bytes already written in place. Neither operation runs
+automatically at boot or menu entry. The EEPROM capacity remains 32 KiB; these quick tests use
+only its beginning.
 
 Scan uses one-byte reads and includes reserved addresses. A scan can advance a device's pointer
 or trigger read side effects. ACK identifies an address response and does not identify EEPROM
@@ -61,15 +62,18 @@ A successful two-byte test prints:
 [MENU] s/a/r/t or q to exit.
 ```
 
-The full test reads the original contents in 64-byte blocks, then writes 32-byte blocks without
-crossing a 64-byte page boundary. A xorshift32 generator provides a new pattern per run. Each
-write is followed by a 6 ms delay. Verification restarts the generator with the same seed and
-compares all 32768 bytes; mismatches report the EEPROM address, expected byte and received byte.
-The result includes written/checked byte counts and the mismatch count.
+The write/read test performs 32 writes of 32 bytes without crossing a 64-byte page boundary.
+A xorshift32 generator provides a new pattern per run. Each write is followed by a 6 ms delay.
+Verification restarts the generator with the same seed and compares all 1024 bytes in sixteen
+64-byte reads. It prints the first 64 bytes as a sample and reports the address, expected byte
+and received byte for at most eight mismatches. Further mismatches are still counted. The
+result includes written/checked byte counts and the total mismatch count; cancellation or a
+transport error cannot produce a successful result.
 
-The continuous read stops on an I2C error and returns to the menu. Transport errors report the
-HAL status and the I2C error bitmask. A long operation checks `q`/Ctrl+C between blocks; other
-received characters are ignored there. UART hex output makes full-device dumps take time.
+The read command returns to the menu after 256 bytes, cancellation or an I2C error. Transport
+errors report the HAL status and the I2C error bitmask. Both tests check `q`/Ctrl+C between
+blocks; other received characters are ignored there. The smaller test ranges and limited
+UART output keep these examples quick to run.
 
 ## Configuration and implementation
 

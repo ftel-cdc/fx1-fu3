@@ -97,11 +97,19 @@ void uart_echo_polling_run(neon_uart_handle_t *uart) {
 *                                        PRIVATE FUNCTIONS
 ==================================================================================================*/
 
+/**
+ * @brief Update UART echo timeout/error statistics for one operation.
+ * @param[in] uart UART handle used to retrieve the detailed error flags.
+ * @param[in] status Status returned by the UART operation.
+ */
 static void uart_echo_polling_record_status(neon_uart_handle_t *uart, neon_status_t status) {
     g_uart_echo_stats.last_status = (uint32_t)status;
     g_uart_echo_stats.last_error = neon_uart_get_error(uart);
 }
 
+/**
+ * @brief Print the accumulated UART echo counters and last error.
+ */
 static void uart_echo_polling_print_stats(void) {
     printf("[STATS] RX=%lu TX=%lu RX_TIMEOUT=%lu TX_TIMEOUT=%lu "
            "RX_ERROR=%lu TX_ERROR=%lu\n",

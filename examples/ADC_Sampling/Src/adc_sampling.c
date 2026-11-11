@@ -1,7 +1,8 @@
 /**
  * @file adc_sampling.c
  * @brief Testcase skeleton for ADC_Sampling.
- * @details Peripheral behavior will be added later.
+ * @details
+ * Peripheral behavior will be added later.
  */
 
 /*==================================================================================================

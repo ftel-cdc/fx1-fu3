@@ -1,7 +1,8 @@
 /**
  * @file trng_read.c
  * @brief Testcase skeleton for TRNG_Read.
- * @details Peripheral behavior will be added later.
+ * @details
+ * Peripheral behavior will be added later.
  */
 
 /*==================================================================================================

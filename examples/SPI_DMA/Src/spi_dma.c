@@ -1,12 +1,24 @@
-/** @file spi_dma.c
+/**
+ * @file spi_dma.c
  * @brief SPI0 DMA write/read of 32 bytes in W5500 socket 0 TX SRAM.
+ * @details
+ * SPI0 TX/RX DMA tests using a W5500 socket TX SRAM buffer.
  */
+
+/*==================================================================================================
+*                                          INCLUDE FILES
+==================================================================================================*/
+
 #include "spi_dma.h"
 #include "crm/neon_crm.h"
 #include "dma/neon_dma.h"
 #include "spi/neon_spi.h"
 #include "sdkconfig.h"
 #include <stdio.h>
+
+/*==================================================================================================
+*                                        DEFINES AND MACROS
+==================================================================================================*/
 
 #if !defined(CONFIG_NEON_MDF_DRIVER_SPI) || !defined(CONFIG_NEON_MDF_DRIVER_DMA)
 #error "SPI_DMA requires both SPI and DMA drivers"
@@ -17,9 +29,22 @@
 #define DATA_BYTES (DATA_WORDS * sizeof(uint32_t))
 #define SPI0_DMA_SLOT 1U
 
+/*==================================================================================================
+*                                         LOCAL VARIABLES
+==================================================================================================*/
+
 /* A failed DMA command has no acknowledged abort. Keep its RAM alive until reset. */
 static uint32_t dma_pending;
 
+/*==================================================================================================
+*                                        PRIVATE FUNCTIONS
+==================================================================================================*/
+
+/**
+ * @brief Hold CS and send a socket-0 TX SRAM header before the DMA payload.
+ * @param[in] write Nonzero for WRITE, zero for READ.
+ * @return SPI configuration or transfer status.
+ */
 static neon_status_t w5500_sram_begin(uint32_t write) {
     /* Socket 0 TX buffer, offset 0: 00 00 14 (write) or 00 00 10 (read). */
     uint32_t header = write != 0U ? 0x000014U : 0x000010U;
@@ -31,6 +56,10 @@ static neon_status_t w5500_sram_begin(uint32_t write) {
     return status;
 }
 
+/**
+ * @brief Disable SPI DMA requests and release CS after the payload finishes.
+ * @return SPI completion or configuration status.
+ */
 static neon_status_t w5500_sram_end(void) {
     /* The payload has finished on the wire before this releases CS. */
     neon_status_t status = neon_spi_disable_dma(SPI0);
@@ -46,7 +75,14 @@ static neon_status_t w5500_sram_end(void) {
     return status;
 }
 
-/* TX always runs: RX needs dummy TX words to generate SCK. NULL rx means TX only. */
+/**
+ * @brief Move the SRAM payload with TX DMA and optional RX DMA.
+ * @param[in] tx Aligned TX words; also supply dummy words for an RX transfer.
+ * @param[out] rx Aligned RX words, or NULL for TX only.
+ * @return DMA/SPI completion status, transfer error or timeout.
+ * @details
+ * TX always runs: RX needs dummy TX words to generate SCK. NULL rx means TX only.
+ */
 static neon_status_t spi_dma_transfer(const uint32_t *tx, uint32_t *rx) {
     neon_spi_dma_config_t request = {
         .state = NEON_SPI_DMA_ENABLE,
@@ -107,6 +143,11 @@ static neon_status_t spi_dma_transfer(const uint32_t *tx, uint32_t *rx) {
     return status;
 }
 
+/*==================================================================================================
+*                                         GLOBAL FUNCTIONS
+==================================================================================================*/
+
+/** @copydoc spi_dma_run */
 void spi_dma_run(void) {
     /* Each word carries four serial bytes, most significant byte first. */
     static uint32_t pattern[DATA_WORDS], dummy[DATA_WORDS], received[DATA_WORDS];

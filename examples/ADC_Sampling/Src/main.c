@@ -1,8 +1,30 @@
+/**
+ * @file main.c
+ * @brief UART terminal entry point for ADC_Sampling.
+ * @details
+ * Initialize the UART console and run ADC_Sampling when r is pressed.
+ * Enter starts a new line and prints the fpga:>> prompt.
+ */
+
+/*==================================================================================================
+*                                          INCLUDE FILES
+==================================================================================================*/
+
 #include <stdio.h>
 #include "mcu_device.h"
 #include "adc_sampling.h"
 #include "console/neon_console.h"
 
+/*==================================================================================================
+*                                         GLOBAL FUNCTIONS
+==================================================================================================*/
+
+/**
+ * @brief Initialize the UART console and dispatch the example.
+ * @return This function does not return.
+ * @details
+ * Press r to run the example; Enter starts a new terminal prompt line.
+ */
 int main(void) {
     printf("\nFU2 ADC_Sampling\n");
     neon_uart_handle_t *uart = neon_console_get_uart();

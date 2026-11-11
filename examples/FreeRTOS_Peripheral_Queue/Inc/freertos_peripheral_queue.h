@@ -1,7 +1,8 @@
 /**
  * @file freertos_peripheral_queue.h
  * @brief Testcase skeleton for FreeRTOS_Peripheral_Queue.
- * @details Declares the entry point; peripheral behavior will be added later.
+ * @details
+ * Declares the entry point; peripheral behavior will be added later.
  */
 
 #ifndef FU2_EXAMPLE_FREERTOS_PERIPHERAL_QUEUE_H

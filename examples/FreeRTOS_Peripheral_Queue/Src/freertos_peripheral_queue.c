@@ -1,7 +1,8 @@
 /**
  * @file freertos_peripheral_queue.c
  * @brief Testcase skeleton for FreeRTOS_Peripheral_Queue.
- * @details Peripheral behavior will be added later.
+ * @details
+ * Peripheral behavior will be added later.
  */
 
 /*==================================================================================================

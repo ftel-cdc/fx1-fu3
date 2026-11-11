@@ -1,7 +1,8 @@
 /**
  * @file rtc_calendar.c
  * @brief Testcase skeleton for RTC_Calendar.
- * @details Peripheral behavior will be added later.
+ * @details
+ * Peripheral behavior will be added later.
  */
 
 /*==================================================================================================

@@ -1,6 +1,8 @@
 /**
  * @file spi_dma.h
  * @brief SPI0 DMA TX/RX checks using W5500 SRAM.
+ * @details
+ * SPI0 TX/RX DMA tests using a W5500 socket TX SRAM buffer.
  */
 
 #ifndef FU2_EXAMPLE_SPI_DMA_H

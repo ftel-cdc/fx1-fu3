@@ -44,6 +44,11 @@ int main(void) {
 *                                        PRIVATE FUNCTIONS
 ==================================================================================================*/
 
+/**
+ * @brief Stop execution after a console-output failure.
+ * @details
+ * This function does not return.
+ */
 static void printf_log_halt(void) {
     for (;;) {
     }

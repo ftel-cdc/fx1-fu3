@@ -1,7 +1,8 @@
 /**
  * @file i2c_dma.c
  * @brief Testcase skeleton for I2C_DMA.
- * @details Peripheral behavior will be added later.
+ * @details
+ * Peripheral behavior will be added later.
  */
 
 /*==================================================================================================

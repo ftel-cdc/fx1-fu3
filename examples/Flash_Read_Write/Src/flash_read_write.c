@@ -112,6 +112,11 @@ cleanup:
 *                                        PRIVATE FUNCTIONS
 ==================================================================================================*/
 
+/**
+ * @brief Generate an index-dependent Flash verification pattern.
+ * @param[in] index Word index in the scratch sector.
+ * @return Test word combining a fixed pattern with its group number.
+ */
 static uint32_t flash_read_write_pattern(uint32_t index) {
     static const uint32_t patterns[] = {
         0x00000000U, 0xFFFFFFFFU, 0xAAAAAAAAU, 0x55555555U, 0x01234567U, 0x89ABCDEFU, 0xA5A5A5A5U, 0x5A5A5A5AU,
