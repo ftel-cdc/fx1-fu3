@@ -30,6 +30,7 @@
 #define PAGE_SIZE 256U
 #define MAX_SIZE 2048U
 #define SAMPLE_SIZE 64U
+#define READ_SIZE 4U
 
 _Static_assert(TEST_OFFSET >= SECTOR_SIZE && TEST_OFFSET <= 0x3F000U,
     "Reserve a test sector inside the 256-KiB QSPI window, after sector zero");
@@ -45,7 +46,6 @@ static uint32_t last_size;
 static uint32_t selected_level;
 static uint32_t random_state;
 static uint32_t selected_mode;
-static uint32_t selected_divider;
 static uint32_t io_failed;
 static uint32_t recovery_required;
 static uint32_t stop_requested;
@@ -175,9 +175,6 @@ static neon_status_t configure_controller(uint32_t divider) {
 #ifdef CONFIG_QSPI_FLASH_READ_WRITE_MODE_3
     config.clock_mode = NEON_QSPI_CLOCK_MODE_3;
 #endif
-    config.timing.slave_select_to_clock = 10U;
-    config.timing.clock_to_slave_select = 10U;
-    config.timing.between_commands = 10U;
     neon_status_t status = neon_qspi_init(QSPI_APB, &config);
     if (status == NEON_BUSY) {
         status = neon_qspi_abort(QSPI_APB, TRANSFER_POLLS);
@@ -273,14 +270,13 @@ static neon_status_t nor_enable_quad(void) {
 }
 
 /**
- * @brief Read array data through the selected indirect Single/Dual/Quad frame.
+ * @brief Read one four-byte frame through the selected Single/Dual/Quad protocol.
  * @param[in] address NOR byte offset.
  * @param[out] data Packed receive words.
- * @param[in] count Number of bytes, a multiple of four.
  * @param[in] mode Zero=Single, one=Dual, two=Quad.
  * @return Transfer status.
  */
-static neon_status_t nor_read(uint32_t address, uint32_t *data, uint32_t count, uint32_t mode) {
+static neon_status_t nor_read_frame(uint32_t address, uint32_t *data, uint32_t mode) {
     neon_qspi_command_t command = {
         .instruction = mode == 0U ? 0x03U : (mode == 1U ? 0x3BU : 0x6BU),
         .instruction_lines = NEON_QSPI_LINES_1,
@@ -289,10 +285,31 @@ static neon_status_t nor_read(uint32_t address, uint32_t *data, uint32_t count, 
         .dummy_cycles = mode == 0U ? 0U : 8U,
         .data_lines = mode == 0U ? NEON_QSPI_LINES_1 :
             (mode == 1U ? NEON_QSPI_LINES_2 : NEON_QSPI_LINES_4),
-        .data_length = count,
+        .data_length = READ_SIZE,
         .receive_enable = 1U,
     };
     return nor_transfer(&command, data);
+}
+
+/**
+ * @brief Read an array range using four-byte frames, one packed word per frame.
+ * @param[in,out] uart Console used to cancel between frames.
+ * @param[in] address NOR byte offset.
+ * @param[out] data Packed receive words.
+ * @param[in] count Byte count, divisible by four.
+ * @param[in] mode Zero=Single, one=Dual, two=Quad.
+ * @return Transfer status or NEON_BUSY on cancellation.
+ */
+static neon_status_t nor_read(neon_uart_handle_t *uart, uint32_t address,
+    uint32_t *data, uint32_t count, uint32_t mode) {
+    neon_status_t status = nor_wait_ready();
+    if (status != NEON_OK) { return status; }
+    for (uint32_t offset = 0U; offset < count; offset += READ_SIZE) {
+        if (cancelled(uart)) { return NEON_BUSY; }
+        status = nor_read_frame(address + offset, &data[offset / 4U], mode);
+        if (status != NEON_OK) { return status; }
+    }
+    return NEON_OK;
 }
 
 /**
@@ -301,7 +318,7 @@ static neon_status_t nor_read(uint32_t address, uint32_t *data, uint32_t count, 
  * @return NEON_OK, NEON_LOCKED, NEON_BUSY on cancellation, or an operation error.
  */
 static neon_status_t nor_erase(neon_uart_handle_t *uart) {
-    uint32_t sr1 = 0U, sr2 = 0U, erased[16];
+    uint32_t sr1 = 0U, sr2 = 0U, erased[READ_SIZE / 4U];
     neon_status_t status = nor_wait_ready();
     if (status == NEON_OK) { status = nor_register(0x05U, &sr1, 1U); }
     if (status == NEON_OK) { status = nor_register(0x35U, &sr2, 1U); }
@@ -322,7 +339,7 @@ static neon_status_t nor_erase(neon_uart_handle_t *uart) {
     if (status != NEON_OK) { return status; }
     for (uint32_t offset = 0U; offset < SECTOR_SIZE; offset += sizeof(erased)) {
         if (cancelled(uart)) { return NEON_BUSY; }
-        status = nor_read(TEST_OFFSET + offset, erased, sizeof(erased), 0U);
+        status = nor_read_frame(TEST_OFFSET + offset, erased, 0U);
         if (status != NEON_OK) { return status; }
         for (uint32_t i = 0U; i < sizeof(erased) / sizeof(erased[0]); ++i) {
             if (erased[i] != 0xFFFFFFFFU) {
@@ -380,6 +397,17 @@ static void fill_pattern(uint32_t size) {
 }
 
 /**
+ * @brief Extract a byte after an aligned word load.
+ * @param[in] data Packed word buffer; volatile access preserves the FU2 word ABI.
+ * @param[in] offset Logical byte offset.
+ * @return The selected byte.
+ */
+static uint32_t byte_at(const volatile uint32_t *data, uint32_t offset) {
+    uint32_t word = data[offset / 4U];
+    return (word >> (8U * (offset % 4U))) & 0xFFU;
+}
+
+/**
  * @brief Dump at most the first 64 bytes as sixteen-column hexadecimal rows.
  * @param[in] data Packed words containing the sample.
  * @param[in] size Total test size in bytes.
@@ -389,26 +417,24 @@ static void dump_sample(const uint32_t *data, uint32_t size) {
     printf("[SAMPLE] First %lu of %lu bytes:\n", (unsigned long)count, (unsigned long)size);
     for (uint32_t offset = 0U; offset < count; ++offset) {
         if ((offset % 16U) == 0U) { printf("%08lX: ", (unsigned long)(TEST_OFFSET + offset)); }
-        printf("%02lX%c", (unsigned long)((data[offset / 4U] >> (8U * (offset % 4U))) & 0xFFU),
+        printf("%02lX%c", (unsigned long)byte_at(data, offset),
             (offset % 16U) == 15U || offset + 1U == count ? '\n' : ' ');
     }
 }
 
 /**
- * @brief Compare every test byte and optionally print the first eight mismatches.
+ * @brief Compare every test byte and print at most the first eight mismatches.
  * @param[in] size Number of bytes to compare.
- * @param[in] details Nonzero enables mismatch detail output.
  * @return Total mismatching byte count.
  */
-static uint32_t compare_data(uint32_t size, uint32_t details) {
+static uint32_t compare_data(uint32_t size) {
     uint32_t mismatches = 0U;
     for (uint32_t offset = 0U; offset < size; ++offset) {
-        uint32_t shift = 8U * (offset % 4U);
-        uint32_t expected = (write_data[offset / 4U] >> shift) & 0xFFU;
-        uint32_t actual = (read_data[offset / 4U] >> shift) & 0xFFU;
+        uint32_t expected = byte_at(write_data, offset);
+        uint32_t actual = byte_at(read_data, offset);
         if (expected != actual) {
             ++mismatches;
-            if (details != 0U && mismatches <= 8U) {
+            if (mismatches <= 8U) {
                 printf("[MISMATCH] NOR=%08lX expected=%02lX actual=%02lX.\n",
                     (unsigned long)(TEST_OFFSET + offset), (unsigned long)expected, (unsigned long)actual);
             }
@@ -419,14 +445,15 @@ static uint32_t compare_data(uint32_t size, uint32_t details) {
 
 /**
  * @brief Read and compare the complete pattern from the most recent successful program.
+ * @param[in,out] uart Console used to cancel between frames.
  * @return NEON_OK, NEON_ERROR for mismatches, or a transport error.
  */
-static neon_status_t read_verify(void) {
+static neon_status_t read_verify(neon_uart_handle_t *uart) {
     if (last_size == 0U) { printf("[INFO] Write a pattern first using 0..9 or w.\n"); return NEON_OK; }
-    neon_status_t status = nor_read(TEST_OFFSET, read_data, last_size, selected_mode);
+    neon_status_t status = nor_read(uart, TEST_OFFSET, read_data, last_size, selected_mode);
     if (status != NEON_OK) { return status; }
     dump_sample(read_data, last_size);
-    uint32_t mismatches = compare_data(last_size, 1U);
+    uint32_t mismatches = compare_data(last_size);
     printf("[VERIFY] bytes=%lu mismatches=%lu %s\n", (unsigned long)last_size,
         (unsigned long)mismatches, mismatches == 0U ? "[PASS]" : "[FAIL]");
     return mismatches == 0U ? NEON_OK : NEON_ERROR;
@@ -449,7 +476,7 @@ static neon_status_t write_verify(neon_uart_handle_t *uart) {
     if (status == NEON_OK) { status = nor_program(uart, size); }
     if (status != NEON_OK) { return status; }
     last_size = size;
-    return read_verify();
+    return read_verify(uart);
 }
 
 /** @brief Print test sizes, mode selection and stop commands. */
@@ -476,7 +503,6 @@ void qspi_flash_read_write_run(neon_uart_handle_t *uart) {
     selected_level = 0U;
     random_state = 0x6D2B79F5U;
     selected_mode = 0U;
-    selected_divider = CONFIG_QSPI_FLASH_READ_WRITE_DIVIDER;
     io_failed = 0U;
     stop_requested = 0U;
     neon_status_t status = configure_controller(NEON_QSPI_CLK_DIV_32);
@@ -485,7 +511,7 @@ void qspi_flash_read_write_run(neon_uart_handle_t *uart) {
         return;
     }
     status = nor_initialize();
-    if (status == NEON_OK) { status = configure_controller(selected_divider); }
+    if (status == NEON_OK) { status = configure_controller(CONFIG_QSPI_FLASH_READ_WRITE_DIVIDER); }
     if (status == NEON_OK) {
         print_help();
         printf("[READY] QSPI_Flash_Read_Write menu, no Enter needed.\n");
@@ -499,7 +525,7 @@ void qspi_flash_read_write_run(neon_uart_handle_t *uart) {
                 selected_level = key - '0';
                 status = write_verify(uart);
             } else if (key == 'w') { status = write_verify(uart); }
-            else if (key == 'r') { status = read_verify(); }
+            else if (key == 'r') { status = read_verify(uart); }
             else if (key == 'i') { status = nor_info(); }
             else if (key == 'h' || key == '?') { print_help(); }
             else if (key == 'a') {

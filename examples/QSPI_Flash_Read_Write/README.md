@@ -79,6 +79,18 @@ use at least `/32` to make BUSY observable, then restore the selected data clock
 The driver owns clock/reset and pin setup. Application code accesses the NOR through
 NEON QSPI APIs; memory-mapped loads are used only in `QSPI_XIP_Read`.
 
+Normal array reads use **4-byte frames**, with a fresh command/address per frame.
+Each frame drains one 32-bit RX word, waits for TC and BUSY=0, then advances the
+NOR address by four. A 2048-byte verification therefore uses 512 read frames. Erase
+verification also reads in 4-byte frames. Page programming uses up to 256 bytes.
+The default CS setup/hold and inter-command timing fields are zero; there is no
+software delay between RX words. This does not change the protocol's eight dummy
+clocks for Dual/Quad reads.
+
+Random-pattern Quad verification can still fail on the tested board, including with
+four-byte frames. Use Single or Dual for the operating modes that passed the board
+tests; Quad verification reports any data mismatches as FAIL.
+
 Data buffers contain aligned `uint32_t` words, with the low byte first in serial/address
 order. No DMA or peripheral interrupts are used. Abort returns the controller to
 indirect mode and flushes FIFOs. A transport error ends the current run; an abort/cleanup
@@ -109,6 +121,11 @@ Switching mode preserves the existing test data and expected buffer, so use `r` 
 compare the same pattern through Single, Dual and Quad reads. Expected data is kept
 in RAM and is invalidated on a new run/reset; use a write test before `r`.
 
+Levels `0..4` use random data and levels `5..9` use fixed data at the same sizes.
+Passing the fixed levels alone does not validate all data transitions. In Quad mode,
+both programming and reading use four data lanes; changing the read frame size does
+not change the page-program frame size.
+
 Example sequence, waiting for each result:
 
 ```text
@@ -134,7 +151,8 @@ x   return to fpga:>>
    read back **all 4096 bytes** to confirm `FF`.
 3. Program pages of at most 256 bytes. Each page has its own WREN and WIP polling;
    no page boundary is crossed.
-4. Read the selected byte count through QSPI RX FIFO into RAM and compare every byte.
+4. Read the selected byte count in 4-byte frames through QSPI RX FIFO into RAM and
+   compare every byte.
 5. Dump only the first 64 bytes and at most eight detailed mismatches. The summary
    still counts **every** mismatching byte in the selected range.
 
