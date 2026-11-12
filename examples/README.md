@@ -35,30 +35,29 @@ SPI_W5500/
 | [ADC_Sampling](ADC_Sampling/README.md) | TODO skeleton | `fu2_adc_sampling` |
 | [AES_Known_Vector](AES_Known_Vector/README.md) | TODO skeleton | `fu2_aes_known_vector` |
 | [CRC_Known_Vector](CRC_Known_Vector/README.md) | TODO skeleton | `fu2_crc_known_vector` |
-| [DMA_Memory_Copy](DMA_Memory_Copy/README.md) | TODO skeleton | `fu2_dma_memory_copy` |
 | [Flash_Read_Write](Flash_Read_Write/README.md) | Implemented | `fu2_flash_read_write` |
 | [FreeRTOS_Peripheral_Queue](FreeRTOS_Peripheral_Queue/README.md) | TODO skeleton | `fu2_freertos_peripheral_queue` |
-| [GPIO_Input_Output_FPGA](GPIO_Input_Output_FPGA/README.md) | Implemented | `fu2_gpio_input_output` |
+| [GPIO_Input_Output](GPIO_Input_Output/README.md) | Implemented | `fu2_gpio_input_output` |
 | [GPIO_Interrupt](GPIO_Interrupt/README.md) | Implemented | `fu2_gpio_interrupt` |
 | [I2C_DMA](I2C_DMA/README.md) | TODO skeleton | `fu2_i2c_dma` |
 | [I2C_EEPROM](I2C_EEPROM/README.md) | Implemented | `fu2_i2c_eeprom` |
 | [PWM_Output](PWM_Output/README.md) | Implemented | `fu2_pwm_output` |
+| [QSPI_Flash_Read_Write](QSPI_Flash_Read_Write/README.md) | Implemented | `fu2_qspi_flash_read_write` |
+| [QSPI_XIP_Read](QSPI_XIP_Read/README.md) | Implemented | `fu2_qspi_xip_read` |
 | [RTC_Calendar](RTC_Calendar/README.md) | TODO skeleton | `fu2_rtc_calendar` |
 | [SPI_DMA](SPI_DMA/README.md) | Implemented | `fu2_spi_dma` |
 | [SPI_W5500](SPI_W5500/README.md) | Implemented | `fu2_spi_w5500` |
 | [TIM_Periodic_Interrupt](TIM_Periodic_Interrupt/README.md) | Implemented | `fu2_tim_periodic_interrupt` |
 | [TRNG_Read](TRNG_Read/README.md) | TODO skeleton | `fu2_trng_read` |
 | [UART_DMA](UART_DMA/README.md) | Implemented | `fu2_uart_dma` |
-| [UART_ECHO_Polling_FPGA](UART_ECHO_Polling_FPGA/README.md) | Implemented | `fu2_uart_echo_polling` |
+| [UART_ECHO_Polling](UART_ECHO_Polling/README.md) | Implemented | `fu2_uart_echo_polling` |
 | [UART_RX_Interrupt](UART_RX_Interrupt/README.md) | Implemented | `fu2_uart_rx_interrupt` |
 
-The collection includes 11 implemented examples. The 8 TODO skeletons remain
-unimplemented and print their status when started with `r`. `Flash_Read_Write` accesses internal FU2 Flash.
-There is no external SPI/QSPI Flash example in this collection.
-
-`UART_ECHO_Polling_FPGA` and `GPIO_Input_Output_FPGA` retain the former FPGA testcases. The
-existing `UART_ECHO_Polling` and `GPIO_Input_Output` applications remain in their original folders.
-The latter GPIO application uses PB1, while the FPGA variant uses PB7.
+TODO skeletons print their status when started with `r`. `Flash_Read_Write` accesses internal
+FU2 Flash. `QSPI_Flash_Read_Write` tests an external NOR by indirect Single/Dual/Quad transfers;
+`QSPI_XIP_Read` programs a known pattern and verifies it through the memory-mapped AHB window.
+Both QSPI apps run from internal Flash and reserve an external NOR sector for destructive tests.
+Their READMEs document the hardware connections, reserved region and menu keys.
 
 ## Build one application
 

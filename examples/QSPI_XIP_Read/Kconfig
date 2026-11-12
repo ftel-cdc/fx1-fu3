@@ -1,0 +1,60 @@
+menu "FU2 example configuration"
+
+config FU2_EXAMPLE_FIXED_CLOCK_HZ
+    int "Fixed FPGA clock (Hz; 0 uses normal SDK clock setup)"
+    range 0 60000000
+    default 10000000
+    help
+        Must match the actual FPGA clock. Zero retains the SDK SystemInit settings.
+
+endmenu
+
+menu "QSPI_XIP_Read configuration"
+
+config QSPI_XIP_READ_TEST_OFFSET
+    hex "Reserved NOR test sector offset (4 KiB aligned)"
+    range 0x1000 0x3F000
+    default 0x3C000
+    help
+        All write tests erase this entire 4096-byte sector without restoring it.
+        Reserve it exclusively for this example, outside existing firmware/data.
+        An unaligned offset is rejected at compile time.
+
+config QSPI_XIP_READ_DIVIDER
+    int "QSPI divider encoding (0=/2, 1=/4, ..., 7=/256)"
+    range 0 7
+    default 4
+    help
+        Test SCK is input_clock / 2^(encoding+1). Wake/reset always uses /32.
+
+choice QSPI_XIP_READ_CLOCK_MODE
+    prompt "QSPI SDR clock mode"
+    default QSPI_XIP_READ_MODE_0
+
+config QSPI_XIP_READ_MODE_0
+    bool "Mode 0 (CPOL=0, CPHA=0)"
+
+config QSPI_XIP_READ_MODE_3
+    bool "Mode 3 (CPOL=1, CPHA=1)"
+
+endchoice
+
+config QSPI_XIP_READ_TIMEOUT_POLLS
+    int "QSPI transfer/abort polling budget"
+    range 1000 100000000
+    default 100000
+
+config QSPI_XIP_READ_READY_POLLS
+    int "Maximum NOR status/write-enable commands per wait"
+    range 1000 10000000
+    default 1000000
+    help
+        Poll counts are not milliseconds. At higher SCK, allow enough status
+        commands for the NOR's maximum sector-erase/program time.
+
+config QSPI_XIP_READ_TRIES
+    int "Captures in the repeated XIP read test"
+    range 1 1000000
+    default 100
+
+endmenu
