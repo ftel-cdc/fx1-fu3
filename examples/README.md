@@ -39,7 +39,7 @@ SPI_W5500/
 | [FreeRTOS_Peripheral_Queue](FreeRTOS_Peripheral_Queue/README.md) | TODO skeleton | `fu2_freertos_peripheral_queue` |
 | [GPIO_Input_Output](GPIO_Input_Output/README.md) | Implemented | `fu2_gpio_input_output` |
 | [GPIO_Interrupt](GPIO_Interrupt/README.md) | Implemented | `fu2_gpio_interrupt` |
-| [I2C_DMA](I2C_DMA/README.md) | TODO skeleton | `fu2_i2c_dma` |
+| [I2C_DMA](I2C_DMA/README.md) | Implemented | `fu2_i2c_dma` |
 | [I2C_EEPROM](I2C_EEPROM/README.md) | Implemented | `fu2_i2c_eeprom` |
 | [PWM_Output](PWM_Output/README.md) | Implemented | `fu2_pwm_output` |
 | [QSPI_Flash_Read_Write](QSPI_Flash_Read_Write/README.md) | Implemented | `fu2_qspi_flash_read_write` |
