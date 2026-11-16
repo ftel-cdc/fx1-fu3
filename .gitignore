@@ -8,8 +8,10 @@
 /examples/FPGA_Terminal/build/
 /vscode-extension/node_modules
 /examples/Printf_Log/build/
-
+/vscode-extension/dist/
+/vscode-extension/*.vsix
 # Python caches
 __pycache__/
 
 /examples/FX1_*/build/
+/examples/ETH_Loopback/build/

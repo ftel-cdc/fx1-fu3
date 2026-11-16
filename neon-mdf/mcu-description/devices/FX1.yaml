@@ -14959,9 +14959,1238 @@ peripherals:
     description: 'RESERVED: VP hiện tại chưa mô phỏng; truy cập gây fault.'
     registers: []
   - name: ETH
-    base: 0x11030000
-    description: 'RESERVED: VP hiện tại chưa mô phỏng; truy cập gây fault.'
-    registers: []
+    base: 285409280
+    description: FTEL Ethernet MAC MAS v1.0.7; VP dev 3b36805 drivers/eth/eth_regs.h. Aligned 32-bit CSR only.
+    registers:
+    - name: ID
+      offset: 0
+      size: 32
+      access: unknown
+      reset: 1163151361
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: VER_MINOR
+        bit_offset: 0
+        bit_width: 4
+      - name: VER_MAJOR
+        bit_offset: 4
+        bit_width: 4
+      - name: ID
+        bit_offset: 8
+        bit_width: 24
+    - name: CTRL
+      offset: 4
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: RST_N
+        bit_offset: 0
+        bit_width: 1
+      - name: RXCSUM_RST_N
+        bit_offset: 1
+        bit_width: 1
+      - name: TXCSUM_RST_N
+        bit_offset: 2
+        bit_width: 1
+      - name: MDIO_RST_N
+        bit_offset: 3
+        bit_width: 1
+      - name: DMA_RST_N
+        bit_offset: 4
+        bit_width: 1
+      - name: TXFIFO_WR_RST_N
+        bit_offset: 5
+        bit_width: 1
+      - name: RXFIFO_RD_RST_N
+        bit_offset: 6
+        bit_width: 1
+      - name: RX_RMII_RST_N
+        bit_offset: 7
+        bit_width: 1
+      - name: TX_RMII_RST_N
+        bit_offset: 8
+        bit_width: 1
+      - name: RXMAC_RST_N
+        bit_offset: 9
+        bit_width: 1
+      - name: TXMAC_RST_N
+        bit_offset: 10
+        bit_width: 1
+      - name: RMON_RST_N
+        bit_offset: 11
+        bit_width: 1
+      - name: TXFIFO_RD_RST_N
+        bit_offset: 12
+        bit_width: 1
+      - name: RXFIFO_WR_RST_N
+        bit_offset: 13
+        bit_width: 1
+    - name: STATUS
+      offset: 8
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: TX_BUSY
+        bit_offset: 0
+        bit_width: 1
+      - name: RX_BUSY
+        bit_offset: 1
+        bit_width: 1
+      - name: DMA_TX_BUSY
+        bit_offset: 2
+        bit_width: 1
+      - name: DMA_RX_BUSY
+        bit_offset: 3
+        bit_width: 1
+      - name: AXI_ERR_STICKY
+        bit_offset: 4
+        bit_width: 1
+    - name: CAP
+      offset: 12
+      size: 32
+      access: unknown
+      reset: 1
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: FULL_DUPLEX
+        bit_offset: 0
+        bit_width: 1
+      - name: JUMBO_EN
+        bit_offset: 1
+        bit_width: 1
+      - name: AXI_DATA_WIDTH
+        bit_offset: 8
+        bit_width: 2
+    - name: INT_RAW
+      offset: 16
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: TX_DONE
+        bit_offset: 0
+        bit_width: 1
+      - name: RX_DONE
+        bit_offset: 1
+        bit_width: 1
+      - name: TX_ERR
+        bit_offset: 2
+        bit_width: 1
+      - name: RX_ERR
+        bit_offset: 3
+        bit_width: 1
+      - name: TX_BUF_UNAVAIL
+        bit_offset: 4
+        bit_width: 1
+      - name: RX_BUF_UNAVAIL
+        bit_offset: 5
+        bit_width: 1
+      - name: MDIO_DONE
+        bit_offset: 7
+        bit_width: 1
+    - name: INT_EN
+      offset: 20
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: EN
+        bit_offset: 0
+        bit_width: 6
+      - name: EN_MDIO_DONE
+        bit_offset: 7
+        bit_width: 1
+    - name: INT_INJ
+      offset: 24
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: INJ
+        bit_offset: 0
+        bit_width: 6
+      - name: INJ_MDIO_DONE
+        bit_offset: 7
+        bit_width: 1
+    - name: INT_STATUS
+      offset: 28
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: STATUS
+        bit_offset: 0
+        bit_width: 6
+      - name: STATUS_MDIO_DONE
+        bit_offset: 7
+        bit_width: 1
+    - name: FIFO_STAT
+      offset: 32
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: RXFIFO_OVF
+        bit_offset: 0
+        bit_width: 1
+      - name: RXFIFO_UDF
+        bit_offset: 1
+        bit_width: 1
+      - name: TXFIFO_OVF
+        bit_offset: 2
+        bit_width: 1
+      - name: TXFIFO_UDF
+        bit_offset: 3
+        bit_width: 1
+      - name: TXMETA_OVF
+        bit_offset: 4
+        bit_width: 1
+      - name: TXMETA_UDF
+        bit_offset: 5
+        bit_width: 1
+    - name: RMII_CFG
+      offset: 4096
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: SPEED
+        bit_offset: 0
+        bit_width: 1
+      - name: TXD_BIT_ORDER
+        bit_offset: 1
+        bit_width: 1
+      - name: RXD_BIT_ORDER
+        bit_offset: 2
+        bit_width: 1
+    - name: RX_MAC_CFG
+      offset: 8192
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: RX_EN
+        bit_offset: 0
+        bit_width: 1
+    - name: RX_MAX_FRAME
+      offset: 8196
+      size: 32
+      access: unknown
+      reset: 1518
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: MAX_FRAME
+        bit_offset: 0
+        bit_width: 16
+    - name: RX_MIN_FRAME
+      offset: 8200
+      size: 32
+      access: unknown
+      reset: 64
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: MIN_FRAME
+        bit_offset: 0
+        bit_width: 16
+    - name: FILT_CTRL
+      offset: 8208
+      size: 32
+      access: unknown
+      reset: 1
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: BCAST_ACCEPT
+        bit_offset: 0
+        bit_width: 1
+      - name: PASS_ALL_MCAST
+        bit_offset: 1
+        bit_width: 1
+      - name: HASH_EN
+        bit_offset: 2
+        bit_width: 1
+    - name: HASH_L
+      offset: 8212
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: HASH_L
+        bit_offset: 0
+        bit_width: 32
+    - name: HASH_H
+      offset: 8216
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: HASH_H
+        bit_offset: 0
+        bit_width: 32
+    - name: UC_ADDR_L0
+      offset: 8224
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: ADDR_L
+        bit_offset: 0
+        bit_width: 32
+    - name: UC_ADDR_H0
+      offset: 8228
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: ADDR_H
+        bit_offset: 0
+        bit_width: 16
+    - name: UC_CTRL0
+      offset: 8232
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: ENABLE
+        bit_offset: 0
+        bit_width: 1
+    - name: UC_ADDR_L1
+      offset: 8240
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: ADDR_L
+        bit_offset: 0
+        bit_width: 32
+    - name: UC_ADDR_H1
+      offset: 8244
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: ADDR_H
+        bit_offset: 0
+        bit_width: 16
+    - name: UC_CTRL1
+      offset: 8248
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: ENABLE
+        bit_offset: 0
+        bit_width: 1
+    - name: UC_ADDR_L2
+      offset: 8256
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: ADDR_L
+        bit_offset: 0
+        bit_width: 32
+    - name: UC_ADDR_H2
+      offset: 8260
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: ADDR_H
+        bit_offset: 0
+        bit_width: 16
+    - name: UC_CTRL2
+      offset: 8264
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: ENABLE
+        bit_offset: 0
+        bit_width: 1
+    - name: UC_ADDR_L3
+      offset: 8272
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: ADDR_L
+        bit_offset: 0
+        bit_width: 32
+    - name: UC_ADDR_H3
+      offset: 8276
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: ADDR_H
+        bit_offset: 0
+        bit_width: 16
+    - name: UC_CTRL3
+      offset: 8280
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: ENABLE
+        bit_offset: 0
+        bit_width: 1
+    - name: TX_MAC_CFG
+      offset: 12288
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: TX_EN
+        bit_offset: 0
+        bit_width: 1
+    - name: IPG
+      offset: 12292
+      size: 32
+      access: unknown
+      reset: 12
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: IPG
+        bit_offset: 0
+        bit_width: 8
+    - name: TX_MAX_FRAME
+      offset: 12296
+      size: 32
+      access: unknown
+      reset: 1518
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: MAX_FRAME
+        bit_offset: 0
+        bit_width: 16
+    - name: TX_MIN_FRAME
+      offset: 12300
+      size: 32
+      access: unknown
+      reset: 64
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: MIN_FRAME
+        bit_offset: 0
+        bit_width: 16
+    - name: CSUM_RX_CFG
+      offset: 16384
+      size: 32
+      access: unknown
+      reset: 3
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: CSUM_RX_EN
+        bit_offset: 0
+        bit_width: 1
+      - name: CSUM_RX_L4_EN
+        bit_offset: 1
+        bit_width: 1
+    - name: CSUM_TX_CFG
+      offset: 20480
+      size: 32
+      access: unknown
+      reset: 3
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: CSUM_TX_EN
+        bit_offset: 0
+        bit_width: 1
+      - name: CSUM_TX_L4_EN
+        bit_offset: 1
+        bit_width: 1
+    - name: DMA_BUILDCFG
+      offset: 24576
+      size: 32
+      access: unknown
+      reset: 699147269
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: DATA_WIDTH_LOG2
+        bit_offset: 0
+        bit_width: 5
+      - name: ADDR_WIDTH
+        bit_offset: 5
+        bit_width: 6
+      - name: MAX_BURST_LOG2
+        bit_offset: 11
+        bit_width: 5
+      - name: TX_FIFO_DEPTH_LOG2
+        bit_offset: 16
+        bit_width: 5
+      - name: RX_FIFO_DEPTH_LOG2
+        bit_offset: 21
+        bit_width: 5
+      - name: POLL_CYCLES_LOG2
+        bit_offset: 26
+        bit_width: 6
+    - name: DMA_AXI_CFG
+      offset: 24580
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: AWCACHE
+        bit_offset: 0
+        bit_width: 4
+      - name: ARCACHE
+        bit_offset: 4
+        bit_width: 4
+    - name: DMA_TX_CTRL
+      offset: 24592
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: START
+        bit_offset: 0
+        bit_width: 1
+      - name: HALT_REQ
+        bit_offset: 1
+        bit_width: 1
+      - name: SRST
+        bit_offset: 2
+        bit_width: 1
+    - name: DMA_TX_STAT
+      offset: 24596
+      size: 32
+      access: unknown
+      reset: 4
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: RUNNING
+        bit_offset: 0
+        bit_width: 1
+      - name: HALTED
+        bit_offset: 1
+        bit_width: 1
+      - name: IDLE
+        bit_offset: 2
+        bit_width: 1
+      - name: SUSPENDED
+        bit_offset: 3
+        bit_width: 1
+      - name: ERR
+        bit_offset: 4
+        bit_width: 1
+      - name: DONE
+        bit_offset: 5
+        bit_width: 1
+    - name: DMA_TX_DESC_BASE
+      offset: 24600
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: DESC_BASE
+        bit_offset: 4
+        bit_width: 28
+    - name: DMA_TX_DESC_LEN
+      offset: 24604
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: DESC_LEN
+        bit_offset: 0
+        bit_width: 16
+    - name: DMA_TX_POLL
+      offset: 24608
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: POLL
+        bit_offset: 0
+        bit_width: 1
+    - name: DMA_TX_COAL
+      offset: 24612
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COAL_CNT
+        bit_offset: 0
+        bit_width: 8
+      - name: COAL_TIMER
+        bit_offset: 8
+        bit_width: 16
+    - name: DMA_TX_ERRINFO
+      offset: 24616
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: ERR_CLASS
+        bit_offset: 0
+        bit_width: 4
+      - name: DECERR
+        bit_offset: 4
+        bit_width: 1
+    - name: DMA_TX_CUR_DESC
+      offset: 24620
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: CUR_DESC
+        bit_offset: 0
+        bit_width: 16
+    - name: DMA_RX_CTRL
+      offset: 26624
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: START
+        bit_offset: 0
+        bit_width: 1
+      - name: HALT_REQ
+        bit_offset: 1
+        bit_width: 1
+      - name: SRST
+        bit_offset: 2
+        bit_width: 1
+    - name: DMA_RX_STAT
+      offset: 26628
+      size: 32
+      access: unknown
+      reset: 4
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: RUNNING
+        bit_offset: 0
+        bit_width: 1
+      - name: HALTED
+        bit_offset: 1
+        bit_width: 1
+      - name: IDLE
+        bit_offset: 2
+        bit_width: 1
+      - name: SUSPENDED
+        bit_offset: 3
+        bit_width: 1
+      - name: ERR
+        bit_offset: 4
+        bit_width: 1
+      - name: DONE
+        bit_offset: 5
+        bit_width: 1
+    - name: DMA_RX_DESC_BASE
+      offset: 26632
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: DESC_BASE
+        bit_offset: 4
+        bit_width: 28
+    - name: DMA_RX_DESC_LEN
+      offset: 26636
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: DESC_LEN
+        bit_offset: 0
+        bit_width: 16
+    - name: DMA_RX_POLL
+      offset: 26640
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: POLL
+        bit_offset: 0
+        bit_width: 1
+    - name: DMA_RX_COAL
+      offset: 26644
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COAL_CNT
+        bit_offset: 0
+        bit_width: 8
+      - name: COAL_TIMER
+        bit_offset: 8
+        bit_width: 16
+    - name: DMA_RX_ERRINFO
+      offset: 26648
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: ERR_CLASS
+        bit_offset: 0
+        bit_width: 4
+      - name: DECERR
+        bit_offset: 4
+        bit_width: 1
+    - name: DMA_RX_CUR_DESC
+      offset: 26652
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: CUR_DESC
+        bit_offset: 0
+        bit_width: 16
+    - name: DMA_RX_BUF_SIZE
+      offset: 26656
+      size: 32
+      access: unknown
+      reset: 1514
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: BUF_SIZE
+        bit_offset: 0
+        bit_width: 16
+    - name: DMA_RX_DROP_CNT
+      offset: 26660
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_CTRL
+      offset: 28672
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: RMON_EN
+        bit_offset: 0
+        bit_width: 1
+      - name: READ_CLEAR_EN
+        bit_offset: 1
+        bit_width: 1
+      - name: CLEAR_ALL
+        bit_offset: 2
+        bit_width: 1
+      - name: FREEZE
+        bit_offset: 3
+        bit_width: 1
+    - name: RMON_OVF_STAT_TX
+      offset: 28676
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: OVF_TX
+        bit_offset: 0
+        bit_width: 13
+    - name: RMON_OVF_STAT_RX
+      offset: 28680
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: OVF_RX
+        bit_offset: 0
+        bit_width: 18
+    - name: RMON_TX_PKTS
+      offset: 28688
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_TX_OCTETS
+      offset: 28692
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_TX_BCAST
+      offset: 28696
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_TX_MCAST
+      offset: 28700
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_TX_UNDERSIZE
+      offset: 28704
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_TX_OVERSIZE
+      offset: 28708
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_TX_DROP
+      offset: 28712
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_TX_PKTS_64
+      offset: 28716
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_TX_PKTS_65_127
+      offset: 28720
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_TX_PKTS_128_255
+      offset: 28724
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_TX_PKTS_256_511
+      offset: 28728
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_TX_PKTS_512_1023
+      offset: 28732
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_TX_PKTS_1024_1518
+      offset: 28736
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_DROP_EVENTS
+      offset: 30720
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_OCTETS
+      offset: 30724
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_PKTS
+      offset: 30728
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_BCAST_PKTS
+      offset: 30732
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_MCAST_PKTS
+      offset: 30736
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_CRC_ALIGN_ERR
+      offset: 30740
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_UNDERSIZE
+      offset: 30744
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_OVERSIZE
+      offset: 30748
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_FRAGMENTS
+      offset: 30752
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_JABBERS
+      offset: 30756
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_COLLISIONS
+      offset: 30760
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_PKTS_64
+      offset: 30764
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_PKTS_65_127
+      offset: 30768
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_PKTS_128_255
+      offset: 30772
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_PKTS_256_511
+      offset: 30776
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_PKTS_512_1023
+      offset: 30780
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_PKTS_1024_1518
+      offset: 30784
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: RMON_RX_FILTER_DROP
+      offset: 30788
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: COUNT
+        bit_offset: 0
+        bit_width: 32
+    - name: MDIO_CTRL
+      offset: 32768
+      size: 32
+      access: unknown
+      reset: 163840
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: START
+        bit_offset: 0
+        bit_width: 1
+      - name: OP
+        bit_offset: 1
+        bit_width: 1
+      - name: REGAD
+        bit_offset: 2
+        bit_width: 5
+      - name: PHYAD
+        bit_offset: 7
+        bit_width: 5
+      - name: CLK_DIV
+        bit_offset: 12
+        bit_width: 8
+      - name: PRE_SUPPRESS
+        bit_offset: 20
+        bit_width: 1
+    - name: MDIO_DATA
+      offset: 32772
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: DATA
+        bit_offset: 0
+        bit_width: 16
+    - name: MDIO_STAT
+      offset: 32776
+      size: 32
+      access: unknown
+      reset: 0
+      description: VP CSR workbook export; access semantics are enforced by the reference driver, not specified by
+        this header.
+      fields:
+      - name: BUSY
+        bit_offset: 0
+        bit_width: 1
+      - name: NO_RESPONSE
+        bit_offset: 1
+        bit_width: 1
+      - name: START_WHILE_BUSY
+        bit_offset: 2
+        bit_width: 1
+      - name: DONE
+        bit_offset: 3
+        bit_width: 1
   - name: MIPI
     base: 0x11040000
     description: CSI-2 chỉ tồn tại khi VP bật --camera. Register chi tiết chưa nhập; xem include/fx1_csi2/fx1_csi2_regs.h.

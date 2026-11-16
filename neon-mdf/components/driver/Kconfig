@@ -105,4 +105,12 @@ config NEON_MDF_DRIVER_WDT
         FU2 watchdog: timeout range, reset/interrupt response, refresh,
         read counter and acknowledge interrupt.
 
+config NEON_MDF_DRIVER_ETH
+    bool "Compile Ethernet driver (FX1)"
+    default y
+    help
+        FTEL Ethernet MAC: descriptor DMA, Clause 22 MDIO, polling/IRQ
+        service and bounded stop/recovery. Currently implemented for FX1.
+        No TCP/IP stack or host network interface is included.
+
 endmenu

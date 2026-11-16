@@ -18678,5 +18678,20 @@ Update: PORT. MAS v1.07: tuning-lsc. [access=rw]</description>
         </register>
       </registers>
     </peripheral>
+    <peripheral>
+      <name>ETH</name>
+      <description>FTEL Ethernet MAC MAS v1.0.7; VP dev 3b36805 drivers/eth/eth_regs.h. Aligned 32-bit CSR only.</description>
+      <baseAddress>0x11030000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x800c</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>ETH</name>
+        <value>6</value>
+      </interrupt>
+      <registers />
+    </peripheral>
   </peripherals>
 </device>
