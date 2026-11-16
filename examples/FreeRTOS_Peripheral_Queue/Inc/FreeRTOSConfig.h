@@ -51,6 +51,10 @@ extern uint32_t SystemCoreClock;
 #define configSTACK_DEPTH_TYPE uint32_t
 #define configMESSAGE_BUFFER_LENGTH_TYPE size_t
 #define configENABLE_MPU 0
+/* FU2 has no VTOR. BootROM v5 forwards exceptions to application vectors.
+ * The default port check reads VTOR (0xe000ed08), which is invalid on FU2.
+ * Disable that direct-routing check while retaining configASSERT. */
+#define configCHECK_HANDLER_INSTALLATION 0
 
 /* The ARM_CM0 port supplies PendSV/SysTick handlers and masks interrupts with
  * PRIMASK; it does not use the Cortex-M4 BASEPRI priority configuration. */

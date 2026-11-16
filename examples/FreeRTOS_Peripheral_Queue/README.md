@@ -5,6 +5,9 @@ task receives the events during a run, controls **GPIOB7 (PB7)** and prints the 
 
 This is an independent FU2 firmware. Its UART terminal waits at boot; press `r` without Enter
 to start the example at the `fpga:>>` prompt.
+The first `r` is received before RTOS initialization. After flashing through UART0,
+open the serial monitor and press Enter to redisplay the prompt, then `r`. Startup
+logs show peripheral initialization, scheduler startup and terminal task entry.
 Console: UART0, 19200 baud, 8N1. FPGA system clock: 10 MHz by default.
 
 Source files are in `Src/`, with the terminal entry in `Src/main.c`. Example headers are in `Inc/`.
@@ -14,7 +17,8 @@ banner to initialize the default UART0, borrow its handle with
 `neon_console_get_uart()` and check for initialization failure. The terminal loop
 is also in `main.c`: print `fpga:>>`, handle Enter/CRLF, wait for `r`, print `[RUN]`,
 call `free_rtos_peripheral_queue_run(uart)` and print the prompt again on return.
-This loop runs in a FreeRTOS task so it can call blocking queue APIs during a run.
+The first wait for `r` runs before the scheduler starts. Subsequent waits and all
+demo runs execute in the terminal task, allowing blocking queue APIs during a run.
 There is no separate UART handle or explicit console attachment.
 
 Before starting the scheduler, `free_rtos_peripheral_queue_init(uart)` initializes
@@ -22,8 +26,8 @@ PB7, enables the UART FIFO and creates the queue and periodic task once. It wait
 for the banner's TX output to finish before updating the existing UART configuration,
 as in `UART_RX_Interrupt`. Baud rate and frame format are preserved.
 
-At the prompt the terminal polls UART RX, yielding for one tick when no byte is
-available. On `r`, the run function takes over RX using interrupts and consumes the
+At the prompt the terminal polls UART RX. Once the scheduler is running it yields
+for one tick when no byte is available. On `r`, the run function takes over RX using interrupts and consumes the
 queue in the same task. Ctrl+C sets PB7 low, disables RX interrupts, discards pending
 events and returns to the terminal loop. Polling and ISR never consume RX together.
 
@@ -42,6 +46,9 @@ call `neon_mdf_add_freertos()` with this application's `Inc/` directory, and lin
 `freertos_kernel`. The helper selects `GCC_ARM_CM0` and `heap_4` for FU2.
 `Inc/FreeRTOSConfig.h` uses `SystemCoreClock`, a 1 kHz tick, an 8 KiB heap and stack
 overflow/allocation failure hooks. Software timers are disabled.
+`configCHECK_HANDLER_INSTALLATION=0` is required for FU2: Cortex-M0 has no VTOR,
+and BootROM v5 forwards interrupts to the application's vector table. The port's
+default direct-routing check reads VTOR and can halt before the first task.
 
 ```text
 UART0 RX FIFO -> USART0_IRQHandler -> xQueueSendFromISR --+
@@ -62,7 +69,7 @@ The producer briefly suspends scheduling around its run-state check and nonblock
 send, preventing a stale periodic send across stop/restart. RX interrupts remain enabled
 during this short scheduling suspension when the demo is running.
 
-The scheduler, queue and tasks are created once at boot. Ctrl+C returns from the
+The scheduler, queue and tasks are created once after the first `r`. Ctrl+C returns from the
 run function to its caller in the terminal task; the scheduler keeps running.
 Starting again reuses the same objects and resets the run statistics. The Cortex-M0 port does not support
 returning to `main()` through `vTaskEndScheduler()`.
