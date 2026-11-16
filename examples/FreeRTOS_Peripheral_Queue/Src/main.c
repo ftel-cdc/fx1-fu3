@@ -2,8 +2,8 @@
  * @file main.c
  * @brief UART terminal entry point for FreeRTOS_Peripheral_Queue.
  * @details
- * Initialize the UART console and run FreeRTOS_Peripheral_Queue when r is pressed.
- * Enter starts a new line and prints the fpga:>> prompt.
+ * Reuse the default printf UART and run the terminal loop in a FreeRTOS task.
+ * Press r to call the example; Ctrl+C returns from the example to this terminal.
  */
 
 /*==================================================================================================
@@ -14,6 +14,10 @@
 #include "mcu_device.h"
 #include "freertos_peripheral_queue.h"
 #include "console/neon_console.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
+static void peripheral_queue_terminal(void *context);
 
 /*==================================================================================================
 *                                         GLOBAL FUNCTIONS
@@ -23,7 +27,8 @@
  * @brief Initialize the UART console and dispatch the example.
  * @return This function does not return.
  * @details
- * Press r to run the example; Enter starts a new terminal prompt line.
+ * The terminal loop runs inside a task because the Cortex-M0 scheduler cannot
+ * return to main after a run. UART initialization follows the other FU2 examples.
  */
 int main(void) {
     printf("\nFU2 FreeRTOS_Peripheral_Queue\n");
@@ -33,23 +38,48 @@ int main(void) {
         for (;;) { __WFI(); }
     }
 
+    if (free_rtos_peripheral_queue_init(uart) == NEON_OK) {
+        if (xTaskCreate(peripheral_queue_terminal, "terminal", 512U, uart,
+                        tskIDLE_PRIORITY + 1U, NULL) == pdPASS) {
+            vTaskStartScheduler();
+        }
+        printf("[FAIL] FreeRTOS terminal did not start.\n");
+    }
+
+    /* No scheduler or UART polling loop to return to after startup failure. */
+    for (;;) {
+        __WFI();
+    }
+}
+
+/**
+ * @brief Run the same r/Enter terminal flow as the other FU2 examples.
+ * @details
+ * Poll only at the prompt. During run(), RX belongs to the UART ISR. The demo
+ * returns on Ctrl+C, so this loop prints the next prompt without restarting RTOS.
+ */
+static void peripheral_queue_terminal(void *context) {
+    neon_uart_handle_t *uart = (neon_uart_handle_t *)context;
     printf("Press r to run FreeRTOS_Peripheral_Queue (no Enter).\n");
     printf("fpga:>> ");
     uint32_t skip_lf = 0U;
     for (;;) {
         uint32_t key = 0U;
-        if (neon_uart_try_receive(uart, &key) != NEON_OK) { continue; }
+        if (neon_uart_try_receive(uart, &key) != NEON_OK) {
+            vTaskDelay(pdMS_TO_TICKS(1));
+            continue;
+        }
         /* Treat CRLF as one Enter; CR and LF also work on their own. */
         if (key == '\n' && skip_lf != 0U) { skip_lf = 0U; continue; }
         skip_lf = key == '\r' ? 1U : 0U;
-        if (key == '\r' || key == '\n') {
+        if (key == '\r' || key == '\n' || key == 3U) {
             printf("\nfpga:>> ");
             continue;
         }
         if (key == 'r') {
             printf("r\n");
             printf("[RUN] FreeRTOS_Peripheral_Queue\n");
-            free_rtos_peripheral_queue_run();
+            free_rtos_peripheral_queue_run(uart);
             printf("fpga:>> ");
         }
     }

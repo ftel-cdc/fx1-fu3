@@ -20,8 +20,12 @@ if(NOT CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ EQUAL 0)
     FU2_FPGA_FIXED_CLOCK_HZ=${CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ}UL)
 endif()
 
+include(${NEON_MDF_PATH}/cmake/freertos.cmake)
+neon_mdf_add_freertos(${NEON_MDF_TARGET} ${CMAKE_CURRENT_SOURCE_DIR}/Inc)
+
 neon_mdf_add_executable(${PROJECT_NAME}
   Src/main.c
   Src/freertos_peripheral_queue.c
 )
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Inc)
+target_link_libraries(${PROJECT_NAME} PRIVATE freertos_kernel)
