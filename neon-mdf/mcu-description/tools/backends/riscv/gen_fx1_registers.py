@@ -123,6 +123,13 @@ def register_header(device):
         for reg in p.registers:
             lines.append(f'NEON_FX1_OFFSET_ASSERT(offsetof({prefix}_Regs_t, {reg.name}) == '
                          f'{prefix}_{reg.name}_OFFSET, "{p.name}.{reg.name}");')
+        # Danh sách X-macro theo thứ tự offset tăng dần, để firmware kiểm một offset lấy từ dữ liệu ngoài
+        # (ví dụ profile tuning) mà không phải chép tay bảng thanh ghi.
+        lines.append(f"#define {prefix}_REGISTER_COUNT {len(p.registers)}u")
+        lines.append(f"#define {prefix}_REGISTER_LIST(X) \\")
+        for reg in p.registers:
+            lines.append(f"    X({reg.name}, 0x{reg.offset:08X}u, NEON_FX1_ACCESS_{reg.access.upper()}) \\")
+        lines.append("    /* hết danh sách */")
     lines += ["#undef NEON_FX1_OFFSET_ASSERT", "#endif", ""]
     return "\n".join(lines)
 

@@ -18,3 +18,10 @@ foreach(_neon_mdf_driver_peripheral
     crm syscsr gpio flash uart i2c crc efuse adc dma spi pwm tim rtc trng aes qspi wdt eth)
   add_subdirectory(${_neon_mdf_driver_peripheral})
 endforeach()
+
+# Camera HAL backends are currently provided for FX1 only.
+if(NEON_MDF_TARGET_${NEON_MDF_TARGET}_FAMILY STREQUAL "FX1")
+  add_subdirectory(mipi)
+  add_subdirectory(csi)
+  add_subdirectory(isp)
+endif()
