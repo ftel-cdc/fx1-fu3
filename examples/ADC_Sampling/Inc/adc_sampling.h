@@ -1,12 +1,10 @@
 /**
  * @file adc_sampling.h
- * @brief Testcase skeleton for ADC_Sampling.
- * @details
- * Declares the entry point; peripheral behavior will be added later.
+ * @brief ADC sampling testcase entry point.
  */
 
-#ifndef FU2_EXAMPLE_ADC_SAMPLING_H
-#define FU2_EXAMPLE_ADC_SAMPLING_H
+#ifndef FPGA_TERMINAL_ADC_SAMPLING_H
+#define FPGA_TERMINAL_ADC_SAMPLING_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,7 +14,7 @@ extern "C" {
 *                                       FUNCTION PROTOTYPES
 ==================================================================================================*/
 /**
- * @brief Report that ADC_Sampling is not implemented yet.
+ * @brief Read ADC batches of 1, 4, and 16 samples and report the results.
  */
 void adc_sampling_run(void);
 
@@ -24,4 +22,4 @@ void adc_sampling_run(void);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_ADC_SAMPLING_H */
+#endif /* FPGA_TERMINAL_ADC_SAMPLING_H */
