@@ -10,7 +10,7 @@ ACCESS = {name: i for i, name in enumerate(
     ("ro", "rw", "w1c", "w1s", "w1p", "w1sc", "mixed", "unknown", "wo"))}
 BASE_MACROS = {"CLINT": "CLINT", "PLIC": "PLIC", "UART": "UART", "SYS_DMA": "SYS_DMA_CSR",
                "SIM_CTRL": "SIM_CTRL", "I2C0": "I2C0", "ISP": "ISP_CSR", "NPU": "NPU_CSR",
-               "H264_H265": "H264_H265_CSR", "ETH": "ETH_CSR", "MIPI": "MIPI_CSR",
+               "H264_H265": "H264_H265_CSR", "ETH": "ETH_CSR", "MIPI_CSI2": "MIPI_CSR",
                "DDR3": "DDR3_CSR", "DDR_SYSCTRL": "DDR_SYSCTRL"}
 
 
