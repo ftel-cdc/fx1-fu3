@@ -1,4 +1,4 @@
-# NEON-MDF · GT32U2086 SDK
+# NEON-MDF GTINX Microcontroller Development Framework
 
 NEON-MDF is a firmware development kit for **GT32U2086**, providing peripheral
 drivers, CMSIS, FreeRTOS and application examples. The SDK uses CMake/Ninja and
