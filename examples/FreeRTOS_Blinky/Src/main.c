@@ -222,7 +222,9 @@ void freertos_risc_v_application_interrupt_handler(void) {
     /* Ignore other IRQs, unused by this demo. Avoid the default infinite loop (`j .` in portASM.S), which
    * would hang on an accidentally enabled peripheral interrupt. */
 }
-#endif /*==================================================================================================
+#endif
+
+/*==================================================================================================
 *                                   PRIVATE FUNCTION PROTOTYPES
 ==================================================================================================*/
 
@@ -278,6 +280,10 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName) {
 
 /* CH32V003F4P6 */
 
+/**
+ * @brief Run the first periodic LED task.
+ * @param[in] pvParameters Unused task context.
+ */
 static void freertos_blinky_v_led0_task(void *pvParameters) {
     (void)pvParameters;
 #if defined(WEACT_F412)
@@ -296,6 +302,10 @@ static void freertos_blinky_v_led0_task(void *pvParameters) {
     }
 }
 
+/**
+ * @brief Run the second periodic LED task.
+ * @param[in] pvParameters Unused task context.
+ */
 static void freertos_blinky_v_led1_task(void *pvParameters) {
     (void)pvParameters;
     /* The LED1 period identifies the version because this app has no UART/printf: v1=500ms, v2=250ms.

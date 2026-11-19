@@ -1,14 +1,28 @@
 /**
  * @file uart_rx_interrupt.c
  * @brief PC -> UART FIFO -> ISR -> ring buffer -> main -> echo.
+ * @details
+ * Move bytes from UART0 RX FIFO to a software ring buffer in the ISR.
  */
+
+/*==================================================================================================
+*                                          INCLUDE FILES
+==================================================================================================*/
 
 #include "uart_rx_interrupt.h"
 #include "sdkconfig.h"
 #include <stdio.h>
 
+/*==================================================================================================
+*                                        DEFINES AND MACROS
+==================================================================================================*/
+
 #define RX_BUFFER_SIZE CONFIG_UART_RX_INTERRUPT_RING_BUF_SIZE
 #define TX_TIMEOUT CONFIG_UART_RX_INTERRUPT_TX_TIMEOUT_POLLS
+
+/*==================================================================================================
+*                                         LOCAL VARIABLES
+==================================================================================================*/
 
 /* FU2 saves each byte in a 32-bit word. */
 static uint32_t g_rx_buffer[RX_BUFFER_SIZE];
@@ -19,6 +33,13 @@ static volatile uint32_t g_stop_requested;
 static volatile uint32_t g_main_work;
 static neon_uart_handle_t *volatile g_active_uart_handle;
 
+/*==================================================================================================
+*                                         GLOBAL FUNCTIONS
+==================================================================================================*/
+
+/**
+ * @brief Drain UART0 RX FIFO into the ring buffer and record Ctrl+C.
+ */
 void USART0_IRQHandler(void) {
     uint32_t value = 0U;
 
@@ -39,6 +60,7 @@ void USART0_IRQHandler(void) {
     __DSB();
 }
 
+/** @copydoc uart_rx_interrupt_run */
 void uart_rx_interrupt_run(neon_uart_handle_t *uart) {
     uint32_t saved_primask = __get_PRIMASK();
     neon_uart_config_t saved_config;

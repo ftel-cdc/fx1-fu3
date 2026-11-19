@@ -1,16 +1,33 @@
-/** @file uart_dma.c
+/**
+ * @file uart_dma.c
  * @brief UART0 TX/RX DMA using fixed patterns and a working main loop.
+ * @details
+ * UART0 fixed-pattern TX/RX tests with DMA0 and bounded polling.
  */
+
+/*==================================================================================================
+*                                          INCLUDE FILES
+==================================================================================================*/
+
 #include "uart_dma.h"
 #include "crm/neon_crm.h"
 #include "dma/neon_dma.h"
 #include "sdkconfig.h"
 #include <stdio.h>
 
+/*==================================================================================================
+*                                        DEFINES AND MACROS
+==================================================================================================*/
+
 #ifndef CONFIG_NEON_MDF_DRIVER_DMA
 #error "UART_DMA requires CONFIG_NEON_MDF_DRIVER_DMA=y"
 #endif
 
+/*==================================================================================================
+*                                         GLOBAL FUNCTIONS
+==================================================================================================*/
+
+/** @copydoc uart_dma_run */
 void uart_dma_run(neon_uart_handle_t *uart) {
     static const uint32_t pattern[16] = {'0', '1', '2', '3', '4', '5', '6', '7',
                                          '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};

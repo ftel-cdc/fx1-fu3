@@ -1,0 +1,32 @@
+menu "FU2 example configuration"
+
+config FU2_EXAMPLE_FIXED_CLOCK_HZ
+    int "Fixed FPGA clock (Hz; 0 uses normal SDK clock setup)"
+    range 0 1000000000
+    default 10000000
+    help
+        Must match the actual FPGA clock. Zero retains the SDK SystemInit settings.
+
+config FU2_EXAMPLE_RX_TIMEOUT_POLLS
+    int "Console RX polling budget"
+    range 1 100000000
+    default 10000
+
+endmenu
+
+menu "I2C EEPROM example"
+
+config I2C_EEPROM_ADDRESS
+    hex "AT24C256 7-bit device address"
+    range 0x50 0x57
+    default 0x57
+
+config I2C_EEPROM_TIMEOUT_POLLS
+    int "Polling budget per I2C transfer or EEPROM delay"
+    range 1000 100000000
+    default 1000000
+    help
+        Polling iterations, not milliseconds. A 6 ms EEPROM write delay
+        uses the core-clock SysTick counter.
+
+endmenu

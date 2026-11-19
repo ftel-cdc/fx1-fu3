@@ -1,7 +1,8 @@
 /**
  * @file trng_read.h
  * @brief Testcase skeleton for TRNG_Read.
- * @details Declares the entry point; peripheral behavior will be added later.
+ * @details
+ * Declares the entry point; peripheral behavior will be added later.
  */
 
 #ifndef FU2_EXAMPLE_TRNG_READ_H

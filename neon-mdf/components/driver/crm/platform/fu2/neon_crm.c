@@ -413,6 +413,7 @@ neon_status_t neon_crm_peripheral_release_reset(neon_crm_peripheral_t peripheral
 }
 
 /** @copydoc neon_crm_peripheral_reset */
+/** @copydoc neon_crm_peripheral_reset */
 neon_status_t neon_crm_peripheral_reset(neon_crm_peripheral_t peripheral) {
     neon_status_t status = neon_crm_peripheral_force_reset(peripheral);
 
@@ -420,7 +421,25 @@ neon_status_t neon_crm_peripheral_reset(neon_crm_peripheral_t peripheral) {
         return status;
     }
 
-    return neon_crm_peripheral_release_reset(peripheral);
+    /*
+     * Hold reset low long enough for slow clock domains (e.g., 36 kHz RTC domain
+     * where 1 cycle ~ 27.8 us) to capture the reset edge across RST_SYNC[cite: 44, 67].
+     */
+    const uint32_t hold_cycles = (peripheral == NEON_CRM_PERIPHERAL_RTC) ? 5000U : 64U;
+    for (volatile uint32_t i = 0U; i < hold_cycles; ++i) {
+        __NOP();
+    }
+
+    status = neon_crm_peripheral_release_reset(peripheral);
+    if (status != NEON_OK) {
+        return status;
+    }
+
+    for (volatile uint32_t i = 0U; i < hold_cycles; ++i) {
+        __NOP();
+    }
+
+    return NEON_OK;
 }
 
 /** @copydoc neon_crm_is_peripheral_reset_asserted */

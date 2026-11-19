@@ -59,7 +59,7 @@ typedef enum {
     /* FU2: SDA=package 18, SCL=19, input feedback/open-drain enabled. DeInit restores saved pad/mux; bus
      * needs external pull-up. */
     NEON_I2C_PIN_CONFIG_AUTO = 0,
-    /* Keep that battery configuration board/boot firmware set. */
+    /* Preserve pin routing configured by the board/boot firmware. */
     NEON_I2C_PIN_CONFIG_KEEP = 1,
 } neon_i2c_pin_config_t;
 
@@ -70,6 +70,8 @@ typedef enum {
     NEON_I2C_STATE_BUSY_RX = 3,
     NEON_I2C_STATE_BUSY_CONFIG = 4,
     NEON_I2C_STATE_INITIALIZED = 5,
+    /* STOP/bus recovery failed. Call set_config again after fixing the bus. */
+    NEON_I2C_STATE_FAULT = 6,
 } neon_i2c_state_t;
 
 typedef enum {
@@ -82,7 +84,25 @@ typedef enum {
     NEON_I2C_DMA_RX = 1,
 } neon_i2c_dma_direction_t;
 
-/* Flag value matches ISR to be able to OR multiple flags in one test. */
+typedef enum {
+    NEON_I2C_DMA_SINGLE = 0,
+    NEON_I2C_DMA_BURST = 1,
+} neon_i2c_dma_mode_t;
+
+typedef enum {
+    NEON_I2C_DMA_BURST_2 = 0,
+    NEON_I2C_DMA_BURST_4 = 1,
+    NEON_I2C_DMA_BURST_8 = 2,
+    NEON_I2C_DMA_BURST_16 = 3,
+} neon_i2c_dma_burst_t;
+
+typedef struct {
+    neon_i2c_dma_mode_t mode;
+    neon_i2c_dma_burst_t burst_length;
+    neon_field16_t total_bytes; /* 1..255; zero encoding is not used. */
+} neon_i2c_dma_config_t;
+
+/* Logical flags; the backend combines ISR with address/data NACK from IITR. */
 typedef uint32_t neon_i2c_flag_t;
 #define NEON_I2C_FLAG_BUS_BUSY ((1U << 0))
 #define NEON_I2C_FLAG_TRANSFER_DONE ((1U << 1))
@@ -122,7 +142,9 @@ typedef uint32_t neon_i2c_interrupt_t;
 #define NEON_I2C_INTERRUPT_ARBITRATION_LOST ((1U << 15))
 #define NEON_I2C_INTERRUPT_ALERT_DETECTED ((1U << 16))
 #define NEON_I2C_INTERRUPT_STOP_DETECTED ((1U << 17))
-#define NEON_I2C_INTERRUPT_ALL (0x0003FFFFU)
+#define NEON_I2C_INTERRUPT_DMA_TX_DONE ((1U << 18))
+#define NEON_I2C_INTERRUPT_DMA_RX_DONE ((1U << 19))
+#define NEON_I2C_INTERRUPT_ALL (0x000FFFFFU)
 
 #define NEON_I2C_ERROR_NONE 0x00000000U
 #define NEON_I2C_ERROR_ADDRESS_NACK 0x00000001U
@@ -133,10 +155,12 @@ typedef uint32_t neon_i2c_interrupt_t;
 #define NEON_I2C_ERROR_PEC 0x00000020U
 #define NEON_I2C_ERROR_CLOCK 0x00000040U
 #define NEON_I2C_ERROR_TIMEOUT 0x00000080U
+#define NEON_I2C_ERROR_RECOVERY_REQUIRED 0x00000100U
+#define NEON_I2C_ERROR_SHORT_TRANSFER 0x00000200U
+#define NEON_I2C_ERROR_RX_OVERFLOW 0x00000400U
 
 typedef struct {
-    /* The period number i2c_clk writes directly to the register. scl_high_count is the programming value,
-   * not including sync latency and spike filter observed outside the battery. */
+    /* Raw i2c_clk counts. scl_high_count excludes input synchronization/filter latency. */
     neon_field16_t scl_low_count;
     neon_field16_t scl_high_count;
     neon_field16_t scl_low_count_high_speed;
@@ -206,12 +230,20 @@ typedef struct neon_i2c_handle_s {
  * @brief Fill the default configuration for i2 c.
  * @param[out] config Module configuration.
  * @details
- * Standard-mode reference configuration according to DTI guide/UVM at i2c_clk approx. 3.4 MHz: low=20,
- * programmable high=9, spike=1 and the timing setup/hold has been used by IP testbench. The value
- * high=14 in LL is the number of observed periods outside the pins, excluding 5
- * synchronization/filter periods of the IP.
+ * FU2: master, 7-bit addressing, AUTO open-drain pins, target SCL 100 kHz.
+ * Timing uses the current system clock, which also clocks I2C on FU2.
+ * Recalculate timing after changing that clock.
  */
 void neon_i2c_get_default_config(neon_i2c_config_t *config);
+
+/**
+ * @brief Calculate conservative Standard/Fast timing for FU2.
+ * @param i2c_clock_hz Actual I2C input clock, 1..60000000 Hz.
+ * @param scl_hz Requested SCL, 1..400000 Hz. Actual SCL can be slower.
+ * @param[out] timing Register counts, including compensation for the two-stage
+ * input synchronizer and spike_count=1. Output is unchanged on invalid input.
+ */
+neon_status_t neon_i2c_calculate_timing(uint32_t i2c_clock_hz, uint32_t scl_hz, neon_i2c_timing_t *timing);
 
 /**
  * @brief Initialize a caller-owned I2C runtime handle without configuring hardware.
@@ -232,6 +264,8 @@ neon_status_t neon_i2c_init(neon_i2c_handle_t *hi2c, neon_i2c_t instance);
  * peripheral. Serialize configuration/teardown with other users of this handle.
  * A successful configuration owns the instance until neon_i2c_deinit().
  * FU2 AUTO configures pin routing; KEEP preserves board-provided routing.
+ * Ultra Fast returns NEON_NOT_SUPPORTED. A FAULT handle can be reconfigured
+ * to reset the controller after fixing the bus and quiescing any external DMAC.
  */
 neon_status_t neon_i2c_set_config(neon_i2c_handle_t *hi2c, const neon_i2c_config_t *config);
 
@@ -267,9 +301,19 @@ neon_status_t neon_i2c_deinit(neon_i2c_handle_t *hi2c);
  * @return NEON_OK on success, or a module error/status code.
  * @details
  * dev_address is the unshifted address 7/10 bit. Valid size 1..256; value 256 encoded as 0 in 8-bit
- * IBCR according to DTI IP's 256-byte limit. timeout_polls is the total number of poll rings for
- * the whole API, not milliseconds. Polling APIs and ReadData/WriteData return NEON_BUSY when DMA
- * requests are enabled. The byte buffer must own all 32-bit words containing it (two-end padding),
+ * IBCR according to DTI IP's 256-byte limit. Master polling temporarily uses
+ * software STOP and masks I2C0 in NVIC while reading DONE/NACK from IITR;
+ * the previous interrupt-enable and hardware-end settings are restored on normal completion.
+ * TX preloads up to one FIFO (including the mem_write register prefix) before START,
+ * then feeds any remaining bytes while the transfer runs.
+ * RX sends STOP as soon as hardware reports DONE, then copies any unread FIFO bytes
+ * to RAM. DONE describes bus completion, not RAM-copy completion; STOP preserves the FIFO.
+ * timeout_polls is the polling budget for the transfer, not milliseconds. Error cleanup
+ * can take up to 10000 additional polls while waiting for STOP and bus release. A failed
+ * cleanup leaves NEON_I2C_STATE_FAULT and NEON_I2C_ERROR_RECOVERY_REQUIRED;
+ * call set_config to recover. Polling APIs and ReadData/WriteData return NEON_BUSY
+ * while DMA requests or handshakes remain active.
+ * The byte buffer must own all 32-bit words containing it (two-end padding),
  * under the FU2 runtime buffer contract. Drivers use memcpy for RAM buffers.
  */
 neon_status_t neon_i2c_master_transmit(neon_i2c_handle_t *hi2c, uint16_t dev_address, const uint8_t *data,
@@ -325,6 +369,8 @@ neon_status_t neon_i2c_mem_write(neon_i2c_handle_t *hi2c, uint16_t dev_address, 
  * API slave blocking. Calls must be made before the other controller starts the transaction so that
  * FIFO is ready; API returns after receiving STOP. With data larger than FIFO, clock_stretch should
  * be enabled to avoid TX underflow/RX overflow.
+ * Wait for this API to return before the next frame. Early STOP with unsent data returns NEON_ERROR and
+ * NEON_I2C_ERROR_SHORT_TRANSFER. Hardware cannot report the exact ACKed TX count.
  */
 neon_status_t neon_i2c_slave_transmit(neon_i2c_handle_t *hi2c, const uint8_t *data, uint16_t size,
                                       uint32_t timeout_polls);
@@ -337,6 +383,17 @@ neon_status_t neon_i2c_slave_transmit(neon_i2c_handle_t *hi2c, const uint8_t *da
  * @return NEON_OK on success, or a module error/status code.
  */
 neon_status_t neon_i2c_slave_receive(neon_i2c_handle_t *hi2c, uint8_t *data, uint16_t size, uint32_t timeout_polls);
+
+/**
+ * @brief Receive one slave transaction and report bytes copied before STOP/timeout.
+ * @details Requires a coordinated master: call before it starts, and wait for return
+ * before the next frame. STOP before size sets NEON_I2C_ERROR_SHORT_TRANSFER; excess bytes
+ * are drained without overrunning data and set NEON_I2C_ERROR_RX_OVERFLOW. Both return
+ * NEON_ERROR. received_count is at most size. Clock stretching should be enabled
+ * for frames larger than the FIFO. A timeout on an active bus leaves STATE_FAULT.
+ */
+neon_status_t neon_i2c_slave_receive_ex(neon_i2c_handle_t *hi2c, uint8_t *data, uint16_t size,
+                                      uint32_t *received_count, uint32_t timeout_polls);
 
 /**
  * @brief Write i2 c data.
@@ -422,10 +479,26 @@ neon_status_t neon_i2c_is_active_flag(const neon_i2c_handle_t *hi2c, uint32_t fl
  * @param[in] enable Nonzero to enable, zero to disable.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * ConfigureDMA only closes/opens I2C requests; the application must still configure the channel,
- * address and number of elements in the DMA driver.
+ * Call set_dma_config first. Enabling also enables the matching DMA DONE event in IIER
+ * for polling/interrupt use. The application must configure the DMAC channel, addresses
+ * and byte count separately. Disabling requests does not cancel outstanding DMAC accesses.
  */
 neon_status_t neon_i2c_configure_dma(neon_i2c_handle_t *hi2c, neon_i2c_dma_direction_t direction, uint8_t enable);
+
+/**
+ * @brief Program a disabled I2C DMA request channel while the bus is idle.
+ * @details Sets transfer length and SINGLE/BURST. Configure FIFO thresholds with set_config
+ * to match the burst length and FIFO capacity before enabling DMA.
+ * Configure the system DMAC separately, then call configure_dma(..., 1).
+ * This API does not start an I2C transaction. Disabling requests does not abort
+ * outstanding DMAC accesses; wait for DMAC quiescence before resetting the IP.
+ */
+neon_status_t neon_i2c_set_dma_config(neon_i2c_handle_t *hi2c, neon_i2c_dma_direction_t direction,
+                                    const neon_i2c_dma_config_t *config);
+
+/** Peripheral DMA DONE and no outstanding peripheral handshake; not I2C STOP. */
+neon_status_t neon_i2c_is_dma_complete(const neon_i2c_handle_t *hi2c, neon_i2c_dma_direction_t direction,
+                                     uint8_t *complete);
 /**
  * @brief Request i2 c bus clear.
  * @param[in,out] hi2c I2C handle and runtime state.

@@ -96,7 +96,10 @@ neon_status_t neon_dma_poll_channel(DMA_TypeDef *instance, uint8_t channel) {
     }
     uint32_t status = *dma_channel_reg(instance, channel, 0xA0U);
     if ((status & error_mask) != 0U) { return NEON_ERROR; }
-    if ((status & 1U) != 0U && *dma_channel_reg(instance, channel, 0x48U) == 0U) {
+    if ((status & 1U) != 0U && *dma_channel_reg(instance, channel, 0x48U) == 0U &&
+        (*dma_channel_reg(instance, channel, 0x3CU) & 0x00000F0FU) == 0U) {
+        /* Accepted AXI reads/writes must retire before buffers are reused. */
+        if ((*dma_channel_reg(instance, channel, 0xA0U) & error_mask) != 0U) { return NEON_ERROR; }
         __DMB();
         return NEON_OK;
     }

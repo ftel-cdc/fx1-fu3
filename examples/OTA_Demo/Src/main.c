@@ -100,6 +100,10 @@ int main(void) {
 *                                        PRIVATE FUNCTIONS
 ==================================================================================================*/
 
+/**
+ * @brief Delay using an uncalibrated busy loop between OTA demo iterations.
+ * @param[in] count Number of loop iterations.
+ */
 static void ota_demo_delay_busy(volatile uint32_t count) {
     while (count--) {
     }

@@ -70,7 +70,8 @@ neon_status_t neon_dma_start_channel(DMA_TypeDef *instance, const neon_dma_confi
 neon_status_t neon_dma_wait_channel(DMA_TypeDef *instance, uint8_t channel, uint32_t timeout_cycles);
 /**
  * @brief Check completion without waiting.
- * @return NEON_OK when done and idle, NEON_BUSY while pending, or an error.
+ * @return NEON_OK when done, idle and no accepted AXI transactions remain;
+ * NEON_BUSY while pending, or an error.
  * @details Bus/FIFO/AXI timeout errors fail the transfer. The no-progress
  * watchdog is advisory for peripheral-paced commands, which may legitimately
  * wait for UART characters longer than its window; it remains fatal for M2M.

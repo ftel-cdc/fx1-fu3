@@ -1,8 +1,30 @@
+/**
+ * @file main.c
+ * @brief UART terminal entry point for UART_ECHO_Polling.
+ * @details
+ * Initialize the UART console and run UART_ECHO_Polling when r is pressed.
+ * Enter starts a new line and prints the fpga:>> prompt.
+ */
+
+/*==================================================================================================
+*                                          INCLUDE FILES
+==================================================================================================*/
+
 #include <stdio.h>
 #include "mcu_device.h"
 #include "uart_echo_polling.h"
 #include "console/neon_console.h"
 
+/*==================================================================================================
+*                                         GLOBAL FUNCTIONS
+==================================================================================================*/
+
+/**
+ * @brief Initialize the UART console and dispatch the example.
+ * @return This function does not return.
+ * @details
+ * Press r to run the example; Enter starts a new terminal prompt line.
+ */
 int main(void) {
     printf("\nFU2 UART_ECHO_Polling_FPGA\n");
     neon_uart_handle_t *uart = neon_console_get_uart();

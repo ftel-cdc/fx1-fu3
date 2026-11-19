@@ -22,11 +22,11 @@ extern "C" {
 *                                       FUNCTION PROTOTYPES
 ==================================================================================================*/
 /**
- * @brief Execute testcase 5P1 - PWM_Output (TIM0_CH0).
- * @details Testcase initialize PWM at predefined frequency, same level interactive menu via UART to
- *          see change Duty Cycle (0%, 25%, 50%, 75%, 100%), check Stop cancer section and verify
- *          parameters via Hardware Readback.
- * @param uart Pointer uses the UART handle structure for exchanging console data.
+ * @brief Run the TIM0 channel-0 PWM test menu.
+ * @param[in,out] uart Initialized UART handle; ownership remains with the caller.
+ * @details
+ * Configure PWM at the selected frequency. UART commands set the duty cycle to
+ * 0%, 25%, 50%, 75% or 100%, start/stop PWM and print the hardware register values.
  */
 void pwm_output_run(neon_uart_handle_t *uart);
 

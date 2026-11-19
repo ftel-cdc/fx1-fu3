@@ -1,2 +1,35 @@
-rsource "../cmake/FPGA_Kconfig"
+menu "FU2 example configuration"
 
+config FU2_EXAMPLE_FIXED_CLOCK_HZ
+    int "Fixed FPGA clock (Hz; 0 uses normal SDK clock setup)"
+    range 0 1000000000
+    default 10000000
+    help
+        Must match the actual FPGA clock. Zero retains the SDK SystemInit settings.
+
+config FU2_EXAMPLE_RX_TIMEOUT_POLLS
+    int "Console RX polling budget"
+    range 1 100000000
+    default 10000
+
+endmenu
+
+menu "SPI DMA example"
+
+config SPI_DMA_SCK_HZ
+    int "SPI0 SCK frequency (Hz)"
+    range 10000 5000000
+    default 1000000
+    help
+        Mode 3, MSB first, hardware SS0, 32-bit payloads. The divider rounds
+        down the actual frequency so it does not exceed the requested value.
+
+config SPI_DMA_TIMEOUT_POLLS
+    int "SPI/DMA polling budget"
+    range 1000 100000000
+    default 1000000
+    help
+        Polling iterations, not milliseconds. A DMA command that does not
+        finish requires resetting the FPGA before another run.
+
+endmenu

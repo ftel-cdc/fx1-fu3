@@ -1,2 +1,24 @@
-rsource "../cmake/FPGA_Kconfig"
+menu "FU2 example configuration"
+
+config FU2_EXAMPLE_FIXED_CLOCK_HZ
+    int "Fixed FPGA clock (Hz; 0 uses normal SDK clock setup)"
+    range 0 1000000000
+    default 10000000
+    help
+        Must match the actual FPGA clock. Zero retains the SDK SystemInit settings.
+
+config FREERTOS_PERIPHERAL_QUEUE_LENGTH
+    int "Number of events in the shared queue"
+    range 1 128
+    default 16
+    help
+        UART RX interrupts and the periodic task share this queue.
+        New events are dropped and counted when the queue is full.
+
+config FREERTOS_PERIPHERAL_QUEUE_PERIOD_MS
+    int "Periodic event interval (ms)"
+    range 100 60000
+    default 1000
+
+endmenu
 

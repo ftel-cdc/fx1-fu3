@@ -1,7 +1,8 @@
 /**
  * @file rtc_calendar.h
  * @brief Testcase skeleton for RTC_Calendar.
- * @details Declares the entry point; peripheral behavior will be added later.
+ * @details
+ * Declares the entry point; peripheral behavior will be added later.
  */
 
 #ifndef FU2_EXAMPLE_RTC_CALENDAR_H

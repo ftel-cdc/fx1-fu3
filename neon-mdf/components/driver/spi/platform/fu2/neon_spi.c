@@ -574,6 +574,26 @@ neon_status_t neon_spi_get_clock_status(SPI_TypeDef *instance, neon_spi_clock_st
     return NEON_OK;
 }
 
+/** @copydoc neon_spi_wait_tx_complete */
+neon_status_t neon_spi_wait_tx_complete(SPI_TypeDef *instance, uint32_t timeout_polls) {
+    neon_status_t status = spi_acquire(instance);
+    if (status != NEON_OK) { return status; }
+    if (((instance->CTRL & SPI_CTRL_SPI_MODE_Msk) >> SPI_CTRL_SPI_MODE_Pos) != 1U) {
+        spi_release(instance);
+        return NEON_NOT_SUPPORTED;
+    }
+    if ((instance->CTRL & SPI_CTRL_DMA_ENABLE_Msk) != 0U &&
+        (instance->CTRL_TX & SPI_CTRL_TX_ENABLE_Msk) != 0U) {
+        while ((instance->STT_DMA & SPI_STT_DMA_TRAN_DONE_TX_Msk) == 0U) {
+            if (timeout_polls == 0U) { return spi_end_transfer(instance, NEON_TIMEOUT); }
+            --timeout_polls;
+        }
+    }
+    status = spi_wait_tx_empty(instance, &timeout_polls);
+    if (status == NEON_OK) { status = spi_wait_frame_complete(instance, 0U, &timeout_polls); }
+    return spi_end_transfer(instance, status);
+}
+
 /** @copydoc neon_spi_configure_dma */
 neon_status_t neon_spi_configure_dma(SPI_TypeDef *instance, neon_spi_dma_direction_t direction,
                                      const neon_spi_dma_config_t *config) {

@@ -4,9 +4,7 @@
  * @details
  * * Backend I2C for FU2.
  *
- * Register/POS/MASK derives from the FU2.h created by FU2.yaml. The transaction sequence attaches to
- * fu2_dti_i2c.[ch] and DTI I2C CTRL User Guide; HAL adds CRM management, pinmux, handle status,
- * shared timeout_polls, and bus error testing.
+ * Blocking transfers, DMA request control, clock/reset and pin configuration for FU2.
  */
 
 /*==================================================================================================
@@ -25,12 +23,14 @@
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
 #define I2C_CONTEXT_PIN_AUTO (1U << 0)
+#define I2C_CONTEXT_RESTORE_IRQ (1U << 1)
+#define I2C_RECOVERY_POLLS 10000U
+#define I2C_DMA_BUSY_MASK (I2C_ISR_DMA_BUSY_TX_Msk | I2C_ISR_DMA_BUSY_RX_Msk)
 #define I2C_INTERRUPT_MASK ((uint32_t)NEON_I2C_INTERRUPT_ALL)
 #define I2C_FLAG_MASK ((uint32_t)NEON_I2C_FLAG_ALL)
 
 #define I2C_TRANSFER_ERROR_FLAGS                                                                                       \
-    (I2C_ISR_ARB_LOST_Msk | I2C_ISR_ADDR_NACK_Msk | I2C_ISR_DATA_NACK_Msk | I2C_ISR_SCL_STUCK_LOW_Msk |                \
-     I2C_ISR_SDA_STUCK_LOW_Msk)
+    (I2C_ISR_ARB_LOST_Msk | I2C_ISR_SCL_STUCK_LOW_Msk | I2C_ISR_SDA_STUCK_LOW_Msk)
 
 /*==================================================================================================
 *                                         LOCAL VARIABLES
@@ -58,22 +58,27 @@ static neon_status_t i2c_reset_pin_route(void);
 static void i2c_pulse_interrupt_clear(I2C_TypeDef *instance, uint32_t interrupts);
 static uint32_t i2c_error_to_clear_mask(uint32_t status);
 static uint32_t i2c_error_code(uint32_t status);
+static uint32_t i2c_logical_flags(const I2C_TypeDef *instance);
 static neon_status_t i2c_check_transfer_error(neon_i2c_handle_t *hi2c);
 static void i2c_abort_master(neon_i2c_handle_t *hi2c, uint8_t transfer_started);
+static void i2c_mark_fault(neon_i2c_handle_t *hi2c);
+static void i2c_restore_polling_irq(neon_i2c_handle_t *hi2c, uint32_t saved_interrupts,
+                                  uint32_t irq_enabled, uint32_t irq_pending);
 static neon_status_t i2c_consume_timeout(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls);
 static neon_status_t i2c_wait_bus_idle(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls, uint8_t check_error);
 static neon_status_t i2c_wait_start_consumed(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls);
 static neon_status_t i2c_wait_tx_space(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls);
-static neon_status_t i2c_wait_rx_data(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls);
+static neon_status_t i2c_wait_rx_data(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls,
+                                     uint32_t *transfer_started);
 static neon_status_t i2c_wait_transfer_done(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls);
-static neon_status_t i2c_wait_stop_detected(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls);
+static neon_status_t i2c_stop_master(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls,
+                                    uint32_t *transfer_started);
 static neon_status_t i2c_acquire(neon_i2c_handle_t *hi2c, neon_i2c_state_t state);
 static void i2c_release(neon_i2c_handle_t *hi2c);
 static void i2c_flush_fifos(I2C_TypeDef *instance);
 static neon_status_t i2c_prepare_master(neon_i2c_handle_t *hi2c, uint32_t address, uint32_t size,
                                         neon_i2c_direction_t direction, uint32_t use_sub_address, uint32_t sub_address,
-                                        uint32_t *timeout_polls, uint32_t *saved_interrupts,
-                                        uint32_t *transfer_started);
+                                        uint32_t *timeout_polls, uint32_t *saved_interrupts);
 static neon_status_t i2c_finish_polling_transfer(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls,
                                                  uint32_t *transfer_started);
 static neon_status_t i2c_master_write_core(neon_i2c_handle_t *hi2c, uint32_t address, uint32_t prefix_valid,
@@ -82,6 +87,7 @@ static neon_status_t i2c_master_write_core(neon_i2c_handle_t *hi2c, uint32_t add
 static neon_status_t i2c_master_read_core(neon_i2c_handle_t *hi2c, uint32_t address, uint32_t use_sub_address,
                                           uint32_t sub_address, uint8_t *data, uint32_t size, uint32_t timeout_polls);
 static void i2c_prepare_slave(neon_i2c_handle_t *hi2c, uint32_t *saved_interrupts);
+static neon_status_t i2c_finish_slave(neon_i2c_handle_t *hi2c);
 
 /*==================================================================================================
 *                                         GLOBAL FUNCTIONS
@@ -99,22 +105,53 @@ void neon_i2c_get_default_config(neon_i2c_config_t *config) {
     config->clock_stretch = NEON_I2C_CLOCK_STRETCH_DISABLE;
     config->own_address = 0U;
     config->pin_config = NEON_I2C_PIN_CONFIG_AUTO;
-    config->timing.scl_low_count = 20U;
-    config->timing.scl_high_count = 9U;
-    config->timing.scl_low_count_high_speed = 0U;
-    config->timing.scl_high_count_high_speed = 0U;
-    config->timing.spike_count = 1U;
-    config->timing.start_setup_count = 12U;
-    config->timing.start_hold_count = 16U;
-    config->timing.stop_setup_count = 12U;
-    config->timing.sda_hold_count = 4U;
-    config->timing.bus_free_count = 20U;
-    config->timing.scl_stuck_low_count = 0U;
-    config->timing.sda_stuck_low_count = 20U;
+    memset(&config->timing, 0, sizeof(config->timing));
+    (void)neon_i2c_calculate_timing(neon_crm_get_system_clock_frequency(), 100000U, &config->timing);
     config->fifo.tx_full_level = 0U;
     config->fifo.tx_empty_level = 0U;
     config->fifo.rx_full_level = 0U;
     config->fifo.rx_empty_level = 0U;
+}
+
+/* The largest product is 60000 kHz * 9500 ns and fits in 32 bits. */
+static uint32_t i2c_ns_to_cycles(uint32_t clock_khz, uint32_t ns) {
+    return (clock_khz * ns + 999999U) / 1000000U;
+}
+
+/** @copydoc neon_i2c_calculate_timing */
+neon_status_t neon_i2c_calculate_timing(uint32_t i2c_clock_hz, uint32_t scl_hz, neon_i2c_timing_t *timing) {
+    if (timing == NULL || i2c_clock_hz == 0U || i2c_clock_hz > 60000000U ||
+        scl_hz == 0U || scl_hz > 400000U) {
+        return NEON_INVALID_PARAM;
+    }
+    uint32_t khz = (i2c_clock_hz + 999U) / 1000U;
+    uint32_t standard = scl_hz <= 100000U;
+    uint32_t period = (i2c_clock_hz + scl_hz - 1U) / scl_hz;
+    uint32_t low = (period + 1U) / 2U;
+    uint32_t min_low = i2c_ns_to_cycles(khz, standard ? 4700U : 1300U);
+    /* spike=1, synchronizer=2: low >= 4*(spike+2+sync+1). */
+    if (min_low < 24U) { min_low = 24U; }
+    if (low < min_low) { low = min_low; }
+    uint32_t high = period > low ? period - low : 0U;
+    uint32_t min_high = i2c_ns_to_cycles(khz, standard ? 4000U : 600U);
+    /* Observed high includes six filter/synchronizer cycles. */
+    if (min_high < 7U) { min_high = 7U; }
+    if (high < min_high) { high = min_high; }
+    if (low > 0xFFFFU || high - 6U > 0xFFFFU) { return NEON_INVALID_PARAM; }
+
+    neon_i2c_timing_t result = {0};
+    result.scl_low_count = low;
+    result.scl_high_count = high - 6U;
+    result.spike_count = 1U;
+    result.start_setup_count = i2c_ns_to_cycles(khz, standard ? 9500U : 1300U);
+    result.start_hold_count = i2c_ns_to_cycles(khz, standard ? 8100U : 1300U);
+    result.stop_setup_count = i2c_ns_to_cycles(khz, standard ? 8100U : 1300U);
+    result.sda_hold_count = i2c_ns_to_cycles(khz, 300U);
+    result.bus_free_count = i2c_ns_to_cycles(khz, standard ? 9500U : 2700U);
+    result.scl_stuck_low_count = 0xFFFFU;
+    result.sda_stuck_low_count = 0xFFFFU;
+    memcpy(timing, &result, sizeof(result));
+    return NEON_OK;
 }
 
 /** @copydoc neon_i2c_get_state */
@@ -161,13 +198,17 @@ neon_status_t neon_i2c_set_config(neon_i2c_handle_t *hi2c, const neon_i2c_config
     if (i2c_is_valid_config(config) == 0U) {
         return NEON_INVALID_PARAM;
     }
+    /* Ultra Fast needs push-pull pins and different transfer semantics. */
+    if (config->speed_mode == NEON_I2C_SPEED_ULTRA_FAST) {
+        return NEON_NOT_SUPPORTED;
+    }
     if (config->pin_config == NEON_I2C_PIN_CONFIG_AUTO) {
         neon_status_t route_status = i2c_validate_pin_route();
         if (route_status != NEON_OK) {
             return route_status;
         }
     }
-    if (hi2c->state == NEON_I2C_STATE_READY) {
+    if (hi2c->state == NEON_I2C_STATE_READY || hi2c->state == NEON_I2C_STATE_FAULT) {
         neon_status_t status = neon_i2c_deinit(hi2c);
         if (status != NEON_OK) {
             return status;
@@ -220,7 +261,16 @@ neon_status_t neon_i2c_deinit(neon_i2c_handle_t *hi2c) {
         i2c_exit_critical(primask);
         return NEON_ERROR;
     }
-    if (hi2c->state != NEON_I2C_STATE_READY) {
+    if (hi2c->state != NEON_I2C_STATE_READY && hi2c->state != NEON_I2C_STATE_FAULT) {
+        i2c_exit_critical(primask);
+        return NEON_BUSY;
+    }
+    /* Request disable alone does not acknowledge outstanding DMAC accesses. */
+    if ((hi2c->instance->ISR & I2C_DMA_BUSY_MASK) != 0U ||
+        ((hi2c->instance->IDTR | hi2c->instance->IDRR) & I2C_IDTR_ENABLE_Msk) != 0U ||
+        (hi2c->state == NEON_I2C_STATE_READY &&
+         (((hi2c->instance->ISR & I2C_ISR_BUS_BUSY_Msk) != 0U) ||
+          ((hi2c->instance->ICTLR & (I2C_ICTLR_START_Msk | I2C_ICTLR_STOP_Msk)) != 0U)))) {
         i2c_exit_critical(primask);
         return NEON_BUSY;
     }
@@ -229,6 +279,10 @@ neon_status_t neon_i2c_deinit(neon_i2c_handle_t *hi2c) {
 
     hi2c->instance->IER = 0U;
     next_status = neon_crm_peripheral_reset(NEON_CRM_PERIPHERAL_I2C0);
+    if (next_status != NEON_OK) {
+        i2c_mark_fault(hi2c);
+        return next_status;
+    }
     if (status == NEON_OK) {
         status = next_status;
     }
@@ -243,6 +297,10 @@ neon_status_t neon_i2c_deinit(neon_i2c_handle_t *hi2c) {
         status = next_status;
     }
 
+    if ((hi2c->private_context & I2C_CONTEXT_RESTORE_IRQ) != 0U) {
+        NVIC_ClearPendingIRQ(I2C0_IRQn);
+        NVIC_EnableIRQ(I2C0_IRQn);
+    }
     primask = i2c_enter_critical();
     fu2_i2c_owner = NULL;
     hi2c->state = NEON_I2C_STATE_RESET;
@@ -347,73 +405,108 @@ neon_status_t neon_i2c_mem_write(neon_i2c_handle_t *hi2c, uint16_t dev_address, 
 /** @copydoc neon_i2c_slave_transmit */
 neon_status_t neon_i2c_slave_transmit(neon_i2c_handle_t *hi2c, const uint8_t *data, uint16_t size,
                                       uint32_t timeout_polls) {
-    neon_status_t status;
-    uint32_t saved_interrupts;
-    uint16_t index;
-
-    if ((i2c_is_valid_handle(hi2c) == 0U) || (data == NULL) || (size == 0U) || (size > NEON_I2C_MAX_TRANSFER_SIZE)) {
+    if (i2c_is_valid_handle(hi2c) == 0U || data == NULL || size == 0U || size > NEON_I2C_MAX_TRANSFER_SIZE) {
         return NEON_INVALID_PARAM;
     }
-    if (i2c_active_config.mode != NEON_I2C_MODE_SLAVE) {
-        return NEON_NOT_SUPPORTED;
+    if (i2c_active_config.mode != NEON_I2C_MODE_SLAVE) { return NEON_NOT_SUPPORTED; }
+    neon_status_t status = i2c_acquire(hi2c, NEON_I2C_STATE_BUSY_TX);
+    if (status != NEON_OK) { return status; }
+    /* The master must wait until this blocking operation has been armed. */
+    if ((hi2c->instance->ISR & I2C_ISR_BUS_BUSY_Msk) != 0U) {
+        i2c_release(hi2c);
+        return NEON_BUSY;
     }
-    status = i2c_acquire(hi2c, NEON_I2C_STATE_BUSY_TX);
-    if (status != NEON_OK) {
-        return status;
-    }
+    uint32_t irq_enabled = NVIC_GetEnableIRQ(I2C0_IRQn);
+    uint32_t irq_pending = NVIC_GetPendingIRQ(I2C0_IRQn);
+    NVIC_DisableIRQ(I2C0_IRQn);
+    uint32_t saved_interrupts;
     hi2c->error_code = NEON_I2C_ERROR_NONE;
     i2c_prepare_slave(hi2c, &saved_interrupts);
-
-    for (index = 0U; (index < size) && (status == NEON_OK); index++) {
-        status = i2c_wait_tx_space(hi2c, &timeout_polls);
-        if (status == NEON_OK) {
-            uint32_t data_word = 0U;
-            memcpy(&data_word, &data[index], sizeof(data[index]));
-            hi2c->instance->ITDR = data_word;
+    uint32_t queued = 0U;
+    uint32_t stop_settled = 0U;
+    for (;;) {
+        status = i2c_check_transfer_error(hi2c);
+        if (status != NEON_OK) { break; }
+        uint32_t stopped = hi2c->instance->IITR & I2C_IITR_STOP_DEC_Msk;
+        uint32_t flags = hi2c->instance->ISR;
+        if (stopped != 0U) {
+            /* Allow the FIFO read pointer to cross its clock boundary after STOP. */
+            if (++stop_settled >= 8U) {
+                if (queued < size || (flags & I2C_ISR_TXFF_EMPTY_Msk) == 0U) {
+                    hi2c->error_code |= NEON_I2C_ERROR_SHORT_TRANSFER;
+                    status = NEON_ERROR;
+                }
+                break;
+            }
+        } else if (queued < size && (flags & I2C_ISR_TXFF_FULL_Msk) == 0U) {
+            uint32_t word = 0U;
+            memcpy(&word, &data[queued++], 1U);
+            hi2c->instance->ITDR = word;
         }
+        status = i2c_consume_timeout(hi2c, &timeout_polls);
+        if (status != NEON_OK) { break; }
     }
-    if (status == NEON_OK) {
-        /* Slave does not use byte-count/transfer-done as master. The transaction only ends when the other
-     * controller plays STOP. */
-        status = i2c_wait_stop_detected(hi2c, &timeout_polls);
-    }
-    i2c_pulse_interrupt_clear(hi2c->instance, I2C_IICR_STOP_DEC_CLR_Msk);
-    hi2c->instance->IIER = saved_interrupts;
+    neon_status_t cleanup = i2c_finish_slave(hi2c);
+    if (status == NEON_OK) { status = cleanup; }
+    i2c_restore_polling_irq(hi2c, saved_interrupts, irq_enabled, irq_pending);
     i2c_release(hi2c);
     return status;
 }
 
 /** @copydoc neon_i2c_slave_receive */
 neon_status_t neon_i2c_slave_receive(neon_i2c_handle_t *hi2c, uint8_t *data, uint16_t size, uint32_t timeout_polls) {
-    neon_status_t status;
-    uint32_t saved_interrupts;
-    uint16_t index;
+    uint32_t received;
+    return neon_i2c_slave_receive_ex(hi2c, data, size, &received, timeout_polls);
+}
 
-    if ((i2c_is_valid_handle(hi2c) == 0U) || (data == NULL) || (size == 0U) || (size > NEON_I2C_MAX_TRANSFER_SIZE)) {
+/** @copydoc neon_i2c_slave_receive_ex */
+neon_status_t neon_i2c_slave_receive_ex(neon_i2c_handle_t *hi2c, uint8_t *data, uint16_t size,
+                                      uint32_t *received_count, uint32_t timeout_polls) {
+    if (i2c_is_valid_handle(hi2c) == 0U || data == NULL || size == 0U ||
+        size > NEON_I2C_MAX_TRANSFER_SIZE || received_count == NULL) {
         return NEON_INVALID_PARAM;
     }
-    if (i2c_active_config.mode != NEON_I2C_MODE_SLAVE) {
-        return NEON_NOT_SUPPORTED;
+    *received_count = 0U;
+    if (i2c_active_config.mode != NEON_I2C_MODE_SLAVE) { return NEON_NOT_SUPPORTED; }
+    neon_status_t status = i2c_acquire(hi2c, NEON_I2C_STATE_BUSY_RX);
+    if (status != NEON_OK) { return status; }
+    if ((hi2c->instance->ISR & I2C_ISR_BUS_BUSY_Msk) != 0U) {
+        i2c_release(hi2c);
+        return NEON_BUSY;
     }
-    status = i2c_acquire(hi2c, NEON_I2C_STATE_BUSY_RX);
-    if (status != NEON_OK) {
-        return status;
-    }
+    uint32_t irq_enabled = NVIC_GetEnableIRQ(I2C0_IRQn);
+    uint32_t irq_pending = NVIC_GetPendingIRQ(I2C0_IRQn);
+    NVIC_DisableIRQ(I2C0_IRQn);
+    uint32_t saved_interrupts;
     hi2c->error_code = NEON_I2C_ERROR_NONE;
     i2c_prepare_slave(hi2c, &saved_interrupts);
-
-    for (index = 0U; (index < size) && (status == NEON_OK); index++) {
-        status = i2c_wait_rx_data(hi2c, &timeout_polls);
-        if (status == NEON_OK) {
-            const uint32_t result_word = (uint8_t)(hi2c->instance->IRDR & I2C_IRDR_RX_DATA_Msk);
-            memcpy(&data[index], &result_word, 1U);
+    uint32_t received = 0U;
+    uint32_t stop_settled = 0U;
+    for (;;) {
+        status = i2c_check_transfer_error(hi2c);
+        if (status != NEON_OK) { break; }
+        uint32_t stopped = hi2c->instance->IITR & I2C_IITR_STOP_DEC_Msk;
+        uint32_t flags = hi2c->instance->ISR;
+        if ((flags & I2C_ISR_RXFF_EMPTY_Msk) == 0U) {
+            const uint32_t word = hi2c->instance->IRDR & I2C_IRDR_RX_DATA_Msk;
+            if (received < size) {
+                memcpy(&data[received++], &word, 1U);
+            } else {
+                hi2c->error_code |= NEON_I2C_ERROR_RX_OVERFLOW;
+            }
+            stop_settled = 0U;
+        } else if (stopped != 0U && ++stop_settled >= 8U) {
+            if (received < size) { hi2c->error_code |= NEON_I2C_ERROR_SHORT_TRANSFER; }
+            if (hi2c->error_code != NEON_I2C_ERROR_NONE) { status = NEON_ERROR; }
+            break;
         }
+        status = i2c_consume_timeout(hi2c, &timeout_polls);
+        if (status != NEON_OK) { break; }
     }
-    if (status == NEON_OK) {
-        status = i2c_wait_stop_detected(hi2c, &timeout_polls);
-    }
-    i2c_pulse_interrupt_clear(hi2c->instance, I2C_IICR_STOP_DEC_CLR_Msk);
-    hi2c->instance->IIER = saved_interrupts;
+    *received_count = received;
+    neon_status_t cleanup = i2c_finish_slave(hi2c);
+    if (status == NEON_OK) { status = cleanup; }
+    i2c_restore_polling_irq(hi2c, saved_interrupts, irq_enabled, irq_pending);
     i2c_release(hi2c);
     return status;
 }
@@ -546,7 +639,7 @@ neon_status_t neon_i2c_get_flags(const neon_i2c_handle_t *hi2c, uint32_t *flags)
         (hi2c->state == NEON_I2C_STATE_RESET)) {
         return NEON_INVALID_PARAM;
     }
-    *flags = hi2c->instance->ISR & I2C_FLAG_MASK;
+    *flags = i2c_logical_flags(hi2c->instance);
     return NEON_OK;
 }
 
@@ -556,30 +649,83 @@ neon_status_t neon_i2c_is_active_flag(const neon_i2c_handle_t *hi2c, uint32_t fl
         (fu2_i2c_owner != hi2c) || (hi2c->state == NEON_I2C_STATE_RESET)) {
         return NEON_INVALID_PARAM;
     }
-    const uint32_t result_word = ((hi2c->instance->ISR & flags) == flags) ? 1U : 0U;
+    const uint32_t result_word = ((i2c_logical_flags(hi2c->instance) & flags) == flags) ? 1U : 0U;
     memcpy(active, &result_word, 1U);
+    return NEON_OK;
+}
+
+/** @copydoc neon_i2c_set_dma_config */
+neon_status_t neon_i2c_set_dma_config(neon_i2c_handle_t *hi2c, neon_i2c_dma_direction_t direction,
+                                    const neon_i2c_dma_config_t *config) {
+    if ((uint32_t)direction > NEON_I2C_DMA_RX || config == NULL ||
+        (uint32_t)config->mode > NEON_I2C_DMA_BURST ||
+        (uint32_t)config->burst_length > NEON_I2C_DMA_BURST_16 ||
+        config->total_bytes == 0U || config->total_bytes > 255U) {
+        return NEON_INVALID_PARAM;
+    }
+    neon_status_t status = i2c_acquire(hi2c, NEON_I2C_STATE_BUSY_CONFIG);
+    if (status != NEON_OK) { return status; }
+    I2C_TypeDef *instance = hi2c->instance;
+    if ((instance->ISR & (I2C_ISR_BUS_BUSY_Msk | I2C_DMA_BUSY_MASK)) != 0U ||
+        (instance->ICTLR & (I2C_ICTLR_START_Msk | I2C_ICTLR_STOP_Msk)) != 0U ||
+        ((instance->IDTR | instance->IDRR) & I2C_IDTR_ENABLE_Msk) != 0U) {
+        i2c_release(hi2c);
+        return NEON_BUSY;
+    }
+    volatile uint32_t *control = direction == NEON_I2C_DMA_TX ? &instance->IDTR : &instance->IDRR;
+    /* IDTR and IDRR have identical field layouts. Keep requests disabled. */
+    *control = ((uint32_t)config->burst_length << I2C_IDTR_MAX_BURST_LEN_Pos) |
+               ((uint32_t)config->mode << I2C_IDTR_BURST_MODE_Pos) |
+               ((uint32_t)config->total_bytes << I2C_IDTR_TOTAL_BYTES_Pos);
+    i2c_pulse_interrupt_clear(instance, direction == NEON_I2C_DMA_TX ?
+        NEON_I2C_INTERRUPT_DMA_TX_DONE : NEON_I2C_INTERRUPT_DMA_RX_DONE);
+    i2c_release(hi2c);
     return NEON_OK;
 }
 
 /** @copydoc neon_i2c_configure_dma */
 neon_status_t neon_i2c_configure_dma(neon_i2c_handle_t *hi2c, neon_i2c_dma_direction_t direction, uint8_t enable) {
-    neon_status_t status;
-    uint32_t mask;
-
-    if (((uint32_t)direction > NEON_I2C_DMA_RX) || (enable > 1U)) {
-        return NEON_INVALID_PARAM;
-    }
-    status = i2c_acquire(hi2c, NEON_I2C_STATE_BUSY_CONFIG);
-    if (status != NEON_OK) {
-        return status;
-    }
-    mask = (direction == NEON_I2C_DMA_TX) ? I2C_IDER_TX_ENABLE_Msk : I2C_IDER_RX_ENABLE_Msk;
+    if ((uint32_t)direction > NEON_I2C_DMA_RX || enable > 1U) { return NEON_INVALID_PARAM; }
+    neon_status_t status = i2c_acquire(hi2c, NEON_I2C_STATE_BUSY_CONFIG);
+    if (status != NEON_OK) { return status; }
+    I2C_TypeDef *instance = hi2c->instance;
+    volatile uint32_t *control = direction == NEON_I2C_DMA_TX ? &instance->IDTR : &instance->IDRR;
     if (enable != 0U) {
-        hi2c->instance->IDER |= mask;
+        if ((*control & I2C_IDTR_TOTAL_BYTES_Msk) == 0U) {
+            i2c_release(hi2c);
+            return NEON_INVALID_PARAM;
+        }
+        if ((*control & I2C_IDTR_ENABLE_Msk) != 0U ||
+            (instance->ISR & (I2C_ISR_BUS_BUSY_Msk | I2C_DMA_BUSY_MASK)) != 0U ||
+            (instance->ICTLR & (I2C_ICTLR_START_Msk | I2C_ICTLR_STOP_Msk)) != 0U) {
+            i2c_release(hi2c);
+            return NEON_BUSY;
+        }
+        uint32_t done = direction == NEON_I2C_DMA_TX ?
+            NEON_I2C_INTERRUPT_DMA_TX_DONE : NEON_I2C_INTERRUPT_DMA_RX_DONE;
+        i2c_pulse_interrupt_clear(instance, done);
+        /* IITR reports enabled events; also makes DONE available to polling. */
+        instance->IIER |= done;
+        *control |= I2C_IDTR_ENABLE_Msk;
     } else {
-        hi2c->instance->IDER &= ~mask;
+        *control &= ~I2C_IDTR_ENABLE_Msk;
     }
     i2c_release(hi2c);
+    return NEON_OK;
+}
+
+/** @copydoc neon_i2c_is_dma_complete */
+neon_status_t neon_i2c_is_dma_complete(const neon_i2c_handle_t *hi2c, neon_i2c_dma_direction_t direction,
+                                     uint8_t *complete) {
+    if (i2c_is_valid_handle(hi2c) == 0U || fu2_i2c_owner != hi2c || complete == NULL ||
+        (uint32_t)direction > NEON_I2C_DMA_RX) {
+        return NEON_INVALID_PARAM;
+    }
+    uint32_t done = direction == NEON_I2C_DMA_TX ?
+        NEON_I2C_INTERRUPT_DMA_TX_DONE : NEON_I2C_INTERRUPT_DMA_RX_DONE;
+    uint32_t busy = direction == NEON_I2C_DMA_TX ? I2C_ISR_DMA_BUSY_TX_Msk : I2C_ISR_DMA_BUSY_RX_Msk;
+    const uint32_t result = (hi2c->instance->IITR & done) != 0U && (hi2c->instance->ISR & busy) == 0U;
+    memcpy(complete, &result, 1U);
     return NEON_OK;
 }
 
@@ -851,7 +997,8 @@ static neon_status_t i2c_apply_config(neon_i2c_handle_t *hi2c, const neon_i2c_co
     hi2c->instance->IBCER = 0U;
     hi2c->instance->IDIER = 0U;
     hi2c->instance->ISRER = 0U;
-    hi2c->instance->IDER = 0U;
+    hi2c->instance->IDTR = 0U;
+    hi2c->instance->IDRR = 0U;
     hi2c->instance->ISDIR = 0U;
     hi2c->instance->IIOCR = 0U;
     hi2c->instance->ISMBR = 0U;
@@ -983,12 +1130,6 @@ static void i2c_pulse_interrupt_clear(I2C_TypeDef *instance, uint32_t interrupts
 static uint32_t i2c_error_to_clear_mask(uint32_t status) {
     uint32_t clear_mask = 0U;
 
-    if ((status & I2C_ISR_ADDR_NACK_Msk) != 0U) {
-        clear_mask |= I2C_IICR_ADDR_NACK_CLR_Msk;
-    }
-    if ((status & I2C_ISR_DATA_NACK_Msk) != 0U) {
-        clear_mask |= I2C_IICR_DATA_NACK_CLR_Msk;
-    }
     if ((status & I2C_ISR_ARB_LOST_Msk) != 0U) {
         clear_mask |= I2C_IICR_ARB_LOST_CLR_Msk;
     }
@@ -1004,12 +1145,6 @@ static uint32_t i2c_error_to_clear_mask(uint32_t status) {
 static uint32_t i2c_error_code(uint32_t status) {
     uint32_t error = NEON_I2C_ERROR_NONE;
 
-    if ((status & I2C_ISR_ADDR_NACK_Msk) != 0U) {
-        error |= NEON_I2C_ERROR_ADDRESS_NACK;
-    }
-    if ((status & I2C_ISR_DATA_NACK_Msk) != 0U) {
-        error |= NEON_I2C_ERROR_DATA_NACK;
-    }
     if ((status & I2C_ISR_ARB_LOST_Msk) != 0U) {
         error |= NEON_I2C_ERROR_ARBITRATION_LOST;
     }
@@ -1022,31 +1157,74 @@ static uint32_t i2c_error_code(uint32_t status) {
     return error;
 }
 
+static uint32_t i2c_logical_flags(const I2C_TypeDef *instance) {
+    uint32_t raw = instance->ISR;
+    uint32_t interrupt = instance->IITR;
+    /* Keep public logical flag values while translating the hardware ISR. */
+    uint32_t flags = (raw & 7U) | ((raw & 0x3FF8U) << 2);
+    if ((interrupt & I2C_IITR_TRANSFER_DONE_Msk) != 0U) { flags |= NEON_I2C_FLAG_TRANSFER_DONE; }
+    if ((interrupt & I2C_IITR_ADDR_NACK_Msk) != 0U) { flags |= NEON_I2C_FLAG_ADDRESS_NACK; }
+    if ((interrupt & I2C_IITR_DATA_NACK_Msk) != 0U) { flags |= NEON_I2C_FLAG_DATA_NACK; }
+    return flags;
+}
+
 static neon_status_t i2c_check_transfer_error(neon_i2c_handle_t *hi2c) {
     uint32_t status = hi2c->instance->ISR;
+    uint32_t interrupt = hi2c->instance->IITR;
     uint32_t errors = status & I2C_TRANSFER_ERROR_FLAGS;
-    uint32_t pec_error = hi2c->instance->IITR & I2C_IITR_PEC_ERR_Msk;
-
-    if ((errors == 0U) && (pec_error == 0U)) {
-        return NEON_OK;
+    uint32_t clear = i2c_error_to_clear_mask(errors);
+    uint32_t code = i2c_error_code(errors);
+    if ((interrupt & I2C_IITR_ADDR_NACK_Msk) != 0U) {
+        code |= NEON_I2C_ERROR_ADDRESS_NACK;
+        clear |= I2C_IICR_ADDR_NACK_CLR_Msk;
     }
-
-    hi2c->error_code |= i2c_error_code(errors);
-    i2c_pulse_interrupt_clear(hi2c->instance, i2c_error_to_clear_mask(errors));
-    if (pec_error != 0U) {
-        hi2c->error_code |= NEON_I2C_ERROR_PEC;
-        i2c_pulse_interrupt_clear(hi2c->instance, I2C_IICR_PEC_ERR_CLR_Msk);
+    if ((interrupt & I2C_IITR_DATA_NACK_Msk) != 0U) {
+        code |= NEON_I2C_ERROR_DATA_NACK;
+        clear |= I2C_IICR_DATA_NACK_CLR_Msk;
     }
-
+    if ((interrupt & I2C_IITR_PEC_ERR_Msk) != 0U) {
+        code |= NEON_I2C_ERROR_PEC;
+        clear |= I2C_IICR_PEC_ERR_CLR_Msk;
+    }
+    if (code == 0U) { return NEON_OK; }
+    hi2c->error_code |= code;
+    i2c_pulse_interrupt_clear(hi2c->instance, clear);
     return NEON_ERROR;
 }
 
 static void i2c_abort_master(neon_i2c_handle_t *hi2c, uint8_t transfer_started) {
-    /* Do not play STOP when the bus is busy before START, or after arbitration has been lost: in either
-   * case the bus is under another controller. */
+    /* Never send STOP to a bus owned by a different master. */
     if ((transfer_started != 0U) && ((hi2c->error_code & NEON_I2C_ERROR_ARBITRATION_LOST) == 0U)) {
         hi2c->instance->ICTLR |= I2C_ICTLR_STOP_Msk;
+        /* The transfer budget may already be zero. Cleanup has its own bounded budget. */
+        uint32_t recovery = I2C_RECOVERY_POLLS;
+        while (((hi2c->instance->ICTLR & (I2C_ICTLR_START_Msk | I2C_ICTLR_STOP_Msk)) != 0U) ||
+               ((hi2c->instance->ISR & I2C_ISR_BUS_BUSY_Msk) != 0U)) {
+            if (recovery-- == 0U) { i2c_mark_fault(hi2c); return; }
+        }
+        i2c_flush_fifos(hi2c->instance);
+    } else if ((hi2c->instance->ICTLR & (I2C_ICTLR_START_Msk | I2C_ICTLR_STOP_Msk)) != 0U) {
+        i2c_mark_fault(hi2c);
     }
+}
+
+static void i2c_mark_fault(neon_i2c_handle_t *hi2c) {
+    hi2c->error_code |= NEON_I2C_ERROR_RECOVERY_REQUIRED;
+    hi2c->state = NEON_I2C_STATE_FAULT;
+    hi2c->instance->IIER = 0U;
+    if (NVIC_GetEnableIRQ(I2C0_IRQn) != 0U) { hi2c->private_context |= I2C_CONTEXT_RESTORE_IRQ; }
+    NVIC_DisableIRQ(I2C0_IRQn);
+}
+
+static void i2c_restore_polling_irq(neon_i2c_handle_t *hi2c, uint32_t saved_interrupts,
+                                  uint32_t irq_enabled, uint32_t irq_pending) {
+    if (hi2c->state == NEON_I2C_STATE_FAULT) {
+        if (irq_enabled != 0U) { hi2c->private_context |= I2C_CONTEXT_RESTORE_IRQ; }
+        return;
+    }
+    hi2c->instance->IIER = saved_interrupts;
+    if (irq_pending == 0U) { NVIC_ClearPendingIRQ(I2C0_IRQn); }
+    if (irq_enabled != 0U) { NVIC_EnableIRQ(I2C0_IRQn); }
 }
 
 static neon_status_t i2c_consume_timeout(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls) {
@@ -1108,42 +1286,38 @@ static neon_status_t i2c_wait_tx_space(neon_i2c_handle_t *hi2c, uint32_t *timeou
     return i2c_check_transfer_error(hi2c);
 }
 
-static neon_status_t i2c_wait_rx_data(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls) {
+static neon_status_t i2c_wait_rx_data(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls,
+                                     uint32_t *transfer_started) {
     neon_status_t status;
 
-    while ((hi2c->instance->ISR & I2C_ISR_RXFF_EMPTY_Msk) != 0U) {
+    for (;;) {
         status = i2c_check_transfer_error(hi2c);
         if (status != NEON_OK) {
             return status;
+        }
+        /* DONE counts bytes received from the bus, not bytes copied to RAM.
+         * Release SCL promptly; STOP preserves the unread RX FIFO contents. */
+        if (*transfer_started != 0U &&
+            (((hi2c->instance->ISR & I2C_ISR_TRANSFER_DONE_Msk) != 0U) ||
+             ((hi2c->instance->IITR & I2C_IITR_TRANSFER_DONE_Msk) != 0U))) {
+            status = i2c_stop_master(hi2c, timeout_polls, transfer_started);
+            if (status != NEON_OK) { return status; }
+        }
+        if ((hi2c->instance->ISR & I2C_ISR_RXFF_EMPTY_Msk) == 0U) {
+            return NEON_OK;
         }
         status = i2c_consume_timeout(hi2c, timeout_polls);
         if (status != NEON_OK) {
             return status;
         }
     }
-    return i2c_check_transfer_error(hi2c);
 }
 
 static neon_status_t i2c_wait_transfer_done(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls) {
     neon_status_t status;
 
-    while ((hi2c->instance->ISR & I2C_ISR_TRANSFER_DONE_Msk) == 0U) {
-        status = i2c_check_transfer_error(hi2c);
-        if (status != NEON_OK) {
-            return status;
-        }
-        status = i2c_consume_timeout(hi2c, timeout_polls);
-        if (status != NEON_OK) {
-            return status;
-        }
-    }
-    return i2c_check_transfer_error(hi2c);
-}
-
-static neon_status_t i2c_wait_stop_detected(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls) {
-    neon_status_t status;
-
-    while ((hi2c->instance->IITR & I2C_IITR_STOP_DEC_Msk) == 0U) {
+    while ((hi2c->instance->ISR & I2C_ISR_TRANSFER_DONE_Msk) == 0U &&
+           (hi2c->instance->IITR & I2C_IITR_TRANSFER_DONE_Msk) == 0U) {
         status = i2c_check_transfer_error(hi2c);
         if (status != NEON_OK) {
             return status;
@@ -1168,13 +1342,19 @@ static neon_status_t i2c_acquire(neon_i2c_handle_t *hi2c, neon_i2c_state_t state
         i2c_exit_critical(primask);
         return NEON_ERROR;
     }
+    if (hi2c->state == NEON_I2C_STATE_FAULT) {
+        i2c_exit_critical(primask);
+        return NEON_ERROR;
+    }
     if (hi2c->state != NEON_I2C_STATE_READY) {
         i2c_exit_critical(primask);
         return NEON_BUSY;
     }
     /* DMA requests must be disabled before software touches the FIFOs. */
     if (((state == NEON_I2C_STATE_BUSY_TX) || (state == NEON_I2C_STATE_BUSY_RX)) &&
-        ((hi2c->instance->IDER & (I2C_IDER_TX_ENABLE_Msk | I2C_IDER_RX_ENABLE_Msk)) != 0U)) {
+        (((hi2c->instance->IDTR & I2C_IDTR_ENABLE_Msk) |
+          (hi2c->instance->IDRR & I2C_IDRR_ENABLE_Msk)) != 0U ||
+         (hi2c->instance->ISR & I2C_DMA_BUSY_MASK) != 0U)) {
         i2c_exit_critical(primask);
         return NEON_BUSY;
     }
@@ -1185,7 +1365,7 @@ static neon_status_t i2c_acquire(neon_i2c_handle_t *hi2c, neon_i2c_state_t state
 
 static void i2c_release(neon_i2c_handle_t *hi2c) {
     uint32_t primask = i2c_enter_critical();
-    hi2c->state = NEON_I2C_STATE_READY;
+    if (hi2c->state != NEON_I2C_STATE_FAULT) { hi2c->state = NEON_I2C_STATE_READY; }
     i2c_exit_critical(primask);
 }
 
@@ -1197,12 +1377,10 @@ static void i2c_flush_fifos(I2C_TypeDef *instance) {
 
 static neon_status_t i2c_prepare_master(neon_i2c_handle_t *hi2c, uint32_t address, uint32_t size,
                                         neon_i2c_direction_t direction, uint32_t use_sub_address, uint32_t sub_address,
-                                        uint32_t *timeout_polls, uint32_t *saved_interrupts,
-                                        uint32_t *transfer_started) {
+                                        uint32_t *timeout_polls, uint32_t *saved_interrupts) {
     neon_status_t status;
     uint32_t config;
 
-    *transfer_started = 0U;
     /* A previous timeout_polls can leave START/STOP pending even before BUS_BUSY
    * asserts. Do not overwrite its address/count or flush its FIFO. */
     while ((hi2c->instance->ICTLR & (I2C_ICTLR_START_Msk | I2C_ICTLR_STOP_Msk)) != 0U) {
@@ -1219,10 +1397,9 @@ static neon_status_t i2c_prepare_master(neon_i2c_handle_t *hi2c, uint32_t addres
     i2c_flush_fifos(hi2c->instance);
     i2c_pulse_interrupt_clear(hi2c->instance, NEON_I2C_INTERRUPT_ALL);
     *saved_interrupts = hi2c->instance->IIER;
-    /* TRANSFER_DONE_EN=1 makes the IP keep the SCL low because it creates STOP itself. The polling API
-   * temporarily turns off this bit and restores after transactions. If the pec is on, the status
-   * pec is temporarily opened so that the polling path can also detect errors. */
-    hi2c->instance->IIER = *saved_interrupts & ~I2C_IIER_TRANSFER_DONE_EN_Msk;
+    /* Poll DONE/NACK in IITR and keep the bus until software sends STOP. */
+    hi2c->instance->IIER = *saved_interrupts | I2C_IIER_TRANSFER_DONE_EN_Msk |
+        I2C_IIER_ADDR_NACK_EN_Msk | I2C_IIER_DATA_NACK_EN_Msk;
     if ((hi2c->instance->ISMBR & I2C_ISMBR_PEC_EN_Msk) != 0U) {
         hi2c->instance->IIER |= I2C_IIER_PEC_ERR_EN_Msk;
     }
@@ -1240,22 +1417,32 @@ static neon_status_t i2c_prepare_master(neon_i2c_handle_t *hi2c, uint32_t addres
     if (use_sub_address != 0U) {
         config |= I2C_ICFGR_SUB_ADDR_EN_Msk;
     }
-    hi2c->instance->ICFGR = config;
-    hi2c->instance->ICTLR |= I2C_ICTLR_START_Msk;
-    *transfer_started = 1U;
-    return i2c_wait_start_consumed(hi2c, timeout_polls);
+    hi2c->instance->ICFGR = config & ~I2C_ICFGR_HW_AUTO_END_Msk;
+    /* Caller fills TX FIFO before issuing START; RX can start immediately. */
+    return NEON_OK;
+}
+
+static neon_status_t i2c_stop_master(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls,
+                                    uint32_t *transfer_started) {
+    hi2c->instance->ICTLR |= I2C_ICTLR_STOP_Msk;
+    while ((hi2c->instance->ICTLR & I2C_ICTLR_STOP_Msk) != 0U) {
+        neon_status_t status = i2c_consume_timeout(hi2c, timeout_polls);
+        if (status != NEON_OK) { return status; }
+    }
+    *transfer_started = 0U;
+    return i2c_wait_bus_idle(hi2c, timeout_polls, 1U);
 }
 
 static neon_status_t i2c_finish_polling_transfer(neon_i2c_handle_t *hi2c, uint32_t *timeout_polls,
                                                  uint32_t *transfer_started) {
-    neon_status_t status;
+    neon_status_t status = NEON_OK;
 
-    status = i2c_wait_transfer_done(hi2c, timeout_polls);
-    if (status == NEON_OK) {
-        /* TRANSFER_DONE_EN is off, so hardware has created STOP by itself. From now on BUS_BUSY can be a
-     * different master; timeout_polls cannot play more STOP. */
-        *transfer_started = 0U;
-        status = i2c_wait_bus_idle(hi2c, timeout_polls, 1U);
+    /* RX may have already stopped on DONE, then drained the remaining FIFO. */
+    if (*transfer_started != 0U) {
+        status = i2c_wait_transfer_done(hi2c, timeout_polls);
+        if (status == NEON_OK) {
+            status = i2c_stop_master(hi2c, timeout_polls, transfer_started);
+        }
     }
     i2c_pulse_interrupt_clear(hi2c->instance, I2C_IICR_TRANSFER_DONE_CLR_Msk);
     return status;
@@ -1266,12 +1453,17 @@ static neon_status_t i2c_master_write_core(neon_i2c_handle_t *hi2c, uint32_t add
                                            uint32_t timeout_polls) {
     neon_status_t status;
     uint32_t saved_interrupts = hi2c->instance->IIER;
-    uint16_t index;
+    uint32_t saved_auto_end = hi2c->instance->ICFGR & I2C_ICFGR_HW_AUTO_END_Msk;
+    uint32_t irq_enabled = NVIC_GetEnableIRQ(I2C0_IRQn);
+    uint32_t irq_pending = NVIC_GetPendingIRQ(I2C0_IRQn);
+    /* IITR events must remain enabled for polling without invoking a user ISR. */
+    NVIC_DisableIRQ(I2C0_IRQn);
+    uint16_t index = 0U;
     uint16_t total_size = (uint16_t)(data_size + ((prefix_valid != 0U) ? 1U : 0U));
     uint32_t transfer_started = 0U;
 
     status = i2c_prepare_master(hi2c, address, total_size, NEON_I2C_DIRECTION_WRITE, 0U, 0U, &timeout_polls,
-                                &saved_interrupts, &transfer_started);
+                                &saved_interrupts);
     if ((status == NEON_OK) && (prefix_valid != 0U)) {
         status = i2c_wait_tx_space(hi2c, &timeout_polls);
         if (status == NEON_OK) {
@@ -1279,7 +1471,23 @@ static neon_status_t i2c_master_write_core(neon_i2c_handle_t *hi2c, uint32_t add
         }
     }
 
-    for (index = 0U; (index < data_size) && (status == NEON_OK); index++) {
+    /* Queue the prefix and up to one FIFO of data before the bus can consume it. */
+    uint32_t prefill_size = NEON_I2C_FIFO_DEPTH - (prefix_valid != 0U ? 1U : 0U);
+    if (prefill_size > data_size) { prefill_size = data_size; }
+    for (; (index < prefill_size) && (status == NEON_OK); index++) {
+        status = i2c_wait_tx_space(hi2c, &timeout_polls);
+        if (status == NEON_OK) {
+            uint32_t data_word = 0U;
+            memcpy(&data_word, &data[index], sizeof(data[index]));
+            hi2c->instance->ITDR = data_word;
+        }
+    }
+    if (status == NEON_OK) {
+        hi2c->instance->ICTLR |= I2C_ICTLR_START_Msk;
+        transfer_started = 1U;
+        status = i2c_wait_start_consumed(hi2c, &timeout_polls);
+    }
+    for (; (index < data_size) && (status == NEON_OK); index++) {
         status = i2c_wait_tx_space(hi2c, &timeout_polls);
         if (status == NEON_OK) {
             uint32_t data_word = 0U;
@@ -1293,7 +1501,10 @@ static neon_status_t i2c_master_write_core(neon_i2c_handle_t *hi2c, uint32_t add
     if (status != NEON_OK) {
         i2c_abort_master(hi2c, transfer_started);
     }
-    hi2c->instance->IIER = saved_interrupts;
+    if (hi2c->state != NEON_I2C_STATE_FAULT) {
+        hi2c->instance->ICFGR = (hi2c->instance->ICFGR & ~I2C_ICFGR_HW_AUTO_END_Msk) | saved_auto_end;
+    }
+    i2c_restore_polling_irq(hi2c, saved_interrupts, irq_enabled, irq_pending);
     return status;
 }
 
@@ -1301,16 +1512,27 @@ static neon_status_t i2c_master_read_core(neon_i2c_handle_t *hi2c, uint32_t addr
                                           uint32_t sub_address, uint8_t *data, uint32_t size, uint32_t timeout_polls) {
     neon_status_t status;
     uint32_t saved_interrupts = hi2c->instance->IIER;
-    uint16_t index;
+    uint32_t saved_auto_end = hi2c->instance->ICFGR & I2C_ICFGR_HW_AUTO_END_Msk;
+    uint32_t irq_enabled = NVIC_GetEnableIRQ(I2C0_IRQn);
+    uint32_t irq_pending = NVIC_GetPendingIRQ(I2C0_IRQn);
+    /* IITR events must remain enabled for polling without invoking a user ISR. */
+    NVIC_DisableIRQ(I2C0_IRQn);
+    uint16_t index = 0U;
     uint32_t transfer_started = 0U;
 
     status = i2c_prepare_master(hi2c, address, size, NEON_I2C_DIRECTION_READ, use_sub_address, sub_address,
-                                &timeout_polls, &saved_interrupts, &transfer_started);
-    for (index = 0U; (index < size) && (status == NEON_OK); index++) {
-        status = i2c_wait_rx_data(hi2c, &timeout_polls);
+                                &timeout_polls, &saved_interrupts);
+    if (status == NEON_OK) {
+        hi2c->instance->ICTLR |= I2C_ICTLR_START_Msk;
+        transfer_started = 1U;
+        status = i2c_wait_start_consumed(hi2c, &timeout_polls);
+    }
+    while ((index < size) && (status == NEON_OK)) {
+        status = i2c_wait_rx_data(hi2c, &timeout_polls, &transfer_started);
         if (status == NEON_OK) {
             const uint32_t result_word = (uint8_t)(hi2c->instance->IRDR & I2C_IRDR_RX_DATA_Msk);
             memcpy(&data[index], &result_word, 1U);
+            ++index;
         }
     }
     if (status == NEON_OK) {
@@ -1319,7 +1541,10 @@ static neon_status_t i2c_master_read_core(neon_i2c_handle_t *hi2c, uint32_t addr
     if (status != NEON_OK) {
         i2c_abort_master(hi2c, transfer_started);
     }
-    hi2c->instance->IIER = saved_interrupts;
+    if (hi2c->state != NEON_I2C_STATE_FAULT) {
+        hi2c->instance->ICFGR = (hi2c->instance->ICFGR & ~I2C_ICFGR_HW_AUTO_END_Msk) | saved_auto_end;
+    }
+    i2c_restore_polling_irq(hi2c, saved_interrupts, irq_enabled, irq_pending);
     return status;
 }
 
@@ -1331,4 +1556,19 @@ static void i2c_prepare_slave(neon_i2c_handle_t *hi2c, uint32_t *saved_interrupt
     if ((hi2c->instance->ISMBR & I2C_ISMBR_PEC_EN_Msk) != 0U) {
         hi2c->instance->IIER |= I2C_IIER_PEC_ERR_EN_Msk;
     }
+}
+
+/* A slave cannot issue STOP. Only reset/reconfigure can recover a stuck active bus. */
+static neon_status_t i2c_finish_slave(neon_i2c_handle_t *hi2c) {
+    uint32_t recovery = I2C_RECOVERY_POLLS;
+    while ((hi2c->instance->ISR & I2C_ISR_BUS_BUSY_Msk) != 0U) {
+        if (recovery-- == 0U) {
+            hi2c->error_code |= NEON_I2C_ERROR_TIMEOUT;
+            i2c_mark_fault(hi2c);
+            return NEON_TIMEOUT;
+        }
+    }
+    i2c_flush_fifos(hi2c->instance);
+    i2c_pulse_interrupt_clear(hi2c->instance, I2C_IICR_STOP_DEC_CLR_Msk);
+    return NEON_OK;
 }

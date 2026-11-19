@@ -185,6 +185,9 @@ void pwm_output_run(neon_uart_handle_t *uart) {
 *                                        PRIVATE FUNCTIONS
 ==================================================================================================*/
 
+/**
+ * @brief Print the PWM duty-cycle and start/stop commands.
+ */
 static void pwm_output_print_pwm_menu(void) {
     printf("\n=================== 5P1 PWM OUTPUT TEST MENU ===================\n");
     printf("  [0] Set Duty 0%%   (pulse = 0, Force LOW)\n");
@@ -198,6 +201,9 @@ static void pwm_output_print_pwm_menu(void) {
     printf("================================================================\n");
 }
 
+/**
+ * @brief Read and print TIM0 channel-0 registers and the calculated duty cycle.
+ */
 static void pwm_output_verify_hardware_readback(void) {
     uint32_t raw_chl = TIM0->CHL_CH0;   /* Actual period register */
     uint32_t raw_ccr1 = TIM0->CCR1_CH0; /* Actual pulse comparison register */

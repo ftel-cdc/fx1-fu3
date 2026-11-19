@@ -1,7 +1,8 @@
 /**
  * @file i2c_dma.h
- * @brief Testcase skeleton for I2C_DMA.
- * @details Declares the entry point; peripheral behavior will be added later.
+ * @brief I2C0 DMA EEPROM example entry point.
+ * @details
+ * Runs a single DMA write/read comparison using an AT24C256 EEPROM.
  */
 
 #ifndef FU2_EXAMPLE_I2C_DMA_H
@@ -15,7 +16,8 @@ extern "C" {
 *                                       FUNCTION PROTOTYPES
 ==================================================================================================*/
 /**
- * @brief Report that I2C_DMA is not implemented yet.
+ * @brief Write 16 EEPROM bytes with DMA, read them back with DMA and compare.
+ * @details Overwrites EEPROM offsets 0000..000F without restoring their contents.
  */
 void i2c_dma_run(void);
 

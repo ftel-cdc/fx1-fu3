@@ -129,6 +129,10 @@ int main(void) {
 *                                        PRIVATE FUNCTIONS
 ==================================================================================================*/
 
+/**
+ * @brief Delay using an uncalibrated busy loop.
+ * @param[in] count Number of loop iterations.
+ */
 static void blinky_delay_busy(volatile uint32_t count) {
     while (count--) {
         __NOP();
