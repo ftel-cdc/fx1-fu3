@@ -5,8 +5,8 @@
  * Declares the entry point; peripheral behavior will be added later.
  */
 
-#ifndef FU2_EXAMPLE_RTC_CALENDAR_H
-#define FU2_EXAMPLE_RTC_CALENDAR_H
+#ifndef GT32U2086_EXAMPLE_RTC_CALENDAR_H
+#define GT32U2086_EXAMPLE_RTC_CALENDAR_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,4 +24,4 @@ void rtc_calendar_run(void);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_RTC_CALENDAR_H */
+#endif /* GT32U2086_EXAMPLE_RTC_CALENDAR_H */

@@ -49,11 +49,11 @@
  */
 #include <stdint.h> /* READ COMMENT ABOVE. */
 
-/* FU2 has a word-only SRAM data bus. Keep logical byte fields in words;
- * retain packed text/buffer layouts through the standard FU2 runtime APIs.
+/* GT32U2086 has a word-only SRAM data bus. Keep logical byte fields in words;
+ * retain packed text/buffer layouts through the standard GT32U2086 runtime APIs.
  * Static object dummy layouts below must use the same field widths.
  */
-#if defined( FU2 )
+#if defined( GT32U2086 )
     #include <string.h>
     /* Volatile prevents GCC from narrowing masked field reads back to LDRB. */
     typedef volatile uint32_t portByteField_t;

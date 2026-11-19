@@ -1,4 +1,4 @@
-# Printf_Log — UART logging on FU2
+# Printf_Log — UART logging on GT32U2086
 
 This bare-metal example calls `printf` directly through the SDK's built-in
 word-only formatter and `_write`. The application only includes `<stdio.h>`;
@@ -16,28 +16,28 @@ calls printf will then fail to link.
 
 ```sh
 cd examples/Printf_Log
-cmake --preset FU2
-cmake --build --preset FU2
+cmake --preset GT32U2086
+cmake --build --preset GT32U2086
 ```
 
 Outputs:
 
-- `build/FU2/printf_log`: ELF for the debugger or emulator.
-- `build/FU2/printf_log.bin`: raw payload.
-- `build/FU2/printf_log_image.bin`: 128-byte ROM v5 header and payload, programmed
-  at `0x00020000` with the existing FU2 tools.
+- `build/GT32U2086/printf_log`: ELF for the debugger or emulator.
+- `build/GT32U2086/printf_log.bin`: raw payload.
+- `build/GT32U2086/printf_log_image.bin`: 128-byte ROM v5 header and payload, programmed
+  at `0x00020000` with the existing GT32U2086 tools.
 
-Use the complete image for ROM boot. See [FU2.md](../../guide/FU2.md) for the
-programming and XIP contract. This example does not add a separate FU2 flashing
+Use the complete image for ROM boot. See [GT32U2086.md](../../guide/GT32U2086.md) for the
+programming and XIP contract. This example does not add a separate GT32U2086 flashing
 tool or bootloader.
 
 Reconfigure for a board with a different clock:
 
 ```sh
 # Board supplying a fixed 20 MHz clock:
-cmake --preset FU2 -DNEON_PRINTF_FIXED_CLOCK_HZ=20000000
+cmake --preset GT32U2086 -DNEON_PRINTF_FIXED_CLOCK_HZ=20000000
 # Or use the SDK's normal SystemInit policy:
-cmake --preset FU2 -DNEON_PRINTF_FIXED_CLOCK_HZ=0
+cmake --preset GT32U2086 -DNEON_PRINTF_FIXED_CLOCK_HZ=0
 ```
 
 Choose one clock configuration for the board and rebuild. The console defaults

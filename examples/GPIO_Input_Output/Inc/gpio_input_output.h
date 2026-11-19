@@ -5,8 +5,8 @@
  * Declares module interfaces.
  */
 
-#ifndef FU2_EXAMPLE_GPIO_INPUT_OUTPUT_H
-#define FU2_EXAMPLE_GPIO_INPUT_OUTPUT_H
+#ifndef GT32U2086_EXAMPLE_GPIO_INPUT_OUTPUT_H
+#define GT32U2086_EXAMPLE_GPIO_INPUT_OUTPUT_H
 
 /*==================================================================================================
 *                                          INCLUDE FILES
@@ -32,4 +32,4 @@ void gpio_input_output_run(neon_uart_handle_t *uart);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_GPIO_INPUT_OUTPUT_H */
+#endif /* GT32U2086_EXAMPLE_GPIO_INPUT_OUTPUT_H */

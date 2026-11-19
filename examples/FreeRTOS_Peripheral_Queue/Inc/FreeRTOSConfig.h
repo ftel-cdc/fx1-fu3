@@ -1,6 +1,6 @@
 /**
  * @file FreeRTOSConfig.h
- * @brief FU2 application configuration, based on FreeRTOS_Blinky.
+ * @brief GT32U2086 application configuration, based on FreeRTOS_Blinky.
  */
 
 #ifndef FREERTOS_CONFIG_H
@@ -37,7 +37,7 @@ extern uint32_t SystemCoreClock;
 #define configTOTAL_HEAP_SIZE (8 * 1024)
 #define configAPPLICATION_ALLOCATED_HEAP 0
 #define configHEAP_CLEAR_MEMORY_ON_FREE 1
-#define configUSE_NEWLIB_REENTRANT 0 /* Only the terminal task writes to the FU2 console. */
+#define configUSE_NEWLIB_REENTRANT 0 /* Only the terminal task writes to the GT32U2086 console. */
 
 #define configUSE_IDLE_HOOK 0
 #define configUSE_TICK_HOOK 0
@@ -51,8 +51,8 @@ extern uint32_t SystemCoreClock;
 #define configSTACK_DEPTH_TYPE uint32_t
 #define configMESSAGE_BUFFER_LENGTH_TYPE size_t
 #define configENABLE_MPU 0
-/* FU2 has no VTOR. BootROM v5 forwards exceptions to application vectors.
- * The default port check reads VTOR (0xe000ed08), which is invalid on FU2.
+/* GT32U2086 has no VTOR. BootROM v5 forwards exceptions to application vectors.
+ * The default port check reads VTOR (0xe000ed08), which is invalid on GT32U2086.
  * Disable that direct-routing check while retaining configASSERT. */
 #define configCHECK_HANDLER_INSTALLATION 0
 

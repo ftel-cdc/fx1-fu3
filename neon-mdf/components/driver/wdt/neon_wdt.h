@@ -2,7 +2,7 @@
  * @file neon_wdt.h
  * @brief Public declarations for watchdog.
  * @details
- * FU2 watchdog: timeout_polls range, reset/interrupt response and refresh.
+ * GT32U2086 watchdog: timeout_polls range, reset/interrupt response and refresh.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.

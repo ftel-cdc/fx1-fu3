@@ -139,8 +139,8 @@ typedef struct QueueDefinition /* The old naming convention is used to prevent b
  * name below to enable the use of older kernel aware debuggers. */
 typedef xQUEUE Queue_t;
 
-#if defined( FU2 )
-    _Static_assert( sizeof( StaticQueue_t ) == sizeof( Queue_t ), "FU2 static queue layout" );
+#if defined( GT32U2086 )
+    _Static_assert( sizeof( StaticQueue_t ) == sizeof( Queue_t ), "GT32U2086 static queue layout" );
 #endif
 
 /*-----------------------------------------------------------*/

@@ -1,5 +1,4 @@
 // selectTarget.ts - QuickPick selects target, real list from CMakePresets.json through presets.ts (not
-// hardcode FU2/WEACT_F412).
 import * as vscode from "vscode";
 import { NeonMdfState } from "../state";
 import { discoverTargets } from "../presets";

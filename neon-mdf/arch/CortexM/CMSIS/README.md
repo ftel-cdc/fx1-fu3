@@ -1,25 +1,10 @@
-# Core/Arch/CortexM/CMSIS
+# CMSIS for GT32U2086
 
-- `CMSIS_5/` is vendored from ARM's official repository
-  (`https://github.com/ARM-software/CMSIS_5`). It contains only the sparse
-  `CMSIS/Core/Include` tree, excluding DSP, NN, RTOS2 and device packs that this
-  SDK does not need. Do not edit these vendor files manually.
+`CMSIS_5/` contains CMSIS-Core files from [Arm CMSIS_5](https://github.com/ARM-software/CMSIS_5),
+restricted to `core_cm0.h`, version/compiler headers and the upstream license.
+Core headers outside the GT32U2086 scope have been removed. When updating the
+vendor sources, keep Cortex-M0 dependency headers at the same version and verify the build.
 
-  **Current status:** this is a **plain vendored copy**, not an active Git
-  submodule; the original repository had not been initialized with `git init`.
-  To convert it to a submodule after initializing this repository, allowing
-  future ARM fixes through `git submodule update --remote`:
-
-  ```sh
-  rm -rf Core/Arch/CortexM/CMSIS/CMSIS_5   # Remove the current vendored copy
-  git submodule add https://github.com/ARM-software/CMSIS_5.git Core/Arch/CortexM/CMSIS/CMSIS_5
-  cd Core/Arch/CortexM/CMSIS/CMSIS_5
-  git sparse-checkout init --cone
-  git sparse-checkout set CMSIS/Core/Include
-  ```
-
-- `Device/<Family>/` contains headers, linker scripts and startup code generated
-  from `mcu-description/`; see `mcu-description/tools/generate.py` and
-  `Device/FU2/`. Paths use a single family level rather than
-  `<Vendor>/<Family>/`. Do not edit generated files manually. Only
-  `system_<DEVICE>.c/.h` are handwritten.
+`Device/GT32U2086/` contains headers, startup code and linker scripts generated
+from `mcu-description/devices/GT32U2086.yaml`. The system files and
+`gt32u2086_runtime.c` are handwritten. See the [SDK architecture](../../../../guide/Architecture.md).

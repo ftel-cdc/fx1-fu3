@@ -5,8 +5,8 @@
  * Indirect Single/Dual/Quad NOR erase, program and byte verification.
  */
 
-#ifndef FU2_EXAMPLE_QSPI_FLASH_READ_WRITE_H
-#define FU2_EXAMPLE_QSPI_FLASH_READ_WRITE_H
+#ifndef GT32U2086_EXAMPLE_QSPI_FLASH_READ_WRITE_H
+#define GT32U2086_EXAMPLE_QSPI_FLASH_READ_WRITE_H
 
 /*==================================================================================================
 *                                          INCLUDE FILES
@@ -35,4 +35,4 @@ void qspi_flash_read_write_run(neon_uart_handle_t *uart);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_QSPI_FLASH_READ_WRITE_H */
+#endif /* GT32U2086_EXAMPLE_QSPI_FLASH_READ_WRITE_H */

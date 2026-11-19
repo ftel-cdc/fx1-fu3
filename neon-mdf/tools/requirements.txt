@@ -1,3 +1,4 @@
-# Required for FU2 on Windows, STM32 UART tools and automatic port detection.
-# FU2 UART flashing/monitoring on Linux/macOS uses only the standard library.
+# Build/code generation, menuconfig, Windows UART and automatic port detection.
+PyYAML>=6,<7
+kconfiglib>=14.1,<15
 pyserial>=3.5,<4

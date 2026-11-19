@@ -60,15 +60,7 @@ def image_layout(device, image="standalone"):
         relay = p.ram.entry("irq_relay")
         if relay:
             relay_base, relay_size = ram.address + relay.offset, relay.size
-    if image == "bootloader":
-        flash_base = flash.address + header_size
-        flash_size = device.bootloader.size - header_size
-    elif image == "app":
-        header_base = flash.address + device.bootloader.size
-        header_size = device.bootloader.image_header_size
-        flash_base = header_base + header_size
-        flash_size = flash.size - device.bootloader.size - header_size
-    elif image != "standalone":
+    if image != "standalone":
         raise ValueError(f"Unknown image kind: {image}")
     return ImageLayout(header_base, header_size, flash_base, flash_size,
                        ram_base, ram_size, relay_base, relay_size)
@@ -93,22 +85,7 @@ def validate_profile(device):
             raise ValueError("irq_relay: must reserve at least 8 bytes, aligned to 8")
         if device.cpu.core not in ("cortex-m0", "cortex-m0plus") or device.cpu.extra.get("vtor_supported", False):
             raise ValueError("irq_relay requires M0/M0+ without VTOR")
-    if device.bootloader:
-        bl = device.bootloader
-        if type(bl.size) is not int or bl.size <= 0 or type(bl.image_header_size) is not int or bl.image_header_size < 0:
-            raise ValueError("bootloader: size must be positive and image_header_size nonnegative")
-        # Legacy bootloader partitions are relative to the entire selected flash.
-        # Only a leading header + remaining application has an unambiguous split.
-        app = p.flash.entry("application")
-        if (any(e.name not in ("application", "image_header") for e in p.flash.layout)
-                or (header and header.offset != 0)
-                or app.offset != layout.header_size or app.offset + app.size != flash.size):
-            raise ValueError("bootloader: flash layout must contain only an optional leading image_header and remaining application")
-        if header and bl.image_header_size != header.size:
-            raise ValueError("image_header.size must equal bootloader.image_header_size")
-        if bl.size <= layout.header_size or bl.size + bl.image_header_size >= flash.size:
-            raise ValueError("bootloader: header/partitions leave no FLASH for code")
-    for kind in ("standalone", "bootloader", "app") if device.bootloader else ("standalone",):
+    for kind in ("standalone",):
         layout = image_layout(device, kind)
         if layout.flash_base % 4 or layout.ram_base % 8 or (layout.ram_base + layout.ram_size) % 8:
             raise ValueError("application: vector must be word aligned and RAM/stack 8-byte aligned")

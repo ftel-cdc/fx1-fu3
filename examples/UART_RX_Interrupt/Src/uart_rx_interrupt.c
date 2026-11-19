@@ -24,7 +24,7 @@
 *                                         LOCAL VARIABLES
 ==================================================================================================*/
 
-/* FU2 saves each byte in a 32-bit word. */
+/* GT32U2086 saves each byte in a 32-bit word. */
 static uint32_t g_rx_buffer[RX_BUFFER_SIZE];
 static volatile uint32_t g_rx_head;
 static volatile uint32_t g_rx_tail;

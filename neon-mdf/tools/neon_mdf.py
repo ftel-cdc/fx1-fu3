@@ -1,33 +1,13 @@
 #!/usr/bin/env python3
-"""
-neon_mdf.py - build, flash, monitor and configure neon-mdf applications.
+"""Build, flash and monitor GT32U2086 applications.
 
-Run from an application folder containing CMakePresets.json, for example:
-    cd examples/Blinky
-    python3 /path/to/neon-mdf/tools/neon_mdf.py -t WEACT_F412 build flash-jtag monitor
+Run from a directory containing CMakePresets.json:
+    python3 /path/to/neon-mdf/tools/neon_mdf.py build
+    python3 /path/to/neon-mdf/tools/neon_mdf.py -p /dev/ttyUSB0 -b 19200 flash-uart-gt32u2086 monitor
 
-Add neon-mdf/tools to PATH and make this script executable to invoke it directly.
-Multiple actions run in order and stop when an action fails:
-
-    build             Configure if needed, then build incrementally with CMake/Ninja.
-    flash-jtag        Build and flash bootloader/header/app in one SWD session.
-    flash-uart-stm32  Use the STM32 ROM System Memory Bootloader. Connect PB2 to
-                      GND and hold B0; the CMake target resets through SWD.
-    flash-uart-fu2    Load <app>_image.bin through ROMCODE USART update. Select
-                      boot mode 100 and press RESET when the tool is ready.
-    flash-ota         Simulate OTA over SWD, writing the OTA image and pending
-                      otadata. Requires flashmap.csv; no network transport is used.
-    monitor           Open UART logs; Ctrl+] exits.
-    menuconfig        Configure Kconfig features.
-    set-target        Save -t in build/.neon_mdf_target for later invocations.
-
-FU2 uses its ROMCODE image header and app. Targets with the SDK bootloader use
-separate bootloader/header/app packaging. Flash targets are shared SDK CMake
-targets; see cmake/flash_targets.cmake and examples/OTA_Demo/.
-
-Target precedence: -t/--target, saved set-target value, then the only available
-CMake preset. Serial-port precedence: -p/--port, NEON_MDF_SERIAL_PORT, then
-automatic detection. FU2 example: -t FU2 -p /dev/ttyUSB0 -b 19200 flash-uart-fu2.
+Select boot mode 100 and press RESET after the UART loader is ready.
+Programming baud must match ROMCODE. Monitor baud defaults to 19200 and
+can be set separately with --monitor-baud. Ctrl+C exits the monitor.
 """
 import argparse
 import json
@@ -113,15 +93,11 @@ def ensure_configured(target: str) -> None:
 
 
 def detect_port_simple() -> str:
-    """
-    used by both flash-uart-stm32 and monitor, without SYNC/READY probing here
-    (the SDK bootloader protocol has no corresponding CMake flash target anymore; see
-    flash_targets.cmake). only don't time: if a USB-serial port exists, use it.
-    """
+    """Select the only USB serial port, without sending probe bytes."""
     try:
         import serial.tools.list_ports
     except ImportError:
-        # Explicit -p/NEON_MDF_SERIAL_PORT remains dependency-free for FU2 POSIX.
+        # Explicit -p/NEON_MDF_SERIAL_PORT remains dependency-free for GT32U2086 POSIX.
         return None
 
     candidates = [p.device for p in serial.tools.list_ports.comports() if p.vid is not None]
@@ -140,7 +116,7 @@ def resolve_port(cli_port) -> str:
 
     if not port:
         print(
-            "error: not auto that is warped - specified by -p/--port or variable each field NEON_MDF_SERIAL_PORT.",
+            "error: cannot select a unique serial port; pass -p/--port or NEON_MDF_SERIAL_PORT.",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -153,59 +129,14 @@ def action_build(target: str, _resolved_port) -> None:
     run(["cmake", "--build", "--preset", target])
 
 
-def action_flash_jtag(target: str, _resolved_port) -> None:
-    """
-    flash both bootloader and app through SWD in one OpenOCD session, using two `program` commands at
-    their actual addresses (cmake/flash_targets.cmake). No UART, running bootloader or serial port
-    at all. call target CMake shared flash_jtag.
-    """
-    ensure_configured(target)
-    run(["cmake", "--build", "--preset", target, "--target", "flash_jtag"])
-
-
-def action_flash_stm32(target: str, resolved_port: str) -> None:
-    """
-    flash both app bootloaders via the actual chip's System Memory Bootloader (ROM of STM32, not
-    bootloader from SDK script) via UART - use client from tools/stm32_uart_flash_firmware.py script
-    (not stm32flash, confirmed not to be malicious on macOS - see comment in flash_targets.cmake).
-    call CMake target for shared flash_uart_stm32.
-
-    Manual preparation: connect PB2 to GND and hold B0 before continuing. The CMake target resets
-    through SWD, which was more reliable than the physical Reset button during testing. input()
-    waits for the user to complete these physical steps because they cannot be automated.
-    cannot automatically execute this hand operation.
-    """
-    ensure_configured(target)
-    input(
-        "\n=== CONNECT PB2->GND + HOLD B0 ON THE BOARD (no Reset button needed - "
-        "automatic reset via SWD) ===\nPress Enter when ready..."
-    )
-    env = dict(os.environ, NEON_MDF_SERIAL_PORT=resolved_port)
-    run(["cmake", "--build", "--preset", target, "--target", "flash_uart_stm32"], env=env)
-    print(
-        "\nFlashing complete. Release B0, disconnect PB2 from GND, then reset to run the app."
-    )
-
-
-def action_flash_ota(target: str, _resolved_port) -> None:
-    """
-    OTA iteration price via SWD (write image + otadata pending on slot "ota") - calls the shared CMake
-    target flash_ota (exists only with app with flashmap.csv, see cmake/flash_targets.cmake
-    neon_mdf_add_ota_flash_target() + examples/OTA_Demo/). No serial port required (write via SWD,
-    same as flash_jtag).
-    """
-    ensure_configured(target)
-    run(["cmake", "--build", "--preset", target, "--target", "flash_ota"])
-
-
-def action_flash_fu2(target: str, resolved_port: str, baud: int) -> None:
-    if target != "FU2":
-        print("error: flash-uart-fu2 only for FU2 target.", file=sys.stderr)
+def action_flash_gt32u2086(target: str, resolved_port: str, baud: int) -> None:
+    if target != "GT32U2086":
+        print("error: flash-uart-gt32u2086 only for GT32U2086 target.", file=sys.stderr)
         sys.exit(1)
     ensure_configured(target)
     env = dict(os.environ, NEON_MDF_SERIAL_PORT=resolved_port,
                NEON_MDF_SERIAL_BAUD=str(baud))
-    run(["cmake", "--build", "--preset", target, "--target", "flash_uart_fu2"], env=env)
+    run(["cmake", "--build", "--preset", target, "--target", "flash_uart_gt32u2086"], env=env)
 
 
 def action_monitor(target: str, resolved_port: str, monitor_baud=None) -> None:
@@ -221,7 +152,7 @@ def action_menuconfig(target: str, _resolved_port) -> None:
     run(["cmake", "--build", "--preset", target, "--target", "menuconfig"])
 
 
-ALL_ACTIONS = ["build", "flash-jtag", "flash-uart-stm32", "flash-uart-fu2", "flash-ota", "monitor", "menuconfig", "set-target"]
+ALL_ACTIONS = ["build", "flash-uart-gt32u2086", "monitor", "menuconfig", "set-target"]
 
 
 def main() -> None:
@@ -230,16 +161,16 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    parser.add_argument("-t", "--target", help="Target (vd WEACT_F412).")
+    parser.add_argument("-t", "--target", choices=["GT32U2086"], help="Device preset (GT32U2086).")
     parser.add_argument("-p", "--port", help="Serial port, e.g. /dev/cu.usbmodem102.")
-    parser.add_argument("-b", "--baud", type=int, help="Baud ROMCODE FU2; or NEON_MDF_SERIAL_BAUD. no baud change seen on the chip.")
-    parser.add_argument("--monitor-baud", type=int, help="Baud UART uses FU2 (default 19200), read repeatedly with baud flash.")
+    parser.add_argument("-b", "--baud", type=int, help="Programming baud matching ROMCODE; alternatively NEON_MDF_SERIAL_BAUD.")
+    parser.add_argument("--monitor-baud", type=int, help="Application UART baud (default 19200), independent of programming baud.")
     parser.add_argument("actions", nargs="+", choices=ALL_ACTIONS, help="action (can write multiple, run sequentially).")
     args = parser.parse_args()
 
     if "set-target" in args.actions:
         if not args.target:
-            print("error: 'set-target' requires -t/--target to be included, e.g. neon_mdf.py -t WEACT_F412 set-target", file=sys.stderr)
+            print("error: 'set-target' requires -t/--target to be included, e.g. neon_mdf.py -t GT32U2086 set-target", file=sys.stderr)
             sys.exit(1)
         save_target(args.target)
         args.actions = [a for a in args.actions if a != "set-target"]
@@ -247,21 +178,23 @@ def main() -> None:
             return
 
     target = resolve_target(args.target)
+    if target != "GT32U2086":
+        parser.error("Only GT32U2086 is supported; select -t GT32U2086 to replace a stale target")
 
     baud = args.baud
-    if "flash-uart-fu2" in args.actions:
-        if target != "FU2":
-            parser.error("flash-uart-fu2 for target FU2 only")
+    if "flash-uart-gt32u2086" in args.actions:
+        if target != "GT32U2086":
+            parser.error("flash-uart-gt32u2086 for target GT32U2086 only")
         try:
             baud = baud if baud is not None else int(os.environ.get("NEON_MDF_SERIAL_BAUD", ""))
         except ValueError:
-            parser.error("baud rate ROMCODE FU2 by -b/--baud or NEON_MDF_SERIAL_BAUD")
+            parser.error("baud rate ROMCODE GT32U2086 by -b/--baud or NEON_MDF_SERIAL_BAUD")
         if baud <= 0:
-            parser.error("baud must be a sugar integer")
+            parser.error("baud must be a positive integer")
     if args.monitor_baud is not None and args.monitor_baud <= 0:
-        parser.error("monitor-baud must be a line integer")
+        parser.error("monitor-baud must be a positive integer")
 
-    needs_port = any(a in args.actions for a in ("flash-uart-stm32", "flash-uart-fu2", "monitor"))
+    needs_port = any(a in args.actions for a in ("flash-uart-gt32u2086", "monitor"))
     resolved_port = None
     if needs_port:
         resolved_port = resolve_port(args.port)
@@ -269,14 +202,8 @@ def main() -> None:
     for action in args.actions:
         if action == "build":
             action_build(target, resolved_port)
-        elif action == "flash-jtag":
-            action_flash_jtag(target, resolved_port)
-        elif action == "flash-uart-stm32":
-            action_flash_stm32(target, resolved_port)
-        elif action == "flash-uart-fu2":
-            action_flash_fu2(target, resolved_port, baud)
-        elif action == "flash-ota":
-            action_flash_ota(target, resolved_port)
+        elif action == "flash-uart-gt32u2086":
+            action_flash_gt32u2086(target, resolved_port, baud)
         elif action == "monitor":
             action_monitor(target, resolved_port, args.monitor_baud)
         elif action == "menuconfig":

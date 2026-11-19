@@ -1,6 +1,6 @@
-menu "FU2 example configuration"
+menu "GT32U2086 example configuration"
 
-config FU2_EXAMPLE_FIXED_CLOCK_HZ
+config GT32U2086_EXAMPLE_FIXED_CLOCK_HZ
     int "Fixed FPGA clock (Hz; 0 uses normal SDK clock setup)"
     range 0 60000000
     default 10000000

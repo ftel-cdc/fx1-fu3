@@ -2,7 +2,7 @@
 
 Kept arch-agnostic on purpose: peripheral/register/memory shape doesn't
 depend on the CPU core. Only cpu.* fields vary per architecture, and each
-backend (backends/cortex_m/, backends/riscv/) is responsible for knowing
+backend (backends/cortex_m/) is responsible for knowing
 which cpu.* fields it needs.
 """
 from dataclasses import dataclass, field
@@ -77,39 +77,6 @@ class Cpu:
 
 
 @dataclass
-class BootloaderUart:
-    peripheral: str  # peripherals[].name use UART for bootloader (e.g. "USART1")
-    tx_pin: str
-    rx_pin: str
-    af: int
-    baud: int
-
-
-@dataclass
-class Bootloader:
-    """optional declaration: device has bootloader please not (see schema/common.schema.yaml). when it
-    does, generator generates more
-    <DEVICE>_BOOTLOADER.ld + <DEVICE>_APP.ld (other than <DEVICE>_FLASH.ld still generate normally) -
-    see gen_linker_script.py."""
-    size: int               # size partition bootloader (bytes), from the beginning of the flash
-    image_header_size: int  # size "slot" header before app vector table (byte) - must be large enough for
-    # flash.address+size+image_header_size to align SCB->VTOR (see loader.py
-    # _check_bootloader_vtor_alignment) - not just >= actual sizeof(image_header_t).
-    uart: BootloaderUart
-
-
-@dataclass
-class EraseSector:
-    """1 sector erase-joint group, running-length (see
-    schema/common.schema.yaml erase_sectors); STM32F412 has three groups:
-    four 16KB sectors, one 64KB sector and three 128KB sectors, listed in increasing address order (not a
-    large knife, tools/gen_flashmap.py read sequentially from the beginning of the flash to calculate the
-    gioi)."""
-    size: int
-    count: int
-
-
-@dataclass
 class LayoutEntry:
     name: str
     offset: int
@@ -146,10 +113,6 @@ class Device:
     memory: list  # list[MemoryRegion]
     peripherals: list  # list[Peripheral]
     interrupts: list  # list[Interrupt]
-    bootloader: object = None  # Optional[Bootloader] - None = device without bootloader partition
-    erase_sectors: object = None  # Optional[list[EraseSector]] - None = no declarations, tools/gen_flashmap.py ignores validation of
-    # sectors when devices are not at the same level (optional, only for additional validation of
-    # devices with uneven sectors - see WEACT_F412.yaml).
     profile: ProfileParam = field(default_factory=ProfileParam)
 
     def memory_by_kind(self, kind: str):

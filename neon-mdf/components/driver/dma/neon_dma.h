@@ -2,7 +2,7 @@
  * @file neon_dma.h
  * @brief Public declarations for DMA.
  * @details
- * FU2 FTEL DMA: 8 channels, command registers at a 0x100-byte stride.
+ * GT32U2086 FTEL DMA: 8 channels, command registers at a 0x100-byte stride.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.

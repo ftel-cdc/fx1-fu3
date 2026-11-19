@@ -1,38 +1,20 @@
-# Wire Kconfig (use kconfiglib, the reusable ESP-IDF/Zephyr library, not parser) to build - same as
-# ESP-IDF's sdkconfig/menuconfig. See ARCHITECTURE.md section 11.
+# Integrate SDK and application Kconfig with kconfiglib; see guide/BuildSystem.md.
 #
 # neon_mdf_process_kconfig(<APP_DIR> [<KCONFIG_FILE>])
-#   APP_DIR - app directory (where the `sdkconfig` file lives, version-control by app - identical to
-#                  ESP-IDF, NOT in neon-mdf/). KCONFIG_FILE - (optional) original Kconfig file used
-#                  for this app. Defaults to ${NEON_MDF_PATH}/Kconfig (mainmenu of SDK, e.g. target
-#                  FU2 uses components/driver). Passes separately when the app has ITS OWN Kconfig,
-#                  independent of components/driver.
+# APP_DIR owns sdkconfig and optional application Kconfig. KCONFIG_FILE defaults
+# to ${NEON_MDF_PATH}/Kconfig. Its optional osource directive includes the
+# application Kconfig through NEON_MDF_APP_KCONFIG without requiring that file.
+# CLI and VS Code both invoke the same menuconfig target.
 #
-# MENUCONFIG combined (SDK+app, 2026-08-10): neon-mdf/Kconfig with dynamic cuoi
-# `osource "$(NEON_MDF_APP_KCONFIG)"` uses an optional source, like
-# Make's `-include` - no error if the file does not exist, checked with kconfiglib before using. This
-# This function always sets NEON_MDF_APP_KCONFIG=${APP_DIR}/Kconfig in the environment before calling
-# kconfiglib (all times configure when opening menuconfig) - if the app has its own
-# <APP_DIR>/Kconfig file no, no will be automatically aggregated with 1 menuconfig/1 sdkconfig only
-# with SDK options (components/driver/Kconfig), no additional declaration is required, no separate
-# KCONFIG_FILE tracing is needed. App that does not have that file osource lang le ignored (no
-# error) - old behavior retains 100%. applied to all CLI (neon_mdf.py) times VS Code extension since
-# both 2 only call this CMake target `menuconfig`, no other unique logic at UI level.
-#
-# After calling:
-#   - target `neon_mdf_kconfig` (INTERFACE) - include dir containing sdkconfig.h, link to any target that
-#     requires #ifdef CONFIG_XXX in C code.
-#   - CONFIG_<NAME> variable (ON/OFF/value) is in the scope calling this function - use if(CONFIG_...) in
-#     CMakeLists.txt to enable/disable source files.
-#   - custom target `menuconfig` - run `cmake --build <dir> --target menuconfig` to open sdkconfig
-#     interactive UI (same as `idf.py menuconfig`).
+# Provides neon_mdf_kconfig (the generated header include directory), CONFIG_*
+# variables in the caller's scope, and the menuconfig custom target. Reconfigure
+# after saving menuconfig settings to apply changes to the build.
 function(neon_mdf_process_kconfig APP_DIR)
-  # Set NOW from the beginning (before every time kconfiglib is run) - see osource in neon-mdf/Kconfig.
-  # set(ENV{...}) affects only the current CMake process and its execute_process() children -
-  # target menuconfig runs first in the program every build, so it must be passed back to `-E env`
-  # separately, rather than through set(ENV{...}) here.
+  # Configure-time subprocesses inherit this environment. Pass the variable
+  # separately to the menuconfig build command, which runs in a new process.
   set(ENV{NEON_MDF_APP_KCONFIG} ${APP_DIR}/Kconfig)
-  find_program(NEON_MDF_PYTHON3 python3 REQUIRED)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  set(NEON_MDF_PYTHON3 ${Python3_EXECUTABLE})
 
   execute_process(
     COMMAND ${NEON_MDF_PYTHON3} -c "import kconfiglib"
@@ -85,9 +67,7 @@ function(neon_mdf_process_kconfig APP_DIR)
     )
   endif()
 
-  # Propagate each CONFIG_* variable to PARENT_SCOPE of this function - this file is called from
-  # neon-mdf/CMakeLists.txt. Functions have their own scope, so PARENT_SCOPE is required for
-  # neon-mdf/CMakeLists.txt reads CONFIG_* immediately after calling).
+  # Functions have their own scope; expose CONFIG_* to neon-mdf/CMakeLists.txt.
   execute_process(
     COMMAND ${NEON_MDF_PYTHON3} -c "
 import re

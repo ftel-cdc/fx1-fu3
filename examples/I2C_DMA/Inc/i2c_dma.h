@@ -5,8 +5,8 @@
  * Runs a single DMA write/read comparison using an AT24C256 EEPROM.
  */
 
-#ifndef FU2_EXAMPLE_I2C_DMA_H
-#define FU2_EXAMPLE_I2C_DMA_H
+#ifndef GT32U2086_EXAMPLE_I2C_DMA_H
+#define GT32U2086_EXAMPLE_I2C_DMA_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,4 +25,4 @@ void i2c_dma_run(void);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_I2C_DMA_H */
+#endif /* GT32U2086_EXAMPLE_I2C_DMA_H */

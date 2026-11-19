@@ -1,35 +1,13 @@
-# cortex-m.schema.yaml
-#
-# Field addition when cpu.core is a Cortex-M variant (arch: cortex-m0, cortex-m0plus, ...). Extensions
-# to common.schema.yaml — do not repeat the general field.
-
+# CPU fields for GT32U2086 (Arm Cortex-M0), extending common.schema.yaml.
 cpu:
-  nvic_priority_bits: int     # NVIC priority bit number real-life on silicon (ARMv6-M for vendor-selected 1-8 bits; most commonly 2
-                              # bits on Cortex-M0). It is imperative to reconfirm with real hardware
-                              # documentation — this error will misrepresent the entire priority
-                              # scheme of FreeRTOS (configPRIO_BITS must match this value).
-  num_irq: int                # IRQ peripheral number (NVIC supports max 32 IRQ on Cortex-M0/M0+, IRQ0..IRQ31)
-  vtor_supported: bool        # Cortex-M0 (ARMv6-M) has no standard VTOR (only M0+ optional). If false, the vector table is REQUIRED
-                              # to be at address 0x00000000 (FLASH header).
-  mpu_present: bool           # (optional, default false) - whether the core has an MPU (Cortex-M4 usually YES, M0/M0+ usually NO).
-                              # Confirm via CMSIS vendor's real device header (macro __MPU_PRESENT),
-                              # not deduced from the core name.
-  fpu_present: bool           # (optional, default false) - ONLY meaningful for core cortex-m4 (create __FPU_PRESENT macro) -
-                              # Cortex-M4F has FPU hardware, Cortex-M4 (without F) does not. If
-                              # true, it is necessary to set compile flag -mfloat-abi=hard
-                              # -mfpu=fpv4-sp-d16 in cmake/arch/cortex-m.cmake so that TRUE uses
-                              # hardware (not just declaration).
+  nvic_priority_bits: 2       # Implemented NVIC priority bits.
+  num_irq: 32                # External IRQ slots, IRQ0..IRQ31.
+  vtor_supported: false      # BootROM forwards exceptions using the SRAM relay.
+  mpu_present: false         # Optional field, defaults to false.
+  fpu_present: false         # Optional field, defaults to false.
 
-# Vector table ( ARMv6-M architecture, applies all Cortex-M0/M0+, vendor independent): 0: Initial Main
-#   Stack Pointer (taken from symbol _estack that linker script level)
-#   1:  Reset_Handler
-#   2:  NMI_Handler
-#   3:  HardFault_Handler
-#   4-10: Reserved
-#   11: SVC_Handler
-#   12-13: Reserved
-#   14: PendSV_Handler
-#   15: SysTick_Handler
-#   16+: IRQ0 .. IRQ(num_irq-1) (each entry takes its name from item `interrupts` in device file .yaml)
-#
-# gen_startup_vector.py creates this layout correctly, without re-declaring it in the device .yaml file.
+# Vector table: 0 initial stack; 1 Reset; 2 NMI; 3 HardFault;
+# 4..10 reserved; 11 SVC; 12..13 reserved; 14 PendSV; 15 SysTick;
+# 16+n external IRQ n. Undeclared external slots are reserved.
+# Application vectors are at the selected profile's vector base, not ROM base.
+# Cortex-M0 has no VTOR: the ROM relay and its reserved SRAM must remain intact.

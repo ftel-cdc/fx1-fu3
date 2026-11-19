@@ -5,8 +5,8 @@
  * The terminal calls the demo within one task; the scheduler starts only once.
  */
 
-#ifndef FU2_EXAMPLE_FREERTOS_PERIPHERAL_QUEUE_H
-#define FU2_EXAMPLE_FREERTOS_PERIPHERAL_QUEUE_H
+#ifndef GT32U2086_EXAMPLE_FREERTOS_PERIPHERAL_QUEUE_H
+#define GT32U2086_EXAMPLE_FREERTOS_PERIPHERAL_QUEUE_H
 
 #include "uart/neon_uart.h"
 
@@ -42,4 +42,4 @@ void free_rtos_peripheral_queue_run(neon_uart_handle_t *uart);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_FREERTOS_PERIPHERAL_QUEUE_H */
+#endif /* GT32U2086_EXAMPLE_FREERTOS_PERIPHERAL_QUEUE_H */

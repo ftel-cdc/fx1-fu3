@@ -4,7 +4,7 @@
 // stored in workspaceState instead of committed settings.json.
 import * as vscode from "vscode";
 
-export type Transport = "uart" | "jtag";
+export type Transport = "uart";
 
 const PORT_STATE_KEY = "neonMdf.selectedPort";
 
@@ -19,7 +19,7 @@ export class NeonMdfState implements vscode.Disposable {
   }
 
   get target(): string {
-    return this.config.get<string>("target", "");
+    return this.config.get<string>("target", "GT32U2086");
   }
 
   async setTarget(target: string): Promise<void> {
@@ -28,7 +28,7 @@ export class NeonMdfState implements vscode.Disposable {
   }
 
   get transport(): Transport {
-    return this.config.get<Transport>("transport", "uart");
+    return "uart";
   }
 
   async setTransport(transport: Transport): Promise<void> {
@@ -39,11 +39,11 @@ export class NeonMdfState implements vscode.Disposable {
   get baudRate(): number {
     const values = this.config.inspect<number>("baudRate");
     return values?.workspaceFolderValue ?? values?.workspaceValue ?? values?.globalValue ??
-      (this.target === "FU2" ? 19200 : 115200);
+      19200;
   }
 
   get flashBaudRate(): number {
-    return this.config.get<number>("fu2FlashBaudRate", 19200);
+    return this.config.get<number>("gt32u2086FlashBaudRate", 19200);
   }
 
   get port(): string | undefined {

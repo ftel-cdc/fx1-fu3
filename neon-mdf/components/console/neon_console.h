@@ -27,12 +27,12 @@ extern "C" {
 *                                       FUNCTION PROTOTYPES
 ==================================================================================================*/
 /**
- * @brief Attach an initialized, caller-owned UART to the FU2 console.
+ * @brief Attach an initialized, caller-owned UART to the GT32U2086 console.
  * @param[in,out] uart Initialized UART handle; ownership remains with the caller.
  * @param[in] timeout_polls Polling iteration budget per byte; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * FU2: CONFIG_NEON_MDF_DRIVER_UART enables printf/vprintf/puts/putchar and
+ * GT32U2086: CONFIG_NEON_MDF_DRIVER_UART enables printf/vprintf/puts/putchar and
  * _write together; include <stdio.h> to use them. No separate printf flag, heap,
  * buffering or newlib stdio. The first output automatically initializes UART0
  * at 19200 baud, 8N1, using SystemCoreClock. App code only needs <stdio.h>.
@@ -65,7 +65,7 @@ neon_status_t neon_console_get_status(void);
 neon_uart_handle_t *neon_console_get_uart(void);
 
 /**
- * @brief Write stdout or stderr bytes through the FU2 console UART.
+ * @brief Write stdout or stderr bytes through the GT32U2086 console UART.
  * @param[in] file Standard output or standard error descriptor.
  * @param[in,out] data data for this operation.
  * @param[in] length Number of elements to process.
@@ -84,9 +84,9 @@ int _write(int file, char *data, int length);
  * Unsupported conversions (including float and %n) return -1, as do UART
  * failures; a prefix may already have been sent. GetStatus explains failure.
  * LF becomes CRLF unless already preceded by CR. Return counts logical
- * characters before this terminal newline translation. Successful FU2 output
+ * characters before this terminal newline translation. Successful GT32U2086 output
  * is queued in UART; wait for TEMT before resetting or reconfiguring UART.
- * FU2 strings/buffers must own their complete aligned containing words.
+ * GT32U2086 strings/buffers must own their complete aligned containing words.
  */
 
 #ifdef __cplusplus

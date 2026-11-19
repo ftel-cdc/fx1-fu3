@@ -19,23 +19,15 @@ export async function setConfiguredSdkPath(sdkPath: string | undefined): Promise
 }
 
 /**
- * variable for each plugin field for cmake subprocess if the user has chosen a separate SDK path -
- * undefined if used by default (no thiep required, so that CMakeLists.txt/settings.json of each app
- * is set as before). CMakeLists.txt of each app has `if(NOT DEFINED ENV{NEON_MDF_PATH})` guard so
- * this variable, when present, will overwrite the old swap convention without modifying the file at
- * all - it can be applied to both old apps (Blinky ...) and new ones.
+ * Override NEON_MDF_PATH for CMake subprocesses when an SDK path is configured.
+ * Leave the environment unchanged otherwise so application defaults apply.
  */
 export function sdkPathEnv(): Record<string, string> | undefined {
   const configured = getConfiguredSdkPath();
   return configured ? { NEON_MDF_PATH: configured } : undefined;
 }
 
-/**
- * The actual SDK path will be applied to an app directory (anchorDir): the dan path is selected in
- * settings if available, otherwise the old convention (2 levels from anchorDir to neon-mdf/, using
- * `${CMAKE_CURRENT_SOURCE_DIR}/../../neon-mdf` as CMakeLists.txt calculates - see
- * examples/<App>/CMakeLists.txt).
- */
+/** Resolve the configured SDK path, or <app>/../../neon-mdf by default. */
 export function resolveSdkPathUri(anchorDir: vscode.Uri): vscode.Uri {
   const configured = getConfiguredSdkPath();
   if (configured) {
@@ -44,11 +36,7 @@ export function resolveSdkPathUri(anchorDir: vscode.Uri): vscode.Uri {
   return vscode.Uri.joinPath(anchorDir, "..", "..", "neon-mdf");
 }
 
-/**
- * POSIX interchange path (available directly in CMakeLists.txt/ CMakePresets.json, OS-independent)
- * from an app directory to the SDK, used by createApp.ts when generating a project; see the previous
- * "../../neon-mdf" equals true value dua on the selected app + SDK).
- */
+/** Return the app-to-SDK relative path with POSIX separators for CMake files. */
 export function relativePathToSdk(fromDir: vscode.Uri, sdkDir: vscode.Uri): string {
   const rel = path.relative(fromDir.fsPath, sdkDir.fsPath);
   return rel.split(path.sep).join("/");
@@ -63,7 +51,7 @@ async function fileExists(uri: vscode.Uri): Promise<boolean> {
   }
 }
 
-/** 1 directory is a real SDK neon-mdf checkout please don't - find file marker tools/cmake/project.cmake. */
+/** Identify an SDK checkout by its tools/cmake/project.cmake marker. */
 export async function looksLikeSdkRoot(dir: vscode.Uri): Promise<boolean> {
   return fileExists(vscode.Uri.joinPath(dir, "tools", "cmake", "project.cmake"));
 }

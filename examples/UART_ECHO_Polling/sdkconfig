@@ -18,11 +18,11 @@ CONFIG_NEON_MDF_DRIVER_UART=y
 # end of components/driver
 
 #
-# FU2 example configuration
+# GT32U2086 example configuration
 #
-CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ=10000000
-CONFIG_FU2_EXAMPLE_RX_TIMEOUT_POLLS=10000
-# end of FU2 example configuration
+CONFIG_GT32U2086_EXAMPLE_FIXED_CLOCK_HZ=10000000
+CONFIG_GT32U2086_EXAMPLE_RX_TIMEOUT_POLLS=10000
+# end of GT32U2086 example configuration
 
 #
 # UART_ECHO_Polling example

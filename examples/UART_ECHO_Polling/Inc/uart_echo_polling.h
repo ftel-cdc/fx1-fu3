@@ -5,8 +5,8 @@
  * Declares module interfaces.
  */
 
-#ifndef FU2_EXAMPLE_UART_ECHO_POLLING_H
-#define FU2_EXAMPLE_UART_ECHO_POLLING_H
+#ifndef GT32U2086_EXAMPLE_UART_ECHO_POLLING_H
+#define GT32U2086_EXAMPLE_UART_ECHO_POLLING_H
 
 /*==================================================================================================
 *                                          INCLUDE FILES
@@ -51,4 +51,4 @@ void uart_echo_polling_run(neon_uart_handle_t *uart);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_UART_ECHO_POLLING_H */
+#endif /* GT32U2086_EXAMPLE_UART_ECHO_POLLING_H */

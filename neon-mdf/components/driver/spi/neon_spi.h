@@ -2,11 +2,11 @@
  * @file neon_spi.h
  * @brief Public declarations for SPI.
  * @details
- * * NEON SPI - HAL for FU2's DTI SPI controller.
+ * * NEON SPI - HAL for GT32U2086's DTI SPI controller.
  *
  * Register map follows DTI SPI rev1.1 chapter 9 (including the DDR slots).
  * These transfer APIs implement legacy SPI, not extended DDR commands.
- * The public API uses the logical value, does not reveal FU2's bit register. Backend maps
+ * The public API uses the logical value, does not reveal GT32U2086's bit register. Backend maps
  * configuration to CTRL/CMDCONF/FIFO/TREGx and manages clock/reset via CRM. The controller supports
  * 8/16/24/32 bit master; slave only supports 8 bits.
  * @note Blocking polling/configuration operations are intended for task context.
@@ -32,10 +32,10 @@ extern "C" {
 ==================================================================================================*/
 #define NEON_SPI_FIFO_DEPTH 8U
 
-#ifdef FU2
+#ifdef GT32U2086
 /* Default pause between bytes, measured in complete SCK periods. */
-#ifndef NEON_SPI_FU2_B2B_SCK_CYCLES
-#define NEON_SPI_FU2_B2B_SCK_CYCLES 10U
+#ifndef NEON_SPI_GT32U2086_B2B_SCK_CYCLES
+#define NEON_SPI_GT32U2086_B2B_SCK_CYCLES 10U
 #endif
 #endif
 
@@ -105,7 +105,7 @@ typedef enum {
 
 typedef enum {
     NEON_SPI_INTERRUPT_DISABLE = 0,
-    /* FU2 has only one general permissible bit for the entire FIFO interrupt signal. */
+    /* GT32U2086 has only one general permissible bit for the entire FIFO interrupt signal. */
     NEON_SPI_INTERRUPT_ENABLE = 1,
 } neon_spi_interrupt_state_t;
 
@@ -123,7 +123,7 @@ typedef enum {
     NEON_SPI_DMA_BURST_2 = 2,
     NEON_SPI_DMA_BURST_4 = 4,
     NEON_SPI_DMA_BURST_8 = 8,
-    /* Field hardware has code 16 but FU2 integrates FIFO depth 8 so it is not usable. */
+    /* Field hardware has code 16 but GT32U2086 integrates FIFO depth 8 so it is not usable. */
     NEON_SPI_DMA_BURST_16 = 16,
 } neon_spi_dma_burst_length_t;
 
@@ -155,7 +155,7 @@ typedef struct {
     neon_field8_t rx_empty_level;
 } neon_spi_fifo_config_t;
 
-#ifdef FU2
+#ifdef GT32U2086
 typedef enum {
     NEON_SPI_B2B_CORE_CYCLES = 0,
     NEON_SPI_B2B_SCK_CYCLES = 1,
@@ -170,7 +170,7 @@ typedef struct {
     neon_field16_t between_frames;
     /* 0 disables the hardware SS timeout. */
     neon_field16_t slave_select_timeout;
-#ifdef FU2
+#ifdef GT32U2086
     /* SCK units follow divider changes; CORE units program T_B2B directly.
      * Rebuild all objects after this structure change. */
     neon_spi_b2b_unit_t between_frames_unit;
@@ -221,7 +221,7 @@ typedef struct {
  * @details
  * Default LL: master, mode 0, MSB, 8 bits, DIV=0, SS not selected, threshold FIFO full=0xFF, the
  * threshold empty=0, interrupt and SS timing off.
- * FU2 B2B defaults to NEON_SPI_FU2_B2B_SCK_CYCLES complete SCK periods.
+ * GT32U2086 B2B defaults to NEON_SPI_GT32U2086_B2B_SCK_CYCLES complete SCK periods.
  */
 void neon_spi_get_default_config(neon_spi_config_t *config);
 
@@ -248,7 +248,7 @@ neon_status_t neon_spi_deinit(SPI_TypeDef *instance);
  * @param[in] instance Peripheral register instance.
  * @param[in] divider Divider.
  * @return NEON_OK on success, or a module error/status code.
- * @details FU2 recalculates B2B when its unit is SCK. Returns
+ * @details GT32U2086 recalculates B2B when its unit is SCK. Returns
  * NEON_INVALID_PARAM without changing registers if T_B2B would exceed 65535.
  */
 neon_status_t neon_spi_set_clock_divider(SPI_TypeDef *instance, uint32_t divider);
@@ -311,7 +311,7 @@ neon_status_t neon_spi_set_fifo_config(SPI_TypeDef *instance, const neon_spi_fif
  * @param[in] instance Peripheral register instance.
  * @param[in] timing timing.
  * @return NEON_OK on success, or a module error/status code.
- * @details FU2 converts SCK units to core-clock cycles for TREG1.T_B2B.
+ * @details GT32U2086 converts SCK units to core-clock cycles for TREG1.T_B2B.
  * Zero disables the byte pause. The encoded value must fit 16 bits.
  */
 neon_status_t neon_spi_set_timing(SPI_TypeDef *instance, const neon_spi_timing_t *timing);
@@ -319,27 +319,27 @@ neon_status_t neon_spi_set_timing(SPI_TypeDef *instance, const neon_spi_timing_t
 /**
  * @brief Transmit SPI.
  * @param[in] instance Peripheral register instance.
- * @param[in] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[in] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @param[in] size Number of transfer elements.
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
  * @details
  * timeout_polls is the maximum total number of poll rings for both calls, not milliseconds.
  * Master calls include a conservative final-frame/SS timing guard because
- * rev1.1 exposes no shifter-BUSY flag. CPU and SPI core use the FU2 system
+ * rev1.1 exposes no shifter-BUSY flag. CPU and SPI core use the GT32U2086 system
  * clock. The guard consumes the same polling budget and leaves manual HOLD
  * asserted when requested. Slave TX only observes FIFO consumption.
  * A polling timeout leaves the controller faulted: call Init/DeInit to reset
  * partial frames and stale FIFO data before another transfer/configuration.
  * Polling returns NEON_BUSY when DMA global is enabled; calls DisableDMA before using it. The byte
- * buffer must own all the 32-bit words containing it (two-ended padding), according to the FU2
+ * buffer must own all the 32-bit words containing it (two-ended padding), according to the GT32U2086
  * runtime buffer contract. Drivers use memcpy for RAM buffers.
  */
 neon_status_t neon_spi_transmit(SPI_TypeDef *instance, const uint8_t *data, uint16_t size, uint32_t timeout_polls);
 /**
  * @brief Receive SPI.
  * @param[in] instance Peripheral register instance.
- * @param[out] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[out] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @param[in] size Number of transfer elements.
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
@@ -467,7 +467,7 @@ neon_status_t neon_spi_get_clock_status(SPI_TypeDef *instance, neon_spi_clock_st
  * This HAL configures one-shot DMA. Every enable programs the disabled
  * channel, pulses its CLEAR bit, then arms it, clearing stale completion and
  * counters without disturbing the other direction. Circular/DDR registers
- * are described in FU2.h but are not exposed by these legacy transfer APIs.
+ * are described in GT32U2086.h but are not exposed by these legacy transfer APIs.
  * state=DISABLE stops the channel while running, ignores other fields and keeps channel
  * configuration/FIFO; disables DMA global when both channels are disabled. configuration FIFO,
  * timing, clock, data width, SS_MODE/SS_LONG and receive capture return BUSY when DMA is on with at

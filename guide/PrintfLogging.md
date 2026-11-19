@@ -1,10 +1,9 @@
-# Export log using printf on FU2
+# Export log using printf on GT32U2086
 
-FU2 has a compact `printf` set, outputting via the `_write` syscall hook, without newlib's heap or
-stdio. The formatter uses 32-bit word access to match FU2 SRAM. For FU2, only the
-`CONFIG_NEON_MDF_DRIVER_UART` flag is used: UART is enabled for both `printf/_write` and printf
-flags alone. STM32F103 does not provide `_write`; WEACT_F412 currently does not have a printf
-retarget to UART.
+GT32U2086 has a compact `printf` set, outputting via the `_write` syscall hook, without newlib's heap or
+stdio. The formatter uses 32-bit word access to match GT32U2086 SRAM. For GT32U2086, only the
+`CONFIG_NEON_MDF_DRIVER_UART` flag enables both the UART driver and `printf/_write`.
+There is no separate printf flag.
 
 ## Use in app
 
@@ -46,12 +45,12 @@ attached yet.
 
 ## Mechanism of operation
 
-1. when the family is FU2 and `CONFIG_NEON_MDF_DRIVER_UART=y`, CMake puts
-   `components/console/platform/fu2/neon_console.c` and
-   `components/driver/uart/platform/fu2/neon_uart.c` into `neon_mdf_driver` library. There is no
+1. when the family is GT32U2086 and `CONFIG_NEON_MDF_DRIVER_UART=y`, CMake puts
+   `components/console/platform/gt32u2086/neon_console.c` and
+   `components/driver/uart/platform/gt32u2086/neon_uart.c` into `neon_mdf_driver` library. There is no
    separate printf flag.
 2. `<stdio.h>` declares `printf`. when the app calls a function, the linker takes the SDK
-   implementation from the driver library. FU2 links to `-nostdlib` and uses the SDK formatter, not
+   implementation from the driver library. GT32U2086 links to `-nostdlib` and uses the SDK formatter, not
    newlib's stdio formatter.
 3. `printf` collect arguments using `va_list`, call `vprintf`, then formatter analyze `%s`, `%d`, `%x`,
    width/precision… and generate each character.
@@ -74,7 +73,7 @@ whose firmware is the same level as the C library; on bare-metal it does not nec
 kernel or issue SVC commands. It can call HAL UART or polling and write straight register TX,
 depending on the backend.
 
-FU2 uses its own formatter because SRAM only supports word aligned access. Only `_write` can be
+GT32U2086 uses its own formatter because SRAM only supports word aligned access. Only `_write` can be
 found, but not byte/halfword in newlib's formatter, buffer and backend functions. Current
 implementation is
 `printf → vprintf → formatter word-only → _write → HAL UART → TX`.
@@ -84,7 +83,7 @@ clock/reset/pinmux/baud and timeout, without repeating register logic.
 Direct call `_write` returns the number of bytes input consumed, may partially count when UART fails
 after sending data, or `-1` when no bytes have been sent. `neon_console_get_status()` explains the
 error; this bare-metal backend does not set up newlib's errno. The buffer transmitted to `_write`
-must own all word aligned containing it, like other FU2 buffers.
+must own all word aligned containing it, like other GT32U2086 buffers.
 
 ## Format and behavior
 
@@ -101,7 +100,7 @@ must own all word aligned containing it, like other FU2 buffers.
 No floats are supported (`%f/%e/%g/...`), `%n`, wide characters, positional arguments or the entire
 stdio library (`fprintf`, `snprintf`, `scanf`, `fflush`, ...). No `setvbuf()` is needed instead of
 `fflush()`: each character is sent immediately using UART polling. Do not add newlib stdio to extend
-these functions on FU2, because those lines do not guarantee word access to SRAM.
+these functions on GT32U2086, because those lines do not guarantee word access to SRAM.
 
 LF (`\n`) changes itself to CRLF on UART; existing string `\r\n` is not added CR again.
 `printf/vprintf` returns the number of logical characters before converting newline. when
@@ -139,5 +138,5 @@ log; exit with `Ctrl+]`.
 ## Confirmation Status
 
 Checked build when UART is on/off, format integer 64-bits, line `_write`, initialize UART
-automatically, down to CRLF and restore after timeout. Runtime FU2 uses memory access functions in
+automatically, down to CRLF and restore after timeout. Runtime GT32U2086 uses memory access functions in
 word 32-bits. No baud, UART pin or log confirmation on real FPGA/silicon.

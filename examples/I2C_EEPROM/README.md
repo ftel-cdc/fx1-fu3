@@ -1,6 +1,6 @@
 # I2C_EEPROM
 
-Independent FU2 firmware for I2C0 master communication with an AT24C256/AT24C256C EEPROM.
+Independent GT32U2086 firmware for I2C0 master communication with an AT24C256/AT24C256C EEPROM.
 Boot opens the UART terminal at `fpga:>>`. Press `r` without Enter to open the I2C menu.
 Console: UART0, 19200 baud, 8N1. Default FPGA clock: 10 MHz; target SCL: 100 kHz.
 
@@ -21,15 +21,15 @@ for writes. This example assumes a 32 KiB AT24C256 with a 16-bit memory address 
 
 ```sh
 cd examples/I2C_EEPROM
-cmake --preset FU2
-cmake --build --preset FU2
+cmake --preset GT32U2086
+cmake --build --preset GT32U2086
 cmake -E env NEON_MDF_SERIAL_PORT=/dev/ttyUSB0 NEON_MDF_SERIAL_BAUD=19200 \
   NEON_MDF_UART_BYTE_GAP_MS=2 NEON_MDF_UART_LOG=full \
-  cmake --build --preset FU2 --target flash_uart_fu2
+  cmake --build --preset GT32U2086 --target flash_uart_gt32u2086
 ```
 
-The packaged image is `build/FU2/fu2_i2c_eeprom_image.bin`, including the 128-byte FU2 header.
-Use the UART-download/boot straps described in [FU2 build and boot](../../guide/FU2.md).
+The packaged image is `build/GT32U2086/gt32u2086_i2c_eeprom_image.bin`, including the 128-byte GT32U2086 header.
+Use the UART-download/boot straps described in [GT32U2086 build and boot](../../guide/GT32U2086.md).
 Open the serial monitor after the loader releases the port, with local echo and flow control off.
 
 ## Menu
@@ -77,11 +77,11 @@ UART output keep these examples quick to run.
 
 ## Configuration and implementation
 
-Open `cmake --build --preset FU2 --target menuconfig`, save, then configure/build again.
-`CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ` must match the actual FPGA clock. Set the EEPROM address
+Open `cmake --build --preset GT32U2086 --target menuconfig`, save, then configure/build again.
+`CONFIG_GT32U2086_EXAMPLE_FIXED_CLOCK_HZ` must match the actual FPGA clock. Set the EEPROM address
 with `CONFIG_I2C_EEPROM_ADDRESS`; `CONFIG_I2C_EEPROM_TIMEOUT_POLLS` is an iteration budget,
 not milliseconds. The driver default calculates standard-mode 100 kHz timing from the
-current FU2 clock; the example does not duplicate the timing calculation.
+current GT32U2086 clock; the example does not duplicate the timing calculation.
 
 The example calls NEON I2C APIs for all bus transfers. The driver configures clock/reset and
 SDA/SCL pin routing. TX preloads up to 32 bytes into the FIFO before START, then streams
@@ -98,7 +98,7 @@ did not finish. Further transfers are blocked. Fix the wiring/device holding the
 press `q` to close the menu, then `r` to configure I2C0 again.
 
 Application byte values are stored in `uint32_t` elements. Small aligned buffers pack/unpack
-these values at the HAL byte-buffer boundary, respecting the FU2 word-only RAM contract.
+these values at the HAL byte-buffer boundary, respecting the GT32U2086 word-only RAM contract.
 SysTick runs from the core clock without interrupts for the EEPROM write delay and PRNG seed.
 The example requires SysTick to be unused at entry and restores its disabled configuration on exit.
 

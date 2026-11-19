@@ -1,4 +1,3 @@
-// presets.ts - read CMakePresets.json (+ include of no) to get real target list (e.g. FU2, WEACT_F412)
 // - without hardcoding or parsing the fragile mcu_variants.cmake format. This is the single
 // diem to fix if later add new target and neon-mdf/cmake/presets/targets.json - extension
 // automatically sees, no need to fix source.

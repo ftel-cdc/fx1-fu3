@@ -5,7 +5,7 @@
  * * NEON GPIO - HAL GPIO is used for Neon MDF targets.
  *
  * The API uses only logical concepts such as input/output, pull and speed. The backend of each chip is
- * responsible for porting them to the real register/mux. With FU2, neon_gpio_init() simultaneously
+ * responsible for porting them to the real register/mux. With GT32U2086, neon_gpio_init() simultaneously
  * configure GPIO and PAD/SYSCSR; the application does not need to know a GPIO pin corresponding to
  * mux value 0, 1 or 2.
  * @note Blocking polling/configuration operations are intended for task context.
@@ -37,21 +37,9 @@ extern "C" {
 #define NEON_GPIO_PIN_5 (1UL << 5U)
 #define NEON_GPIO_PIN_6 (1UL << 6U)
 #define NEON_GPIO_PIN_7 (1UL << 7U)
-#define NEON_GPIO_PIN_8 (1UL << 8U)
-#define NEON_GPIO_PIN_9 (1UL << 9U)
-#define NEON_GPIO_PIN_10 (1UL << 10U)
-#define NEON_GPIO_PIN_11 (1UL << 11U)
-#define NEON_GPIO_PIN_12 (1UL << 12U)
-#define NEON_GPIO_PIN_13 (1UL << 13U)
-#define NEON_GPIO_PIN_14 (1UL << 14U)
-#define NEON_GPIO_PIN_15 (1UL << 15U)
 
-/* FU2 and CH32V003 have 8 bit/port; the currently supported STM32 has 16 bit/port. */
-#if defined(FU2) || defined(CH32V003F4P6)
+/* GT32U2086 has eight pins per GPIO port. */
 #define NEON_GPIO_PIN_ALL (0xFFUL)
-#else
-#define NEON_GPIO_PIN_ALL (0xFFFFUL)
-#endif
 
 /*==================================================================================================
 *                                  STRUCTURES AND OTHER TYPEDEFS
@@ -91,7 +79,7 @@ typedef enum {
 
 typedef enum {
     NEON_GPIO_INTERRUPT_DISABLE = 0,
-    /* FU2 plays interrupt when the filtered input moves to a rising edge. */
+    /* GT32U2086 plays interrupt when the filtered input moves to a rising edge. */
     NEON_GPIO_INTERRUPT_ENABLE = 1,
 } neon_gpio_interrupt_t;
 
@@ -107,7 +95,7 @@ typedef struct {
     neon_gpio_speed_t speed;         /* The relative drive level of the pad. */
     neon_gpio_schmitt_t schmitt;     /* Input line schmitt. */
     neon_gpio_slew_rate_t slew_rate; /* speed output level switch. */
-    /* when interrupt=ENABLE, FU2 backend is always on synchronously because hardware requires CTL.SYNC_EN
+    /* when interrupt=ENABLE, GT32U2086 backend is always on synchronously because hardware requires CTL.SYNC_EN
    * for edge filtering and detection. */
     neon_gpio_input_sync_t input_sync;   /* Synchronize input to GPIO clock. */
     neon_gpio_interrupt_t interrupt;     /* Allow interrupt of selected batteries. */
@@ -132,7 +120,7 @@ void neon_gpio_get_default_config(neon_gpio_config_t *config);
  * @param[in] instance Peripheral register instance.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Clock is not enabled implicitly in config to keep the same flow on all targets. Backend FU2
+ * Clock is not enabled implicitly in config to keep the same flow on all targets. Backend GT32U2086
  * simultaneously releases GPIO reset when clock is enabled.
  */
 neon_status_t neon_gpio_clock_enable(GPIO_TypeDef *instance);
@@ -143,7 +131,7 @@ neon_status_t neon_gpio_clock_enable(GPIO_TypeDef *instance);
  * @param[in] init Initialization settings.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * On FU2, PA0..PA4 share the JTAG route. config one of these pins releases JTAG before selecting GPIO;
+ * On GT32U2086, PA0..PA4 share the JTAG route. config one of these pins releases JTAG before selecting GPIO;
  * if JTAG mux is locked in on state, function returns NEON_LOCKED and no configuration changes are
  * seen GPIO/PAD.
  *
@@ -188,7 +176,7 @@ void neon_gpio_toggle_pin(GPIO_TypeDef *instance, uint32_t pin_mask);
  * @param[in] enable Nonzero to enable, zero to disable.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * API interrupt FU2 detects rising edge after filter/synchronizer. Backend not yet supported on other
+ * API interrupt GT32U2086 detects rising edge after filter/synchronizer. Backend not yet supported on other
  * target return NEON_NOT_SUPPORTED see because silently ignored.
  */
 neon_status_t neon_gpio_set_interrupt_enabled(GPIO_TypeDef *instance, uint32_t pin_mask, uint8_t enable);

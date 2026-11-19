@@ -5,8 +5,8 @@ if(NOT NEON_MDF_PATH)
   get_filename_component(NEON_MDF_PATH "../../neon-mdf" ABSOLUTE)
 endif()
 include(${NEON_MDF_PATH}/tools/cmake/project.cmake)
-if(NOT NEON_MDF_TARGET STREQUAL "FU2")
-  message(FATAL_ERROR "Printf_Log currently supports FU2 only")
+if(NOT NEON_MDF_TARGET STREQUAL "GT32U2086")
+  message(FATAL_ERROR "Printf_Log currently supports GT32U2086 only")
 endif()
 
 # This example defaults to the same externally supplied 10-MHz FPGA clock
@@ -14,6 +14,6 @@ endif()
 set(NEON_PRINTF_FIXED_CLOCK_HZ "10000000" CACHE STRING "Fixed FPGA clock Hz; 0 for normal clock setup")
 if(NOT NEON_PRINTF_FIXED_CLOCK_HZ STREQUAL "0")
   target_compile_definitions(${NEON_MDF_DEVICE_TARGET} PUBLIC
-    FU2_FPGA_FIXED_CLOCK_HZ=${NEON_PRINTF_FIXED_CLOCK_HZ}UL)
+    GT32U2086_FPGA_FIXED_CLOCK_HZ=${NEON_PRINTF_FIXED_CLOCK_HZ}UL)
 endif()
 neon_mdf_add_executable(printf_log Src/main.c)

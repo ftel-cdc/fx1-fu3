@@ -1,6 +1,0 @@
-# STM32F103CB (128 KiB, 1 KiB erase pages) OTA_Demo partition table.
-# Offsets are assigned sequentially after the 8 KiB bootloader.
-# name,     type, subtype, size
-app,        app,  factory, 0x6000     # 24 KiB: 0x08002000..0x08008000
-otadata,    data, ota,     0x400      # one page: 0x08008000..0x08008400
-app_ota,    app,  ota,     0x17C00    # 95 KiB: 0x08008400..0x08020000

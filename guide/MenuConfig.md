@@ -1,8 +1,7 @@
 # Optional declaration `menuconfig`/`sdkconfig`
 
 Instructions for adding 1 toggle options via `menuconfig` — are the same as ESP-IDF's
-`Kconfig`/`sdkconfig` system (reused with `kconfiglib`, no parser). See `ARCHITECTURE.md` section of
-11 for a design overview; this file goes into the option declaration syntax + usage.
+`Kconfig`/`sdkconfig` system (reused with `kconfiglib`, no parser). See [Architecture](Architecture.md) for a design overview; this file goes into the option declaration syntax + usage.
 
 ## General Models
 
@@ -12,7 +11,7 @@ neon-mdf/Kconfig                      # mainmenu SDK - rsource each component
   └─ osource "$(NEON_MDF_APP_KCONFIG)" # option OF APP (if app has its own Kconfig)
 
 <app>/Kconfig     # OPTIONS - separate app options, automatically merged into THE SAME menu
-<app>/sdkconfig   # save real selected lua (text file, version-control by app)
+<app>/sdkconfig   # Selected configuration (text file, versioned with the application)
         │ (cmake/kconfig.cmake -> tools/kconfig/gen_config_header.py, run at configure)
         ▼
 build/<TARGET>/config/sdkconfig.h      # #define CONFIG_X ... - used in C code
@@ -136,8 +135,8 @@ app in code using it.
 
 ```sh
 cd examples/Blinky
-cmake --build --preset WEACT_F412 --target menuconfig   # open UI select (same as idf.py menuconfig)
-cmake --preset WEACT_F412                                 # mandatory re-configure after saving to apply
+cmake --build --preset GT32U2086 --target menuconfig   # open UI select (same as idf.py menuconfig)
+cmake --preset GT32U2086                                 # mandatory re-configure after saving to apply
 ```
 
 Or via VS Code: command **NEON-MDF: menuconfig**. Or CLI: `neon_mdf.py menuconfig`. All 3 paths call

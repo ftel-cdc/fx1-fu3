@@ -1,19 +1,6 @@
-// createApp.ts implements the New App wizard: choose bare-metal
-// please FreeRTOS first, then copy <SDK>/tools/templates/ or
-// <SDK>/tools/templates_freertos/ (2 real sources in repo, no bundle and extension - edit template
-// without rebuilding or repackaging the extension) to a destination directory. Replace the two tokens inside each file:
-// __APP_NAME__ -> user app name choose __NEON_MDF_RELATIVE_PATH__ -> corresponding path from DEST
-// DIR to the currently selected SDK (see ../sdkPath.ts) - true on app + SDK value, no assumed
-// the old "../../neon-mdf" assumption, which fails when Select Another Folder places an app outside examples/,
-// or have chosen separate SDK path via neonMdf.sdkPath). then open in each. both templates were
-// built-test for real (both 3 presets FU2/WEACT_F412/CH32V003F4P6, flash+real on WEACT_F412) before
-// this feature was written - see CMakeLists.txt/Src/main.c in
-// tools/templates/ and tools/templates_freertos/.
-//
-// templatesDir is derived from sdkDir (not from open workspaceFolder) - it is derived from
-// Projects/Templates/ into the SDK on 2026-08-10, like the shared OpenOCD configuration; see
-// cmake/openocd/), so you have to change resolveSdkPathUri() of destDir itself to find its use,
-// which is how sdkDir/relPath are used below.
+// Create an application from the SDK's bare-metal or FreeRTOS template.
+// Templates are read from the selected SDK rather than bundled in the extension.
+// Replace __APP_NAME__ and __NEON_MDF_RELATIVE_PATH__ using the chosen destination.
 import * as vscode from "vscode";
 import { resolveSdkPathUri, relativePathToSdk, looksLikeSdkRoot } from "../sdkPath";
 
@@ -29,21 +16,10 @@ async function pathExists(uri: vscode.Uri): Promise<boolean> {
 }
 
 /**
- * Real examples/ to create new app in which - from receiver fill 2 cases (2026-08-10, real bug fix:
- * previously assumed the workspace was an existing app such as examples/Blinky, then used
- * .. as examples/. Opening the repository root (which contains neon-mdf/ and examples/) instead of an
- * app made that calculation one level too high and selected the wrong destination. Confirmed
- * via user's bug report, not
- * cases):
- *   1. Opening workspace is an app folder (e.g. examples/Blinky) - examples/ is the CHA folder of no (old
- *      behavior, unchanged).
- *   2. If the workspace is the repository root, containing neon-mdf/ and examples/, use its examples/
- * subdirectory. Check this case before the app-directory heuristic for reliable detection
- * markers through looksLikeSdkRoot() on `<folder>/neon-mdf`, not only dua vao `examples/` exist
- * please do not - 1 old app folder turned on periodically can count yes has subdirectory named
- * "examples/" irrelevant). if both 2 do not match (eg user open another safe directory), fallback
- * the previous parent-directory behavior, with a separate SDK-directory warning below when the path is
- * invalid.
+ * Use examples/ when the workspace is the repository root with a valid SDK.
+ * Otherwise use the workspace's parent, as when an example application is open.
+ * Verify the SDK marker to avoid mistaking an unrelated examples/ directory for
+ * the repository layout.
  */
 async function resolveExamplesDir(openedFolder: vscode.Uri): Promise<vscode.Uri> {
   const childExamples = vscode.Uri.joinPath(openedFolder, "examples");
@@ -55,10 +31,8 @@ async function resolveExamplesDir(openedFolder: vscode.Uri): Promise<vscode.Uri>
 }
 
 /**
- * Copy templateDir to destDir and replace the supplied `tokens` inside each file
- * file (not the file name - no template files use tokens in the name). assume each template file is
- * text (correct for all current tools/templates/: .c/.h/.json/.cfg/txt) - if later add more
- * template files, this function must be updated accordingly.
+ * Copy the template tree and replace tokens in file contents, not filenames.
+ * All current template files are text; binary assets would need separate handling.
  */
 async function copyTemplateDir(src: vscode.Uri, dest: vscode.Uri, tokens: Record<string, string>): Promise<void> {
   await vscode.workspace.fs.createDirectory(dest);
@@ -90,7 +64,7 @@ export async function createAppCommand(): Promise<void> {
 
   const appName = await vscode.window.showInputBox({
     prompt: "App name, used for the folder and CMake target: letters, digits and underscores; must not start with a digit",
-    placeHolder: "vd my_app",
+    placeHolder: "e.g. my_app",
     validateInput: (value) => {
       if (!value) {
         return "app name not in";
@@ -105,21 +79,13 @@ export async function createAppCommand(): Promise<void> {
     return;
   }
 
-  // Bare-metal app (superloop) versus FreeRTOS app (scheduler,
-  // xTaskCreate/vTaskStartScheduler). The two templates have different source sets (CMakeLists.txt/
-  // Src/main.c/Inc/FreeRTOSConfig.h) font not a flag runtime, en
-  // FreeRTOS additionally needs include(cmake/freertos.cmake)/neon_mdf_add_freertos()
-  // + glue arch-specific (SVC/PendSV/SysTick for WEACT_F412, STK/mtvec for CH32V003F4P6 - see
-  // tools/templates_freertos/Src/main.c) cannot "off" space with #ifdef in a generic template. See
-  // tools/templates/ (bare-
-  // metal) and tools/templates_freertos/ (FreeRTOS) are both minimal templates
-  // are both minimal proof-of-life templates without GPIO/LED demos; they differ in scheduler support
-  // not.
+  // Templates differ in their source files and scheduler integration.
+  // Both provide a minimal UART example without a GPIO/LED demonstration.
   const templateChoice = await vscode.window.showQuickPick(
     [
       {
         label: "$(circuit-board) Bare-metal app",
-        description: "superloop don space, no FreeRTOS",
+        description: "Main loop without FreeRTOS",
         templateFolder: "templates",
       },
       {
@@ -140,7 +106,7 @@ export async function createAppCommand(): Promise<void> {
   const picked = await vscode.window.showQuickPick(
     [
       { label: "$(folder) created in examples/ (recommended)", description: defaultDest.fsPath, dest: defaultDest },
-      { label: "$(folder-opened) select different folder...", description: "duyet directory", dest: undefined },
+      { label: "$(folder-opened) select different folder...", description: "Browse for a destination directory", dest: undefined },
     ],
     { placeHolder: "create app at the top?" }
   );
@@ -167,13 +133,12 @@ export async function createAppCommand(): Promise<void> {
     return;
   }
 
-  // SDK path true on destDir (not open workspaceFolder) - matches how CMakeLists.txt of new app will be
-  // magnetic (${CMAKE_CURRENT_SOURCE_DIR} = destDir for real build). use setting neonMdf.sdkPath if
-  // user selected, otherwise old convention (2 level up to neon-mdf/) - see sdkPath.ts.
+  // Resolve the SDK relative to the destination, matching the generated CMake
+  // project's source directory rather than the currently open workspace.
   const sdkDir = resolveSdkPathUri(destDir);
   if (!(await looksLikeSdkRoot(sdkDir))) {
     const proceed = await vscode.window.showWarningMessage(
-      `NEON-MDF: can't find neon-mdf SDK at ${sdkDir.fsPath} (this directory is not the same as a real SDK checkout). if the app is creating at an unknown value (not below examples/), select its own SDK path via the command "NEON-MDF: select Dan SDK path..." first. still creating app (build might fail)?`,
+      `NEON-MDF: No SDK found at ${sdkDir.fsPath}. For applications outside examples/, use "NEON-MDF: Select SDK Path..." to select the SDK. Create the application anyway? Building may fail until the SDK path is configured.`,
       "still create",
       "deactivate"
     );

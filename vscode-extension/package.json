@@ -1,57 +1,96 @@
 {
   "name": "neon-mdf-tools",
   "displayName": "NEON-MDF Tools",
-  "description": "Build, flash and monitor UI for neon-mdf (bootloader and application), similar to the ESP-IDF extension. Calls the existing flash_targets.cmake and .vscode/tasks.json workflows.",
+  "description": "Build, flash and monitor GT32U2086 applications with NEON-MDF.",
   "publisher": "neon-mdf",
   "version": "0.1.0",
   "private": true,
   "engines": {
     "vscode": "^1.90.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
   "activationEvents": [
     "workspaceContains:CMakePresets.json"
   ],
   "main": "./dist/extension.js",
-  "extensionDependencies": ["marus25.cortex-debug"],
   "contributes": {
     "commands": [
-      { "command": "neonMdf.createApp", "title": "NEON-MDF: Create New App..." },
-      { "command": "neonMdf.selectSdkPath", "title": "NEON-MDF: Select SDK Path..." },
-      { "command": "neonMdf.selectTarget", "title": "NEON-MDF: Select Target" },
-      { "command": "neonMdf.selectTransport", "title": "NEON-MDF: Select Transport (UART/JTAG)" },
-      { "command": "neonMdf.selectPort", "title": "NEON-MDF: Select Serial Port" },
-      { "command": "neonMdf.build", "title": "NEON-MDF: Build" },
-      { "command": "neonMdf.flash", "title": "NEON-MDF: Flash" },
-      { "command": "neonMdf.buildFlashMonitor", "title": "NEON-MDF: Build + Flash + Log" },
-      { "command": "neonMdf.debug", "title": "NEON-MDF: Debug" },
-      { "command": "neonMdf.menuconfig", "title": "NEON-MDF: menuconfig" },
-      { "command": "neonMdf.openMonitor", "title": "NEON-MDF: Serial Monitor" }
+      {
+        "command": "neonMdf.createApp",
+        "title": "NEON-MDF: Create New App..."
+      },
+      {
+        "command": "neonMdf.selectSdkPath",
+        "title": "NEON-MDF: Select SDK Path..."
+      },
+      {
+        "command": "neonMdf.selectTarget",
+        "title": "NEON-MDF: Select Target"
+      },
+      {
+        "command": "neonMdf.selectTransport",
+        "title": "NEON-MDF: Select Transport (UART)"
+      },
+      {
+        "command": "neonMdf.selectPort",
+        "title": "NEON-MDF: Select Serial Port"
+      },
+      {
+        "command": "neonMdf.build",
+        "title": "NEON-MDF: Build"
+      },
+      {
+        "command": "neonMdf.flash",
+        "title": "NEON-MDF: Flash"
+      },
+      {
+        "command": "neonMdf.buildFlashMonitor",
+        "title": "NEON-MDF: Build + Flash + Log"
+      },
+      {
+        "command": "neonMdf.debug",
+        "title": "NEON-MDF: Debug"
+      },
+      {
+        "command": "neonMdf.menuconfig",
+        "title": "NEON-MDF: menuconfig"
+      },
+      {
+        "command": "neonMdf.openMonitor",
+        "title": "NEON-MDF: Serial Monitor"
+      }
     ],
     "configuration": {
       "title": "NEON-MDF",
       "properties": {
         "neonMdf.target": {
           "type": "string",
-          "default": "",
-          "description": "Selected target (for example, WEACT_F412), read dynamically from CMakePresets.json rather than hardcoded."
+          "default": "GT32U2086",
+          "description": "GT32U2086 device preset.",
+          "enum": [
+            "GT32U2086"
+          ]
         },
         "neonMdf.transport": {
           "type": "string",
-          "enum": ["uart", "jtag"],
-          "default": "jtag",
-          "description": "Firmware programming interface. FU2: ROMCODE UART; select boot mode 100 and press RESET when the tool is ready. STM32: UART System Bootloader or JTAG/SWD, depending on the board."
+          "enum": [
+            "uart"
+          ],
+          "default": "uart",
+          "description": "ROMCODE UART programming: select boot mode 100 and press RESET when the loader is ready."
         },
         "neonMdf.baudRate": {
           "type": "number",
-          "default": 115200,
-          "description": "Application UART/Serial Monitor baud rate, independent of the programming baud rate. Defaults to 19200 for FU2 and 115200 for other targets when unset."
+          "default": 19200,
+          "description": "Application UART/Serial Monitor baud; independent of programming baud."
         },
-        "neonMdf.fu2FlashBaudRate": {
+        "neonMdf.gt32u2086FlashBaudRate": {
           "type": "integer",
           "minimum": 1,
           "default": 19200,
-          "description": "FU2 UART programming baud rate; must match the board ROMCODE. Passed when the CMake target runs; does not change the chip baud rate."
+          "description": "GT32U2086 UART programming baud rate; must match the board ROMCODE. Passed when the CMake target runs; does not change the chip baud rate."
         },
         "neonMdf.sdkPath": {
           "type": "string",
@@ -66,7 +105,7 @@
     "watch": "node esbuild.js --watch",
     "package": "node esbuild.js --production",
     "typecheck": "tsc --noEmit",
-    "vsix": "vsce package"
+    "vsix": "npm run package && vsce package --skip-license"
   },
   "devDependencies": {
     "@types/vscode": "^1.90.0",
@@ -77,5 +116,10 @@
   },
   "dependencies": {
     "serialport": "^12.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ftel-cdc/neon_mdf.git",
+    "directory": "vscode-extension"
   }
 }

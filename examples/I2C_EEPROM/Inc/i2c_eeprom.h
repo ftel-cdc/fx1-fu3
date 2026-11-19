@@ -5,8 +5,8 @@
  * Scan I2C0, read 256 bytes once, or write and verify the first 1 KiB.
  */
 
-#ifndef FU2_EXAMPLE_I2C_EEPROM_H
-#define FU2_EXAMPLE_I2C_EEPROM_H
+#ifndef GT32U2086_EXAMPLE_I2C_EEPROM_H
+#define GT32U2086_EXAMPLE_I2C_EEPROM_H
 
 /*==================================================================================================
 *                                          INCLUDE FILES
@@ -34,4 +34,4 @@ void i2c_eeprom_run(neon_uart_handle_t *uart);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_I2C_EEPROM_H */
+#endif /* GT32U2086_EXAMPLE_I2C_EEPROM_H */

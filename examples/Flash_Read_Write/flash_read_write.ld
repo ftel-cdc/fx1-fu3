@@ -1,4 +1,4 @@
-/* Reserve the last FU2 main-array sector; it is not part of the image. */
+/* Reserve the last GT32U2086 main-array sector; it is not part of the image. */
 MEMORY
 {
   FLASH_RW_SCRATCH (rw) : ORIGIN = 0x0009FE00, LENGTH = 0x200
@@ -16,6 +16,6 @@ SECTIONS
 INSERT AFTER .data;
 
 ASSERT(ORIGIN(FLASH) == 0x00020080 || ORIGIN(FLASH) == 0x30000080,
-       "Flash_Read_Write requires the FU2 normal or XIP image profile")
+       "Flash_Read_Write requires the GT32U2086 normal or XIP image profile")
 ASSERT(ORIGIN(FLASH) == 0x30000080 || LOADADDR(.data) + SIZEOF(.data) <= __flash_rw_start__,
        "Flash_Read_Write image overlaps the Flash_Read_Write scratch sector")

@@ -65,8 +65,8 @@
         #endif
     } EventGroup_t;
 
-    #if defined( FU2 )
-        _Static_assert( sizeof( StaticEventGroup_t ) == sizeof( EventGroup_t ), "FU2 static event group layout" );
+    #if defined( GT32U2086 )
+        _Static_assert( sizeof( StaticEventGroup_t ) == sizeof( EventGroup_t ), "GT32U2086 static event group layout" );
     #endif
 
 /*-----------------------------------------------------------*/

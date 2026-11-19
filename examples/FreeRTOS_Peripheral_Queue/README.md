@@ -3,7 +3,7 @@
 UART RX interrupt and a periodic FreeRTOS task send events to one queue. The terminal
 task receives the events during a run, controls **GPIOB7 (PB7)** and prints the results.
 
-This is an independent FU2 firmware. Its UART terminal waits at boot; press `r` without Enter
+This is an independent GT32U2086 firmware. Its UART terminal waits at boot; press `r` without Enter
 to start the example at the `fpga:>>` prompt.
 The first `r` is received before RTOS initialization. After flashing through UART0,
 open the serial monitor and press Enter to redisplay the prompt, then `r`. Startup
@@ -12,7 +12,7 @@ Console: UART0, 19200 baud, 8N1. FPGA system clock: 10 MHz by default.
 
 Source files are in `Src/`, with the terminal entry in `Src/main.c`. Example headers are in `Inc/`.
 
-`main.c` follows the other FU2 examples, including `GPIO_Input_Output`: print the
+`main.c` follows the other GT32U2086 examples, including `GPIO_Input_Output`: print the
 banner to initialize the default UART0, borrow its handle with
 `neon_console_get_uart()` and check for initialization failure. The terminal loop
 is also in `main.c`: print `fpga:>>`, handle Enter/CRLF, wait for `r`, print `[RUN]`,
@@ -43,10 +43,10 @@ events and returns to the terminal loop. Polling and ISR never consume RX togeth
 
 The build follows `../FreeRTOS_Blinky`: include `neon-mdf/cmake/freertos.cmake`,
 call `neon_mdf_add_freertos()` with this application's `Inc/` directory, and link
-`freertos_kernel`. The helper selects `GCC_ARM_CM0` and `heap_4` for FU2.
+`freertos_kernel`. The helper selects `GCC_ARM_CM0` and `heap_4` for GT32U2086.
 `Inc/FreeRTOSConfig.h` uses `SystemCoreClock`, a 1 kHz tick, an 8 KiB heap and stack
 overflow/allocation failure hooks. Software timers are disabled.
-`configCHECK_HANDLER_INSTALLATION=0` is required for FU2: Cortex-M0 has no VTOR,
+`configCHECK_HANDLER_INSTALLATION=0` is required for GT32U2086: Cortex-M0 has no VTOR,
 and BootROM v5 forwards interrupts to the application's vector table. The port's
 default direct-routing check reads VTOR and can halt before the first task.
 
@@ -58,7 +58,7 @@ Periodic task -> vTaskDelayUntil -> xQueueSend ----------+
 
 The queue defaults to 16 events, each containing three aligned `uint32_t` fields:
 event type, value and tick timestamp. Values are copied into the queue, which meets
-FU2's word-access SRAM requirements without passing temporary buffer pointers.
+GT32U2086's word-access SRAM requirements without passing temporary buffer pointers.
 
 The periodic task runs at priority 2 with a 128-word stack. It sends an event every
 1000 ms while the demo is active; the first event follows the task's existing cadence.
@@ -78,17 +78,17 @@ returning to `main()` through `vTaskEndScheduler()`.
 
 ```sh
 cd examples/FreeRTOS_Peripheral_Queue
-cmake --preset FU2
-cmake --build --preset FU2
+cmake --preset GT32U2086
+cmake --build --preset GT32U2086
 cmake -E env NEON_MDF_SERIAL_PORT=/dev/ttyUSB0 NEON_MDF_SERIAL_BAUD=19200 \
   NEON_MDF_UART_BYTE_GAP_MS=2 NEON_MDF_UART_LOG=full \
-  cmake --build --preset FU2 --target flash_uart_fu2
+  cmake --build --preset GT32U2086 --target flash_uart_gt32u2086
 ```
 
-Load `build/FU2/fu2_freertos_peripheral_queue_image.bin` when selecting an image manually. This file includes the FU2
-128-byte image header; `fu2_freertos_peripheral_queue.bin` is the raw payload. Open a serial monitor after the loader
+Load `build/GT32U2086/gt32u2086_freertos_peripheral_queue_image.bin` when selecting an image manually. This file includes the GT32U2086
+128-byte image header; `gt32u2086_freertos_peripheral_queue.bin` is the raw payload. Open a serial monitor after the loader
 releases the port. Use the board's UART-download/normal-boot straps as described in
-[FU2 build and boot](../../guide/FU2.md).
+[GT32U2086 build and boot](../../guide/GT32U2086.md).
 
 ## Run
 
@@ -134,11 +134,11 @@ supported; CRLF produces only one new prompt.
 
 ## Configuration and checks
 
-Configure with `cmake --build --preset FU2 --target menuconfig`, then build again.
+Configure with `cmake --build --preset GT32U2086 --target menuconfig`, then build again.
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
-| `CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ` | `10000000` | Must match the actual FPGA clock for UART and RTOS timing. |
+| `CONFIG_GT32U2086_EXAMPLE_FIXED_CLOCK_HZ` | `10000000` | Must match the actual FPGA clock for UART and RTOS timing. |
 | `CONFIG_FREERTOS_PERIPHERAL_QUEUE_LENGTH` | `16` | Queue capacity, from 1 to 128 events. |
 | `CONFIG_FREERTOS_PERIPHERAL_QUEUE_PERIOD_MS` | `1000` | Periodic interval, from 100 to 60000 ms. |
 
@@ -154,4 +154,4 @@ Suggested hardware checks:
 6. At the prompt, check CR, LF and CRLF; CRLF should produce only one new prompt.
 
 Build success validates compilation, linking and image packaging. Pin routing, UART
-interrupt delivery, timing and stack margins still need verification on FU2 hardware.
+interrupt delivery, timing and stack margins still need verification on GT32U2086 hardware.

@@ -2,7 +2,7 @@
  * @file uart_echo_polling.c
  * @brief Implementation for UART echo polling.
  * @details
- * Standalone FU2 UART0 polling echo example.
+ * Standalone GT32U2086 UART0 polling echo example.
  */
 
 /*==================================================================================================
@@ -47,7 +47,7 @@ void uart_echo_polling_run(neon_uart_handle_t *uart) {
     printf("[INFO] UART echo ready. Type a character; Ctrl+C stops the example.\n");
 
     for (;;) {
-        /* A one-byte buffer owns a complete aligned word on FU2. */
+        /* A one-byte buffer owns a complete aligned word on GT32U2086. */
         uint32_t byte_word = 0U;
         neon_status_t status = neon_uart_receive(uart, (uint8_t *)&byte_word, 1U, CONFIG_UART_ECHO_RX_TIMEOUT_POLLS);
         if (status == NEON_TIMEOUT) {

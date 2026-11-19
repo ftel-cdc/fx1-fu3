@@ -251,8 +251,8 @@ typedef struct StreamBufferDef_t
     UBaseType_t uxNotificationIndex;                               /* The index we are using for notification, by default tskDEFAULT_INDEX_TO_NOTIFY. */
 } StreamBuffer_t;
 
-#if defined( FU2 )
-    _Static_assert( sizeof( StaticStreamBuffer_t ) == sizeof( StreamBuffer_t ), "FU2 static stream buffer layout" );
+#if defined( GT32U2086 )
+    _Static_assert( sizeof( StaticStreamBuffer_t ) == sizeof( StreamBuffer_t ), "GT32U2086 static stream buffer layout" );
 #endif
 
 /*

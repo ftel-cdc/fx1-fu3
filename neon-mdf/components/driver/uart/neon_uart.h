@@ -4,7 +4,7 @@
  * @details
  * * NEON_UART - HAL UART commonly used for Neon MDF backends.
  *
- * public configuration uses logical values, without revealing FU2 LL bit code. The backend is
+ * public configuration uses logical values, without revealing GT32U2086 LL bit code. The backend is
  * responsible for mapping to the register of each chip. Newly added fields have a default value of
  * 0 so that old code only assigned baud_rate remains 8-N-1, oversampling x16, no FIFO and no
  * flow-control.
@@ -73,17 +73,17 @@ typedef enum {
 } neon_uart_hardware_flow_control_t;
 
 typedef enum {
-    /* FU2 manually configures pad/mux TX/RX; DeInit restores saved bits. */
+    /* GT32U2086 manually configures pad/mux TX/RX; DeInit restores saved bits. */
     NEON_UART_PIN_CONFIG_AUTO = 0,
     /* Maintain that pinmux/PAD board or boot firmware configured. */
     NEON_UART_PIN_CONFIG_KEEP = 1,
 } neon_uart_pin_config_t;
 
 typedef enum {
-    /* FU2 DTI: TX stands for LSR.THRF=0; RX stands for LSR.DR=1. */
+    /* GT32U2086 DTI: TX stands for LSR.THRF=0; RX stands for LSR.DR=1. */
     NEON_UART_STATUS_SOURCE_HARDWARE = 0,
     /* Legacy compatibility shim: The old firmware/VP used to use MSR like PL011 FR with RXFE at bit 4. Do
-   * not use this mode for the current FU2 VP. */
+   * not use this mode for the current GT32U2086 VP. */
     NEON_UART_STATUS_SOURCE_FVP_MSR = 1,
 } neon_uart_status_source_t;
 
@@ -99,11 +99,11 @@ typedef enum {
 typedef uint32_t neon_uart_interrupt_t;
 #define NEON_UART_INTERRUPT_RX_READY ((1U << 0))
 #define NEON_UART_INTERRUPT_TX_FULL ((1U << 1))
-/* Legacy name: on FU2 this interrupt indicates TX full, not TX ready. */
+/* Legacy name: on GT32U2086 this interrupt indicates TX full, not TX ready. */
 #define NEON_UART_INTERRUPT_TX_READY (NEON_UART_INTERRUPT_TX_FULL)
 #define NEON_UART_INTERRUPT_LINE_ERROR ((1U << 2))
 #define NEON_UART_INTERRUPT_MODEM ((1U << 3))
-/* Logical policy flags: AUTO clears IER.AUCLR, MANUAL sets it on FU2. */
+/* Logical policy flags: AUTO clears IER.AUCLR, MANUAL sets it on GT32U2086. */
 #define NEON_UART_INTERRUPT_AUTO_CLEAR ((1U << 4))
 #define NEON_UART_INTERRUPT_MANUAL_CLEAR ((1U << 5))
 #define NEON_UART_INTERRUPT_ALL (0x0FU)
@@ -111,14 +111,14 @@ typedef uint32_t neon_uart_interrupt_t;
 typedef enum {
     NEON_UART_INTERRUPT_ID_NONE = 0,
     NEON_UART_INTERRUPT_ID_TX_FULL = 1,
-    /* Legacy name; FU2 INTID=1 is the TX-full interrupt. */
+    /* Legacy name; GT32U2086 INTID=1 is the TX-full interrupt. */
     NEON_UART_INTERRUPT_ID_TX_READY = NEON_UART_INTERRUPT_ID_TX_FULL,
     NEON_UART_INTERRUPT_ID_RX_READY = 2,
     NEON_UART_INTERRUPT_ID_LINE_ERROR = 3,
     NEON_UART_INTERRUPT_ID_RX_TIMEOUT = 4,
     NEON_UART_INTERRUPT_ID_DMA_TX_DONE = 5,
     NEON_UART_INTERRUPT_ID_DMA_RX_DONE = 6,
-    /* Reserved logical ID for other backends; FU2 INTID=0 means NONE. */
+    /* Reserved logical ID for other backends; GT32U2086 INTID=0 means NONE. */
     NEON_UART_INTERRUPT_ID_MODEM = 0x80,
     NEON_UART_INTERRUPT_ID_UNKNOWN = 0xFF,
 } neon_uart_interrupt_id_t;
@@ -133,7 +133,7 @@ typedef enum {
 #define NEON_UART_ERROR_BREAK 0x00000008U
 #define NEON_UART_ERROR_RX_FIFO 0x00000010U
 #define NEON_UART_ERROR_CLOCK 0x00000020U
-/* Legacy flags. FU2 reports CLOCK and stores address/command in clock_status. */
+/* Legacy flags. GT32U2086 reports CLOCK and stores address/command in clock_status. */
 #define NEON_UART_ERROR_ADDRESS 0x00000040U
 #define NEON_UART_ERROR_COMMAND 0x00000080U
 
@@ -147,10 +147,10 @@ typedef struct {
     neon_uart_parity_t parity;
     neon_uart_over_sampling_t over_sampling;
     neon_uart_fifo_state_t fifo_state;
-    /* FU2 rev1p3 does not define threshold bits: only the default is supported. */
+    /* GT32U2086 rev1p3 does not define threshold bits: only the default is supported. */
     neon_uart_fifo_threshold_t fifo_threshold;
     neon_uart_hardware_flow_control_t hardware_flow_control;
-    /* FU2 does not have RTS/CTS mapping in SYSCSR LL table: hardware flow-control must select KEEP and
+    /* GT32U2086 does not have RTS/CTS mapping in SYSCSR LL table: hardware flow-control must select KEEP and
    * configure the handshake pins on board. */
     neon_uart_pin_config_t pin_config;
     neon_uart_status_source_t status_source;
@@ -161,7 +161,7 @@ typedef struct neon_uart_handle_s {
     neon_uart_t instance;
     volatile neon_uart_state_t state;
     volatile uint32_t error_code;
-    /* Last FU2 CLKS fault snapshot: bit 0 flag, [12:1] address, bit 13 R/W.
+    /* Last GT32U2086 CLKS fault snapshot: bit 0 flag, [12:1] address, bit 13 R/W.
    * CLKS is read-to-clear; this snapshot remains until the next receive/init
    * or ClearError. address/command fields are metadata, not error flags. */
     volatile uint32_t clock_status;
@@ -197,7 +197,7 @@ neon_status_t neon_uart_init(neon_uart_handle_t *huart, neon_uart_t instance);
  * @details On a ready handle this operation deinitializes and reconfigures the
  * peripheral. Serialize configuration/teardown with other users of this handle.
  * A successful configuration owns the instance until neon_uart_deinit().
- * FU2 AUTO configures pin routing; KEEP preserves board-provided routing.
+ * GT32U2086 AUTO configures pin routing; KEEP preserves board-provided routing.
  */
 neon_status_t neon_uart_set_config(neon_uart_handle_t *huart, const neon_uart_config_t *config);
 
@@ -233,13 +233,13 @@ neon_status_t neon_uart_set_baud_rate(neon_uart_handle_t *huart, uint32_t baud_r
 /**
  * @brief Poll the UART transmitter until the requested bytes have been queued.
  * @param[in,out] huart UART handle and runtime state.
- * @param[in] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[in] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @param[in] size Number of transfer elements.
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
  * @details
  * timeout_polls is the maximum total number of poll rings for both calls, not milliseconds.
- * FU2 TX returns after enqueueing all data through THR using LSR[5] THRF=0;
+ * GT32U2086 TX returns after enqueueing all data through THR using LSR[5] THRF=0;
  * it does not wait for the last byte to finish on the wire (LSR[6] TEMT).
  * Drain TEMT before resetting/reconfiguring the UART or changing its pins.
  */
@@ -247,7 +247,7 @@ neon_status_t neon_uart_transmit(neon_uart_handle_t *huart, const uint8_t *data,
 /**
  * @brief Poll the UART receiver until the requested bytes have been read.
  * @param[in,out] huart UART handle and runtime state.
- * @param[out] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[out] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @param[in] size Number of transfer elements.
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
@@ -255,7 +255,7 @@ neon_status_t neon_uart_transmit(neon_uart_handle_t *huart, const uint8_t *data,
 neon_status_t neon_uart_receive(neon_uart_handle_t *huart, uint8_t *data, uint16_t size, uint32_t timeout_polls);
 
 /**
- * @brief Read one available RX element without waiting (FU2).
+ * @brief Read one available RX element without waiting (GT32U2086).
  * @param[in,out] huart Configured UART handle.
  * @param[out] data Complete aligned 32-bit word; updated only on NEON_OK.
  * @return NEON_OK, NEON_TIMEOUT if empty, NEON_ERROR on a hardware error,
@@ -270,7 +270,7 @@ neon_status_t neon_uart_receive(neon_uart_handle_t *huart, uint8_t *data, uint16
 neon_status_t neon_uart_try_receive(neon_uart_handle_t *huart, uint32_t *data);
 
 /**
- * @brief Wait for the last queued TX element to leave the wire (FU2).
+ * @brief Wait for the last queued TX element to leave the wire (GT32U2086).
  * @param[in,out] huart Configured UART handle.
  * @param[in] timeout_polls Polling budget, not milliseconds.
  * @return NEON_OK, NEON_TIMEOUT, a handle error, or NEON_NOT_SUPPORTED.
@@ -281,7 +281,7 @@ neon_status_t neon_uart_wait_tx_complete(neon_uart_handle_t *huart, uint32_t tim
 /**
  * @brief Transmit UART words.
  * @param[in,out] huart UART handle and runtime state.
- * @param[in] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[in] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @param[in] size Number of transfer elements.
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
@@ -293,7 +293,7 @@ neon_status_t neon_uart_transmit_words(neon_uart_handle_t *huart, const uint16_t
 /**
  * @brief Receive UART words.
  * @param[in,out] huart UART handle and runtime state.
- * @param[out] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[out] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @param[in] size Number of transfer elements.
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
@@ -330,13 +330,13 @@ neon_status_t neon_uart_get_interrupt_id(const neon_uart_handle_t *huart, neon_u
 neon_status_t neon_uart_is_interrupt_pending(const neon_uart_handle_t *huart, uint8_t *pending);
 /* The above APIs control only UART's IER/IIR; the application still enables NVIC with
  * NVIC_EnableIRQ(USARTx_IRQn) and self - grants matching ISR/callback.
- * FU2 ALL includes interrupt sources only; select AUTO_CLEAR or MANUAL_CLEAR
+ * GT32U2086 ALL includes interrupt sources only; select AUTO_CLEAR or MANUAL_CLEAR
  * separately (never both). enable/Disable AUTO_CLEAR clears/sets IER[4];
  * enable/Disable MANUAL_CLEAR sets/clears it. Reading IIR acknowledges pending
  * sources in manual mode: call GetInterruptID once and check NONE, rather than
  * calling IsInterruptPending followed by GetInterruptID for the same event. */
 
-/* FU2 FIFO clear requires FIFO mode; non-FIFO mode returns NOT_SUPPORTED. */
+/* GT32U2086 FIFO clear requires FIFO mode; non-FIFO mode returns NOT_SUPPORTED. */
 /**
  * @brief Clear UART rx fifo.
  * @param[in,out] huart UART handle and runtime state.
@@ -363,7 +363,7 @@ neon_uart_state_t neon_uart_get_state(const neon_uart_handle_t *huart);
  */
 uint32_t neon_uart_get_error(const neon_uart_handle_t *huart);
 
-#ifdef FU2
+#ifdef GT32U2086
 typedef enum {
     NEON_UART_DMA_RX = 0,
     NEON_UART_DMA_TX = 1,
@@ -373,7 +373,7 @@ typedef enum {
 #define NEON_UART0_DMA_PERIPHERAL_ID 2U
 
 /**
- * @brief Configure single-request UART DMA handshaking (FU2).
+ * @brief Configure single-request UART DMA handshaking (GT32U2086).
  * @param[in,out] huart Configured 8-bit UART in FIFO mode.
  * @param[in] direction RX or TX.
  * @param[in] count UART characters; zero disables that direction.

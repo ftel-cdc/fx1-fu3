@@ -1,19 +1,13 @@
 """create CMSIS-style device header (<DEVICE>.h) from model.Device.
 
-Layout complies with CMSIS-Core standard conventions (similar to stm32fxxx.h/similar):
+Layout follows CMSIS-Core conventions:
 IRQn_Type enum -> #define core config (__NVIC_PRIO_BITS...) -> include
 core_cmX.h -> peripheral register struct -> base address define.
 """
 
 import re
 
-try:
-    from . import core_info
-except ImportError:
-    # gen_riscv_header.py import this file via sys.path.insert() (not through the package
-    # "backends.cortex_m") to reuse _peripheral_struct() - there is no package context for relative
-    # import, fallback to absolute.
-    import core_info
+from . import core_info
 
 _ACCESS_QUALIFIER = {"rw": "__IO", "ro": "__I ", "wo": "__O "}
 _SIZE_TO_CTYPE = {8: "uint8_t", 16: "uint16_t", 32: "uint32_t"}
@@ -143,8 +137,7 @@ def generate(device, out_path: str):
     cpu = device.cpu
     prio_bits = cpu.extra.get("nvic_priority_bits", 2)
     vtor_present = 1 if cpu.extra.get("vtor_supported", False) else 0
-    # mpu_present/fpu_present must be derived from YAML (not hard-code 0 as before) - many Cortex-M4 chips
-    # (e.g. STM32F4) have real MPU+FPU, hard-code 0 would be wrong.
+    # CPU feature macros come from the GT32U2086 device description.
     mpu_present = 1 if cpu.extra.get("mpu_present", False) else 0
     fpu_present = 1 if cpu.extra.get("fpu_present", False) else 0
     # lookup() raise clear if core has not been confirmed (see core_info.py) - no silent fallback on
@@ -243,7 +236,7 @@ def generate(device, out_path: str):
 
     # ---- Peripheral structs ----
     # Instance with `type` (e.g. UART0..UART4 -> type UART) only creates a shared struct, the same way
-    # CMSIS/STM32 lets USART1/2/3 share it USART_TypeDef - loader.py has validated all instances of
+    # Peripherals may share a register type; loader.py validates all instances of
     # the same type that have identical register layouts so takes the layout of the first instance
     # as canonical.
     lines.append("/* =========================== Peripheral register structures ======================== */")
@@ -295,21 +288,6 @@ def generate(device, out_path: str):
             f"0x{m.address:08X}UL   /* {m.kind}, 0x{m.size:X} bytes */"
         )
     lines.append("")
-
-    if device.bootloader is not None:
-        from mcu_desc.memory_layout import pick_flash
-        flash = pick_flash(device)
-        bl = device.bootloader
-        app_base = flash.address + bl.size
-        app_vector_base = app_base + bl.image_header_size
-        app_size = flash.size - bl.size - bl.image_header_size
-        lines.append("/* ========================= Bootloader partition layout (see YAML devices, item `bootloader:`) === */")
-        lines.append(f"#define NEON_MDF_BOOTLOADER_SIZE     0x{bl.size:08X}UL")
-        lines.append(f"#define NEON_MDF_IMAGE_HEADER_SIZE   0x{bl.image_header_size:08X}UL")
-        lines.append(f"#define NEON_MDF_APP_BASE            0x{app_base:08X}UL   /* application header partition; construct its header here */")
-        lines.append(f"#define NEON_MDF_APP_VECTOR_BASE     0x{app_vector_base:08X}UL   /* = APP_BASE + IMAGE_HEADER_SIZE - real app vector table */")
-        lines.append(f"#define NEON_MDF_APP_SIZE            0x{app_size:08X}UL")
-        lines.append("")
 
     lines.append('#ifdef __cplusplus')
     lines.append('}')

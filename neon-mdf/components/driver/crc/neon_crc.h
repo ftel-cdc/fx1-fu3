@@ -2,12 +2,12 @@
  * @file neon_crc.h
  * @brief Public declarations for CRC.
  * @details
- * * NEON_CRC - CRC-8 engine, blocking feature. API model STM32 HAL. REAL port from
- * src_fu2/fu2_crc.c::LL_CRC_Calc (old team, BuuPQ) - self-contained, no need to call separate
+ * * NEON_CRC - CRC-8 engine, blocking feature. HAL API. Register implementation from
+ * src_gt32u2086/gt32u2086_crc.c::LL_CRC_Calc (old team, BuuPQ) - self-contained, no need to call separate
  * config() first (original design matching: LL_CRC_Calc manually configure
  * polynomial/data_length/enable then feed FIFO and disable again).
  *
- * Source: inc_fu2/fu2_crc.h ("FU2 CRC Hardware Specification v2.0"). FU2_CRC is the only engine (no
+ * Source: inc_gt32u2086/gt32u2086_crc.h ("GT32U2086 CRC Hardware Specification v2.0"). GT32U2086_CRC is the only engine (no
  * more instances) - still receives the `instance` parameter to keep the generic API framework like
  * other peripherals.
  * @note Blocking polling/configuration operations are intended for task context.
@@ -31,7 +31,7 @@ extern "C" {
 /*==================================================================================================
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
-/* Common 8-bit polynomials - see inc_fu2/fu2_crc.h LL_CRC_POLY_*. */
+/* Common 8-bit polynomials - see inc_gt32u2086/gt32u2086_crc.h LL_CRC_POLY_*. */
 #define NEON_CRC_POLY_SMBUS 0x07U     /* CRC-8/SMBUS, also = CRC-8/ITU */
 #define NEON_CRC_POLY_MAXIM 0x31U     /* CRC-8/MAXIM */
 #define NEON_CRC_POLY_SAE_J1850 0x1DU /* CRC-8/SAE-J1850 */

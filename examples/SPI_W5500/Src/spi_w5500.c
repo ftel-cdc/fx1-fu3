@@ -125,7 +125,7 @@ static int w5500_access8(uint32_t address, uint32_t write, uint32_t data, uint32
     uint32_t tx = (address << 16) | (write != 0U ? 0x0400U : 0U) | (data & 0xFFU);
     uint32_t rx = 0U;
     spi_w5500_ticks();
-    printf("[FU2 -> W5500] %s addr=0x%04lX TX=0x%08lX\n", write != 0U ? "WRITE" : "READ",
+    printf("[GT32U2086 -> W5500] %s addr=0x%04lX TX=0x%08lX\n", write != 0U ? "WRITE" : "READ",
            (unsigned long)address, (unsigned long)tx);
     neon_status_t status = neon_spi_transmit_receive_words(SPI0, &tx, &rx, 1U, SPI_TIMEOUT);
     if (status != NEON_OK) {
@@ -133,7 +133,7 @@ static int w5500_access8(uint32_t address, uint32_t write, uint32_t data, uint32
         neon_spi_init(SPI0, &g_spi_config);
         return 0;
     }
-    printf("[W5500 -> FU2] RX=0x%08lX DATA=0x%02lX%s\n", (unsigned long)rx,
+    printf("[W5500 -> GT32U2086] RX=0x%08lX DATA=0x%02lX%s\n", (unsigned long)rx,
            (unsigned long)(rx & 0xFFU), write != 0U ? " (ignored for WRITE)" : "");
     *result = rx & 0xFFU;
     spi_w5500_ticks();
@@ -285,8 +285,8 @@ static void w5500_read32(void) {
         printf("[FAIL] SPI burst incomplete; SPI0 reset attempted, no partial dump.\n");
         return;
     }
-    printf("[FU2 -> W5500] READ32 TX=00 00 10 + 32 dummy bytes, one CS assertion\n");
-    printf("[W5500 -> FU2] socket 0 TX SRAM, offset 0x0000 (contents are not a test pattern)\n");
+    printf("[GT32U2086 -> W5500] READ32 TX=00 00 10 + 32 dummy bytes, one CS assertion\n");
+    printf("[W5500 -> GT32U2086] socket 0 TX SRAM, offset 0x0000 (contents are not a test pattern)\n");
     for (uint32_t index = 0U; index < 32U; ++index) {
         if ((index % 16U) == 0U) {
             printf("%04lX: ", (unsigned long)index);
@@ -509,7 +509,7 @@ void spi_w5500_run(neon_uart_handle_t *uart) {
     static const uint32_t speeds[] = {100000U, 500000U, 1000000U, 2500000U, 5000000U};
     for (;;) {
         uint32_t key = 0U;
-        neon_status_t status = neon_uart_receive(uart, (uint8_t *)&key, 1U, CONFIG_FU2_EXAMPLE_RX_TIMEOUT_POLLS);
+        neon_status_t status = neon_uart_receive(uart, (uint8_t *)&key, 1U, CONFIG_GT32U2086_EXAMPLE_RX_TIMEOUT_POLLS);
         if (status == NEON_OK) {
             if (key == 3U || key == 'q' || key == 'Q') {
                 break;

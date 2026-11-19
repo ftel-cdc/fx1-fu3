@@ -2,7 +2,7 @@
  * @file neon_aes.h
  * @brief Public declarations for AES.
  * @details
- * FU2 native AES-128 IP: key/IV/input/output banks, polling READY/DONE.
+ * GT32U2086 native AES-128 IP: key/IV/input/output banks, polling READY/DONE.
  * config stores direction for the single AES instance. Serialize access to the
  * engine, its configuration and key when sharing it between tasks.
  * @note Blocking polling/configuration operations are intended for task context.

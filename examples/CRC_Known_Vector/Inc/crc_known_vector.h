@@ -5,8 +5,8 @@
  * Declares the entry point; peripheral behavior will be added later.
  */
 
-#ifndef FU2_EXAMPLE_CRC_KNOWN_VECTOR_H
-#define FU2_EXAMPLE_CRC_KNOWN_VECTOR_H
+#ifndef GT32U2086_EXAMPLE_CRC_KNOWN_VECTOR_H
+#define GT32U2086_EXAMPLE_CRC_KNOWN_VECTOR_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,4 +24,4 @@ void crc_known_vector_run(void);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_CRC_KNOWN_VECTOR_H */
+#endif /* GT32U2086_EXAMPLE_CRC_KNOWN_VECTOR_H */

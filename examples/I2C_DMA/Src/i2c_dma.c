@@ -126,7 +126,7 @@ static neon_status_t transfer(uint32_t *data, neon_i2c_dma_direction_t direction
             if (status != NEON_OK) { return status; }
             stop_sent = 1U;
         }
-        /* The byte output owns a complete word, as required by the FU2 runtime. */
+        /* The byte output owns a complete word, as required by the GT32U2086 runtime. */
         status = neon_i2c_is_dma_complete(&i2c, direction, (uint8_t *)&complete);
         if (status != NEON_OK) { return status; }
         if (dma_status == NEON_OK && complete != 0U && stop_sent != 0U &&

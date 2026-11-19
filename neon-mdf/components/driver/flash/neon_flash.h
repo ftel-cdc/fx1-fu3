@@ -2,7 +2,7 @@
  * @file neon_flash.h
  * @brief Public declarations for Flash.
  * @details
- * NEON Flash HAL. FU2 definitions follow the Common-Spec-v8 VP contract.
+ * NEON Flash HAL. GT32U2086 definitions follow the Common-Spec-v8 VP contract.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.
@@ -40,14 +40,14 @@ neon_status_t neon_flash_erase_region(uint32_t address, uint32_t size);
  */
 neon_status_t neon_flash_program_word(uint32_t address, uint32_t data);
 
-#if defined(FU2)
+#if defined(GT32U2086)
 
 #include "mcu_device.h"
 
 /*==================================================================================================
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
-/* FU2 v8 main array: two 256-KB banks and 512-byte erase sectors. */
+/* GT32U2086 v8 main array: two 256-KB banks and 512-byte erase sectors. */
 #define NEON_FLASH_BANK_COUNT 2U
 #define NEON_FLASH_BANK_SIZE 0x40000U
 #define NEON_FLASH_TOTAL_SIZE 0x80000U
@@ -62,10 +62,10 @@ neon_status_t neon_flash_program_word(uint32_t address, uint32_t data);
 #define NEON_FLASH_DEFAULT_TIMEOUT 200000U
 
 #if (NEON_FLASH_BANK_COUNT * NEON_FLASH_BANK_SIZE) != NEON_FLASH_TOTAL_SIZE
-#error "FU2 v8 Flash bank geometry does not match total size"
+#error "GT32U2086 v8 Flash bank geometry does not match total size"
 #endif
 #if (NEON_FLASH_SECTORS_PER_BANK * NEON_FLASH_SECTOR_SIZE) != NEON_FLASH_BANK_SIZE
-#error "FU2 v8 Flash sector geometry does not match bank size"
+#error "GT32U2086 v8 Flash sector geometry does not match bank size"
 #endif
 
 #define NEON_FLASH_ERROR_NONE 0x00000000U
@@ -113,7 +113,7 @@ void neon_flash_get_default_config(neon_flash_config_t *config);
  * @param[in] config Module configuration.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * FU2 waits for BUSY=0 and START=0 before reusing BootROM initialization or
+ * GT32U2086 waits for BUSY=0 and START=0 before reusing BootROM initialization or
  * launching INIT. A hardware wait exceeding operation_timeout_polls returns
  * NEON_TIMEOUT; an ongoing operation owned by the driver returns NEON_BUSY.
  */
@@ -186,7 +186,7 @@ neon_status_t neon_flash_erase_sector(uint32_t address);
 neon_status_t neon_flash_erase_chip(void);
 /**
  * @brief Enter Flash deep power standby.
- * @return NEON_NOT_SUPPORTED on FU2.
+ * @return NEON_NOT_SUPPORTED on GT32U2086.
  * @details
  * Spec v1.4 section 3 lists Deep Standby as unsupported, although section
  * 6.13 describes it. These APIs issue no command until support is confirmed.
@@ -194,7 +194,7 @@ neon_status_t neon_flash_erase_chip(void);
 neon_status_t neon_flash_enter_deep_power_standby(void);
 /**
  * @brief Exit Flash deep power standby.
- * @return NEON_NOT_SUPPORTED on FU2.
+ * @return NEON_NOT_SUPPORTED on GT32U2086.
  */
 neon_status_t neon_flash_exit_deep_power_standby(void);
 
@@ -250,7 +250,7 @@ neon_status_t neon_flash_erase_bank(uint32_t bank, uint8_t include_redundancy, u
  * @return NEON_OK on success, or a module error/status code.
  * @details
  * Deprecated compatibility APIs: these v1.2 operations are absent from the
- * FU2 v8 VP register contract and always return NEON_NOT_SUPPORTED.
+ * GT32U2086 v8 VP register contract and always return NEON_NOT_SUPPORTED.
  */
 neon_status_t neon_flash_write_config_register(uint32_t bank, uint32_t address, uint32_t data);
 /**
@@ -288,7 +288,7 @@ neon_status_t neon_flash_enable_bad_sector_remap(uint8_t enable);
  */
 neon_status_t neon_flash_enable_nvr_sector(uint8_t enable);
 
-#endif /* FU2 */
+#endif /* GT32U2086 */
 
 #ifdef __cplusplus
 }

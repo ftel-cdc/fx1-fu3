@@ -1,8 +1,8 @@
 # I2C_DMA
 
-Independent FU2 firmware for I2C0 DMA communication with an AT24C256/AT24C256C EEPROM.
+Independent GT32U2086 firmware for I2C0 DMA communication with an AT24C256/AT24C256C EEPROM.
 
-This is an independent FU2 firmware. Its UART terminal waits at boot; press `r` without Enter
+This is an independent GT32U2086 firmware. Its UART terminal waits at boot; press `r` without Enter
 to start the example at the `fpga:>>` prompt.
 Console: UART0, 19200 baud, 8N1. Default FPGA clock: 10 MHz; target SCL: 100 kHz.
 
@@ -26,17 +26,17 @@ and connect I2C0 TX/RX requests to **DMA1, peripheral slot 4**.
 
 ```sh
 cd examples/I2C_DMA
-cmake --preset FU2
-cmake --build --preset FU2
+cmake --preset GT32U2086
+cmake --build --preset GT32U2086
 cmake -E env NEON_MDF_SERIAL_PORT=/dev/ttyUSB0 NEON_MDF_SERIAL_BAUD=19200 \
   NEON_MDF_UART_BYTE_GAP_MS=2 NEON_MDF_UART_LOG=full \
-  cmake --build --preset FU2 --target flash_uart_fu2
+  cmake --build --preset GT32U2086 --target flash_uart_gt32u2086
 ```
 
-Load `build/FU2/fu2_i2c_dma_image.bin` when selecting an image manually. This file includes the FU2
-128-byte image header; `fu2_i2c_dma.bin` is the raw payload. Open a serial monitor after the loader
+Load `build/GT32U2086/gt32u2086_i2c_dma_image.bin` when selecting an image manually. This file includes the GT32U2086
+128-byte image header; `gt32u2086_i2c_dma.bin` is the raw payload. Open a serial monitor after the loader
 releases the port. Use the board's UART-download/normal-boot straps as described in
-[FU2 build and boot](../../guide/FU2.md).
+[GT32U2086 build and boot](../../guide/GT32U2086.md).
 
 ## Run
 
@@ -75,8 +75,8 @@ When the run function completes, the application returns to its UART terminal.
 Press `r` again to repeat the example. This is a bounded one-shot test with no inner menu.
 At this prompt, Enter starts a new line and prints `fpga:>>` again. CR, LF and CRLF are
 supported; CRLF produces only one new prompt.
-Configure with `cmake --build --preset FU2 --target menuconfig`, then build again.
-`CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ` must match the actual FPGA clock for I2C timing and the write
+Configure with `cmake --build --preset GT32U2086 --target menuconfig`, then build again.
+`CONFIG_GT32U2086_EXAMPLE_FIXED_CLOCK_HZ` must match the actual FPGA clock for I2C timing and the write
 delay to be correct. `CONFIG_I2C_DMA_TIMEOUT_POLLS` is a polling budget, not milliseconds.
 Enable both `CONFIG_NEON_MDF_DRIVER_I2C` and `CONFIG_NEON_MDF_DRIVER_DMA`.
 

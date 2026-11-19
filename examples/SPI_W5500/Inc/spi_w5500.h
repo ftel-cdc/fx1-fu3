@@ -5,8 +5,8 @@
  * Run the SPI0 W5500 register, SRAM and timing-test menu.
  */
 
-#ifndef FU2_EXAMPLE_SPI_W5500_H
-#define FU2_EXAMPLE_SPI_W5500_H
+#ifndef GT32U2086_EXAMPLE_SPI_W5500_H
+#define GT32U2086_EXAMPLE_SPI_W5500_H
 
 /*==================================================================================================
 *                                          INCLUDE FILES
@@ -34,4 +34,4 @@ void spi_w5500_run(neon_uart_handle_t *uart);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_SPI_W5500_H */
+#endif /* GT32U2086_EXAMPLE_SPI_W5500_H */

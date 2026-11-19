@@ -26,7 +26,7 @@
  * Press r to run the example; Enter starts a new terminal prompt line.
  */
 int main(void) {
-    printf("\nFU2 QSPI_Flash_Read_Write\n");
+    printf("\nGT32U2086 QSPI_Flash_Read_Write\n");
     neon_uart_handle_t *uart = neon_console_get_uart();
     if (uart == NULL) {
         printf("[FAIL] UART0 initialization failed.\n");

@@ -31,7 +31,7 @@
 void uart_dma_run(neon_uart_handle_t *uart) {
     static const uint32_t pattern[16] = {'0', '1', '2', '3', '4', '5', '6', '7',
                                          '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-    /* FU2 uses word accesses: one UART character per uint32_t, not packed bytes. */
+    /* GT32U2086 uses word accesses: one UART character per uint32_t, not packed bytes. */
     static uint32_t tx[64], rx[16];
     neon_uart_config_t saved, config;
     if (uart == NULL || neon_uart_get_instance(uart) != NEON_UART0 ||

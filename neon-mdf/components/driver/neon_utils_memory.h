@@ -2,7 +2,7 @@
  * @file neon_utils_memory.h
  * @brief Internal backend interface for memory.
  * @details
- * Internal backend of fu2_runtime.c; drivers, apps and RTOS use <string.h> APIs.
+ * Internal backend of gt32u2086_runtime.c; drivers, apps and RTOS use <string.h> APIs.
  * Normal-memory buffer access using aligned 32-bit bus transactions only.
  * Buffers must own the complete aligned words containing their bytes (pad
  * both ends). Do not use on MMIO or concurrently modified DMA storage.

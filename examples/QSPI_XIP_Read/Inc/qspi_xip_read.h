@@ -5,8 +5,8 @@
  * Indirect Quad programming and verified QSPI memory-mapped reads.
  */
 
-#ifndef FU2_EXAMPLE_QSPI_XIP_READ_H
-#define FU2_EXAMPLE_QSPI_XIP_READ_H
+#ifndef GT32U2086_EXAMPLE_QSPI_XIP_READ_H
+#define GT32U2086_EXAMPLE_QSPI_XIP_READ_H
 
 /*==================================================================================================
 *                                          INCLUDE FILES
@@ -35,4 +35,4 @@ void qspi_xip_read_run(neon_uart_handle_t *uart);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_QSPI_XIP_READ_H */
+#endif /* GT32U2086_EXAMPLE_QSPI_XIP_READ_H */

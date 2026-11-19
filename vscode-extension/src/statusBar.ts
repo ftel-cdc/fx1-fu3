@@ -31,10 +31,8 @@ export class NeonMdfStatusBar implements vscode.Disposable {
     this.targetItem.text = `$(circuit-board) ${this.state.target || "select target"}`;
     this.targetItem.tooltip = "NEON-MDF: Select Target";
 
-    this.transportItem.text =
-      this.state.transport === "jtag" ? "$(circuit-board) JTAG" : "$(plug) UART";
-    this.transportItem.tooltip =
-      "NEON-MDF: Flash transport (JTAG: one fast SWD session; UART: System Bootloader, manual preparation required)";
+    this.transportItem.text = "$(plug) UART";
+    this.transportItem.tooltip = "NEON-MDF: ROMCODE UART; select boot mode 100, then RESET when ready";
 
     this.portItem.text = `$(radio-tower) ${this.state.port ?? "no port selected"}`;
     this.portItem.tooltip = "NEON-MDF: Select Serial Port";

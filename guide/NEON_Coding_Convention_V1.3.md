@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document defines source organization, naming, header/source layout, Doxygen, API design and review rules for NEON Extension. It adopts STM32 HAL2 conventions where useful, with NEON-specific decisions taking precedence.
+This document defines source organization, naming, header/source layout, Doxygen, API design and review rules for NEON Extension. It defines the conventions used by the GT32U2086 SDK.
 
 Key NEON decisions:
 

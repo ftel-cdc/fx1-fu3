@@ -6,22 +6,22 @@
   },
   "configurePresets": [
     {
-      "name": "FU2",
-      "displayName": "FU2 standalone example",
+      "name": "GT32U2086",
+      "displayName": "GT32U2086 standalone example",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/FU2",
+      "binaryDir": "${sourceDir}/build/GT32U2086",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "${fileDir}/../../neon-mdf/cmake/toolchain/arm-none-eabi.cmake",
         "CMAKE_BUILD_TYPE": "Debug",
-        "NEON_MDF_TARGET": "FU2",
+        "NEON_MDF_TARGET": "GT32U2086",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     }
   ],
   "buildPresets": [
     {
-      "name": "FU2",
-      "configurePreset": "FU2"
+      "name": "GT32U2086",
+      "configurePreset": "GT32U2086"
     }
   ]
 }

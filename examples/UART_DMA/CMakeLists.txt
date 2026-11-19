@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(fu2_uart_dma C ASM)
+project(gt32u2086_uart_dma C ASM)
 
 if(NOT NEON_MDF_PATH)
   if(DEFINED ENV{NEON_MDF_PATH})
@@ -10,14 +10,14 @@ if(NOT NEON_MDF_PATH)
 endif()
 
 include(${NEON_MDF_PATH}/tools/cmake/project.cmake)
-if(NOT NEON_MDF_TARGET STREQUAL "FU2")
-  message(FATAL_ERROR "This example supports FU2 only")
+if(NOT NEON_MDF_TARGET STREQUAL "GT32U2086")
+  message(FATAL_ERROR "This example supports GT32U2086 only")
 endif()
 
 include(${CMAKE_BINARY_DIR}/config/sdkconfig.cmake)
-if(NOT CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ EQUAL 0)
+if(NOT CONFIG_GT32U2086_EXAMPLE_FIXED_CLOCK_HZ EQUAL 0)
   target_compile_definitions(${NEON_MDF_DEVICE_TARGET} PUBLIC
-    FU2_FPGA_FIXED_CLOCK_HZ=${CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ}UL)
+    GT32U2086_FPGA_FIXED_CLOCK_HZ=${CONFIG_GT32U2086_EXAMPLE_FIXED_CLOCK_HZ}UL)
 endif()
 
 neon_mdf_add_executable(${PROJECT_NAME}

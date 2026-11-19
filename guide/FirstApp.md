@@ -1,91 +1,114 @@
-# Create your first application
+# Your first GT32U2086 application
 
-This tutorial covers creating, building, flashing and editing a new application.
-Install the development environment first; see `SETUP.md`.
+Complete [environment setup](Setup.md) and activate `.venv` before starting.
+The quickest approach is to create a project from a template or copy a suitable example.
 
-## 1. Create a new application
+## Create from VS Code
 
-**Using VS Code** (recommended): open the repository root `neon_mdf/` or an
-existing application. Press `Cmd/Ctrl+Shift+P`, select **NEON-MDF: Create New
-App...**, enter a name containing letters, digits and underscores that does not
-start with a digit (for example, `my_app`), then choose **Bare-metal app** or
-**FreeRTOS app**. Create it in `examples/` by default. Accept the prompt to open
-the new application directory in a separate window.
+Open an example, run **NEON-MDF: Create New App...**, name the project and select
+bare-metal or FreeRTOS. The wizard copies the SDK template and replaces the
+application name and SDK path. See [VS Code](VSCode.md) for extension installation
+and SDK selection.
 
-**Using the command line**: copy one of the two templates and replace two
-tokens in the file contents:
+## Create from a terminal
 
-```sh
-cp -r neon-mdf/tools/templates examples/my_app   # Or tools/templates_freertos
-cd examples/my_app
-# Replace __APP_NAME__ with my_app and __NEON_MDF_RELATIVE_PATH__ with ../../neon-mdf
-# in CMakeLists.txt, CMakePresets.json, Src/main.c and .vscode/settings.json
+Run the following cross-platform script from the repository root using Python
+in `.venv`. It creates `examples/MyApp` from the bare-metal template:
+
+```python
+from pathlib import Path
+import shutil
+
+source = Path("neon-mdf/tools/templates")
+destination = Path("examples/MyApp")
+shutil.copytree(source, destination)
+for path in destination.rglob("*"):
+    if path.is_file():
+        text = path.read_text(encoding="utf-8")
+        text = text.replace("__APP_NAME__", "MyApp")
+        text = text.replace("__NEON_MDF_RELATIVE_PATH__", "../../neon-mdf")
+        path.write_text(text, encoding="utf-8")
 ```
 
-The VS Code wizard replaces these tokens automatically. When copying manually,
-replace them yourself using an editor or `sed`.
+Save this as a temporary script and run it with `python`, or execute it in the
+Python REPL. `copytree` reports an error if the destination already exists.
+For a FreeRTOS application, replace `templates` with `templates_freertos`;
+kernel configuration is in `Inc/FreeRTOSConfig.h`. For applications outside the
+repository, replace `../../neon-mdf` with the correct relative SDK path, or use
+the VS Code wizard to calculate it automatically.
 
-## 2. Application structure
+## Project structure
 
 ```text
-my_app/
-  CMakeLists.txt      # project(my_app) and neon_mdf_add_executable()/neon_mdf_add_app_executable()
-  CMakePresets.json   # Includes shared cmake/presets/targets.json presets for every target
-  Src/main.c         # Minimal int main(void) entry point, without a GPIO/LED demo
-  Kconfig            # Empty placeholder with a commented example; present in both templates
-  .vscode/           # settings.json sets NEON_MDF_PATH in cmake.environment; extensions.json
+MyApp/
+├── CMakeLists.txt       # Application name, SDK path and source list
+├── CMakePresets.json    # GT32U2086 preset, Arm GNU, Ninja, build/GT32U2086
+├── Kconfig             # Optional application-specific settings
+├── Src/main.c          # Application entry point
+└── Inc/FreeRTOSConfig.h # FreeRTOS template only
 ```
 
-See `guide/MenuConfig.md` to add application-specific Kconfig options.
-`Src/main.c` provides a main loop or task as the starting point for application
-logic. `WEACT_F412` currently has no syscall retarget for UART `printf()`, so
-template `printf()` calls do not produce UART logs on that target.
+After the first configuration, `sdkconfig` stores application settings and
+`build/` contains generated artifacts. Keep `sdkconfig` in version control;
+do not commit `build/`.
 
-## 3. Build
+The application calls `project()` before including the SDK:
+
+```cmake
+cmake_minimum_required(VERSION 3.25)
+project(MyApp C ASM)
+include($ENV{NEON_MDF_PATH}/tools/cmake/project.cmake)
+neon_mdf_add_executable(MyApp Src/main.c)
+```
+
+This minimal version requires `NEON_MDF_PATH`; templates already provide
+SDK path discovery. Add `.c` files to `neon_mdf_add_executable()` and register
+include directories with `target_include_directories(MyApp PRIVATE Inc)` as needed.
+
+## Configure and build
 
 ```sh
-cd examples/my_app
-cmake --preset WEACT_F412
-cmake --build --preset WEACT_F412
+cd examples/MyApp
+cmake --preset GT32U2086
+cmake --build --preset GT32U2086
 ```
 
-Replace `WEACT_F412` with `FU2` or `CH32V003F4P6` to build another target.
-No changes to `CMakeLists.txt` or `Src/main.c` are needed unless the application
-uses target-specific `#ifdef` branches. See `examples/Blinky/Src/main.c` for
-one source file supporting all three targets.
+The template enables UART through the default driver configuration. Check
+`CONFIG_NEON_MDF_DRIVER_UART=y` in `sdkconfig` if the application calls `printf`.
+The main output is `build/GT32U2086/MyApp_image.bin`; a `.bin` without `_image`
+is the payload without its header. `MyApp` is the ELF and `MyApp.map` is the linker map.
 
-Targets with `bootloader:` in their YAML, such as `WEACT_F412` and
-`CH32V003F4P6`, also build a `bootloader` executable. The default application
-template builds a single application through `neon_mdf_add_app_executable()`
-and has no OTA support. See `guide/BootloaderOTA.md` to add OTA.
-
-## 4. Flash and view logs on WEACT_F412 hardware
-
-In VS Code, select `WEACT_F412` in the status bar, then run **NEON-MDF: Build +
-Flash + Log**.
-
-From the command line:
+## Program, run and edit
 
 ```sh
-cmake --build --preset WEACT_F412 --target flash_jtag
-cmake --build --preset WEACT_F412 --target serial_monitor   # Press Ctrl+] to exit
+cmake -E env NEON_MDF_SERIAL_PORT=/dev/ttyUSB0 NEON_MDF_SERIAL_BAUD=19200 cmake --build --preset GT32U2086 --target flash_uart_gt32u2086
+cmake -E env NEON_MDF_SERIAL_PORT=/dev/ttyUSB0 NEON_MDF_MONITOR_BAUD=19200 cmake --build --preset GT32U2086 --target serial_monitor
 ```
 
-A repeating `"my_app is running"` message indicates that the application is
-running on the board.
+Set the port and baud for your board. Select boot mode `100`, wait for the loader
+to be ready, then press RESET. The template prints `MyApp is running` through
+UART0. If initial logs are missed, keep the monitor open and reset in boot mode
+`000`. See [UART programming](GT32U2086Flashing.md).
 
-## 5. Edit and rebuild
+Edit `Src/main.c`, build and program again. For a bare-metal application using
+interrupts, finish peripheral/NVIC configuration before calling `__enable_irq()`;
+BootROM hands off with global interrupts masked. The FreeRTOS port enables
+interrupts when starting the scheduler; see [FreeRTOS](FreeRTOSPort.md).
 
-Edit `Src/main.c`, for example to toggle an LED through GPIO. Use
-`examples/Blinky/Src/main.c` as a reference: call `neon_gpio_clock_enable()`
-before `neon_gpio_init()`. See `guide/DriverImplement.md` for the driver API.
+## Configuration and CLI
 
-Rebuild and flash again. Reconfiguration with `cmake --preset` is only needed
-after changes to `CMakeLists.txt`, `flashmap.csv` or `Kconfig`.
+```sh
+cmake --build --preset GT32U2086 --target menuconfig
+cmake --preset GT32U2086
+cmake --build --preset GT32U2086
+```
 
-## 6. Next steps
+The CLI provides a shorter way to invoke the same CMake targets. From the
+application directory, after setting `NEON_MDF_PATH`:
 
-- Application-specific `menuconfig` options: `guide/MenuConfig.md`.
-- OTA support: `guide/BootloaderOTA.md`.
-- VS Code debugging, breakpoints and stepping: `guide/Debugging.md`.
-- SDK design rationale: `ARCHITECTURE.md`.
+```sh
+python "$NEON_MDF_PATH/tools/neon_mdf.py" -p /dev/ttyUSB0 -b 19200 build flash-uart-gt32u2086 monitor
+```
+
+Available actions are `build`, `flash-uart-gt32u2086`, `monitor`, `menuconfig`
+and `set-target`. `GT32U2086` is the only target; see `--help` for parameters.

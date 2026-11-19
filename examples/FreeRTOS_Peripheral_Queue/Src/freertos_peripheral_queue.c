@@ -18,7 +18,7 @@
 #define PERIODIC_STACK_WORDS 128U
 #define UART_TX_TIMEOUT_POLLS 1000000U
 
-/* Each event owns complete aligned words, as required by FU2 SRAM. The queue
+/* Each event owns complete aligned words, as required by GT32U2086 SRAM. The queue
  * copies the value; no pointers to temporary ISR/task buffers are retained. */
 typedef struct {
     uint32_t type;

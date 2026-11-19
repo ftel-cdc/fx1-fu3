@@ -97,8 +97,8 @@
  * name below to enable the use of older kernel aware debuggers. */
     typedef xTIMER Timer_t;
 
-    #if defined( FU2 )
-        _Static_assert( sizeof( StaticTimer_t ) == sizeof( Timer_t ), "FU2 static timer layout" );
+    #if defined( GT32U2086 )
+        _Static_assert( sizeof( StaticTimer_t ) == sizeof( Timer_t ), "GT32U2086 static timer layout" );
     #endif
 
 /* The definition of messages that can be sent and received on the timer queue.

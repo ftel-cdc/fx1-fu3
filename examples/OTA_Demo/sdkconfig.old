@@ -1,7 +1,0 @@
-
-#
-# components/driver
-#
-CONFIG_NEON_MDF_DRIVER_UART=y
-CONFIG_NEON_MDF_DRIVER_I2C=y
-# end of components/driver

@@ -1,14 +1,8 @@
-// selectPort.ts - QuickPick selects the correct serial number from ports.ts (serialport.list()) - this
-// option allows you to select "automatically" (see serialMonitor/portProbe.ts, this step is only
-// necessary if your board has been reset) and "enter handset" in case the board is not yet
-// installed or the serialport is not available (e.g. ST-Link VCP secure OS).
 import * as vscode from "vscode";
 import { NeonMdfState } from "../state";
 import { listPorts } from "../ports";
-import { detectPortCommand } from "./detectPort";
 
-const MANUAL_ENTRY = "$(edit) enter hand...";
-const AUTO_DETECT_ENTRY = "$(zap) auto that (RESET board before)...";
+const MANUAL_ENTRY = "$(edit) Enter serial port...";
 
 export async function selectPortCommand(state: NeonMdfState): Promise<void> {
   let ports: { path: string; manufacturer?: string }[] = [];
@@ -21,7 +15,6 @@ export async function selectPortCommand(state: NeonMdfState): Promise<void> {
   }
 
   const items: vscode.QuickPickItem[] = [
-    { label: AUTO_DETECT_ENTRY, description: "that port is running bootloader (real delivery SYNC/READY)" },
     ...ports.map((p) => ({
       label: p.path,
       description: p.manufacturer,
@@ -30,14 +23,9 @@ export async function selectPortCommand(state: NeonMdfState): Promise<void> {
   ];
 
   const picked = await vscode.window.showQuickPick(items, {
-    placeHolder: ports.length > 0 ? "select serial port" : "no knob found - enter that hand or auto",
+    placeHolder: ports.length > 0 ? "select serial port" : "No ports found; enter the serial port manually",
   });
   if (!picked) {
-    return;
-  }
-
-  if (picked.label === AUTO_DETECT_ENTRY) {
-    await detectPortCommand(state);
     return;
   }
 

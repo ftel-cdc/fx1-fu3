@@ -2,14 +2,14 @@
  * @file neon_efuse.h
  * @brief Public declarations for eFuse.
  * @details
- * Legacy only: OTP_TypeDef belongs to the old FU2 map. Do not include this
+ * Legacy only: OTP_TypeDef belongs to the old GT32U2086 map. Do not include this
  * header in current applications; use flash/neon_flash.h for NVR records.
  */
 
 /*
  * NEON_EFUSE - read/write OTP (one-time-programmable) in 8-bit rows. Port TRUE from
- * src_fu2/fu2_efuse.c (former team, BuuPQ) - eFuse array is a separate memory-mapped area
- * (FU2_EFUSE_ARRAY_BASE = OTP_BASE + 0x1000, 128 rows × 4 byte stride, see inc_fu2/fu2_efuse.h), DO
+ * src_gt32u2086/gt32u2086_efuse.c (former team, BuuPQ) - eFuse array is a separate memory-mapped area
+ * (GT32U2086_EFUSE_ARRAY_BASE = OTP_BASE + 0x1000, 128 rows × 4 byte stride, see inc_gt32u2086/gt32u2086_efuse.h), DO
  * NOT read/write via register `instance` like CRC/ADC - `instance` is only used to set timing
  * before read/write (timing applies to the entire OTP block, not in rows).
  *
@@ -55,7 +55,7 @@ typedef struct {
 /*==================================================================================================
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
-#define NEON_EFUSE_ROW_COUNT 128U /* 0..127, see FU2_EFUSE_ROW_COUNT */
+#define NEON_EFUSE_ROW_COUNT 128U /* 0..127, see GT32U2086_EFUSE_ROW_COUNT */
 
 /*==================================================================================================
 *                                       FUNCTION PROTOTYPES

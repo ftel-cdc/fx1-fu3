@@ -4,48 +4,48 @@ config NEON_MDF_DRIVER_UART
     bool "Compile UART drivers"
     default y
     help
-        HAL UART polling, FIFO and interrupt-control notifications in build. FU2: Enable UART while
+        HAL UART polling, FIFO and interrupt-control notifications in build. GT32U2086: Enable UART while
         compiling printf/vprintf/puts/putchar and syscall hook _write, no separate printf flag is
         required. The console initializes UART0 on the first export. Disabling option will remove
-        the UART driver and FU2 console from the build; calling those APIs will report link errors.
+        the UART driver and GT32U2086 console from the build; calling those APIs will report link errors.
 
 config NEON_MDF_DRIVER_I2C
-    bool "Compile I2C driver (i2c/neon_i2c_fu2.c)"
+    bool "Compile I2C driver (i2c/neon_i2c_gt32u2086.c)"
     default y
     help
-        HAL I2C FU2: master/slave polling and interrupt, address 7/10
+        HAL I2C GT32U2086: master/slave polling and interrupt, address 7/10
         bit, memory-read repeated START, FIFO, SMBus/PEC, DMA request,
         bus-clear, CRM management and self-configuration SDA/SCL. Timing using period number i2c_clk; board
         must have external pull-up resistors on both SDA and SCL.
 
 config NEON_MDF_DRIVER_CRC
-    bool "Compile CRC-8 driver (crc/neon_crc_fu2.c)"
+    bool "Compile CRC-8 driver (crc/neon_crc_gt32u2086.c)"
     default y
     help
-        Includes CRC-8 driver (NEON_CRC_Calculate) - real port from src_fu2/fu2_crc.c. Disabled to reduce
+        Includes CRC-8 driver (NEON_CRC_Calculate) - real port from src_gt32u2086/gt32u2086_crc.c. Disabled to reduce
         Flash usage if the app is not in use.
 
 config NEON_MDF_DRIVER_EFUSE
     bool
     default n
     help
-        Old sdkconfig compatible symbol; OTP source kept at driver/efuse. FU2 ROM v5 save security policy
+        Old sdkconfig compatible symbol; OTP source kept at driver/efuse. GT32U2086 ROM v5 save security policy
         and public key in Flash NVR; use Flash driver's NVR API, not old OTP address.
 
 config NEON_MDF_DRIVER_ADC
-    bool "Compile ADC driver (adc/neon_adc_fu2.c)"
+    bool "Compile ADC driver (adc/neon_adc_gt32u2086.c)"
     default y
     help
-        FU2 ADC: 12-bit sample slots, configuration channel/timing and polling.
+        GT32U2086 ADC: 12-bit sample slots, configuration channel/timing and polling.
 
 config NEON_MDF_DRIVER_DMA
-    bool "Compile DMA driver (dma/neon_dma_fu2.c)"
+    bool "Compile DMA driver (dma/neon_dma_gt32u2086.c)"
     default y
     help
-        FU2 FTEL DMA: 8 channel, command register and 32-bit copy word.
+        GT32U2086 FTEL DMA: 8 channel, command register and 32-bit copy word.
 
 config NEON_MDF_DRIVER_SPI
-    bool "Compile SPI driver (spi/neon_spi_fu2.c)"
+    bool "Compile SPI driver (spi/neon_spi_gt32u2086.c)"
     default y
     help
         HAL SPI master/slave: polling 8/16/24/32-bit, full-duplex, slave-select, timing, FIFO,
@@ -53,57 +53,57 @@ config NEON_MDF_DRIVER_SPI
         configuration before transmission.
 
 config NEON_MDF_DRIVER_PWM
-    bool "Compile PWM driver (pwm/neon_pwm_fu2.c)"
+    bool "Compile PWM driver (pwm/neon_pwm_gt32u2086.c)"
     default y
     help
-        Report includes two-channel PWM FU2 v8 DTI drivers (NEON_PWM_Init/Start/Stop/SetPeriod/SetPulse),
-        following the PWM DTI register map selected by FU2 v8 VP.
+        Report includes two-channel PWM GT32U2086 v8 DTI drivers (NEON_PWM_Init/Start/Stop/SetPeriod/SetPulse),
+        following the PWM DTI register map selected by GT32U2086 v8 VP.
 
 config NEON_MDF_DRIVER_TIM
-    bool "Compile the TIM driver (tim/neon_tim_fu2.c)"
+    bool "Compile the TIM driver (tim/neon_tim_gt32u2086.c)"
     default y
     help
         report including full Timer driver for two channels CH0/CH1: configuration counter,
         prescaler/reload, compare, update/preload/one-pulse/center-aligned,
-        interrupt/flag and clock-failure status. Bitfield and background logic taken from FU2 LL; public API
+        interrupt/flag and clock-failure status. Bitfield and background logic taken from GT32U2086 LL; public API
         checks parameters and returns NEON_StatusTypeDef.
 
 config NEON_MDF_DRIVER_RTC
-    bool "Compile RTC driver (rtc/neon_rtc_fu2.c)"
+    bool "Compile RTC driver (rtc/neon_rtc_gt32u2086.c)"
     default y
     help
         Report includes RTC driver (NEON_RTC_Init/SetTime/GetTime/SetDate/GetDate) - Init/DeInit port real
-        from src_fu2/fu2_dti_rtc.c, Set/GetTime/Date write new pairing inline helper BCD real in
+        from src_gt32u2086/gt32u2086_dti_rtc.c, Set/GetTime/Date write new pairing inline helper BCD real in
         header.
 
 config NEON_MDF_DRIVER_TRNG
-    bool "Compile TRNG driver (trng/neon_trng_fu2.c)"
+    bool "Compile TRNG driver (trng/neon_trng_gt32u2086.c)"
     default y
     help
         Report included driver TRNG (NEON_TRNG_Init/GetRandomNumber) - Init/DeInit port real from
-        src_fu2/fu2_dti_trng.c, GetRandomNumber write new pairing inline helper real in header. 3rd
+        src_gt32u2086/gt32u2086_dti_trng.c, GetRandomNumber write new pairing inline helper real in header. 3rd
         IP (Dolphin Technology).
 
 config NEON_MDF_DRIVER_AES
-    bool "Compile AES driver (aes/neon_aes_fu2.c)"
+    bool "Compile AES driver (aes/neon_aes_gt32u2086.c)"
     default y
     help
-        FU2 AES-128: ECB/CBC/CTR, key/IV and polling READY/DONE.
+        GT32U2086 AES-128: ECB/CBC/CTR, key/IV and polling READY/DONE.
 
 config NEON_MDF_DRIVER_QSPI
     bool "Compile QSPI driver"
     default y
     help
-        FU2 QSPI SDR: Single/Dual/Quad command phases, FIFO polling,
+        GT32U2086 QSPI SDR: Single/Dual/Quad command phases, FIFO polling,
         transfer completion, abort and memory-mapped reads.
         Flash erase/program, QE and status commands are supplied by the application.
         Automatic status-polling, DDR and DMA APIs are not implemented.
 
 config NEON_MDF_DRIVER_WDT
-    bool "Compile watchdog driver (wdt/neon_wdt_fu2.c)"
+    bool "Compile watchdog driver (wdt/neon_wdt_gt32u2086.c)"
     default y
     help
-        FU2 watchdog: timeout range, reset/interrupt response, refresh,
+        GT32U2086 watchdog: timeout range, reset/interrupt response, refresh,
         read counter and acknowledge interrupt.
 
 endmenu

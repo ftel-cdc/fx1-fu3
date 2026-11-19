@@ -5,8 +5,8 @@
  * Run UART0 TX/RX DMA pattern tests.
  */
 
-#ifndef FU2_EXAMPLE_UART_DMA_H
-#define FU2_EXAMPLE_UART_DMA_H
+#ifndef GT32U2086_EXAMPLE_UART_DMA_H
+#define GT32U2086_EXAMPLE_UART_DMA_H
 
 /*==================================================================================================
 *                                          INCLUDE FILES
@@ -34,4 +34,4 @@ void uart_dma_run(neon_uart_handle_t *uart);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_UART_DMA_H */
+#endif /* GT32U2086_EXAMPLE_UART_DMA_H */

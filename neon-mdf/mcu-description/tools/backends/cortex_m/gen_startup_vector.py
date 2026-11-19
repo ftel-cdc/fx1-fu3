@@ -1,29 +1,5 @@
-"""create startup_<DEVICE>.s (GNU AS) for Cortex-M — shared to EVERY core confirmed in core_info.py
-(currently: cortex-m0/cortex-m0plus ARMv6-M,
-cortex-m3/cortex-m4 ARMv7-M).
-
-The first 16 entries of the table vector are ARM-based (constant between vendors), BUT 4 slots
-  (4/5/6/12) differ from each other: 0: Initial Main Stack Pointer (_estack, from linker script)
-  1:  Reset_Handler
-  2:  NMI_Handler
-  3:  HardFault_Handler
-  4: MemManage_Handler — ONLY core have has_extended_fault_handlers=True (ARMv7-M+/mainline); rest
-  Reserved 5: BusFault_Handler — as above 6: UsageFault_Handler — as above 7-10: Reserved (all core)
-  11: SVC_Handler
-  12: DebugMon_Handler — as MemManage, only ARMv7-M+/mainline
-  13: Reserved
-  14: PendSV_Handler
-  15: SysTick_Handler
-  16+: <NAME>_IRQHandler follows `interrupts` in .yaml device — position TRUE = 16 + irq.number (not
-       listed order in YAML file), gap fill (`number` is ignored midway) = Reserved (`.word 0`) —
-       same way gap-fill with backends/riscv/gen_startup.py, avoid vector table deviation if 1
-       corresponding YAML device does not declare continuously 0..N-1.
-
-Fixed bug (history, see guide/ArchitectDetail.md if needed): old version uses a fixed ARMv6-M
-template layout for EVERY core (including Cortex-M4 WEACT_F412, mpu_present=true) — entry 4/5/6/12
-is written `.word 0` (literal, NOT Default_Handler) seen because of the actual handler; also IRQ
-entry only in the order listed in YAML, not according to `number` — vector table deflection easy if
-YAML has empty spaces are filled RESERVED manually.
+"""Generate Cortex-M0 startup and vectors, placing IRQs by their YAML number.
+Reserved vector slots contain zero; handlers default to Default_Handler.
 """
 
 from . import core_info

@@ -1,13 +1,13 @@
-menu "FU2 example configuration"
+menu "GT32U2086 example configuration"
 
-config FU2_EXAMPLE_FIXED_CLOCK_HZ
+config GT32U2086_EXAMPLE_FIXED_CLOCK_HZ
     int "Fixed FPGA clock (Hz; 0 uses normal SDK clock setup)"
     range 0 1000000000
     default 10000000
     help
         Must match the actual FPGA clock. Zero retains the SDK SystemInit settings.
 
-config FU2_EXAMPLE_RX_TIMEOUT_POLLS
+config GT32U2086_EXAMPLE_RX_TIMEOUT_POLLS
     int "Console RX polling budget"
     range 1 100000000
     default 10000
@@ -22,7 +22,7 @@ menu "UART RX Interrupt Configuration"
         default 128
         help
             Size of the internal ring buffer for UART RX interrupt handling.
-            Number of byte slots, each stored in an aligned 32-bit word on FU2.
+            Number of byte slots, each stored in an aligned 32-bit word on GT32U2086.
             Any positive size is supported, not only powers of 2.
 
     config UART_RX_INTERRUPT_TX_TIMEOUT_POLLS

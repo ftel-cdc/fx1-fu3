@@ -29,10 +29,10 @@ static void peripheral_queue_wait_for_run(neon_uart_handle_t *uart, BaseType_t s
  * @return This function does not return.
  * @details
  * The terminal loop runs inside a task because the Cortex-M0 scheduler cannot
- * return to main after a run. UART initialization follows the other FU2 examples.
+ * return to main after a run. UART initialization follows the other GT32U2086 examples.
  */
 int main(void) {
-    printf("\nFU2 FreeRTOS_Peripheral_Queue\n");
+    printf("\nGT32U2086 FreeRTOS_Peripheral_Queue\n");
     neon_uart_handle_t *uart = neon_console_get_uart();
     if (uart == NULL) {
         printf("[FAIL] UART0 initialization failed.\n");
@@ -62,7 +62,7 @@ int main(void) {
 }
 
 /**
- * @brief Run the same r/Enter terminal flow as the other FU2 examples.
+ * @brief Run the same r/Enter terminal flow as the other GT32U2086 examples.
  * @details
  * Poll only at the prompt. During run(), RX belongs to the UART ISR. The demo
  * returns on Ctrl+C, so this loop prints the next prompt without restarting RTOS.

@@ -3,7 +3,6 @@ if(CONFIG_NEON_MDF_DRIVER_UART)
     TARGET neon_mdf_driver
     PERIPHERAL uart
     SOURCES
-      FU2 ${CMAKE_CURRENT_LIST_DIR}/platform/fu2/neon_uart.c
-      STM32F103 ${CMAKE_CURRENT_LIST_DIR}/platform/stm32f103/neon_uart.c
+      GT32U2086 ${CMAKE_CURRENT_LIST_DIR}/platform/gt32u2086/neon_uart.c
   )
 endif()

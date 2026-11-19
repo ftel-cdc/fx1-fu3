@@ -2,11 +2,11 @@
  * @file neon_tim.h
  * @brief Public declarations for timer.
  * @details
- * * NEON find - HAL timer for FU2.
+ * * NEON find - HAL timer for GT32U2086.
  *
  * Each TIM0..TIM7 contains two independent counting channels CH0/CH1. Each channel has four compare
  * registers, a control register, interrupt and its own state. The driver only publicly functions
- * that have been validated by FU2 LL; the two raw PWM modes retain names for source compatibility
+ * that have been validated by GT32U2086 LL; the two raw PWM modes retain names for source compatibility
  * but neon_tim_init() returns NEON_NOT_SUPPORTED because LL has not yet described route output,
  * polarity and duty rules.
  * @note Blocking polling/configuration operations are intended for task context.
@@ -99,8 +99,7 @@ typedef struct {
     uint32_t auto_reload;                 /* 32-bit CHL_CHx value. */
     neon_tim_mode_t mode;                 /* Disable or normal. */
     neon_tim_counter_mode_t counter_mode; /* Count up or down. */
-    /* AUTO_RELOAD bit controls CNT reload from CHL; this is not the register/preload shadow like the STM32
-   * timer. */
+    /* AUTO_RELOAD controls CNT reload from CHL. */
     neon_tim_auto_reload_t auto_reload_mode;
     neon_tim_one_pulse_mode_t one_pulse_mode;
     neon_tim_center_aligned_mode_t center_aligned_mode;
@@ -121,7 +120,7 @@ typedef struct {
  * @brief Fill the default configuration for timer.
  * @param[out] config Module configuration.
  * @details
- * Default according to FU2's reset: prescaler=0, reload=0, timer stop, count up,
+ * Default according to GT32U2086's reset: prescaler=0, reload=0, timer stop, count up,
  * auto-reload/one-pulse/center-aligned/interrupt are all off.
  */
 void neon_tim_get_default_config(neon_tim_config_t *config);
@@ -393,7 +392,7 @@ neon_status_t neon_tim_is_compare_channel_enabled(TIM_TypeDef *instance, uint8_t
  * @return NEON_OK on success, or a module error/status code.
  * @details
  * The below APIs only control INTR_EN_CHx. The application must still enable the correct IRQ in NVIC;
- * FU2 v8 uses a separate IRQ for TIM0/TIM1 and three common IRQs for pairs TIM2/3, TIM4/5, TIM6/7.
+ * GT32U2086 v8 uses a separate IRQ for TIM0/TIM1 and three common IRQs for pairs TIM2/3, TIM4/5, TIM6/7.
  */
 neon_status_t neon_tim_enable_interrupt(TIM_TypeDef *instance, uint8_t channel, uint32_t interrupts);
 /**
@@ -444,7 +443,7 @@ neon_status_t neon_tim_is_active_flag(TIM_TypeDef *instance, uint8_t channel, ui
  * @param[in] flags Status-flag bitmask.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Keep API for source compatibility; FU2 returns NEON_NOT_SUPPORTED because STT does not have a clear
+ * Keep API for source compatibility; GT32U2086 returns NEON_NOT_SUPPORTED because STT does not have a clear
  * command by software. Do not write STT: FPGA can report bus errors.
  */
 neon_status_t neon_tim_clear_flag(TIM_TypeDef *instance, uint8_t channel, uint32_t flags);

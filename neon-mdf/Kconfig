@@ -1,7 +1,7 @@
 mainmenu "neon-mdf Configuration"
 
 # Like ESP-IDF's original Kconfig: this file specifies the Kconfig source of each "component" (here
-# neon-mdf has exactly one components/driver component) - see ARCHITECTURE.md entry 11.
+# neon-mdf has exactly one components/driver component) - see guide/BuildSystem.md.
 rsource "components/driver/Kconfig"
 
 # Kconfig OF OWN APP (if any) - merged into GENERAL 1 menuconfig/1 sdkconfig with SDK options above.

@@ -26,7 +26,7 @@
 #endif
 
 /*
- * FU2 CRM Spec v3.3 Section 3.7: RTC core clock operates at 36 kHz[cite: 67].
+ * GT32U2086 CRM Spec v3.3 Section 3.7: RTC core clock operates at 36 kHz[cite: 67].
  * DTI RTC UG Section 5: Divisor = 36,000 Hz / 100 Hz = 360[cite: 16].
  */
 #ifndef CONFIG_RTC_CALENDAR_PRESCALER

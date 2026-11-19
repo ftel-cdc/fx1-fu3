@@ -1,7 +1,7 @@
 """generate GNU ld linker script (GCC arm-none-eabi) from model.Device.
 
 Select 1 flash area (kind=='flash', lowest address) and 1 RAM area for the app to use (prefer region
-with name containing "USR" - according to convention FU2.yaml RAM_SYS/RAM_USR; if not, take the
+with name containing "USR" - according to convention GT32U2086.yaml RAM_SYS/RAM_USR; if not, take the
 first RAM area). The remaining RAM area (e.g. RAM_SYS) is not touched by this linker script - for
 other system firmware / DMA buffer.
 """
@@ -158,9 +158,3 @@ def _write_script(device, image, out_path):
 def generate(device, out_path: str):
     """Generate the selected profile's standalone image."""
     _write_script(device, "standalone", out_path)
-
-
-def generate_bootloader_partitions(device, bootloader_out_path: str, app_out_path: str):
-    """Generate bootloader and app using the same selected memory profile."""
-    _write_script(device, "bootloader", bootloader_out_path)
-    _write_script(device, "app", app_out_path)

@@ -2,7 +2,7 @@
  * @file tim_periodic_interrupt.c
  * @brief Implementation for timer periodic interrupt.
  * @details
- * FU2 periodic timer interrupt; PB7 is the scope/logic-analyzer output.
+ * GT32U2086 periodic timer interrupt; PB7 is the scope/logic-analyzer output.
  */
 
 /*==================================================================================================
@@ -39,7 +39,7 @@ volatile uint32_t g_tim_periodic_ticks;
 /**
  * @brief Handle the TIM1 IRQHandler interrupt.
  * @details
- * FU2 routes TIM1 to IRQ13; the startup vector uses this handler name.
+ * GT32U2086 routes TIM1 to IRQ13; the startup vector uses this handler name.
  */
 void TIM1_IRQHandler(void) {
     uint32_t flags = 0U;
@@ -58,7 +58,7 @@ void TIM1_IRQHandler(void) {
 
 /** @copydoc tim_periodic_interrupt_run */
 void tim_periodic_interrupt_run(neon_uart_handle_t *uart) {
-    /* FU2 FPGA feeds TIM1 from the system clock. */
+    /* GT32U2086 FPGA feeds TIM1 from the system clock. */
     if (SystemCoreClock < 1000U || (SystemCoreClock % 1000U) != 0U) {
         printf("[ERROR] Timer clock must support a 1 kHz counter.\n");
         return;

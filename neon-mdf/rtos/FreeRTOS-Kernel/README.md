@@ -1,3 +1,8 @@
+> NEON-MDF subset for GT32U2086: only the GCC Cortex-M0 port and heap_4 are
+> included. CMake files are adapted for this subset. The kernel retains local
+> word-only SRAM patches; see [integration notes](../README.md). The upstream
+> project description below is retained for provenance.
+
 [![CMock Unit Tests](https://github.com/FreeRTOS/FreeRTOS-Kernel/actions/workflows/unit-tests.yml/badge.svg?branch=main&event=push)](https://github.com/FreeRTOS/FreeRTOS-Kernel/actions/workflows/unit-tests.yml?query=branch%3Amain+event%3Apush+workflow%3A%22CMock+Unit+Tests%22++)
 [![codecov](https://app.codecov.io/gh/FreeRTOS/FreeRTOS-Kernel/badge.svg?branch=main)](https://codecov.io/gh/FreeRTOS/FreeRTOS-Kernel)
 

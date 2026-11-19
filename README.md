@@ -1,270 +1,131 @@
-# neon-mdf
+# NEON-MDF · GT32U2086 SDK
 
-FU2 uses a single `FU2` target/preset with the RTL BootROM v5 layout. Application
-vectors are at `0x00020080`; builds produce `<app>_image.bin` containing the
-128-byte header to load at `0x00020000`. See [FU2 build and boot contract](guide/FU2.md).
+NEON-MDF is a firmware development kit for **GT32U2086**, providing peripheral
+drivers, CMSIS, FreeRTOS and application examples. The SDK uses CMake/Ninja and
+Arm GNU Toolchain, with terminal and VS Code workflows on Windows, Linux and macOS.
 
-An ESP-IDF-style SDK for embedded microcontrollers: **one MCU description
-(YAML) generates the device headers, linker scripts and startup code**.
-Architecture-independent drivers share an API across chip families. The SDK also
-provides bootloader and OTA integration. Each application includes one SDK
-CMake file and remains a separate, independent CMake project.
+Each application is an independent project. The SDK generates device headers,
+startup code, linker scripts and SVD from the GT32U2086 hardware description,
+then packages firmware for programming through the UART BootROM.
 
-Both **Arm Cortex-M** (CMSIS) and **RISC-V** (custom CSR/startup support without
-CMSIS) use the same code generation pipeline.
+[Environment setup](guide/Setup.md) · [Your first application](guide/FirstApp.md) ·
+[Examples](examples/README.md) · [Documentation](guide/README.md)
 
-**Set up the environment first:** see `SETUP.md` for Windows, macOS and Linux.
+## What is included?
 
-Coding conventions: [NEON Coding Convention V1.3](guide/NEON_Coding_Convention_V1.3.md)
-and [how they apply to Neon MDF](guide/NEON_MDF_Source_Format_Guideline.md).
+- **Peripheral drivers:** GPIO, UART, I2C, SPI, DMA, ADC, timer/PWM, RTC, watchdog,
+  Flash/QSPI, CRC, TRNG and AES, plus clock/reset management and SYSCSR.
+- **Application configuration:** select drivers and parameters with `menuconfig`/`sdkconfig`.
+- **UART console:** `printf` for strings and integers, a programming tool and a serial monitor.
+- **FreeRTOS:** Cortex-M0 port integration with application-specific heap/stack settings.
+- **Examples and templates:** button inputs, GPIO outputs, interrupts, DMA and RTOS queues.
 
-## Available targets
+GT32U2086 has an Arm Cortex-M0 core running at up to 60 MHz, 512 KB instruction
+Flash and 128 KB SRAM. FPGA examples typically configure a 10 MHz clock; set the
+clock to match your hardware. Hardware details and firmware formats are covered
+in the [GT32U2086 guide](guide/GT32U2086.md).
 
-| Target | Vendor | Core | Flash | RAM | Bootloader/OTA | Status |
-|---|---|---|---|---|---|---|
-| `FU2` | FPT Telecom | Cortex-M0, up to 60MHz | 512KB | 128KB | RTL BootROM v5 | Register map v8; build/link and MMIO emulation checked; FPGA timing requires hardware measurements |
-| `WEACT_F412` | STMicroelectronics (STM32F412RET6) | Cortex-M4F, 100MHz | 512KB | 256KB | Yes | **Hardware-verified**; the main hardware test board |
-| `CH32V003F4P6` | WCH | RISC-V QingKe V2A (RV32EC), 48MHz | 16KB | 2KB | Application-dependent; see below | Build/link verified; **not yet run on hardware** |
+## Getting started
 
-## Directory structure
+### 1. Prepare the tools
 
-```text
-neon_mdf/
-  neon-mdf/                      # Independent SDK; contains no applications
-    export.sh                    # Sets NEON_MDF_PATH, like ESP-IDF export.sh
-    CMakeLists.txt               # Builds neon_mdf_driver and neon_mdf_device_<TARGET>
-    Kconfig                      # Sources component and application Kconfig files
-
-    mcu-description/             # Source of truth for generated headers/linker/startup
-      schema/                    # Common and architecture-specific YAML schemas
-      devices/<TARGET>.yaml      # MCU memory map, peripherals, IRQs and bootloader layout
-      tools/                     # Python loader, model and cortex_m/riscv backends
-      generated/                 # Debugger SVD and generated CMake fragments
-
-    arch/
-      CortexM/
-        CMSIS/CMSIS_5/           # ARM CMSIS-Core vendor files; Core/Include only
-        CMSIS/Device/<FAMILY>/   # Generated files and handwritten system_<TARGET>.c
-      RISCV/
-        Core/                    # CSR helpers, software arithmetic and minimal libc shim
-        Device/<VENDOR>/<FAMILY>/ # Generated files and handwritten system_<TARGET>.c
-        Port/                    # PFIC interrupt and critical-section support
-
-    components/
-      console/                   # FU2 printf/_write over UART; enabled with the UART driver
-      driver/                    # Family-specific HAL backends
-      bootloader/                # Shared second-stage loader with architecture/family glue
-      ota/                       # OTA metadata shared by bootloader and application
-
-    rtos/FreeRTOS-Kernel/        # Upstream FreeRTOS with two RV32E compatibility patches
-    cmake/                      # Toolchains, architecture flags, targets and build integration
-    tools/
-      cmake/project.cmake       # The single SDK CMake file applications include
-      templates/                # Bare-metal application template
-      templates_freertos/       # FreeRTOS application template
-      neon_mdf.py               # CLI for build/flash/monitor/menuconfig
-      gen_flashmap.py, build_*.py # Partition generation and firmware image packaging
-
-  examples/
-    Blinky/                     # GPIO toggle; bootloader/OTA on WEACT_F412/CH32V003F4P6
-    FreeRTOS_Blinky/             # Two FreeRTOS tasks toggling two pins; three targets
-    OTA_Demo/                    # Factory, OTA and deliberately invalid OTA variants
-    Printf_Log/                  # FU2 word-only printf through _write/UART0
-    UART_ECHO_Polling/           # FU2 UART0 polling echo; configurable baud/clock/timeout
-    GPIO_Input_Output/           # FU2 PB5 button controls PB1 LED; logs over UART0
-    SPI_W5500/                  # Standalone FPGA SPI0/W5500 register and SRAM checks
-    UART_DMA/                   # Standalone FPGA UART0 DMA TX/RX
-    UART_RX_Interrupt/          # Standalone FPGA UART FIFO/ISR/ring-buffer echo
-    GPIO_Interrupt/             # Standalone FPGA PB5 interrupt counter
-    TIM_Periodic_Interrupt/     # Standalone FPGA TIM1 interrupt and PB7 LED
-    Flash_Read_Write/           # Standalone FPGA internal Flash erase/write/verify
-    PWM_Output/                 # Standalone FPGA TIM0_CH0 PWM menu
-    UART_ECHO_Polling_FPGA/     # Polling echo migrated from the FPGA testcases
-    GPIO_Input_Output_FPGA/     # PB5 button controls PB7; separate from the PB1 example
-    ...                         # Other peripheral skeletons are also independent projects
-    cmake/                      # Shared FPGA build/preset/Kconfig settings only
-
-  vscode-extension/             # Build/flash/monitor/debug/menuconfig UI; see VSCODE.md
-```
-
-Each application directory has its own `CMakeLists.txt` and `CMakePresets.json`;
-some also provide `.vscode/` configuration. See the
-[FPGA example index](examples/README.md). Applications configure and
-build independently of each other and of the SDK, just like ESP-IDF examples.
-
-FU2 Flash Tool **1.0** provides the `flash_uart_fu2` CMake target. Port and baud
-settings are supplied at execution time. Select boot mode 100 and press RESET
-when the tool is ready. See [FU2 UART programming](guide/FU2Flashing.md) and
-[FU2 boot modes](guide/FU2BootModes.md) for image preparation and boot procedures.
-
-See `guide/ArchitectDetail.md` for the dependency graph between CMake targets.
-
-## Try an example
-
-For a new application, see `guide/FirstApp.md`. To build an existing example:
-
-```sh
-. neon-mdf/export.sh              # Once per terminal session
-cd examples/Blinky
-cmake --preset WEACT_F412
-cmake --build --preset WEACT_F412
-# -> build/WEACT_F412/{bootloader,blinky,blinky_ota}.{elf,bin,map}
-```
-
-Use `FU2` or `CH32V003F4P6` instead to select another target. The same
-`Src/main.c` uses the appropriate family driver selected by CMake.
-
-## Bootloader and OTA
-
-`WEACT_F412`, `STM32F103CB` and `CH32V003F4P6` declare `bootloader:` in their
-device YAML. Their applications also build a `bootloader` executable with
-SDK-provided `main.c`. Programming uses SWD/JTAG or the custom UART protocol:
-SYNC, a 16-byte header (magic/size/crc32), 256-byte chunks and CRC32 verification.
-
-An application with `flashmap.csv` defines `app`, `otadata` and `app_ota`
-partitions, similar to ESP-IDF `partitions.csv`. OTA uses an **asymmetric**
-layout: updates never overwrite the factory `app` slot; they write only
-`app_ota`. The `otadata` partition stores `active_slot`, `state` and
-`boot_attempts`.
-
-The application calls `neon_ota_confirm_valid()` after running reliably. An
-unconfirmed image that repeatedly resets beyond `NEON_OTA_MAX_BOOT_ATTEMPTS`
-(default 3) **automatically rolls back to the factory image**. Factory boot,
-OTA switching and rollback have been verified on WEACT_F412 hardware.
-
-See `guide/BootloaderOTA.md` for partition definitions, CMake integration, API
-calls and factory-to-OTA-to-rollback testing.
-
-Bare-metal `examples/Blinky` on `CH32V003F4P6` builds three executables:
-`bootloader`, `blinky` and `blinky_ota`. Its
-`flashmap.CH32V003F4P6.csv` fits two application images into the 12KB remaining
-after the 4KB bootloader.
-
-`examples/FreeRTOS_Blinky` on the same chip has no OTA partition map. The
-minimal FreeRTOS build already uses about 8.5KB Flash and 2KB RAM
-(measured on 2026-08-11: text+data=8488B, bss=1936B), leaving insufficient space
-for two application images in the chip's 16KB Flash and 2KB RAM. It builds one
-application through `neon_mdf_add_app_executable()`. Both configurations use a
-bootloader that verifies the header/CRC32 and receives UART updates; the
-FreeRTOS version overwrites one fixed slot without A/B switching or rollback.
-
-`FU2` does not declare `bootloader:`. It builds one application and its
-BootROM image, without OTA.
-
-## FreeRTOS
-
-`FreeRTOS_Blinky` supports all three targets using upstream FreeRTOS ports:
-
-- `FU2` (Cortex-M0): `GCC_ARM_CM0`.
-- `WEACT_F412` (Cortex-M4F): `GCC_ARM_CM4F`.
-- `CH32V003F4P6` (RISC-V without CLINT): `GCC_RISC_V_GENERIC` with the
-  `RISCV_no_extensions` chip extension. The application configures the QingKe
-  STK tick timer and switches `mtvec` to Direct mode in
-  `vPortSetupTimerInterrupt()`; see the opening comments in `Src/main.c`.
-  Two scoped patches in `portable/GCC/RISC-V/` support RV32E's reduced
-  16-register file.
-
-See `guide/FreeRTOSPort.md` for port selection, Direct Routing and CLINT-less
-integration on a new CPU architecture.
-
-## FU2 printf logging
-
-Enable `CONFIG_NEON_MDF_DRIVER_UART=y` for both UART and `printf/_write`;
-there is no separate printf flag. Disabling UART excludes the driver and
-console.
-
-Include `<stdio.h>` and call
-`printf("counter=%u hex=0x%08lX\n", 1U, 0x1234UL)`.
-The first `_write` initializes UART0 at 19200 baud, 8N1.
-`neon_console_attach_uart()` optionally selects a different UART or baud rate.
-
-The word-only formatter supports strings, integers and hexadecimal output,
-without floating-point formatting or full stdio support. STM32F103 and
-WEACT_F412 have no built-in UART printf retarget; use their UART APIs directly
-or provide an application console.
-
-See [Printf_Log](examples/Printf_Log/README.md) and
-[PrintfLogging.md](guide/PrintfLogging.md) for API details, wiring, monitoring
-and verification.
-
-## menuconfig (Kconfig)
-
-Each application's `sdkconfig` selects which drivers are compiled. See
-`guide/MenuConfig.md` to add options.
-
-```sh
-cmake --build --preset WEACT_F412 --target menuconfig   # Like idf.py menuconfig
-cmake --preset WEACT_F412                              # Reconfigure to apply changes
-```
-
-## VS Code
-
-Open an application directory such as `examples/Blinky/`. Install
-`neon-mdf-tools` from `vscode-extension/`. The status bar selects the target,
-transport and serial port. Commands provide Build, Flash, Debug, Serial Monitor
-and menuconfig; the Create New App wizard offers bare-metal and FreeRTOS
-templates.
-
-See `VSCODE.md` for usage and `guide/Debugging.md` for the flash-then-attach
-workflow and two hardware issues that have been diagnosed and fixed.
-
-## CLI without VS Code
-
-```sh
-. neon-mdf/export.sh
-cd examples/Blinky
-python3 $NEON_MDF_PATH/tools/neon_mdf.py build flash-jtag monitor
-```
-
-Actions include `build`, `flash-jtag`, `flash-uart-stm32`, `flash-ota`,
-`monitor`, `menuconfig` and `set-target`. Multiple actions run sequentially
-in one command.
-
-## Add an MCU target
-
-See `guide/AddNewMCU.md` for the full procedure:
-
-1. Write `neon-mdf/mcu-description/devices/<TARGET>.yaml` using the common
-   schema and `schema/arch/<arch>.schema.yaml`. Use verified addresses and
-   register layouts; mark unknown data as PLACEHOLDER. See `guide/DeviceYAML.md`.
-2. Register `NEON_MDF_TARGET_<TARGET>_{ARCH,FAMILY,...}` in
-   `neon-mdf/cmake/mcu_variants.cmake`.
-3. Write `system_<TARGET>.c/.h` for the chip's actual clock setup.
-4. For a new family, add a GPIO backend in `components/driver/gpio/`. A
-   bootloader also requires Flash and UART backends in
-   `components/driver/flash/` and `components/bootloader/`.
-   See `guide/DriverImplement.md`.
-5. Add a preset to `neon-mdf/cmake/presets/targets.json`, shared by applications
-   through `include`.
-
-## Detailed guides
-
-| File | Contents |
+| Tool | Requirement / purpose |
 |---|---|
-| `guide/FirstApp.md` | Create an application, understand its files, build, flash, view logs and edit code. |
-| `guide/AddNewMCU.md` | Add a target: YAML, CMake registration, drivers, optional bootloader/OTA and FreeRTOS, and verification. |
-| `guide/DeviceYAML.md` | Complete reference for device YAML fields. |
-| `guide/DriverImplement.md` | Shared APIs, family backends and required, conditional or Kconfig-controlled CMake integration. |
-| `guide/MenuConfig.md` | Define bool/int/hex/string options and use them in C and CMake. |
-| `guide/PrintfLogging.md` | FU2 UART printf configuration, formats, monitoring and word-only verification. |
-| `guide/ArchitectDetail.md` | CMake target dependencies and include dependencies between layers. |
-| `guide/BootloaderOTA.md` | Add OTA partitions, CMake integration and API calls; test factory/OTA/rollback. |
-| `guide/FreeRTOSPort.md` | Select ports and integrate Direct Routing or CLINT-less operation. |
-| `guide/Debugging.md` | VS Code debugging and hardware fixes for header erasure by `load` and unreliable reset. |
+| Git | Obtain the SDK source |
+| Arm GNU Toolchain | `arm-none-eabi` distribution with GCC, binutils and newlib |
+| CMake | **3.25 or later**, for the SDK presets |
+| Ninja | Build firmware |
+| Python | **3.10 or later**, with packages from `neon-mdf/tools/requirements.txt` |
+| USB–UART adapter and GT32U2086 board | Program and run firmware; no board is needed to build |
 
-`ARCHITECTURE.md` explains the design rationale; `guide/` provides procedures.
+Install the tools using the [Windows, Linux or macOS setup guide](guide/Setup.md),
+then verify them in your terminal:
 
-## Current limitations
+```sh
+arm-none-eabi-gcc --version
+cmake --version
+ninja --version
+python3 --version
+```
 
-- `FU2` uses the Common Specification v8 register map and RTL BootROM v5 image
-  contract. MMIO emulation complements FPGA timing measurements and hardware
-  verification. See `guide/FU2.md` and `FU2_PORTING_STATUS.md`.
-- `CH32V003F4P6` drivers, bootloader and FreeRTOS port are build/link verified
-  and await hardware testing; the ordered board has not arrived. Extension and
-  CLI flashing integration also awaits `wlink`, which differs from
-  Cortex-M OpenOCD/SWD programming.
-- VS Code debugging currently supports Cortex-M through OpenOCD/SWD. RISC-V
-  requires WCH's OpenOCD fork and has not been validated.
-- Polling driver timeouts count polling iterations, rather than milliseconds.
-  FU2 SRAM/DMA accesses use aligned 32-bit words; byte buffers must own each
-  complete word that they occupy.
+On Windows, use `python` if your Python installation does not provide `python3`.
+VS Code and Node.js are only needed to use the editor or build/package its extension.
+
+### 2. Obtain the SDK and install Python packages
+
+```sh
+git clone https://github.com/ftel-cdc/neon_mdf.git
+cd neon_mdf
+python3 -m venv .venv
+```
+
+Activate the Python environment:
+
+| Terminal | Command from `neon_mdf/` |
+|---|---|
+| Linux/macOS (Bash, Zsh) | `. .venv/bin/activate` |
+| Windows PowerShell | `.\.venv\Scripts\Activate.ps1` |
+| Windows CMD | `.venv\Scripts\activate.bat` |
+
+```sh
+python -m pip install -r neon-mdf/tools/requirements.txt
+```
+
+Keep this environment activated when configuring and building. Bundled examples
+locate the SDK relative to their repository directory; see [creating an application](guide/FirstApp.md)
+for projects outside the repository.
+
+### 3. Build your first firmware
+
+Use `Printf_Log` to verify your environment and observe the firmware over UART:
+
+```sh
+cd examples/Printf_Log
+cmake --preset GT32U2086
+cmake --build --preset GT32U2086
+```
+
+The complete firmware image is **`build/GT32U2086/printf_log_image.bin`**. It
+includes the BootROM header; select this file when programming an image manually.
+
+### 4. Program the board and view output
+
+Connect the adapter TX to board RX, adapter RX to board TX, and share GND according
+to your board schematic. Close any programs holding the serial port. Replace
+`/dev/ttyUSB0` with your actual port, such as `COM3` on Windows or
+`/dev/cu.usbserial-…` on macOS.
+
+Run this command on **one line** from `examples/Printf_Log/`:
+
+```sh
+cmake -E env NEON_MDF_SERIAL_PORT=/dev/ttyUSB0 NEON_MDF_SERIAL_BAUD=19200 cmake --build --preset GT32U2086 --target flash_uart_gt32u2086
+```
+
+Select **boot mode `100`**, wait for the tool to report that UART is ready, then
+press **RESET**. Programming baud must match ROMCODE on your board; `19200` is the
+example configuration. After successful programming, open the monitor:
+
+```sh
+cmake -E env NEON_MDF_SERIAL_PORT=/dev/ttyUSB0 NEON_MDF_MONITOR_BAUD=19200 cmake --build --preset GT32U2086 --target serial_monitor
+```
+
+You should see `[INFO] counter=…` lines. Exit the monitor with `Ctrl+C`.
+Select boot mode **`000`** to run the installed firmware after subsequent resets
+or power cycles. See [UART programming](guide/GT32U2086Flashing.md) for connection
+checks and troubleshooting.
+
+## Next steps
+
+| Task | Start here |
+|---|---|
+| Read a button and control GPIO | [GPIO_Input_Output](examples/GPIO_Input_Output/README.md) |
+| Find a peripheral example | [Example index](examples/README.md) |
+| Create your own project | [Your first application](guide/FirstApp.md) |
+| Build, program and view logs in VS Code | [VS Code](guide/VSCode.md) |
+| Enable drivers or change parameters | [menuconfig](guide/MenuConfig.md) |
+| Use tasks and queues | [FreeRTOS](guide/FreeRTOSPort.md) |
+| Explore drivers, memory and the build system | [Documentation index](guide/README.md) |
+
+UART is the SDK's current getting-started workflow. GT32U2086 does not yet have a
+complete JTAG/OpenOCD configuration; see [Debugging](guide/Debugging.md) for the
+current integration status.

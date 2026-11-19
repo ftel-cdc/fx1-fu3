@@ -108,7 +108,7 @@ typedef uint32_t neon_crm_reset_source_t;
 ==================================================================================================*/
 /* CRM status conventions:
  * - NEON_INVALID_PARAM: invalid pointer, enum or input configuration combination.
- * - NEON_NOT_SUPPORTED: valid peripheral but FU2 has no required function.
+ * - NEON_NOT_SUPPORTED: valid peripheral but GT32U2086 has no required function.
  * - NEON_TIMEOUT: PLL is not locked within the limit of pll_timeout_polls.
  * - NEON_OK: operation complete; no private peripheral clock gate is considered always enabled and the
  *   clock API still returns NEON_OK. */
@@ -191,7 +191,7 @@ neon_status_t neon_crm_is_peripheral_clock_enabled(neon_crm_peripheral_t periphe
  * @param[in] peripheral Peripheral.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * Reset of FU2 positive low level: force reset write 0, release reset write 1.
+ * Reset of GT32U2086 positive low level: force reset write 0, release reset write 1.
  */
 neon_status_t neon_crm_peripheral_force_reset(neon_crm_peripheral_t peripheral);
 /**

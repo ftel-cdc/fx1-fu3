@@ -398,7 +398,7 @@ static void fill_pattern(uint32_t size) {
 
 /**
  * @brief Extract a byte after an aligned word load.
- * @param[in] data Packed word buffer; volatile access preserves the FU2 word ABI.
+ * @param[in] data Packed word buffer; volatile access preserves the GT32U2086 word ABI.
  * @param[in] offset Logical byte offset.
  * @return The selected byte.
  */

@@ -26,7 +26,7 @@
  * Press r to run the example; Enter starts a new terminal prompt line.
  */
 int main(void) {
-    printf("\nFU2 I2C_EEPROM\n");
+    printf("\nGT32U2086 I2C_EEPROM\n");
     neon_uart_handle_t *uart = neon_console_get_uart();
     if (uart == NULL) {
         printf("[FAIL] UART0 initialization failed.\n");

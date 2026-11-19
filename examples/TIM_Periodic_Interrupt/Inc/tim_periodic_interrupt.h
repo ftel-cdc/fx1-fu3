@@ -5,8 +5,8 @@
  * Declares module interfaces.
  */
 
-#ifndef FU2_EXAMPLE_TIM_PERIODIC_INTERRUPT_H
-#define FU2_EXAMPLE_TIM_PERIODIC_INTERRUPT_H
+#ifndef GT32U2086_EXAMPLE_TIM_PERIODIC_INTERRUPT_H
+#define GT32U2086_EXAMPLE_TIM_PERIODIC_INTERRUPT_H
 
 /*==================================================================================================
 *                                          INCLUDE FILES
@@ -36,4 +36,4 @@ void tim_periodic_interrupt_run(neon_uart_handle_t *uart);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_TIM_PERIODIC_INTERRUPT_H */
+#endif /* GT32U2086_EXAMPLE_TIM_PERIODIC_INTERRUPT_H */

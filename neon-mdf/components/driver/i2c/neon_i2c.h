@@ -2,10 +2,10 @@
  * @file neon_i2c.h
  * @brief Public declarations for I2C.
  * @details
- * * NEON I2C - HAL for FU2's DTI I2C controller.
+ * * NEON I2C - HAL for GT32U2086's DTI I2C controller.
  *
  * The public API uses unshifted addresses and logical values. The backend manages clock/reset, pinmux,
- * FIFO and FU2 hardware specific clear pulses.
+ * FIFO and GT32U2086 hardware specific clear pulses.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.
@@ -56,7 +56,7 @@ typedef enum {
 } neon_i2c_clock_stretch_t;
 
 typedef enum {
-    /* FU2: SDA=package 18, SCL=19, input feedback/open-drain enabled. DeInit restores saved pad/mux; bus
+    /* GT32U2086: SDA=package 18, SCL=19, input feedback/open-drain enabled. DeInit restores saved pad/mux; bus
      * needs external pull-up. */
     NEON_I2C_PIN_CONFIG_AUTO = 0,
     /* Preserve pin routing configured by the board/boot firmware. */
@@ -176,7 +176,7 @@ typedef struct {
 } neon_i2c_timing_t;
 
 typedef struct {
-    /* FU2 integrates FIFO 32 deep but the field threshold is only 4 bit wide. */
+    /* GT32U2086 integrates FIFO 32 deep but the field threshold is only 4 bit wide. */
     neon_field8_t tx_full_level;
     neon_field8_t tx_empty_level;
     neon_field8_t rx_full_level;
@@ -196,7 +196,7 @@ typedef struct {
     neon_i2c_speed_mode_t speed_mode;
     neon_i2c_addressing_mode_t addressing_mode;
     neon_i2c_clock_stretch_t clock_stretch;
-    /* address FU2 when in slave mode; master mode ignores this field. */
+    /* address GT32U2086 when in slave mode; master mode ignores this field. */
     neon_field16_t own_address;
     neon_i2c_pin_config_t pin_config;
     neon_i2c_timing_t timing;
@@ -230,14 +230,14 @@ typedef struct neon_i2c_handle_s {
  * @brief Fill the default configuration for i2 c.
  * @param[out] config Module configuration.
  * @details
- * FU2: master, 7-bit addressing, AUTO open-drain pins, target SCL 100 kHz.
- * Timing uses the current system clock, which also clocks I2C on FU2.
+ * GT32U2086: master, 7-bit addressing, AUTO open-drain pins, target SCL 100 kHz.
+ * Timing uses the current system clock, which also clocks I2C on GT32U2086.
  * Recalculate timing after changing that clock.
  */
 void neon_i2c_get_default_config(neon_i2c_config_t *config);
 
 /**
- * @brief Calculate conservative Standard/Fast timing for FU2.
+ * @brief Calculate conservative Standard/Fast timing for GT32U2086.
  * @param i2c_clock_hz Actual I2C input clock, 1..60000000 Hz.
  * @param scl_hz Requested SCL, 1..400000 Hz. Actual SCL can be slower.
  * @param[out] timing Register counts, including compensation for the two-stage
@@ -263,7 +263,7 @@ neon_status_t neon_i2c_init(neon_i2c_handle_t *hi2c, neon_i2c_t instance);
  * @details On a ready handle this operation deinitializes and reconfigures the
  * peripheral. Serialize configuration/teardown with other users of this handle.
  * A successful configuration owns the instance until neon_i2c_deinit().
- * FU2 AUTO configures pin routing; KEEP preserves board-provided routing.
+ * GT32U2086 AUTO configures pin routing; KEEP preserves board-provided routing.
  * Ultra Fast returns NEON_NOT_SUPPORTED. A FAULT handle can be reconfigured
  * to reset the controller after fixing the bus and quiescing any external DMAC.
  */
@@ -295,7 +295,7 @@ neon_status_t neon_i2c_deinit(neon_i2c_handle_t *hi2c);
  * @brief I2 c master transmit.
  * @param[in,out] hi2c I2C handle and runtime state.
  * @param[in] dev_address Unshifted 7-bit or 10-bit I2C device address.
- * @param[in] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[in] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @param[in] size Number of transfer elements.
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
@@ -314,7 +314,7 @@ neon_status_t neon_i2c_deinit(neon_i2c_handle_t *hi2c);
  * call set_config to recover. Polling APIs and ReadData/WriteData return NEON_BUSY
  * while DMA requests or handshakes remain active.
  * The byte buffer must own all 32-bit words containing it (two-end padding),
- * under the FU2 runtime buffer contract. Drivers use memcpy for RAM buffers.
+ * under the GT32U2086 runtime buffer contract. Drivers use memcpy for RAM buffers.
  */
 neon_status_t neon_i2c_master_transmit(neon_i2c_handle_t *hi2c, uint16_t dev_address, const uint8_t *data,
                                        uint16_t size, uint32_t timeout_polls);
@@ -322,7 +322,7 @@ neon_status_t neon_i2c_master_transmit(neon_i2c_handle_t *hi2c, uint16_t dev_add
  * @brief I2 c master receive.
  * @param[in,out] hi2c I2C handle and runtime state.
  * @param[in] dev_address Unshifted 7-bit or 10-bit I2C device address.
- * @param[out] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[out] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @param[in] size Number of transfer elements.
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
@@ -335,7 +335,7 @@ neon_status_t neon_i2c_master_receive(neon_i2c_handle_t *hi2c, uint16_t dev_addr
  * @param[in,out] hi2c I2C handle and runtime state.
  * @param[in] dev_address Unshifted 7-bit or 10-bit I2C device address.
  * @param[in] register_address Device register sub-address.
- * @param[out] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[out] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @param[in] data_size Number of payload bytes.
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
@@ -350,7 +350,7 @@ neon_status_t neon_i2c_mem_read(neon_i2c_handle_t *hi2c, uint16_t dev_address, u
  * @param[in,out] hi2c I2C handle and runtime state.
  * @param[in] dev_address Unshifted 7-bit or 10-bit I2C device address.
  * @param[in] register_address Device register sub-address.
- * @param[in] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[in] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @param[in] data_size Number of payload bytes.
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
@@ -361,7 +361,7 @@ neon_status_t neon_i2c_mem_write(neon_i2c_handle_t *hi2c, uint16_t dev_address, 
 /**
  * @brief I2 c slave transmit.
  * @param[in,out] hi2c I2C handle and runtime state.
- * @param[in] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[in] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @param[in] size Number of transfer elements.
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
@@ -377,7 +377,7 @@ neon_status_t neon_i2c_slave_transmit(neon_i2c_handle_t *hi2c, const uint8_t *da
 /**
  * @brief I2 c slave receive.
  * @param[in,out] hi2c I2C handle and runtime state.
- * @param[out] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[out] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @param[in] size Number of transfer elements.
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.
@@ -398,7 +398,7 @@ neon_status_t neon_i2c_slave_receive_ex(neon_i2c_handle_t *hi2c, uint8_t *data, 
 /**
  * @brief Write i2 c data.
  * @param[in,out] hi2c I2C handle and runtime state.
- * @param[in] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[in] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @return NEON_OK on success, or a module error/status code.
  * @details
  * Primitive does not block interrupt slaves. Returns NEON_BUSY when FIFO TX is full or FIFO RX is
@@ -408,7 +408,7 @@ neon_status_t neon_i2c_write_data(neon_i2c_handle_t *hi2c, uint8_t data);
 /**
  * @brief Read i2 c data.
  * @param[in,out] hi2c I2C handle and runtime state.
- * @param[out] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[out] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @return NEON_OK on success, or a module error/status code.
  */
 neon_status_t neon_i2c_read_data(neon_i2c_handle_t *hi2c, uint8_t *data);
@@ -426,7 +426,7 @@ neon_status_t neon_i2c_get_slave_status(const neon_i2c_handle_t *hi2c, neon_i2c_
  * @param[in] interrupts interrupt-source bitmask.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * In master mode, enable TRANSFER_DONE as FU2 keeps SCL low at the end of byte-count and does not
+ * In master mode, enable TRANSFER_DONE as GT32U2086 keeps SCL low at the end of byte-count and does not
  * generate STOP itself; ISR must decide to repeated START or call GenerateStop().
  */
 neon_status_t neon_i2c_enable_interrupts(neon_i2c_handle_t *hi2c, uint32_t interrupts);
@@ -450,7 +450,7 @@ neon_status_t neon_i2c_get_interrupt_status(const neon_i2c_handle_t *hi2c, uint3
  * @param[in] interrupts interrupt-source bitmask.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * FU2's IICR requires pulse 1 -> 0; the API performs enough of both writes.
+ * GT32U2086's IICR requires pulse 1 -> 0; the API performs enough of both writes.
  * ClearInterrupts/ClearSMBusFlags/GenerateStop returns NEON_BUSY when the other API is holding the
  * handle; ISR must not use raw MMIO to erase polling flags.
  */

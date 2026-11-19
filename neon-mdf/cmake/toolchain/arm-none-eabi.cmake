@@ -15,7 +15,7 @@ find_program(ARM_GCC_PATH ${TOOLCHAIN_PREFIX}gcc)
 if(NOT ARM_GCC_PATH)
   message(FATAL_ERROR
     "${TOOLCHAIN_PREFIX}gcc not found in PATH. GNU Arm Embedded "
-    "Toolchain (e.g. `brew install arm-none-eabi-gcc` on macOS - formula, not cask - see SETUP.md) and mail back.")
+    "Toolchain with newlib and add its bin directory to PATH; see guide/Setup.md.")
 endif()
 
 set(CMAKE_C_COMPILER   ${TOOLCHAIN_PREFIX}gcc)

@@ -5,14 +5,14 @@
 # (loader.py only checks the required field at the code level, see
 # mcu-description/tools/mcu_desc/loader.py).
 #
-# The section below is "arch-agnostic": it applies to all CPU architectures (Cortex-M, RISC-V, ...).
+# Common fields for the GT32U2086 device description.
 # Architectural fields are located in schema/arch/<arch>.schema.yaml.
 
-device: string              # chip name, e.g. "FU2" — used as filename header/linker/startup generated
+device: string              # chip name, e.g. "GT32U2086" — used as filename header/linker/startup generated
 vendor: string              # name vendor/team, e.g. "FPTTelecom" — only for description, NOT for naming folders (folder
                              # CMSIS/Device/<family> only by family, see field family)
-family: string              # chip family name, e.g. "FU2" (if there are multiple variants, the family is different device, e.g. family FU2, device FU2-LQFP80/FU2-QPN80)
-arch: string                # Required: "cortex-m0" | "cortex-m0plus" | "cortex-m3" | "cortex-m4" | "riscv-rv32ec" (WCH QingKe V2A, see CH32V003F4P6.yaml) | ... (conversely: "riscv-rv32imac" | ...)
+family: string              # chip family name, e.g. "GT32U2086" (if there are multiple variants, the family is different device, e.g. family GT32U2086, device GT32U2086-LQFP80/GT32U2086-QPN80)
+arch: cortex-m0             # GT32U2086 core architecture
 description: string         # short description
 
 cpu:                        # CPU core information — section details according to architecture see schema/arch/<arch>.schema.yaml
@@ -31,7 +31,7 @@ memory:                     # memory list, used to create linker scripts
 # No profile_param means no added secure header or IRQ relay, even on Cortex-M0.
 # Devices without explicit profiles retain their existing implicit normal layout.
 # Supported names: normal, xip. Unknown/duplicate names fail validation.
-# CLI: generate.py --device FU2 --profile normal|xip (default: normal).
+# CLI: generate.py --device GT32U2086 --profile normal|xip (default: normal).
 # CMake: -DNEON_MDF_PROFILE=normal|xip. Generated paths hold the selected profile.
 # Keep memory[] as physical addresses/sizes; profile offsets are relative to region.
 # Each flash/ram mapping contains region, optional description, and a layout list.
@@ -88,9 +88,6 @@ profile_param:
 # - ram.irq_relay: M0/M0+ without VTOR; base/size aligned to 8, size >= 8.
 #   Owned by ROM. Shifted vectors without VTOR require this reservation.
 # - To omit a reservation, omit its entry and adjust application offset/size.
-# - Explicit layouts with bootloader: flash must contain only an optional leading
-#   image_header and application covering the remainder; header size must equal
-#   bootloader.image_header_size. RAM may still contain additional ranges.
 # Additional names are supported for reserved or allocatable ranges. They expose
 # PROFILE_FLASH_<NAME> / PROFILE_RAM_<NAME> linker MEMORY regions with no automatic
 # section matching. Allocatable extras require explicit section placement in a
@@ -131,46 +128,3 @@ interrupts:                  # IRQ mapping table number -> name, used to create 
   - number: int                 # 0..(cpu.num_irq - 1), according to schema/arch/cortex-m.schema.yaml is NVIC IRQ0..IRQ31
     name: string                 # e.g. "UART0" -> generated "UART0_IRQn" / "UART0_IRQHandler"
     description: string
-
-bootloader:                  # OPTIONS - only declared when this device builds according to the "bootloader + app" model (see
-                              # components/bootloader/). when available, generator generates MORE
-                              # <DEVICE>_BOOTLOADER.ld + <DEVICE>_APP.ld (besides <DEVICE>_FLASH.ld
-                              # still generates normally for all devices)
-                              # + macro NEON_MDF_APP_BASE/APP_VECTOR_BASE/APP_SIZE in header.
-  size: hex                    # size partition bootloader (bytes), from the beginning of the lowest flash area (kind=flash) - e.g.
-                                # 0x8000 (32KB)
-  image_header_size: hex       # size "slot" header before app vector table (byte) - MUST be large enough that (flash.address + size
-                                # + image_header_size) satisfies SCB->VTOR alignment requirement
-                                # (ARMv7-M: multiple of 2^n >= 4*(16+cpu.num_irq), minimum 0x80) -
-                                # loader.py manually calculates and raises error if not, see
-                                # loader.py._check_bootloader_vtor_alignment(). MUST NOT equal true
-                                # sizeof(image header struct) (usually much smaller).
-  uart:                         # UART bootloader for receiving firmware (binary protocol SYNC/READY/ACK/NAK, see
-                                # components/bootloader/)
-    peripheral: string           # peripherals[].name used as UART, e.g. "USART1"
-    tx_pin: string                # vd "PA9"
-    rx_pin: string                # vd "PA10"
-    af: int                       # alternate function number of GPIO for upper peripheral
-    baud: int                     # vd 115200
-
-erase_sectors:                # OPTIONS - REAL flash erase-sector table, run-length format (group of sectors the same size in a
-                               # row), STANDARD DATA address order increasing from the beginning of
-                               # the flash area. Many chips (STM32F4...) have unequal sectors - the
-                               # `memory:` field above does not demonstrate this (there is only 1
-                               # `size` for the entire area). Used by tools/gen_flashmap.py to
-                               # validate the app's flashmap.csv (each partition must be within
-                               # sector boundaries - erase 1 partition must not touch adjacent
-                               # partition data). No declarations
-                               # = generator Ignore this validate (apps that don't use flashmap.csv do not report the time read to -
-                               # 100% secure with existing pipeline). The sum (size*count) of all
-                               # groups MUST match EXACTLY the lowest flash area size in `memory:` -
-                               # loader.py raise clear error if deviated (catches early sector
-                               # mistype/missing).
-  - size: hex                   # size per sector in this group (bytes)
-    count: int                  # consecutive sectors of this size
-
-# IMPORTANT NOTE: If the .yaml device file is based solely on the product brief (without the
-# register-level Technical Reference Manual), the base/offset/reset address value is PLACEHOLDER so
-# that the pipeline can run end-to-end. — cannot be used as a real address for real silicon
-# programming until compared with the official register document
-# file devices/*.yaml.

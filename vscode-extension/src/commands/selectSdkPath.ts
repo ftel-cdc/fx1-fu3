@@ -1,6 +1,5 @@
-// selectSdkPath.ts - same as "ESP-IDF: Configure ESP-IDF Extension" command (select idf.espIdfPath):
-// only have one directory, validate no like a real neon-mdf checkout, save neonMdf.sdkPath (Global)
-// settings. "reset to automatic" erase setting, return to old swap path conventions.
+// Validate and save the SDK directory in the global neonMdf.sdkPath setting.
+// Resetting the setting restores the default app-relative SDK path.
 import * as vscode from "vscode";
 import { getConfiguredSdkPath, setConfiguredSdkPath, looksLikeSdkRoot } from "../sdkPath";
 
@@ -14,7 +13,7 @@ export async function selectSdkPathCommand(): Promise<void> {
     { label: BROWSE_LABEL, description: "select 1 real SDK checkout" },
     {
       label: RESET_LABEL,
-      description: "select erase, reuse the modified dan convention (../../neon-mdf)",
+      description: "Clear the setting and use ../../neon-mdf relative to the application",
     },
   ];
 
@@ -47,7 +46,7 @@ export async function selectSdkPathCommand(): Promise<void> {
   const dir = chosen[0];
   if (!(await looksLikeSdkRoot(dir))) {
     const proceed = await vscode.window.showWarningMessage(
-      `NEON-MDF: ${dir.fsPath} is not the same as a neon-mdf SDK checkout (no tools/cmake/project.cmake seen) - still use this dan path?`,
+      `NEON-MDF: ${dir.fsPath} does not contain tools/cmake/project.cmake. Use this SDK path anyway?`,
       "still use",
       "deactivate"
     );

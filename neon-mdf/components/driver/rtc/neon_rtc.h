@@ -2,13 +2,13 @@
  * @file neon_rtc.h
  * @brief Public declarations for RTC.
  * @details
- * * NEON_RTC - API hour/date decimal, backend switches to BCD according to FU2.yaml. year uses full
+ * * NEON_RTC - API hour/date decimal, backend switches to BCD according to GT32U2086.yaml. year uses full
  * four digits; SetDate checks the date in month and leap year.
  *
  * NOT done yet: Alarm/interrupt channel/Stopwatch (true in header but not needed for use-case
  * read/write basic hours - added later if app needs it).
  *
- * Source: inc_fu2/fu2_dti_rtc.h (DTI RTC).
+ * Source: inc_gt32u2086/gt32u2086_dti_rtc.h (DTI RTC).
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.

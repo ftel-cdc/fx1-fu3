@@ -2,7 +2,7 @@
  * @file neon_pwm.h
  * @brief Public declarations for PWM.
  * @details
- * NEON PWM API for the FU2 v8 DTI two-channel register map.
+ * NEON PWM API for the GT32U2086 v8 DTI two-channel register map.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.
@@ -86,7 +86,7 @@ void neon_pwm_get_default_config(neon_pwm_config_t *config);
  * @param[in] config Module configuration.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * PWM0/PWM1 and TIM0 are supported TIM_TypeDef instances in FU2 v8.
+ * PWM0/PWM1 and TIM0 are supported TIM_TypeDef instances in GT32U2086 v8.
  * TIM0 channel 0 supplies PWM_T0 on PB6 in the current VP routing. It shares
  * the channel with normal TIM0 users; stop/deinitialize before switching APIs.
  * The FPGA output channel/duty mapping must be confirmed by measurement.
@@ -238,7 +238,7 @@ neon_status_t neon_pwm_is_active_flag(TIM_TypeDef *instance, uint8_t channel, ui
  * @param[in] flags Status-flag bitmask.
  * @return NEON_OK on success, or a module error/status code.
  * @details
- * FU2 returns NEON_NOT_SUPPORTED: live STT has no software clear command.
+ * GT32U2086 returns NEON_NOT_SUPPORTED: live STT has no software clear command.
  */
 neon_status_t neon_pwm_clear_flags(TIM_TypeDef *instance, uint8_t channel, uint32_t flags);
 

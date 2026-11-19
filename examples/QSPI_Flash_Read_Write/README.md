@@ -1,15 +1,15 @@
 # QSPI_Flash_Read_Write
 
-Standalone FU2 firmware for indirect NOR erase, page program and byte verification.
+Standalone GT32U2086 firmware for indirect NOR erase, page program and byte verification.
 The application starts at the `fpga:>>` UART terminal and waits for `r`.
 
 ## Hardware and test region
 
-Use a NOR connected to **FU2 QSPI CS0** with IO0..IO3, SCK, CS#, compatible supply and
+Use a NOR connected to **GT32U2086 QSPI CS0** with IO0..IO3, SCK, CS#, compatible supply and
 common ground. The bitstream must route these signals to the NOR. The automatic driver
 route uses the package pins below; verify their connections on the board.
 
-| Signal | FU2 package pin |
+| Signal | GT32U2086 package pin |
 |---|---:|
 | SCK | 68 |
 | CS0 | 72 |
@@ -20,7 +20,7 @@ route uses the package pins below; verify their connections on the board.
 
 Supported devices use the W25Q80DV-compatible command/status protocol: JEDEC
 `EF 40 xx` or `C8 40 xx`, density `12h..18h`. Other IDs are rejected before array writes.
-The NOR is external to FU2 and can be soldered on the board. Its presence and routing
+The NOR is external to GT32U2086 and can be soldered on the board. Its presence and routing
 must be confirmed; a flash used for FPGA configuration may use a different connection.
 
 **Reserve NOR offsets `0x0003C000..0x0003CFFF` exclusively for this example.**
@@ -32,24 +32,24 @@ Protection/suspend causes write tests to stop; the example does not remove prote
 
 The offset is configurable in menuconfig. It must be 4 KiB aligned, after sector zero,
 and inside the first 256 KiB; reserve the chosen sector outside existing images/data.
-`Flash_Read_Write` is a separate example for internal FU2 Flash.
+`Flash_Read_Write` is a separate example for internal GT32U2086 Flash.
 
 ## Build and load
 
 ```sh
 cd examples/QSPI_Flash_Read_Write
-cmake --preset FU2
-cmake --build --preset FU2
+cmake --preset GT32U2086
+cmake --build --preset GT32U2086
 cmake -E env NEON_MDF_SERIAL_PORT=/dev/ttyUSB0 NEON_MDF_SERIAL_BAUD=19200 \
   NEON_MDF_UART_BYTE_GAP_MS=2 NEON_MDF_UART_LOG=full \
-  cmake --build --preset FU2 --target flash_uart_fu2
+  cmake --build --preset GT32U2086 --target flash_uart_gt32u2086
 ```
 
-Load `build/FU2/fu2_qspi_flash_read_write_image.bin`, which includes the 128-byte FU2 header.
+Load `build/GT32U2086/gt32u2086_qspi_flash_read_write_image.bin`, which includes the 128-byte GT32U2086 header.
 These apps execute from internal Flash and require the **normal** build profile.
 CMake rejects `-DNEON_MDF_PROFILE=xip` because the app changes the QSPI configuration
 and erases/programs the NOR. Booting/executing firmware from NOR is a separate test.
-See [FU2 build and boot](../../guide/FU2.md) for UART-download and normal-boot straps.
+See [GT32U2086 build and boot](../../guide/GT32U2086.md) for UART-download and normal-boot straps.
 
 Open UART0 at **19200 baud, 8N1**, local echo and flow control off. At `fpga:>>`, press
 `r` without Enter to open the example menu. Enter prints a fresh prompt; CR, LF and
@@ -59,12 +59,12 @@ No test executes automatically at boot. Send each command after the preceding re
 ## Configuration
 
 ```sh
-cmake --build --preset FU2 --target menuconfig
-cmake --preset FU2
-cmake --build --preset FU2
+cmake --build --preset GT32U2086 --target menuconfig
+cmake --preset GT32U2086
+cmake --build --preset GT32U2086
 ```
 
-- `CONFIG_FU2_EXAMPLE_FIXED_CLOCK_HZ`: actual FPGA clock, default 10 MHz, maximum 60 MHz.
+- `CONFIG_GT32U2086_EXAMPLE_FIXED_CLOCK_HZ`: actual FPGA clock, default 10 MHz, maximum 60 MHz.
   Setting this value does not change the physical clock.
 - `CONFIG_QSPI_FLASH_READ_WRITE_TEST_OFFSET`: reserved NOR sector, default `0x3C000`.
 - `CONFIG_QSPI_FLASH_READ_WRITE_DIVIDER`: encoding 0..7 for `/2,/4,...,/256`, default 4 (`/32`).

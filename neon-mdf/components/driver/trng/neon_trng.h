@@ -3,12 +3,12 @@
  * @brief Public declarations for TRNG.
  * @details
  * * NEON_TRNG - generate real random numbers (True RNG). config/DeInit ports REAL from
- * src_fu2/fu2_dti_trng.c (old team, BuuPQ). neon_trng_get_random_number is NOT in .c team source
- * (only inline LL_TRNG_ReadData/IsDataValid in inc_fu2/fu2_dti_trng.h) - write new by combining 2
+ * src_gt32u2086/gt32u2086_dti_trng.c (old team, BuuPQ). neon_trng_get_random_number is NOT in .c team source
+ * (only inline LL_TRNG_ReadData/IsDataValid in inc_gt32u2086/gt32u2086_dti_trng.h) - write new by combining 2
  * real inline functions as recommended in header ("data is valid only once VLD is
  * asserted").
  *
- * Source: inc_fu2/fu2_dti_trng.h ("DTI_TRNG User Guide Rev 1.0, Dolphin Technology") - 3rd IP (Dolphin
+ * Source: inc_gt32u2086/gt32u2086_dti_trng.h ("DTI_TRNG User Guide Rev 1.0, Dolphin Technology") - 3rd IP (Dolphin
  * Technology), see note license in project memory before sharing SDK out.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;

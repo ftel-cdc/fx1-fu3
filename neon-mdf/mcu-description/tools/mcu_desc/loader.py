@@ -30,6 +30,8 @@ def load_device(path: str, profile: str = "normal") -> model.Device:
     vendor = _require(raw, "vendor", "root")
     family = _require(raw, "family", "root")
     arch = _require(raw, "arch", "root")
+    if (device, family, arch) != ("GT32U2086", "GT32U2086", "cortex-m0"):
+        raise DeviceDescriptionError("Only GT32U2086 / cortex-m0 is supported")
     description = raw.get("description", "")
 
     cpu_raw = dict(_require(raw, "cpu", "root"))
@@ -165,35 +167,6 @@ def load_device(path: str, profile: str = "normal") -> model.Device:
             f"interrupts have number={interrupts[-1].number} >= cpu.num_irq={num_irq}"
         )
 
-    bootloader = None
-    if "bootloader" in raw:
-        b_raw = raw["bootloader"]
-        bl_size = _require(b_raw, "size", "bootloader")
-        header_size = _require(b_raw, "image_header_size", "bootloader")
-        uart_raw = _require(b_raw, "uart", "bootloader")
-        bootloader = model.Bootloader(
-            size=bl_size,
-            image_header_size=header_size,
-            uart=model.BootloaderUart(
-                peripheral=_require(uart_raw, "peripheral", "bootloader.uart"),
-                tx_pin=_require(uart_raw, "tx_pin", "bootloader.uart"),
-                rx_pin=_require(uart_raw, "rx_pin", "bootloader.uart"),
-                af=_require(uart_raw, "af", "bootloader.uart"),
-                baud=_require(uart_raw, "baud", "bootloader.uart"),
-            ),
-        )
-
-    erase_sectors = None
-    if "erase_sectors" in raw:
-        erase_sectors = []
-        for i, es in enumerate(raw["erase_sectors"]):
-            ctx = f"erase_sectors[{i}]"
-            erase_sectors.append(model.EraseSector(
-                size=_require(es, "size", ctx),
-                count=_require(es, "count", ctx),
-            ))
-        _check_erase_sectors_cover_flash(memory, erase_sectors)
-
     if "privice_parram" in raw:
         raise DeviceDescriptionError("privice_parram is no longer supported; use profile_param")
     profiles = _load_profiles(raw, memory)
@@ -202,17 +175,14 @@ def load_device(path: str, profile: str = "normal") -> model.Device:
     result = model.Device(
         device=device, vendor=vendor, family=family, arch=arch, description=description,
         cpu=cpu, memory=memory, peripherals=peripherals, interrupts=interrupts,
-        bootloader=bootloader, erase_sectors=erase_sectors, profile=profiles[profile],
+        profile=profiles[profile],
     )
     from dataclasses import replace
-    from .memory_layout import validate_profile, pick_flash
+    from .memory_layout import validate_profile
     for params in profiles.values():
         candidate = replace(result, profile=params)
         try:
             validate_profile(candidate)
-            if bootloader and not params.flash:
-                selected_memory = [pick_flash(candidate)] + candidate.memory_by_kind("ram")
-                _check_bootloader_vtor_alignment(selected_memory, cpu, bootloader, arch)
         except ValueError as exc:
             raise DeviceDescriptionError(f"profile '{params.name}': {exc}") from exc
     return result
@@ -300,96 +270,6 @@ def _load_profile_memory(block, kind, memory, ctx):
         if left.offset + left.size > right.offset:
             raise DeviceDescriptionError(f"{ctx}.layout: '{left.name}' overlaps '{right.name}'")
     return model.ProfileMemory(region_name, entries, description)
-
-
-def _check_erase_sectors_cover_flash(memory, erase_sectors):
-    """`erase_sectors` is a HAND declaration (not made of `memory:`, the uneven micromap sectors of many
-    chips cannot silently omit the field. Catch missing or mistyped values early
-    sectors, check that the sum of the don port sizes of all groups must match exactly with the
-    maximum flash area size (the same convention as _pick_flash() in gen_linker_script.py) -
-    mismatch means
-    missing or extra sectors are an error."""
-    flash_regions = [m for m in memory if m.kind == "flash"]
-    if not flash_regions:
-        raise DeviceDescriptionError("erase_sectors: device has no memory region kind=flash")
-    flash = sorted(flash_regions, key=lambda m: m.address)[0]
-
-    total = sum(es.size * es.count for es in erase_sectors)
-    if total != flash.size:
-        raise DeviceDescriptionError(
-            f"erase_sectors: total size of groups (0x{total:X}) size mismatch "
-            f"'flash area'{flash.name}' (0x{flash.size:X}) - recheck using sector, "
-            f"missing or extra groups"
-        )
-
-
-def _check_bootloader_vtor_alignment(memory, cpu, bootloader, arch):
-    """SCB->VTOR (ARMv7-M) - or equivalent vector table address of PFIC on RISC-V/WCH (mtvec[1:0]=3
-    "Address" mode, see CH32V003F4P6.yaml's cpu.mtvec_mode) - requires write address must be by the
-    the vector-table byte size rounded up to a power of two, at least 128 bytes. Hardware silently
-    rounds misaligned VTOR values down without a fault. If image_header_size does not satisfy
-    small, APP_VECTOR_BASE will not align use, vector table will point wrong value (alias vao header
-    region). Any app using interrupts such as SysTick/PendSV/SVC would fetch the wrong vector -
-    hardfault or undefined behavior silently, only loud when there is real interrupt
-    enabled.
-
-    the number of slot vector tables (num_vectors) calculated differently from real numbers between 2
-    This fixes the earlier unconditional use of 16 + num_irq for both architectures; see the
-    word-present in CH32V003F4P6.yaml assigned
-    bootloader.image_header_size):
-      - Cortex-M (ARMv6-M/ARMv7-M+): 16 core exception specified (same
-        core vectors, from Initial SP through SysTick_Handler, followed by cpu.num_irq device vectors:
-        num_vectors = 16 + num_irq.
-      - RISC-V/PFIC: cpu.num_irq according to the convention of this SDK (see backends/riscv/gen_startup.py)
-        is the total number of real SLOTs of the vector table, having reported GOM leveling the
-        section core/reserved (PFIC only has 12 slots with headers
-        table: entry 0 is "j handle_reset", 1 reserved, 2 NMI, 3 HardFault -
-        not 16 as ARM) -> num_vectors = num_irq directly, not
-        add 16.
-    For the current CH32V003F4P6, the old false real port (16+39=55) and the used real port (39) are
-    evenly spaced up to the same length (256 bytes) so they do not have a true bug - but are
-    composite arithmetic, not equal to the common real port, and the real risk for the next RISC-V
-    device has another num_irq.
-
-    the number of exception/IRQ used to compute must be the real hardware power of silicon
-    (cpu.extra.num_irq), not the IRQ declared in `interrupts:` (maybe empty/not enough) - the vector
-    table slot must be sufficient for all possible hardware values, not just the SDK wired up here.
-    """
-    num_irq = cpu.extra.get("num_irq")
-    if num_irq is None:
-        raise DeviceDescriptionError(
-            "bootloader: requires cpu.num_irq (to calculate vector table alignment "
-            "real) - this device has not declared cpu.num_irq"
-        )
-    if arch.startswith("cortex-m"):
-        num_vectors = 16 + num_irq  # 16 core exception with default + device IRQ
-    elif arch.startswith("riscv"):
-        num_vectors = num_irq  # cpu.num_irq is already the total number of real slots (see docstring)
-    else:
-        raise DeviceDescriptionError(
-            f"bootloader: unknown how to calculate the number of slot vector tables for "
-            f"arch '{arch}' - add fast each in _check_bootloader_vtor_alignment() "
-            "(mcu_desc/loader.py) after confirming the real number of slots core/reserved specified "
-            "It's your watch, no guessing."
-        )
-    required_align = 0x80
-    while required_align < num_vectors * 4:
-        required_align *= 2
-
-    flash_regions = [m for m in memory if m.kind == "flash"]
-    if not flash_regions:
-        raise DeviceDescriptionError("bootloader: device without memory region kind=flash")
-    flash = sorted(flash_regions, key=lambda m: m.address)[0]
-
-    app_vector_base = flash.address + bootloader.size + bootloader.image_header_size
-    if app_vector_base % required_align != 0:
-        vector_formula = f"16 core + cpu.num_irq={num_irq}" if arch.startswith("cortex-m") else f"cpu.num_irq={num_irq} (was total number of slots, see docstring)"
-        raise DeviceDescriptionError(
-            f"bootloader.image_header_size=0x{bootloader.image_header_size:X} mismatch: "
-            f"APP_VECTOR_BASE=0x{app_vector_base:08X} (flash.address+bootloader.size+image_header_size) "
-            f"must be by the number of 0x{required_align:X} (requires align vector table for {num_vectors} "
-            f"vector = {vector_formula}) - it is image_header_size to apply this gene"
-        )
 
 
 def _check_no_overlap(regions):

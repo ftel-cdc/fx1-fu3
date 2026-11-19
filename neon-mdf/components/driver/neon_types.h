@@ -2,7 +2,7 @@
  * @file neon_types.h
  * @brief Common Neon MDF status and ABI-safe field types.
  * @details
- * Defines shared status codes and preserves the FU2 aligned-word field ABI.
+ * Defines shared status codes and preserves the GT32U2086 aligned-word field ABI.
  */
 
 #ifndef __NEON_TYPES_H__
@@ -13,9 +13,9 @@
 ==================================================================================================*/
 #include <stdint.h>
 
-/* FU2 logical narrow fields always occupy complete words in SRAM.
- * Rebuild all FU2 objects when switching from the old narrow-field ABI. */
-#if defined(FU2)
+/* GT32U2086 logical narrow fields always occupy complete words in SRAM.
+ * Rebuild all GT32U2086 objects when switching from the old narrow-field ABI. */
+#if defined(GT32U2086)
 
 /*==================================================================================================
 *                                  STRUCTURES AND OTHER TYPEDEFS

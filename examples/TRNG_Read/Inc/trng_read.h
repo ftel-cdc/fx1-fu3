@@ -5,8 +5,8 @@
  * Declares the entry point; peripheral behavior will be added later.
  */
 
-#ifndef FU2_EXAMPLE_TRNG_READ_H
-#define FU2_EXAMPLE_TRNG_READ_H
+#ifndef GT32U2086_EXAMPLE_TRNG_READ_H
+#define GT32U2086_EXAMPLE_TRNG_READ_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,4 +24,4 @@ void trng_read_run(void);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_TRNG_READ_H */
+#endif /* GT32U2086_EXAMPLE_TRNG_READ_H */

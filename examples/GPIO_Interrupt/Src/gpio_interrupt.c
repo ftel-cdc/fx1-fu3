@@ -2,7 +2,7 @@
  * @file gpio_interrupt.c
  * @brief Implementation for GPIO interrupt.
  * @details
- * FU2 GPIOB interrupt counter; UART output is handled outside the ISR.
+ * GT32U2086 GPIOB interrupt counter; UART output is handled outside the ISR.
  */
 
 /*==================================================================================================

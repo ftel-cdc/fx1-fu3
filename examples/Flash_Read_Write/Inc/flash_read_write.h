@@ -5,8 +5,8 @@
  * Declares module interfaces.
  */
 
-#ifndef FU2_EXAMPLE_FLASH_READ_WRITE_H
-#define FU2_EXAMPLE_FLASH_READ_WRITE_H
+#ifndef GT32U2086_EXAMPLE_FLASH_READ_WRITE_H
+#define GT32U2086_EXAMPLE_FLASH_READ_WRITE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,4 +24,4 @@ void flash_read_write_run(void);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_FLASH_READ_WRITE_H */
+#endif /* GT32U2086_EXAMPLE_FLASH_READ_WRITE_H */

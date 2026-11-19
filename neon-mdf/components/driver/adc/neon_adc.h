@@ -2,7 +2,7 @@
  * @file neon_adc.h
  * @brief Public declarations for ADC.
  * @details
- * FU2 23-register ADC controller: 12-bit samples, up to 16 sample slots.
+ * GT32U2086 23-register ADC controller: 12-bit samples, up to 16 sample slots.
  * @note Blocking polling/configuration operations are intended for task context.
  * Serialize configuration/teardown with other users of the same peripheral;
  * timeout_polls values are polling budgets, not milliseconds, where applicable.
@@ -62,7 +62,7 @@ neon_status_t neon_adc_start_conversion(ADC_TypeDef *instance);
 /**
  * @brief Read ADC samples.
  * @param[in] instance Peripheral register instance.
- * @param[out] data Transfer data; FU2 RAM buffers must own their complete aligned 32-bit words.
+ * @param[out] data Transfer data; GT32U2086 RAM buffers must own their complete aligned 32-bit words.
  * @param[in] length Number of elements to process.
  * @param[in] timeout_polls Polling iteration budget; this value is not milliseconds.
  * @return NEON_OK on success, or a module error/status code.

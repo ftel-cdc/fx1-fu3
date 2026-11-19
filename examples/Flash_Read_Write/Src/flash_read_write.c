@@ -2,7 +2,7 @@
  * @file flash_read_write.c
  * @brief Implementation for Flash read write.
  * @details
- * FU2 main Flash smoke test using the public driver API.
+ * GT32U2086 main Flash smoke test using the public driver API.
  */
 
 /*==================================================================================================

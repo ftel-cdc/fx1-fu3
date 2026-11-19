@@ -11,9 +11,8 @@ field `snake_case`, indent 4 spaces and open brackets same line. The private hel
 keyword `static`.
 
 Device register type, name register, startup/linker symbol, `main`, ISR, `SystemInit`,
-`SystemCoreClock`, syscall/runtime and FreeRTOS hook keep the platform contract. `SDK_IRQ_*` is
-RISC-V Port interface, not HAL API. Cortex-M uses CMSIS directly. CMSIS/FreeRTOS and output
-generator are not changed only for style sync.
+`SystemCoreClock`, syscall/runtime and FreeRTOS hook keep the platform contract.
+GT32U2086 uses CMSIS directly. Vendor source and generated output are not reformatted only for style.
 
 ## 2. Repository structure
 
@@ -24,9 +23,7 @@ generator are not changed only for style sync.
 ├── neon-mdf/
 │   ├── components/
 │   │   ├── driver/                 # HAL and peripheral backend
-│   │   ├── console/                # printf/console FU2
-│   │   ├── bootloader/
-│   │   └── ota/
+│   │   └── console/                # printf/console GT32U2086
 │   ├── arch/                       # CPU, device, IRQ, runtime
 │   ├── mcu-description/            # YAML, schema, generator
 │   ├── cmake/                      # Toolchain and build integration
@@ -37,7 +34,7 @@ generator are not changed only for style sync.
 ```
 
 SDK/app structure and dimensional dependency are further described in
-[ARCHITECTURE.md](../ARCHITECTURE.md).
+[Architecture](Architecture.md).
 
 ## 3. Architecture and dependencies
 
@@ -46,9 +43,8 @@ does not include `main.h` or source app dependencies. Header uses `mcu_device.h`
 `neon_<module>_device.h` respectively to get type/instance of selected device.
 
 CMake selects backend according to `NEON_MDF_TARGET_<TARGET>_FAMILY`. Cortex-M enables/disables IRQ
-and sets priority via CMSIS `NVIC_*`, critical section saves/restore PRIMASK using CMSIS. RISC-V
-uses `SDK_IRQ_*` from `arch/RISCV/Port/`. The required Flash/reset operation on FU2 still runs from
-SRAM.
+and sets priority via CMSIS `NVIC_*`; critical sections save/restore PRIMASK.
+The required Flash/reset operation on GT32U2086 runs from SRAM.
 
 ## 4. Directory and file source conventions
 
@@ -60,8 +56,8 @@ SRAM.
 | Header HAL | `components/driver/<module>/neon_<module>.h` |
 | Header instance | `<module>/neon_<module>_device.h`, when API needs alias instance |
 | Backend | `<module>/platform/<family>/neon_<module>.c` |
-| Internal header by platform | `syscsr/platform/fu2/neon_syscsr_internal.h` |
-| FU2 internal memory utility | `components/driver/neon_utils_memory.h` |
+| Internal header by platform | `syscsr/platform/gt32u2086/neon_syscsr_internal.h` |
+| GT32U2086 internal memory utility | `components/driver/neon_utils_memory.h` |
 | Source/header app | `examples/<App>/Src/`, `Inc/`; standalone FPGA examples follow `Printf_Log` |
 | Standalone FPGA peripheral example | `examples/<Example>/` |
 
@@ -73,12 +69,11 @@ components/driver/uart/
 ├── neon_uart.h
 ├── neon_uart_device.h
 └── platform/
-    ├── fu2/neon_uart.c
-    └── stm32f103/neon_uart.c
+    └── gt32u2086/neon_uart.c
 ```
 
 The file name uses lowercase letters and underscores. Existing example directory names such
-as `UART_RX_Interrupt` and `CRC_Known_Vector` are retained. Each FU2 example has its own `Src/main.c`
+as `UART_RX_Interrupt` and `CRC_Known_Vector` are retained. Each GT32U2086 example has its own `Src/main.c`
 and executable. Add implementation files to CMake sources; do not include a `.c` file directly.
 
 ## 5. Naming convention
@@ -99,7 +94,7 @@ and executable. Add implementation files to CMake sources; do not include a `.c`
 
 Private helper does not add `static_` to the name. HAL's type uses `_t`; type register like
 `UART_TypeDef` remains device generator of the same level. Internal interface by platform can
-network namespace family, for example `fu2_syscsr_*`; application does not use internal headers.
+network namespace family, for example `gt32u2086_syscsr_*`; application does not use internal headers.
 
 Public enum with explicit value, preserving existing encoding. Use unsigned macro for combining
 bitmasks. Keep literal `U`, `UL`, `ULL` by width. Input pointer is not modified using `const`.
@@ -220,20 +215,20 @@ read information using `get_config()`, `get_instance()`, `get_state()`, `get_err
 serialize configuration/teardown operations with other task/ISR using the same peripheral. The API
 polling/configuration can block in task context; do not call blocking wait in ISR.
 
-FU2 constraints continue to apply:
+GT32U2086 constraints continue to apply:
 
-- SRAM/MMIO uses aligned word 32-bit. `neon_field8_t` and `neon_field16_t` remain `uint32_t` on FU2;
+- SRAM/MMIO uses aligned word 32-bit. `neon_field8_t` and `neon_field16_t` remain `uint32_t` on GT32U2086;
   the other backend keeps 8/16-bit. width
 - Buffer byte/string owns the full word containing data and terminator. Use `<string.h>` for normal
   RAM; runtime associates implementation word-only.
-- `neon_utils_memory.h` is only the internal backend of `fu2_runtime.c`. MMIO uses register word
+- `neon_utils_memory.h` is only the internal backend of `gt32u2086_runtime.c`. MMIO uses register word
   `volatile`, does not include MMIO in memory/string. function
 - Keep DMA's alignment/count/burst and `.ramfunc`'s Flash/reset. requirements
-- Keep FU2 compiler policy and check word-access on firmware/archive.
+- Keep GT32U2086 compiler policy and check word-access on firmware/archive.
 - `timeout_polls` is the number of poll rings. The value 0 makes sense for each API; do not manually
   convert timeout to milliseconds just because the convention example uses ms.
 
-Rebuild the entire object after changing API/type/handle. See [FU2.md](FU2.md).
+Rebuild the entire object after changing API/type/handle. See [GT32U2086.md](GT32U2086.md).
 
 ## 11. Checklist and Inspection
 
@@ -244,14 +239,14 @@ Rebuild the entire object after changing API/type/handle. See [FU2.md](FU2.md).
 - Check owner, input `const`, unit, bounds, timeout, ISR and side effect.
 - Handwritten format source; retains register/runtime/upstream contract.
 - Build related targets, run meaningful regression for changes.
-- With FU2 test word-access, SRAM placement and emulation; emulation does not validate FPGA timing or
+- With GT32U2086 test word-access, SRAM placement and emulation; emulation does not validate FPGA timing or
   actual hardware.
 
 ```sh
 . neon-mdf/export.sh
 cd examples/SPI_W5500
-cmake --preset FU2
-cmake --build --preset FU2
+cmake --preset GT32U2086
+cmake --build --preset GT32U2086
 ```
 
 How to add driver: [DriverImplement.md](DriverImplement.md).

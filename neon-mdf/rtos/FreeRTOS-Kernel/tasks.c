@@ -458,8 +458,8 @@ typedef struct tskTaskControlBlock       /* The old naming convention is used to
  * below to enable the use of older kernel aware debuggers. */
 typedef tskTCB TCB_t;
 
-#if defined( FU2 )
-    _Static_assert( sizeof( StaticTask_t ) == sizeof( TCB_t ), "FU2 static task layout" );
+#if defined( GT32U2086 )
+    _Static_assert( sizeof( StaticTask_t ) == sizeof( TCB_t ), "GT32U2086 static task layout" );
 #endif
 
 #if ( configNUMBER_OF_CORES == 1 )

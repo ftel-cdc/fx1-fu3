@@ -5,8 +5,8 @@
  * Receive UART0 data through an interrupt-driven ring buffer and echo it.
  */
 
-#ifndef FU2_EXAMPLE_UART_RX_INTERRUPT_H
-#define FU2_EXAMPLE_UART_RX_INTERRUPT_H
+#ifndef GT32U2086_EXAMPLE_UART_RX_INTERRUPT_H
+#define GT32U2086_EXAMPLE_UART_RX_INTERRUPT_H
 
 /*==================================================================================================
 *                                          INCLUDE FILES
@@ -34,4 +34,4 @@ void uart_rx_interrupt_run(neon_uart_handle_t *uart);
 }
 #endif
 
-#endif /* FU2_EXAMPLE_UART_RX_INTERRUPT_H */
+#endif /* GT32U2086_EXAMPLE_UART_RX_INTERRUPT_H */
