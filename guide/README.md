@@ -23,6 +23,7 @@ then choose a guide for your next task.
 | [GT32U2086](GT32U2086.md) | Memory, BootROM v5, word-only runtime, normal/XIP profiles |
 | [UART programming](GT32U2086Flashing.md) | Wiring, tool parameters, programming/monitoring and troubleshooting |
 | [Boot modes](GT32U2086BootModes.md) | Boot selection, image preparation, internal Flash and QSPI |
+| [Secure boot](SecureBoot.md) | Build and program signed internal Flash images |
 | [Device YAML](DeviceYAML.md) | Registers, IRQs and memory profiles |
 
 ## SDK development

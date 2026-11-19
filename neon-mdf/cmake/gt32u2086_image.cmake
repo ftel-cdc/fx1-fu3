@@ -36,5 +36,31 @@ function(neon_mdf_add_gt32u2086_image target)
     COMMENT "${target}: package GT32U2086 header + payload"
     VERBATIM
   )
+  option(NEON_MDF_SECURE_BOOT "Produce a signed internal Flash image" OFF)
+  if(NEON_MDF_SECURE_BOOT)
+    if(_suffix STREQUAL "_xip")
+      message(FATAL_ERROR "BootROM v5 does not authenticate XIP images")
+    endif()
+    set(NEON_MDF_SIGNING_KEY "" CACHE FILEPATH
+        "ECDSA P-256 firmware signing key (defaults to SDK tools/key.pem)")
+    if(NEON_MDF_SIGNING_KEY)
+      get_filename_component(_key "${NEON_MDF_SIGNING_KEY}" ABSOLUTE)
+    else()
+      set(_key "${NEON_MDF_PATH}/tools/key.pem")
+    endif()
+    if(NOT EXISTS "${_key}" OR IS_DIRECTORY "${_key}")
+      message(FATAL_ERROR "Set NEON_MDF_SIGNING_KEY to an existing PEM private key")
+    endif()
+    set(_signer "${NEON_MDF_PATH}/tools/gt32u2086_secure_image.py")
+    # Sign after packaging and rerun when the key or signing command changes.
+    add_custom_command(TARGET ${target} POST_BUILD
+      COMMAND ${Python3_EXECUTABLE} "${_signer}" "${_image}"
+              --key "${_key}" --output "$<TARGET_FILE_DIR:${target}>/${target}_image_signed.bin"
+      COMMENT "${target}: sign GT32U2086 BootROM image"
+      VERBATIM)
+    set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS "${_key}" "${_signer}")
+    set_property(TARGET ${target} PROPERTY NEON_MDF_GT32U2086_IMAGE_FILE
+      "$<TARGET_FILE_DIR:${target}>/${target}_image_signed.bin")
+  endif()
   neon_mdf_add_gt32u2086_flash_targets(${target})
 endfunction()
