@@ -95,9 +95,37 @@ export async function configure(
   const sdkDir = (await resolveSdkPath(app.uri, sdkPathOverride))?.uri;
   const args = ["--preset", PRESET];
   if (mode === "fresh") {
-    args.push(...await freshOptions(app, cache, sdkDir), "--fresh");
+    const options = await freshOptions(app, cache, sdkDir);
+    if (!options.some((option) => option.startsWith("-DPython3_EXECUTABLE="))) {
+      const python = await findVirtualEnvPython(app, sdkDir);
+      if (python) {
+        options.push(`-DPython3_EXECUTABLE=${python}`);
+      }
+    }
+    args.push(...options, "--fresh");
   }
   await requireSuccess(runTask(app, "Configure", args, sdkDir), "Configuration");
+}
+
+async function findVirtualEnvPython(app: Application, sdkDir?: vscode.Uri): Promise<string | undefined> {
+  const roots = [app.uri, app.folder.uri];
+  if (sdkDir) {
+    roots.push(vscode.Uri.joinPath(sdkDir, ".."));
+  }
+  const executable = process.platform === "win32" ? ["Scripts", "python.exe"] : ["bin", "python"];
+  for (const root of roots) {
+    const candidate = vscode.Uri.joinPath(root, ".venv", ...executable);
+    try {
+      const stat = await vscode.workspace.fs.stat(candidate);
+      if ((stat.type & vscode.FileType.File) !== 0) {
+        return candidate.fsPath;
+      }
+    } catch (error) {
+      if (!(error instanceof vscode.FileSystemError) || error.code !== "FileNotFound") {
+        throw error;
+      }
+    }
+  }
 }
 
 export async function runBuild(

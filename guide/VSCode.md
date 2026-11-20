@@ -18,7 +18,7 @@ npm run compile
 npm run vsix
 ```
 
-The last command creates `neon-mdf-tools-0.1.4.vsix`. In VS Code, open Extensions →
+The last command creates `neon-mdf-tools-0.1.5.vsix`. In VS Code, open Extensions →
 the `…` menu → **Install from VSIX...** and select the generated file. Press `F5`
 from the extension project to test in an Extension Development Host. `.vsix`
 packages and `dist/` are generated artifacts; rebuild them after extension changes.
@@ -69,6 +69,9 @@ and upload progress. The status bar and Command Palette also expose the existing
 build and flash commands. The extension carries forward the selected Python
 interpreter, memory profile, firmware version and signing options when using
 `--fresh`. It resolves the SDK path again on the workspace host.
+When no Python interpreter was explicitly configured, the extension looks for
+`.venv` in the application, workspace and SDK checkout before letting CMake pick
+a system interpreter. Install the SDK dependencies into that environment.
 
 Flash releases an open monitor session and opens a new one after a successful
 upload. **NEON-MDF: Build + Flash + Log** opens the monitor after programming
