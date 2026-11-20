@@ -1,7 +1,6 @@
 config NEON_MDF_CAMERA_RUNTIME
     bool "Build Neon camera runtime"
     default n
-    select NEON_MDF_DRIVER_MIPI
     select NEON_MDF_DRIVER_CSI
     select NEON_MDF_DRIVER_ISP
     help

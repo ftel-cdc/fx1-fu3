@@ -5,7 +5,7 @@
 
 /* Everything the geometry and format decide, computed once for both memory_bytes() and init(). */
 typedef struct {
-    neon_csi_config_t csi_config;   /* Geometry, format, line padding and buffer size; addresses not yet set. */
+    neon_csi_config_t csi_config;   /* Geometry, format, line pitch and buffer size; addresses not yet set. */
     neon_csi_layout_t layout;
     uint32_t align;
     uint32_t y_stride;
@@ -97,14 +97,12 @@ static neon_status_t make_plan(const neon_camera_runtime_config_t *config, plan_
     if (plan->align == 0U) {
         return NEON_NOT_SUPPORTED;
     }
+    /* The receiver takes the pitch, line_pitch_bytes = bytes_per_line + padding, and checks the padding. */
     padding = (uint32_t)(align_up(plan->layout.bytes_per_line, plan->align) - plan->layout.bytes_per_line);
-    if (padding > UINT16_MAX) {
-        return NEON_NOT_SUPPORTED;
-    }
     plan->csi_config.dma.line_pitch_bytes = plan->layout.bytes_per_line + padding;
     status = neon_csi_calculate_layout(&plan->csi_config, &plan->layout);
     if (status != NEON_OK) {
-        return status;
+        return (status == NEON_INVALID_PARAM) ? NEON_NOT_SUPPORTED : status;
     }
     plan->csi_config.dma.buffer_size_bytes = plan->layout.frame_bytes;
 
@@ -139,7 +137,7 @@ void neon_camera_runtime_get_default_config(neon_camera_runtime_config_t *config
     config->raw_depth = NEON_ISP_RAW12;
     config->bayer_pattern = NEON_ISP_BAYER_RGGB;
     config->continuous_clock = true;
-    config->mipi_ready_timeout_polls = NEON_CAMERA_RUNTIME_DEFAULT_READY_POLLS;
+    config->phy_name = NEON_CAMERA_RUNTIME_DEFAULT_PHY;
     config->algorithm_ops = neon_camera_3a_reference_ops();
 }
 
@@ -161,8 +159,7 @@ neon_status_t neon_camera_runtime_memory_bytes(const neon_camera_runtime_config_
 static void deinit_handles(neon_camera_runtime_t *runtime)
 {
     (void)neon_isp_deinit(&runtime->isp);
-    (void)neon_csi_deinit(&runtime->csi);
-    (void)neon_mipi_deinit(&runtime->mipi);
+    (void)neon_csi_deinit(&runtime->csi); /* Also releases the PHY. */
     (void)memset(runtime, 0, sizeof(*runtime));
 }
 
@@ -185,7 +182,7 @@ neon_status_t neon_camera_runtime_init(neon_camera_runtime_t *runtime, const neo
     neon_status_t status;
 
     if (runtime == NULL || config == NULL || config->sensor == NULL || config->sensor_ops == NULL ||
-        config->lane_count == 0U || config->lane_rate_bps == 0U) {
+        config->phy_name == NULL || config->lane_count == 0U || config->lane_rate_bps == 0U) {
         return NEON_INVALID_PARAM;
     }
     if (!blob_consistent(config->isp_profile, config->isp_profile_bytes) ||
@@ -216,8 +213,8 @@ neon_status_t neon_camera_runtime_init(neon_camera_runtime_t *runtime, const neo
     }
 
     (void)memset(runtime, 0, sizeof(*runtime));
-    status = neon_mipi_init(&runtime->mipi);
-    if (status == NEON_OK) status = neon_csi_init(&runtime->csi, &runtime->mipi);
+    status = neon_phy_get(config->phy_name, &runtime->phy);
+    if (status == NEON_OK) status = neon_csi_init(&runtime->csi, &runtime->phy);
     if (status == NEON_OK) status = neon_isp_init(&runtime->isp);
     if (status != NEON_OK) {
         deinit_handles(runtime);
@@ -235,15 +232,12 @@ neon_status_t neon_camera_runtime_init(neon_camera_runtime_t *runtime, const neo
     pipeline->sensor = config->sensor;
     pipeline->sensor_ops = config->sensor_ops;
     pipeline->sensor_mode_id = config->sensor_mode_id;
-    pipeline->mipi = &runtime->mipi;
-    pipeline->mipi_config.direction = NEON_MIPI_DIRECTION_RX;
-    pipeline->mipi_config.lane_count = config->lane_count;
-    pipeline->mipi_config.lane_rate_bps = config->lane_rate_bps;
-    pipeline->mipi_config.continuous_clock = config->continuous_clock;
-    pipeline->mipi_ready_timeout_polls = config->mipi_ready_timeout_polls != 0U ?
-        config->mipi_ready_timeout_polls : NEON_CAMERA_RUNTIME_DEFAULT_READY_POLLS;
     pipeline->csi = &runtime->csi;
     pipeline->csi_config = plan.csi_config;
+    /* The lane map stays the default of neon_csi_get_default_config(): straight. */
+    pipeline->csi_config.link.lane_count = config->lane_count;
+    pipeline->csi_config.link.lane_rate_bps = config->lane_rate_bps;
+    pipeline->csi_config.link.continuous_clock = config->continuous_clock;
     pipeline->isp = &runtime->isp;
     pipeline->algorithm = &runtime->algorithm;
     pipeline->algorithm_ops = algorithm_ops;
@@ -285,8 +279,7 @@ neon_status_t neon_camera_runtime_deinit(neon_camera_runtime_t *runtime)
     }
     /* Look before touching anything: a deinit of one handle wipes it, and a half-done teardown would leave a
      * running stage with no handle. */
-    if (runtime->isp.state == NEON_ISP_STATE_RUNNING || runtime->csi.state == NEON_CSI_STATE_RUNNING ||
-        runtime->mipi.state != NEON_MIPI_STATE_RELEASED) {
+    if (runtime->isp.state == NEON_ISP_STATE_RUNNING || runtime->csi.state == NEON_CSI_STATE_RUNNING) {
         return NEON_BUSY;
     }
     deinit_handles(runtime);

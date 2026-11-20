@@ -113,20 +113,14 @@ config NEON_MDF_DRIVER_ETH
         service and bounded stop/recovery. Currently implemented for FX1.
         No TCP/IP stack or host network interface is included.
 
-config NEON_MDF_DRIVER_MIPI
-    bool "Compile FX1 MIPI D-PHY driver"
-    default n
-    help
-        FX1-only D-PHY ownership, lane and recovery driver. It is reusable by
-        CSI-2 camera input and a future DSI display client.
-
 config NEON_MDF_DRIVER_CSI
     bool "Compile FX1 CSI-2 receiver driver"
     default n
-    select NEON_MDF_DRIVER_MIPI
     help
-        FX1 CSI-2 receiver driver: virtual channel, RAW format and ingress
-        lifecycle. Camera runtime is a client, not the owner of this driver.
+        FX1 CSI-2 receiver driver: D-PHY link bring-up, virtual channel, RAW
+        format and ingress lifecycle. Builds the generic PHY layer (phy/) and
+        the FX1 D-PHY driver it uses. Camera runtime is a client, not the
+        owner of this driver.
 
 config NEON_MDF_DRIVER_ISP
     bool "Compile FX1 ISP HAL"
@@ -136,14 +130,11 @@ config NEON_MDF_DRIVER_ISP
         statistics. AE/AWB/AF policy is deliberately outside this driver, in neon_camera_runtime.
 
 config NEON_MDF_CAMERA_SIMULATION
-    bool "Use the in-RAM simulation backends of MIPI, CSI and ISP"
-    depends on NEON_MDF_DRIVER_MIPI || NEON_MDF_DRIVER_CSI || NEON_MDF_DRIVER_ISP
+    bool "Use the in-RAM simulation backend of the ISP"
+    depends on NEON_MDF_DRIVER_ISP
     default y
     help
-        Selects the in-RAM backends of the MIPI D-PHY, CSI-2 and ISP HAL. They follow the MAS behaviour
-        (Stop State bring-up, ping-pong DMA, buffer ownership, error policies, rotating ISP DMA) but touch
-        no register. The FX1 register backends are not written yet: they need the register workbook (MIPI,
-        CSI) or the rotating DMA on top of ftel_isp (ISP). Turning this off stops the build with a message
-        until then.
+        Selects the in-RAM backend of the ISP HAL. It touches no register. The ISP register backend needs
+        the rotating DMA on top of ftel_isp.
 
 endmenu

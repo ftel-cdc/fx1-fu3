@@ -8,15 +8,17 @@
  * - init() does not touch the hardware, and a warm restart may leave the DMA writing and the IRQ enabled.
  *   configure() therefore starts by quieting the receiver: GLOBAL_IRQ_ENABLE and IRQ_ENABLE to 0, the DMA
  *   aborted and stopped, CORE_CONFIG.core_enable to 0 (its reset value is 1), IRQ_STATUS cleared.
- * - MAS 9.1 order: configure() does steps 7 to 9 with dma_enable 0; start() does the rest of 9 (dma_enable,
- *   dma_start), 10 (core_enable) and 11 (clear IRQ_STATUS, then IRQ_ENABLE, then global_enable). Steps 2 to
- *   6 and 13 belong to neon_mipi (D-PHY): configure() only holds a placeholder that confirms the link is
- *   ready, csi_dphy_bringup(). Of step 4, configure() writes vc_exposure_map (read-modify-write, the same
- *   register holds active_lanes). Step 12 belongs to the application. With the test pattern generator, start()
- *   also writes vc_exposure_map = 0, TPG_RESOLUTION, TPG_BLANKING, then tpg_enable, and waits for
+ * - MAS 9.1 order: configure() does steps 2 to 6 (csi_link_up(): D-PHY reset, active_lanes, enables, Stop
+ *   State) and then 7 to 9 with dma_enable 0; start() does the rest of 9 (dma_enable, dma_start), 10
+ *   (core_enable) and 11 (clear IRQ_STATUS, then IRQ_ENABLE, then global_enable). Step 12 belongs to the
+ *   application. With the test pattern generator, configure() does steps 2 and 3 only, and start() also
+ *   writes vc_exposure_map = 0, TPG_RESOLUTION, TPG_BLANKING, then tpg_enable, and waits for
  *   CORE_STATUS.active_src = 1 and src_switch_pending = 0.
- * - soft_reset needs the byte clock (PHY_STATUS.cl_rxclkactivehs); without it, escalate to the link.
- *   full_reset only while DMA_STATUS.dma_busy is 0, and it clears every register: configure again.
+ * - The D-PHY timers (neon_phy_configure()) are written between steps 3 and 4, while PHY_CONFIG has every
+ *   lane disabled: the D-PHY reads them without synchronization (D-PHY HAS v0.18 §4.1).
+ * - PROTOCOL_CONFIG holds active_lanes and vc_exposure_map: every write is a read-modify-write.
+ * - soft_reset needs the byte clock (PHY_STATUS.cl_rxclkactivehs); without it, stop() and configure() again.
+ *   full_reset is not used: configure() reprograms every register it relies on.
  * - Events during a reset and the 256 sys_clk after it are not recorded. Every soft_reset leaves one
  *   spurious LANE_ALIGN_ABORT: write 0x00FFFFFF to IRQ_STATUS again afterwards.
  * - A write to IRQ_STATUS completes only once the bits read back as 0 (up to 16 lite_aclk).
@@ -54,7 +56,7 @@
  *   21    ERR_WC_ALIGN           -> PLATFORM / FX1_WC_ALIGN_ERROR
  *   22    FMTBRIDGE_OVERFLOW     -> PLATFORM / FX1_FORMAT_BRIDGE_OVERFLOW
  *   23    FRAME_NUM_SEQ_ERR      -> PLATFORM / FX1_FRAME_NUMBER_ERROR
- *   SYSTEM_LINK_RESET is raised by this driver; FRAME_START and PACKET_SHORT have no source.
+ *   FRAME_START and PACKET_SHORT have no source.
  */
 
 /*==================================================================================================
@@ -78,8 +80,16 @@
 #define CSI_TPG_MIN_SIZE        8U      /* Smallest generator width and height. */
 #define CSI_DEFAULT_METADATA_DT 0x12U   /* Embedded 8-bit non-image data; METADATA_DT_CONFIG reset value. */
 
+/* Lane counts of PROTOCOL_CONFIG.active_lanes: 00 = 1, 01 = 2, 11 = 4 lanes; 10 is reserved. */
+#define CSI_ACTIVE_LANES_1      0U
+#define CSI_ACTIVE_LANES_2      1U
+#define CSI_ACTIVE_LANES_4      3U
+#define CSI_LANE_STATUS_STRIDE  8U      /* LANE_STATUS: lane x at bits [8x+3:8x]. */
+
 /* Polling budgets. One poll is one CSR read. */
 #define CSI_DPHY_READY_POLLS    100000U /* Stop State wait (MAS 9.1 step 6); T_INIT is at least 100 us. */
+#define CSI_DPHY_RESET_POLLS    100000U /* CORE_STATUS.reset_in_progress after dphy_rst_req (>= 40 core_clk). */
+#define CSI_LANES_APPLIED_POLLS 1000U   /* PROTOCOL_CONFIG.active_lanes_applied; Lane Management is idle after the reset. */
 #define CSI_DMA_IDLE_POLLS      100000U /* DMA_STATUS.dma_busy after dma_abort: in-flight AXI bursts must drain. */
 #define CSI_RESET_POLLS         100000U /* CORE_STATUS.reset_in_progress after soft_reset. */
 #define CSI_TPG_SWITCH_POLLS    100000U /* CORE_STATUS source switch to the TPG; MAS gives no fixed maximum. */
@@ -121,9 +131,7 @@
      NEON_CSI_SUB_EVENT_PACKET_CRC_ERROR | NEON_CSI_SUB_EVENT_PACKET_UNSUPPORTED_DT |                 \
      NEON_CSI_SUB_EVENT_PACKET_WC_CORRUPTION)
 #define CSI_SUPPORTED_PHY (NEON_CSI_SUB_EVENT_PHY_SOT_ERROR | NEON_CSI_SUB_EVENT_PHY_SOT_SYNC_ERROR)
-#define CSI_SUPPORTED_SYSTEM                                                                          \
-    (NEON_CSI_SUB_EVENT_SYSTEM_LINK_RESET | NEON_CSI_SUB_EVENT_SYSTEM_OVERFLOW |                      \
-     NEON_CSI_SUB_EVENT_SYSTEM_BUS_ERROR)
+#define CSI_SUPPORTED_SYSTEM (NEON_CSI_SUB_EVENT_SYSTEM_OVERFLOW | NEON_CSI_SUB_EVENT_SYSTEM_BUS_ERROR)
 #define CSI_SUPPORTED_PLATFORM                                                                        \
     (NEON_CSI_FX1_SUB_EVENT_CLOCK_STOP_STATE | NEON_CSI_FX1_SUB_EVENT_LINE_BUFFER_FULL |              \
      NEON_CSI_FX1_SUB_EVENT_LANE_ABORT | NEON_CSI_FX1_SUB_EVENT_WC_ALIGN_ERROR |                      \
@@ -149,6 +157,7 @@ static const neon_csi_caps_t fx1_caps = {
     .vc_count = (uint8_t)NEON_CSI_FX1_VC_COUNT,         /* VC0 and VC1; other channels are ignored. */
     .has_test_pattern = true,                           /* TPG_CONTROL. */
     .has_metadata = true,                               /* METADATA_DT_CONFIG.metadata_capture_en. */
+    .dma_align_bytes = CSI_DMA_ALIGN,                   /* The DMA ignores bits 2:0 of addresses, sizes and the stride. */
     /* The Format Bridge takes RAW10 and RAW12 only (STREAM_CONFIG.stream_format, DMA_CONTROL.dma_format). */
     .supported_raw_formats = NEON_CSI_RAW_FORMAT_BIT(NEON_CSI_RAW10) | NEON_CSI_RAW_FORMAT_BIT(NEON_CSI_RAW12),
     /* FRAME_START and PACKET_SHORT have no interrupt source on FX1. */
@@ -166,6 +175,10 @@ static const neon_csi_caps_t fx1_caps = {
  * copies it. Fields not listed are 0: width/height, DMA addresses and sizes must come from the
  * application, metadata and the test pattern start disabled. */
 static const neon_csi_config_t fx1_default_config = {
+    .link = {
+        .continuous_clock = true,                   /* The only mode of the FX1 D-PHY (HAS §4.6). */
+        .lane_map = {0U, 1U, 2U, 3U},               /* Straight; change it when the board swaps lanes. */
+    },
     .raw_format = NEON_CSI_RAW12,                   /* Most common FX1 sensor format. */
     .pixel_packing = NEON_CSI_PACKING_UNPACKED16,   /* One sample per 16-bit word, right aligned. */
     .metadata = {
@@ -225,7 +238,10 @@ static const csi_irq_map_t csi_irq_map[] = {
 *                                  PRIVATE FUNCTION PROTOTYPES
 ==================================================================================================*/
 static bool csi_metadata_dt_valid(uint8_t data_type);
-static neon_status_t csi_dphy_bringup(neon_csi_handle_t *handle, bool test_pattern);
+static neon_status_t csi_check_link(const neon_csi_handle_t *handle, const neon_phy_mipi_dphy_opts_t *link);
+static neon_status_t csi_link_up(neon_csi_handle_t *handle, const neon_csi_config_t *config);
+static void csi_link_down(neon_csi_handle_t *handle);
+static uint8_t csi_lane_stop_mask(uint32_t lane_status);
 static neon_status_t csi_quiesce(void);
 static void csi_write_receive_path(const neon_csi_config_t *config, const neon_csi_layout_t *layout);
 static void csi_write_stream_path(const neon_csi_config_t *config);
@@ -236,9 +252,7 @@ static uint32_t csi_irq_enable_mask(const neon_csi_config_t *config);
 static neon_status_t csi_tpg_switch_on(void);
 static neon_status_t csi_wait_sensor_source(void);
 static neon_csi_buffer_state_t csi_buffer_state(uint32_t field);
-static void csi_check_link(neon_csi_handle_t *handle);
-static uint32_t csi_pending_sub_events(const neon_csi_handle_t *handle, uint32_t irq_status, neon_csi_event_t event,
-                                       uint32_t *irq_bits);
+static uint32_t csi_pending_sub_events(uint32_t irq_status, neon_csi_event_t event, uint32_t *irq_bits);
 static bool csi_frame_id_before(uint32_t a, uint32_t b);
 static uint32_t csi_record_word(uint32_t meta_addr, uint32_t word);
 static uint32_t csi_metadata_dt_config(uint8_t data_type, bool capture, bool fnum_check, bool extract);
@@ -256,9 +270,11 @@ neon_status_t neon_csi_get_caps(neon_csi_caps_t *caps)
     return NEON_OK;
 }
 
-neon_status_t neon_csi_init(neon_csi_handle_t *handle, neon_mipi_handle_t *mipi)
+neon_status_t neon_csi_init(neon_csi_handle_t *handle, neon_phy_t *phy)
 {
-    if ((handle == NULL) || (mipi == NULL)) {
+    neon_status_t status;
+
+    if ((handle == NULL) || (phy == NULL)) {
         return NEON_INVALID_PARAM;
     }
 
@@ -266,9 +282,19 @@ neon_status_t neon_csi_init(neon_csi_handle_t *handle, neon_mipi_handle_t *mipi)
     if (fx1_read32(CSI_REG(IP_VERSION)) != CSI_EXPECTED_IP_VERSION) {
         return NEON_NOT_SUPPORTED;
     }
+    /* The receive side of a D-PHY, as Linux CSI-2 receivers ask with phy_set_mode_ext(). */
+    status = neon_phy_init(phy);
+    if (status != NEON_OK) {
+        return status;
+    }
+    status = neon_phy_set_mode(phy, NEON_PHY_MODE_MIPI_DPHY, NEON_PHY_MIPI_DPHY_SUBMODE_RX);
+    if (status != NEON_OK) {
+        (void)neon_phy_exit(phy);
+        return status;
+    }
 
     *handle = (neon_csi_handle_t){0};
-    handle->mipi = mipi;
+    handle->phy = phy;
     handle->caps = fx1_caps;
     handle->state = NEON_CSI_STATE_IDLE;
     return NEON_OK;
@@ -283,7 +309,11 @@ neon_status_t neon_csi_deinit(neon_csi_handle_t *handle)
         return NEON_BUSY;
     }
 
-    /* The hardware is left as it is: stop() already quieted it. */
+    /* stop() already quieted the receiver; the link stays up until here. */
+    if (handle->state != NEON_CSI_STATE_RESET) {
+        csi_link_down(handle);
+        (void)neon_phy_exit(handle->phy);
+    }
     *handle = (neon_csi_handle_t){0};
     handle->state = NEON_CSI_STATE_RESET;
     return NEON_OK;
@@ -420,21 +450,30 @@ neon_status_t neon_csi_configure(neon_csi_handle_t *handle, const neon_csi_confi
     if (config->test_pattern.pattern > (uint8_t)NEON_CSI_FX1_TPG_HORIZONTAL_BARS) {
         return NEON_INVALID_PARAM; /* TPG_CONTROL.tpg_pattern is one bit. */
     }
-
-    /* MAS 9.1 steps 2 to 6: D-PHY. The test pattern path needs steps 2 and 3 only (MAS 9.1, TPG note). */
-    status = csi_dphy_bringup(handle, config->test_pattern.enable);
-    if (status != NEON_OK) {
-        return status;
+    if (!config->test_pattern.enable) {
+        status = csi_check_link(handle, &config->link);
+        if (status != NEON_OK) {
+            return status;
+        }
     }
 
-    /* Not in MAS 9.1: bring a receiver left running (warm restart, second configure) back to rest. */
+    /* Not in MAS 9.1: bring a receiver left running (warm restart, second configure) back to rest. Done
+     * before the link: the D-PHY reset must not cut a burst the DMA is still writing. */
     status = csi_quiesce();
     if (status != NEON_OK) {
         return status;
     }
 
+    /* MAS 9.1 steps 2 to 6: D-PHY. The test pattern path needs steps 2 and 3 only (MAS 9.1, TPG note).
+     * A failure leaves the receiver IDLE: the configuration below is not written. */
+    handle->state = NEON_CSI_STATE_IDLE;
+    status = csi_link_up(handle, config);
+    if (status != NEON_OK) {
+        return status;
+    }
+
     /* MAS 9.1 step 4, CSI part: PROTOCOL_CONFIG.vc_exposure_map = 0, VC0 is the Long (lead) channel.
-     * ATTENTION: read-modify-write, active_lanes [1:0] of the same register belongs to the D-PHY driver.
+     * ATTENTION: read-modify-write, active_lanes [1:0] of the same register was written by csi_link_up().
      * It must be 0 while the test pattern generator is the source. neon_csi_fx1_set_lead_vc() changes it. */
     fx1_write32(CSI_REG(PROTOCOL_CONFIG),
                 fx1_read32(CSI_REG(PROTOCOL_CONFIG)) & NEON_FX1_MIPI_CSI2_PROTOCOL_CONFIG_RW_MASK &
@@ -456,10 +495,6 @@ neon_status_t neon_csi_configure(neon_csi_handle_t *handle, const neon_csi_confi
         handle->config.sub_event_mask[event] &= fx1_caps.supported_sub_events[event];
     }
     handle->acquired_mask = 0U;
-    handle->software_sub_events = 0U;
-    /* A later change of either epoch means the link was reset under this configuration. */
-    handle->phy_epoch = handle->mipi->phy_epoch;
-    handle->config_epoch = handle->mipi->config_epoch;
     handle->state = NEON_CSI_STATE_CONFIGURED;
     return NEON_OK;
 }
@@ -479,11 +514,6 @@ neon_status_t neon_csi_start(neon_csi_handle_t *handle)
     if (handle->state != NEON_CSI_STATE_CONFIGURED) {
         return NEON_ERROR;
     }
-    /* NEON_MIPI_RECOVER_FULL (CORE_CONFIG.full_reset) returned every register to reset: configure again. */
-    if (handle->mipi->config_epoch != handle->config_epoch) {
-        handle->state = NEON_CSI_STATE_IDLE;
-        return NEON_ERROR;
-    }
     test_pattern = handle->config.test_pattern.enable;
 
     /* Sensor path after a TPG run: stop()/configure() cleared tpg_enable, but the mux returns to the sensor
@@ -494,16 +524,6 @@ neon_status_t neon_csi_start(neon_csi_handle_t *handle)
         if (status != NEON_OK) {
             return status;
         }
-    }
-
-    /* Sensor path: pin the link so it cannot be released while frames arrive. The TPG path never has a
-     * READY link (MAS 9.1 skips steps 4 to 6), so it is not locked. */
-    if (!test_pattern) {
-        status = neon_mipi_lock(handle->mipi);
-        if (status != NEON_OK) {
-            return status; /* NEON_ERROR: the link is not READY, e.g. after a recovery. */
-        }
-        handle->link_locked = true;
     }
 
     /* MAS 9.1 step 9, second half: dma_enable, then dma_start. Read-modify-write keeps dma_format and
@@ -562,20 +582,13 @@ neon_status_t neon_csi_stop(neon_csi_handle_t *handle)
                 CSI_BIT(BUFFER_RELEASE, RELEASE_BUF0) | CSI_BIT(BUFFER_RELEASE, RELEASE_BUF1));
     handle->acquired_mask = 0U;
 
-    if (handle->link_locked) {
-        (void)neon_mipi_unlock(handle->mipi);
-        handle->link_locked = false;
-    }
-
-    /* Configuration registers are kept: start() may follow without configure(). */
+    /* Configuration registers and the link are kept: start() may follow without configure(). */
     handle->state = NEON_CSI_STATE_CONFIGURED;
     return NEON_OK;
 }
 
 neon_status_t neon_csi_recover(neon_csi_handle_t *handle)
 {
-    neon_mipi_status_t link;
-    neon_status_t status;
     uint32_t polls;
 
     if (handle == NULL) {
@@ -587,12 +600,8 @@ neon_status_t neon_csi_recover(neon_csi_handle_t *handle)
 
     /* ATTENTION: soft_reset is synchronised into rxbyteclkhs. Without the byte clock it never reaches
      * Lane Management and does nothing; the TPG path has no byte clock either. The caller escalates to
-     * neon_mipi_recover(NEON_MIPI_RECOVER_FULL), then configure() again. */
-    status = neon_mipi_get_status(handle->mipi, &link);
-    if (status != NEON_OK) {
-        return status;
-    }
-    if (!link.clock_hs_active) {
+     * stop() and configure(), which resets the D-PHY. */
+    if ((fx1_read32(CSI_REG(PHY_STATUS)) & CSI_BIT(PHY_STATUS, CL_RXCLKACTIVEHS)) == 0U) {
         return NEON_ERROR;
     }
 
@@ -620,7 +629,9 @@ neon_status_t neon_csi_recover(neon_csi_handle_t *handle)
 
 neon_status_t neon_csi_get_status(neon_csi_handle_t *handle, neon_csi_status_t *status)
 {
+    neon_phy_status_t phy_status;
     uint32_t ownership;
+    uint32_t phy;
     uint32_t ecc;
     uint32_t i;
 
@@ -653,6 +664,16 @@ neon_status_t neon_csi_get_status(neon_csi_handle_t *handle, neon_csi_status_t *
     status->crc_error_count = fx1_read32(CSI_REG(CRC_ERROR_COUNT));
     /* Every dropped capture, on the stream path, the DMA path or both. */
     status->frame_drop_count = fx1_read32(CSI_REG(FRAME_DROP_COUNT));
+
+    /* Link. ATTENTION: stopstate rises before the last byte of a burst has left the D-PHY (D-PHY HAS v0.18
+     * §4.5, PARA_STOP_DRAIN_EN = 0): it does not tell that a frame is complete. */
+    phy = fx1_read32(CSI_REG(PHY_STATUS));
+    status->clock_stop_state = (phy & CSI_BIT(PHY_STATUS, CL_STOPSTATE)) != 0U;
+    status->clock_hs_active = (phy & CSI_BIT(PHY_STATUS, CL_RXCLKACTIVEHS)) != 0U;
+    status->lane_stop_mask = csi_lane_stop_mask(fx1_read32(CSI_REG(LANE_STATUS)));
+    if (neon_phy_take_status(handle->phy, NEON_PHY_MODE_MIPI_DPHY, &phy_status) == NEON_OK) {
+        status->phy_errors = phy_status.mipi_dphy;
+    }
     return NEON_OK;
 }
 
@@ -690,12 +711,10 @@ neon_status_t neon_csi_get_events(neon_csi_handle_t *handle, uint32_t *events)
     if (handle->state == NEON_CSI_STATE_RESET) {
         return NEON_ERROR;
     }
-    csi_check_link(handle);
-
     *events = 0U;
     irq_status = fx1_read32(CSI_REG(IRQ_STATUS));
     for (event = 0U; event < (uint32_t)NEON_CSI_EVENT_COUNT; event++) {
-        if (csi_pending_sub_events(handle, irq_status, (neon_csi_event_t)event, &irq_bits) != 0U) {
+        if (csi_pending_sub_events(irq_status, (neon_csi_event_t)event, &irq_bits) != 0U) {
             *events |= NEON_CSI_EVENT_BIT(event);
         }
     }
@@ -712,17 +731,12 @@ neon_status_t neon_csi_take_sub_events(neon_csi_handle_t *handle, neon_csi_event
     if (handle->state == NEON_CSI_STATE_RESET) {
         return NEON_ERROR;
     }
-    csi_check_link(handle);
-
     /* MAS 9.2: read IRQ_STATUS, write back exactly the bits read (RW1C). A flag raised after the read, or in
      * the same cycle as its clear, stays set for the next call. Bits of other events are not touched.
      * ATTENTION: the write completes only once those bits read back 0 (up to 16 lite_aclk). */
-    *sub_events = csi_pending_sub_events(handle, fx1_read32(CSI_REG(IRQ_STATUS)), event, &irq_bits);
+    *sub_events = csi_pending_sub_events(fx1_read32(CSI_REG(IRQ_STATUS)), event, &irq_bits);
     if (irq_bits != 0U) {
         fx1_write32(CSI_REG(IRQ_STATUS), irq_bits);
-    }
-    if (event == NEON_CSI_EVENT_SYSTEM) {
-        handle->software_sub_events = 0U;
     }
     return NEON_OK;
 }
@@ -737,9 +751,7 @@ neon_status_t neon_csi_get_sub_events(neon_csi_handle_t *handle, neon_csi_event_
     if (handle->state == NEON_CSI_STATE_RESET) {
         return NEON_ERROR;
     }
-    csi_check_link(handle);
-
-    *sub_events = csi_pending_sub_events(handle, fx1_read32(CSI_REG(IRQ_STATUS)), event, &irq_bits);
+    *sub_events = csi_pending_sub_events(fx1_read32(CSI_REG(IRQ_STATUS)), event, &irq_bits);
     return NEON_OK;
 }
 
@@ -780,7 +792,6 @@ neon_status_t neon_csi_acquire_frame(neon_csi_handle_t *handle, neon_csi_frame_t
     if ((handle == NULL) || (frame == NULL)) {
         return NEON_INVALID_PARAM;
     }
-    csi_check_link(handle);
     if (handle->state != NEON_CSI_STATE_RUNNING) {
         return NEON_ERROR;
     }
@@ -1002,7 +1013,7 @@ neon_status_t neon_csi_fx1_set_lead_vc(neon_csi_handle_t *handle, uint8_t vc)
         return NEON_INVALID_PARAM; /* vc_exposure_map shall be 0 while the TPG is selected. */
     }
 
-    /* ATTENTION: read-modify-write, active_lanes [1:0] of the same register belongs to the D-PHY driver. */
+    /* ATTENTION: read-modify-write, active_lanes [1:0] of the same register was written by csi_link_up(). */
     protocol = fx1_read32(CSI_REG(PROTOCOL_CONFIG)) & NEON_FX1_MIPI_CSI2_PROTOCOL_CONFIG_RW_MASK &
                ~CSI_BIT(PROTOCOL_CONFIG, VC_EXPOSURE_MAP);
     fx1_write32(CSI_REG(PROTOCOL_CONFIG), protocol | CSI_FIELD(PROTOCOL_CONFIG, VC_EXPOSURE_MAP, vc));
@@ -1121,31 +1132,127 @@ static bool csi_metadata_dt_valid(uint8_t data_type)
 }
 
 /*
- * MAS 9.1 steps 2 to 6: D-PHY bring-up.
- * PLACEHOLDER: these steps belong to the D-PHY driver (neon_mipi). The application runs
- * neon_mipi_acquire() before neon_csi_configure(); this helper marks where each step sits and only
- * confirms the result. neon_mipi_wait_ready() returns at once when the link is already READY.
- * ATTENTION: on the test pattern path MAS 9.1 skips steps 4 to 6 only. Steps 2 and 3 (D-PHY reset)
- * are still required, so the link must be acquired; it never becomes READY without a sensor, which is
- * why start() takes neon_mipi_lock() on the sensor path only.
- * TODO(dphy): FX1 has only the simulation backend of neon_mipi. The register backend
- * (PHY_CONFIG, PROTOCOL_CONFIG.active_lanes, PHY_STATUS, LANE_STATUS) is not written yet.
+ * Link settings the receiver and its D-PHY can both take. Reads one read-only register, writes nothing.
+ * Lane Management maps byte k to lane k mod lane_count, so only 1, 2 and 4 lanes exist
+ * (PROTOCOL_CONFIG.active_lanes), and never more than the build has (max_lanes, same encoding: an
+ * active_lanes above it shall not be written). The rest (line rate, lane map, continuous clock) is the
+ * PHY's to judge.
  */
-static neon_status_t csi_dphy_bringup(neon_csi_handle_t *handle, bool test_pattern)
+static neon_status_t csi_check_link(const neon_csi_handle_t *handle, const neon_phy_mipi_dphy_opts_t *link)
 {
-    /* Step 2: PHY_CONFIG.dphy_rst_req = 1                          -> neon_mipi_acquire()    */
-    /* Step 3: poll CORE_STATUS.reset_in_progress until 0           -> neon_mipi_acquire()    */
-    if (handle->mipi->state == NEON_MIPI_STATE_RELEASED) {
-        return NEON_ERROR; /* Steps 2 and 3 are required on both paths. */
+    neon_phy_configure_opts_t opts;
+    uint32_t max_lanes;
+    uint32_t built;
+
+    if ((link->lane_count != 1U) && (link->lane_count != 2U) && (link->lane_count != 4U)) {
+        return (link->lane_count == 0U) ? NEON_INVALID_PARAM : NEON_NOT_SUPPORTED;
     }
-    if (test_pattern) {
-        return NEON_OK; /* Steps 4 to 6 are not required (MAS 9.1, TPG note). */
+    max_lanes = CSI_GET(PROTOCOL_CONFIG, MAX_LANES, fx1_read32(CSI_REG(PROTOCOL_CONFIG)));
+    built = (max_lanes == CSI_ACTIVE_LANES_4) ? 4U : (max_lanes == CSI_ACTIVE_LANES_2) ? 2U : 1U;
+    if (link->lane_count > built) {
+        return NEON_NOT_SUPPORTED;
     }
-    /* Step 4: PROTOCOL_CONFIG.active_lanes (vc_exposure_map: here) -> neon_mipi_acquire()    */
-    /* Step 5: PHY_CONFIG.phy_enable, cl_enable, dl_enable          -> neon_mipi_acquire()    */
-    /* Step 6: poll PHY_STATUS.cl_stopstate, laneX_stopstate        -> neon_mipi_wait_ready() */
-    /* NEON_ERROR: link not acquired. NEON_TIMEOUT: no Stop State yet, the sensor may not drive LP-11. */
-    return neon_mipi_wait_ready(handle->mipi, CSI_DPHY_READY_POLLS);
+    opts.mipi_dphy = *link;
+    return neon_phy_validate(handle->phy, NEON_PHY_MODE_MIPI_DPHY, &opts);
+}
+
+/*
+ * MAS 9.1 steps 2 to 6: D-PHY bring-up, from any previous state of the link.
+ * ATTENTION:
+ * - The D-PHY timers are written by neon_phy_configure() between steps 3 and 4, with every lane disabled:
+ *   the D-PHY reads them without synchronization (D-PHY HAS v0.18 §4.1). csi_link_down() comes first.
+ * - Test pattern path: MAS 9.1 skips steps 4 to 6 only. The D-PHY reset is still done; the lanes stay
+ *   disabled and the PHY powered off.
+ * - active_lanes is adopted only while the Lane Management Burst FSM is idle, which it is after the reset:
+ *   active_lanes_applied is read back to confirm it.
+ * - Step 6 needs the sensor driving LP-11 for T_INIT. On NEON_TIMEOUT the link stays enabled (link_up), so
+ *   a later configure() or deinit() takes it down first.
+ */
+static neon_status_t csi_link_up(neon_csi_handle_t *handle, const neon_csi_config_t *config)
+{
+    neon_phy_configure_opts_t opts;
+    neon_status_t status;
+    uint32_t active_lanes;
+    uint32_t protocol;
+    uint8_t lane_mask;
+    uint32_t polls;
+
+    csi_link_down(handle);
+
+    /* Steps 2 and 3. dphy_rst_req is self-clearing; the enables written with it are 0. */
+    fx1_write32(CSI_REG(PHY_CONFIG), CSI_BIT(PHY_CONFIG, DPHY_RST_REQ));
+    for (polls = 0U; (fx1_read32(CSI_REG(CORE_STATUS)) & CSI_BIT(CORE_STATUS, RESET_IN_PROGRESS)) != 0U; polls++) {
+        if (polls >= CSI_DPHY_RESET_POLLS) {
+            return NEON_TIMEOUT;
+        }
+    }
+    if (config->test_pattern.enable) {
+        return NEON_OK;
+    }
+
+    /* Lanes are disabled: the D-PHY timers may change. */
+    opts.mipi_dphy = config->link;
+    status = neon_phy_configure(handle->phy, NEON_PHY_MODE_MIPI_DPHY, &opts);
+    if (status != NEON_OK) {
+        return status;
+    }
+
+    /* Step 4: active_lanes. Read-modify-write: vc_exposure_map of the same register is kept. */
+    active_lanes = (config->link.lane_count == 4U) ? CSI_ACTIVE_LANES_4
+                 : (config->link.lane_count == 2U) ? CSI_ACTIVE_LANES_2 : CSI_ACTIVE_LANES_1;
+    protocol = fx1_read32(CSI_REG(PROTOCOL_CONFIG)) & NEON_FX1_MIPI_CSI2_PROTOCOL_CONFIG_RW_MASK &
+               ~CSI_BIT(PROTOCOL_CONFIG, ACTIVE_LANES);
+    fx1_write32(CSI_REG(PROTOCOL_CONFIG), protocol | CSI_FIELD(PROTOCOL_CONFIG, ACTIVE_LANES, active_lanes));
+    for (polls = 0U; CSI_GET(PROTOCOL_CONFIG, ACTIVE_LANES_APPLIED, fx1_read32(CSI_REG(PROTOCOL_CONFIG))) != active_lanes;
+         polls++) {
+        if (polls >= CSI_LANES_APPLIED_POLLS) {
+            return NEON_TIMEOUT;
+        }
+    }
+
+    /* Step 5: PHY powered, then the clock lane and the data lanes in use. forcerxmode stays 0. */
+    status = neon_phy_power_on(handle->phy);
+    if (status != NEON_OK) {
+        return status;
+    }
+    handle->link_up = true;
+    lane_mask = (uint8_t)((1U << config->link.lane_count) - 1U);
+    fx1_write32(CSI_REG(PHY_CONFIG), CSI_BIT(PHY_CONFIG, PHY_ENABLE) | CSI_BIT(PHY_CONFIG, CL_ENABLE) |
+                                         CSI_FIELD(PHY_CONFIG, DL_ENABLE, lane_mask));
+
+    /* Step 6: Stop State on the clock lane and every data lane in use. */
+    for (polls = 0U; polls < CSI_DPHY_READY_POLLS; polls++) {
+        if (((fx1_read32(CSI_REG(PHY_STATUS)) & CSI_BIT(PHY_STATUS, CL_STOPSTATE)) != 0U) &&
+            ((csi_lane_stop_mask(fx1_read32(CSI_REG(LANE_STATUS))) & lane_mask) == lane_mask)) {
+            return NEON_OK;
+        }
+    }
+    return NEON_TIMEOUT; /* The sensor may not drive LP-11 yet. */
+}
+
+/* Disable every lane, then power the PHY off. Nothing to do when the link is not up. */
+static void csi_link_down(neon_csi_handle_t *handle)
+{
+    if (!handle->link_up) {
+        return;
+    }
+    fx1_write32(CSI_REG(PHY_CONFIG), 0U);
+    (void)neon_phy_power_off(handle->phy);
+    handle->link_up = false;
+}
+
+/* LANE_STATUS -> bit n set when data lane n is in Stop State. */
+static uint8_t csi_lane_stop_mask(uint32_t lane_status)
+{
+    uint8_t mask = 0U;
+    uint32_t lane;
+
+    for (lane = 0U; lane < NEON_PHY_MIPI_DPHY_MAX_LANES; lane++) {
+        if ((lane_status & (CSI_BIT(LANE_STATUS, LANE0_STOPSTATE) << (lane * CSI_LANE_STATUS_STRIDE))) != 0U) {
+            mask |= (uint8_t)(1U << lane);
+        }
+    }
+    return mask;
 }
 
 /*
@@ -1294,8 +1401,7 @@ static void csi_write_tpg(neon_csi_raw_format_t raw_format, const neon_csi_fx1_t
                     CSI_FIELD(TPG_CONTROL, TPG_CFA_ORDER, tpg->cfa_order));
 }
 
-/* IRQ_ENABLE from config.sub_event_mask. Sub events with no IRQ source (SYSTEM_LINK_RESET, raised by the
- * driver) have no entry and enable nothing. */
+/* IRQ_ENABLE from config.sub_event_mask. Sub events with no IRQ source have no entry and enable nothing. */
 static uint32_t csi_irq_enable_mask(const neon_csi_config_t *config)
 {
     uint32_t mask = 0U;
@@ -1313,7 +1419,7 @@ static uint32_t csi_irq_enable_mask(const neon_csi_config_t *config)
  * MAS 9.1 TPG note: vc_exposure_map = 0, then tpg_enable = 1, then wait for CORE_STATUS.active_src = 1
  * and src_switch_pending = 0.
  * ATTENTION:
- * - vc_exposure_map is read-modify-write: active_lanes of the same register belongs to the D-PHY driver.
+ * - vc_exposure_map is read-modify-write: active_lanes of the same register was written by csi_link_up().
  * - The switch waits until no source has a frame in flight: the sensor must not stream meanwhile.
  * - No fixed maximum latency (CORE_STATUS.active_src); NEON_TIMEOUT after CSI_TPG_SWITCH_POLLS reads.
  */
@@ -1365,39 +1471,9 @@ static neon_csi_buffer_state_t csi_buffer_state(uint32_t field)
     }
 }
 
-/*
- * Link check, done by every event call and by acquire. neon_mipi_recover() changes the epochs:
- * - phy_epoch: the D-PHY was reset under this receiver -> NEON_CSI_SUB_EVENT_SYSTEM_LINK_RESET.
- * - config_epoch: CORE_CONFIG.full_reset returned every register to reset -> the configuration is lost,
- *   the receiver goes back to IDLE and must be configured again. Buffers and the link lock are dropped.
- */
-static void csi_check_link(neon_csi_handle_t *handle)
-{
-    if ((handle->state == NEON_CSI_STATE_RESET) || (handle->mipi == NULL)) {
-        return;
-    }
-    if (handle->mipi->phy_epoch != handle->phy_epoch) {
-        handle->phy_epoch = handle->mipi->phy_epoch;
-        handle->software_sub_events |= NEON_CSI_SUB_EVENT_SYSTEM_LINK_RESET;
-    }
-    if (handle->mipi->config_epoch != handle->config_epoch) {
-        handle->config_epoch = handle->mipi->config_epoch;
-        handle->software_sub_events |= NEON_CSI_SUB_EVENT_SYSTEM_LINK_RESET;
-        if ((handle->state == NEON_CSI_STATE_CONFIGURED) || (handle->state == NEON_CSI_STATE_RUNNING)) {
-            if (handle->link_locked) {
-                (void)neon_mipi_unlock(handle->mipi);
-                handle->link_locked = false;
-            }
-            handle->acquired_mask = 0U;
-            handle->state = NEON_CSI_STATE_IDLE;
-        }
-    }
-}
-
-/* Sub events of one event pending in irq_status, plus the driver's own for SYSTEM. irq_bits receives the
- * IRQ_STATUS bits behind them, for the RW1C clear. Masked sub events are included. */
-static uint32_t csi_pending_sub_events(const neon_csi_handle_t *handle, uint32_t irq_status, neon_csi_event_t event,
-                                       uint32_t *irq_bits)
+/* Sub events of one event pending in irq_status. irq_bits receives the IRQ_STATUS bits behind them, for the
+ * RW1C clear. Masked sub events are included. */
+static uint32_t csi_pending_sub_events(uint32_t irq_status, neon_csi_event_t event, uint32_t *irq_bits)
 {
     uint32_t sub_events = 0U;
     uint32_t i;
@@ -1408,9 +1484,6 @@ static uint32_t csi_pending_sub_events(const neon_csi_handle_t *handle, uint32_t
             sub_events |= csi_irq_map[i].sub_event;
             *irq_bits |= csi_irq_map[i].irq_bit;
         }
-    }
-    if (event == NEON_CSI_EVENT_SYSTEM) {
-        sub_events |= handle->software_sub_events;
     }
     return sub_events;
 }

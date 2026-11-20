@@ -3,7 +3,6 @@
 /* Stages that start() completes, in order. A rollback undoes every stage up to the one it is given. */
 typedef enum {
     STAGE_NONE = 0,
-    STAGE_MIPI,
     STAGE_CSI,
     STAGE_ISP,
     STAGE_SENSOR
@@ -12,7 +11,7 @@ typedef enum {
 static int pipeline_complete(const neon_camera_pipeline_t *pipeline)
 {
     return pipeline != 0 && pipeline->sensor != 0 && pipeline->sensor_ops != 0 &&
-           pipeline->mipi != 0 && pipeline->csi != 0 && pipeline->isp != 0 &&
+           pipeline->csi != 0 && pipeline->isp != 0 &&
            pipeline->algorithm != 0 && pipeline->algorithm_ops != 0;
 }
 
@@ -24,7 +23,6 @@ static int stop_stages(neon_camera_pipeline_t *pipeline, start_stage_t reached)
     if (reached >= STAGE_SENSOR && pipeline->sensor_ops->stop_stream(pipeline->sensor)) result = -1;
     if (reached >= STAGE_ISP && neon_isp_stop(pipeline->isp) != NEON_OK) result = -1;
     if (reached >= STAGE_CSI && neon_csi_stop(pipeline->csi) != NEON_OK) result = -1;
-    if (reached >= STAGE_MIPI && neon_mipi_release(pipeline->mipi) != NEON_OK) result = -1;
     return result;
 }
 
@@ -32,23 +30,15 @@ static int reference_start(neon_camera_pipeline_t *pipeline)
 {
     uint32_t latency;
 
-    if (!pipeline_complete(pipeline) || pipeline->csi->mipi != pipeline->mipi ||
-        pipeline->mipi_ready_timeout_polls == 0u) return -1;
+    if (!pipeline_complete(pipeline)) return -1;
 
     if (pipeline->sensor_ops->probe(pipeline->sensor) ||
         pipeline->sensor_ops->configure_mode(pipeline->sensor, pipeline->sensor_mode_id)) return -1;
 
-    /* A refused acquire means somebody else holds the link: nothing of ours to undo. */
-    if (neon_mipi_acquire(pipeline->mipi, &pipeline->mipi_config) != NEON_OK) return -1;
-    if (neon_mipi_wait_ready(pipeline->mipi, pipeline->mipi_ready_timeout_polls) != NEON_OK ||
-        neon_csi_configure(pipeline->csi, &pipeline->csi_config) != NEON_OK) {
-        (void)stop_stages(pipeline, STAGE_MIPI);
-        return -1;
-    }
-    if (neon_csi_start(pipeline->csi) != NEON_OK) {
-        (void)stop_stages(pipeline, STAGE_MIPI);
-        return -1;
-    }
+    /* configure() brings the D-PHY link up and waits for Stop State: the sensor drives LP-11 after its mode
+     * is set. A refusal leaves the receiver IDLE, nothing of ours to undo. */
+    if (neon_csi_configure(pipeline->csi, &pipeline->csi_config) != NEON_OK ||
+        neon_csi_start(pipeline->csi) != NEON_OK) return -1;
     /* The tuning goes in first, while the ISP is stopped (the only frame-safe moment for every table), and
      * the configuration after it, so that the fields the HAL owns are the HAL's. */
     if ((pipeline->isp_profile != 0 &&

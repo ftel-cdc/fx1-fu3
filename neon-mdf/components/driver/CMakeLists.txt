@@ -21,7 +21,7 @@ endforeach()
 
 # Camera HAL backends are currently provided for FX1 only.
 if(NEON_MDF_TARGET_${NEON_MDF_TARGET}_FAMILY STREQUAL "FX1")
-  add_subdirectory(mipi)
+  add_subdirectory(phy)
   add_subdirectory(csi)
   add_subdirectory(isp)
 endif()

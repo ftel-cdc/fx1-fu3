@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "csi/neon_csi.h"
-#include "mipi/neon_mipi.h"
 #include "isp/neon_isp.h"
 #include "neon_camera_3a.h"
 #include "neon_camera_sensor_hal.h"
@@ -12,10 +11,7 @@
 typedef struct {
     void *sensor;
     const neon_camera_sensor_hal_ops_t *sensor_ops;
-    /* The link, the receiver and the ISP are used directly. csi must have been bound to mipi by neon_csi_init(). */
-    neon_mipi_handle_t *mipi;
-    neon_mipi_config_t mipi_config;
-    uint32_t mipi_ready_timeout_polls; /* Status polls to wait for Stop State; at least one. */
+    /* The receiver and the ISP are used directly. The receiver owns the D-PHY link: csi_config.link. */
     neon_csi_handle_t *csi;
     neon_csi_config_t csi_config;
     neon_isp_handle_t *isp;
@@ -35,7 +31,7 @@ typedef struct {
 
 /*
  * start() brings the pipeline up in the order that the MIPI CSI-2 MAS (9.1) and the ISP MAS require: sensor
- * probe and mode, MIPI link ready, CSI configured and started, ISP tuning profile written (if any), ISP
+ * probe and mode, CSI configured (which brings the D-PHY link up) and started, ISP tuning profile written (if any), ISP
  * configured and started, and only then the sensor streams. A failure undoes the stages that had completed. stop() runs the same stages in reverse.
  *
  * The runtime does not move frames: it brings the stages up and runs the 3A loop. Handing a frame that the
@@ -60,8 +56,8 @@ const neon_camera_runtime_ops_t *neon_camera_runtime_reference_ops(void);
 /*
  * Gathered configuration. A caller describes the camera once, and neon_camera_runtime_init() derives the
  * per-module configurations from it, so that the receiver and the ISP agree by construction: the ISP input
- * stride is the receiver's line pitch, the receiver's line padding makes that pitch a multiple of the
- * DMA alignment, and the NV12 planes use that same alignment.
+ * stride is the receiver's line pitch, the padding in that pitch makes it a multiple of the DMA alignment
+ * of both, and the NV12 planes use that same alignment.
  */
 typedef struct {
     /* Sensor, selected by the caller (see neon_camera_sensor_hal.h). */
@@ -75,11 +71,11 @@ typedef struct {
     neon_isp_raw_depth_t raw_depth;
     neon_isp_bayer_pattern_t bayer_pattern;
 
-    /* MIPI link. */
-    uint8_t lane_count;
+    /* D-PHY link. */
+    const char *phy_name;                 /* PHY under the receiver, for neon_phy_get(); NEON_CAMERA_RUNTIME_DEFAULT_PHY by default. */
+    uint8_t lane_count;                   /* Data lanes the sensor drives. */
     uint32_t lane_rate_bps;               /* Line rate per data lane. */
-    bool continuous_clock;
-    uint32_t mipi_ready_timeout_polls;    /* 0 selects NEON_CAMERA_RUNTIME_DEFAULT_READY_POLLS. */
+    bool continuous_clock;                /* The sensor keeps its clock lane in High-Speed mode between bursts. */
 
     /*
      * One DDR region for every buffer. init() carves it, in this order and each piece rounded up to the DMA
@@ -111,11 +107,12 @@ typedef struct {
     uint32_t algorithm_tuning_bytes;
 } neon_camera_runtime_config_t;
 
-#define NEON_CAMERA_RUNTIME_DEFAULT_READY_POLLS 100U
+/* The D-PHY under the CSI-2 receiver (phy/platform/fx1/neon_phy_fx1.h). */
+#define NEON_CAMERA_RUNTIME_DEFAULT_PHY "csi-dphy0"
 
 /* Everything one camera pipeline owns. The caller allocates it; init() fills it. */
 typedef struct {
-    neon_mipi_handle_t mipi;
+    neon_phy_t phy;                       /* D-PHY of the receiver, bound by init(), initialized by neon_csi_init(). */
     neon_csi_handle_t csi;
     neon_isp_handle_t isp;
     neon_camera_3a_t algorithm;
@@ -124,8 +121,8 @@ typedef struct {
 } neon_camera_runtime_t;
 
 /**
- * @brief Fill a configuration with portable defaults: RAW12, RGGB, continuous clock, the default ready
- * timeout and the reference 3A. The sensor, geometry, lanes and memory are left at zero for the caller.
+ * @brief Fill a configuration with portable defaults: RAW12, RGGB, continuous clock, the default PHY
+ * and the reference 3A. The sensor, geometry, lanes and memory are left at zero for the caller.
  * @param[out] config Configuration.
  */
 void neon_camera_runtime_get_default_config(neon_camera_runtime_config_t *config);
@@ -141,7 +138,7 @@ void neon_camera_runtime_get_default_config(neon_camera_runtime_config_t *config
 neon_status_t neon_camera_runtime_memory_bytes(const neon_camera_runtime_config_t *config, uint32_t *bytes);
 
 /**
- * @brief Initialize the link, the receiver, the ISP and the 3A algorithm, and derive their configurations.
+ * @brief Bind the D-PHY, initialize the receiver, the ISP and the 3A algorithm, and derive their configurations.
  * @details
  * Touches no hardware. It checks what it needs for the derivation (geometry and format, buffer sizes, that
  * the region is big enough); the rules of each module (lane count, ISP size limits, bursts) are checked
@@ -150,7 +147,7 @@ neon_status_t neon_camera_runtime_memory_bytes(const neon_camera_runtime_config_
  * if the default is not wanted.
  * @param[out] runtime Storage, overwritten. Must not hold a running pipeline.
  * @param[in] config Configuration.
- * @return NEON_OK, NEON_INVALID_PARAM (NULL pointer, no sensor, no lanes, bad geometry or depth, region too
+ * @return NEON_OK, NEON_INVALID_PARAM (NULL pointer, no sensor, no lanes, no PHY name, bad geometry or depth, region too
  * small, a tuning binary with a pointer but no size or the reverse, an ISP profile entry the chip refuses,
  * both profile and algorithm_tuning, or a 3A tuning the algorithm refuses), or NEON_NOT_SUPPORTED (also
  * for algorithm_tuning given to an algorithm that cannot load one). On failure nothing is left
@@ -161,7 +158,7 @@ neon_status_t neon_camera_runtime_init(neon_camera_runtime_t *runtime, const neo
 /**
  * @brief Release the handles of a pipeline that is stopped.
  * @param[in,out] runtime Pipeline.
- * @return NEON_OK, NEON_BUSY if the ISP or the receiver runs or the link is acquired (nothing is changed),
+ * @return NEON_OK, NEON_BUSY if the ISP or the receiver runs (nothing is changed),
  * or NEON_INVALID_PARAM for a NULL pointer.
  */
 neon_status_t neon_camera_runtime_deinit(neon_camera_runtime_t *runtime);

@@ -2,9 +2,10 @@
  * @file neon_csi.h
  * @brief Public declarations for the CSI-2 receiver.
  * @details
- * CSI-2 receiver: packet decoding, DMA of the frames to memory, frame context, metadata, test pattern
- * and event reporting. The D-PHY and the lanes belong to neon_mipi.h; a receiver is bound to one link and
- * takes a lock on it while it runs.
+ * CSI-2 receiver: D-PHY link bring-up, packet decoding, DMA of the frames to memory, frame context,
+ * metadata, test pattern and event reporting. The receiver owns its link: it is bound to one PHY
+ * (phy/neon_phy.h) and drives it, together with the reset, lane enables and Stop State of its own
+ * registers, from neon_csi_configure(). config.link describes the lanes.
  *
  * This header is common to every chip. What a chip provides is reported by neon_csi_get_caps(); settings
  * that only one chip has are in csi/platform/<family>/neon_csi_<family>.h.
@@ -21,7 +22,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "neon_types.h"
-#include "mipi/neon_mipi.h"
+#include "phy/neon_phy.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -69,8 +70,7 @@ extern "C" {
 #define NEON_CSI_SUB_EVENT_PHY_SOT_ERROR            (1UL << 0)                      /* Start-of-Transmission error on a data lane. */
 #define NEON_CSI_SUB_EVENT_PHY_SOT_SYNC_ERROR       (1UL << 1)                      /* Start-of-Transmission sync could not be found. */
 
-/* Sub events of NEON_CSI_EVENT_SYSTEM. */
-#define NEON_CSI_SUB_EVENT_SYSTEM_LINK_RESET        (1UL << 0)                      /* Raised by the driver: the link was reset under this receiver. */
+/* Sub events of NEON_CSI_EVENT_SYSTEM. Bit 0 is free: it was the link reset of the former separate link driver. */
 #define NEON_CSI_SUB_EVENT_SYSTEM_OVERFLOW          (1UL << 1)                      /* An internal buffer or FIFO overflowed; data was lost. */
 #define NEON_CSI_SUB_EVENT_SYSTEM_BUS_ERROR         (1UL << 2)                      /* A DMA write to memory was refused by the bus. */
 
@@ -83,7 +83,7 @@ typedef enum {
     NEON_CSI_EVENT_FRAME = 1,     /* Frame Start and frame errors, per virtual channel. */
     NEON_CSI_EVENT_PACKET = 2,    /* Packet header and payload errors, generic short packets. */
     NEON_CSI_EVENT_PHY = 3,       /* D-PHY errors. */
-    NEON_CSI_EVENT_SYSTEM = 4,    /* Link reset, overflow, bus error. */
+    NEON_CSI_EVENT_SYSTEM = 4,    /* Overflow, bus error. */
     NEON_CSI_EVENT_PLATFORM = 5,  /* Chip-specific; sub events in csi/platform/<family>/neon_csi_<family>.h. */
     NEON_CSI_EVENT_COUNT = 6      /* Number of events. */
 } neon_csi_event_t;
@@ -124,10 +124,9 @@ typedef enum {
 } neon_csi_buffer_state_t;
 
 typedef enum {
-    NEON_CSI_STATE_RESET = 0,       /* Not initialized, or deinitialized: bound to no link. */
-    NEON_CSI_STATE_IDLE = 1,        /* Bound to a link, not configured. Also entered when a full reset of the
-                                     * link loses the configuration, reported by NEON_CSI_SUB_EVENT_SYSTEM_LINK_RESET. */
-    NEON_CSI_STATE_CONFIGURED = 2,  /* Configuration programmed, not receiving. */
+    NEON_CSI_STATE_RESET = 0,       /* Not initialized, or deinitialized: bound to no PHY. */
+    NEON_CSI_STATE_IDLE = 1,        /* Bound to a PHY, not configured. */
+    NEON_CSI_STATE_CONFIGURED = 2,  /* Configuration programmed and link up (Stop State seen), not receiving. */
     NEON_CSI_STATE_RUNNING = 3      /* Receiving. */
 } neon_csi_state_t;
 
@@ -152,6 +151,7 @@ typedef struct {
     uint8_t vc_count;                /* Virtual channels with frame context, at most NEON_CSI_MAX_VCS. */
     bool has_test_pattern;           /* A test pattern generator can replace the sensor. */
     bool has_metadata;               /* Embedded data can be captured with each frame. */
+    uint32_t dma_align_bytes;        /* Buffer addresses, buffer sizes and the line pitch are multiples of this; 0 means any. */
     uint32_t supported_raw_formats;  /* NEON_CSI_RAW_FORMAT_BIT() of each accepted neon_csi_raw_format_t. */
     uint32_t supported_sub_events[NEON_CSI_EVENT_COUNT]; /* Per event: the sub event bits the chip can raise. */
 } neon_csi_caps_t;
@@ -180,6 +180,7 @@ typedef struct {
 
 /** Everything neon_csi_configure() programs. */
 typedef struct {
+    neon_phy_mipi_dphy_opts_t link;          /* D-PHY lanes, line rate and board wiring; not used while the test pattern is enabled. */
     neon_csi_raw_format_t raw_format;        /* Format the sensor sends. */
     uint16_t width;                          /* Active pixels per line expected from the sensor. */
     uint16_t height;                         /* Lines per frame expected from the sensor. */
@@ -224,32 +225,34 @@ typedef struct {
     uint32_t ecc_error_count;                                   /* Packet headers with an ECC error. */
     uint32_t crc_error_count;                                   /* Long packets with a CRC error. */
     uint32_t frame_drop_count;                                  /* Frames lost because no buffer was free. */
+    bool clock_stop_state;                                      /* The clock lane is in Stop State. */
+    bool clock_hs_active;                                       /* The clock lane is in High-Speed mode: the byte clock runs. */
+    uint8_t lane_stop_mask;                                     /* Bit n set: data lane n is in Stop State. */
+    neon_phy_mipi_dphy_status_t phy_errors;                     /* D-PHY errors since the previous get_status, read and cleared. */
 } neon_csi_status_t;
 
 /** Receiver instance, caller allocated. Fields are private to the driver. */
 typedef struct neon_csi_handle_s {
-    neon_mipi_handle_t *mipi;        /* Link the receiver is bound to. */
+    neon_phy_t *phy;                 /* D-PHY of the link, initialized by neon_csi_init(). */
     neon_csi_caps_t caps;            /* Copy of neon_csi_get_caps(), taken by neon_csi_init(). */
     neon_csi_state_t state;          /* Driver state. */
     neon_csi_config_t config;        /* Last configuration accepted by neon_csi_configure(). */
-    bool link_locked;                /* The link lock is held, from neon_csi_start() to neon_csi_stop(). */
+    bool link_up;                    /* The PHY is powered and the lanes are enabled, from configure() to deinit(). */
     uint8_t acquired_mask;           /* Bit n set: software holds buffer n. */
-    uint32_t software_sub_events;    /* NEON_CSI_EVENT_SYSTEM sub events raised by the driver, e.g. LINK_RESET. */
-    uint32_t phy_epoch;              /* neon_mipi phy_epoch seen at configure: a change means the PHY was reset. */
-    uint32_t config_epoch;           /* neon_mipi config_epoch seen at configure: a change means the configuration is lost. */
 } neon_csi_handle_t;
 
 /*==================================================================================================
 *                                       FUNCTION PROTOTYPES                                       
 ==================================================================================================*/
 /**
- * @brief Bind a receiver to a link.
+ * @brief Bind a receiver to its D-PHY and initialize the PHY (neon_phy_init()).
  * @param[out] handle Receiver handle, caller allocated.
- * @param[in] mipi Link handle, initialized.
+ * @param[in,out] phy PHY handle from neon_phy_get(): a MIPI D-PHY with a receive side. It is set to
+ * NEON_PHY_MIPI_DPHY_SUBMODE_RX and stays in use until neon_csi_deinit().
  * @return NEON_OK on success, NEON_INVALID_PARAM for a NULL pointer, NEON_NOT_SUPPORTED if the hardware is
- * not a receiver this driver supports.
+ * not a receiver this driver supports, or a status of neon_phy_init() or neon_phy_set_mode().
  */
-neon_status_t neon_csi_init(neon_csi_handle_t *handle, neon_mipi_handle_t *mipi);
+neon_status_t neon_csi_init(neon_csi_handle_t *handle, neon_phy_t *phy);
 
 /**
  * @brief Report what the chip provides. Needs no handle and no hardware.
@@ -259,15 +262,16 @@ neon_status_t neon_csi_init(neon_csi_handle_t *handle, neon_mipi_handle_t *mipi)
 neon_status_t neon_csi_get_caps(neon_csi_caps_t *caps);
 
 /**
- * @brief Release the binding.
+ * @brief Disable the lanes, power the PHY off, release it (neon_phy_exit()) and the binding.
  * @param[in] handle Receiver handle.
  * @return NEON_OK, or NEON_BUSY while the receiver is running.
  */
 neon_status_t neon_csi_deinit(neon_csi_handle_t *handle);
 
 /**
- * @brief Fill a configuration with defaults: RAW12 in NEON_CSI_PACKING_UNPACKED16, test pattern off and
- * the frame and error events enabled. The buffers and the geometry are left at zero for the caller.
+ * @brief Fill a configuration with defaults: RAW12 in NEON_CSI_PACKING_UNPACKED16, test pattern off, the
+ * frame and error events enabled, and a link with a continuous clock and a straight lane map. The buffers,
+ * the geometry, link.lane_count and link.lane_rate_bps are left at zero for the caller.
  * @param[out] config Configuration.
  */
 void neon_csi_get_default_config(neon_csi_config_t *config);
@@ -282,25 +286,34 @@ void neon_csi_get_default_config(neon_csi_config_t *config);
 neon_status_t neon_csi_calculate_layout(const neon_csi_config_t *config, neon_csi_layout_t *layout);
 
 /**
- * @brief Validate and program a configuration. The core stays disabled.
+ * @brief Validate and program a configuration, and bring the link up. The core stays disabled.
+ * @details The link is reset and reprogrammed every time: lanes disabled, D-PHY reset, PHY configured
+ * from config.link, lanes enabled, then a wait for Stop State on the clock lane and every used data lane.
+ * The sensor must already drive LP-11, for at least T_INIT (100 us). With the test pattern enabled only
+ * the D-PHY reset is done.
  * @param[in,out] handle Receiver handle, not running.
  * @param[in] config Configuration.
- * @return NEON_OK on success, NEON_BUSY while running, NEON_ERROR if the link is released,
- * NEON_INVALID_PARAM for an invalid configuration, or a platform error status.
+ * @return NEON_OK on success, NEON_BUSY while running, NEON_ERROR if not initialized, NEON_INVALID_PARAM
+ * for an invalid configuration, NEON_NOT_SUPPORTED for a lane count or line rate the hardware cannot take
+ * (including more lanes than the receiver was built with),
+ * NEON_TIMEOUT if Stop State was not seen (the receiver stays IDLE; call again once the sensor drives
+ * LP-11), or a platform error status.
  */
 neon_status_t neon_csi_configure(neon_csi_handle_t *handle, const neon_csi_config_t *config);
 
 /**
  * @brief Arm the buffers, enable the DMA and then the receiver. Start the sensor after it.
  * @param[in,out] handle Receiver handle, configured.
- * @return NEON_OK on success, NEON_BUSY if running, NEON_ERROR if not configured (also after a full reset
- * of the link) or the link is not ready.
+ * @return NEON_OK on success, NEON_BUSY if running, NEON_ERROR if not configured.
  */
 neon_status_t neon_csi_start(neon_csi_handle_t *handle);
 
 /**
- * @brief Abort the DMA, wait for outstanding writes, disable the core and unlock the link. Stop the
- * sensor first. Buffers held by software become invalid.
+ * @brief Stop at once: abort the DMA, wait only for the AXI writes already issued, and disable the core.
+ * No Frame End is waited for: a frame in progress is dropped. Stop the sensor first. Buffers held by
+ * software become invalid. The link stays up, so start() may follow without configure(); the first
+ * capture after that start may then report one frame sync error (see neon_phy_fx1.h, clock after the
+ * last burst).
  * @param[in,out] handle Receiver handle, running.
  * @return NEON_OK on success, NEON_ERROR if the receiver is not running, or a platform error status
  * (the receiver then stays running and stop may be called again).
@@ -310,16 +323,16 @@ neon_status_t neon_csi_stop(neon_csi_handle_t *handle);
 /**
  * @brief Reset the datapath and keep the register configuration. Frames held by software are lost: both
  * buffers become hardware owned again.
- * Deeper resets (D-PHY, whole controller) belong to the link: neon_mipi_recover().
+ * The deeper reset is neon_csi_stop() then neon_csi_configure(), which resets the D-PHY and brings the
+ * link up again.
  * @param[in,out] handle Receiver handle, running.
  * @return NEON_OK, NEON_ERROR if not running or when the clock lane is not in High-Speed mode (the
- * datapath reset needs the byte clock, so escalate to neon_mipi_recover() with NEON_MIPI_RECOVER_FULL and
- * configure again), or a platform error status.
+ * datapath reset needs the byte clock: escalate to stop() and configure()), or a platform error status.
  */
 neon_status_t neon_csi_recover(neon_csi_handle_t *handle);
 
 /**
- * @brief Read the state, the buffer ownership and the counters.
+ * @brief Read the state, the buffer ownership, the counters and the link, and take the D-PHY errors.
  * @param[in,out] handle Receiver handle.
  * @param[out] status Snapshot.
  * @return NEON_OK on success, or a platform error status.
