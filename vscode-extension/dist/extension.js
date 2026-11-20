@@ -227,10 +227,39 @@ function runTask(app, name, args, env = {}) {
     });
   });
 }
-async function configure(app, force = false) {
-  if (!force) {
+var preservedOptions = /* @__PURE__ */ new Set([
+  "Python3_EXECUTABLE",
+  "NEON_MDF_PATH",
+  "NEON_MDF_PROFILE",
+  "NEON_MDF_SECURE_BOOT",
+  "NEON_MDF_SIGNING_KEY",
+  "NEON_MDF_GT32U2086_APP_VERSION"
+]);
+async function freshOptions(app, cache) {
+  try {
+    const content = Buffer.from(await vscode4.workspace.fs.readFile(cache)).toString("utf8");
+    const options = [];
+    for (const line of content.split(/\r?\n/)) {
+      const entry = /^([A-Za-z0-9_]+):([^=]+)=(.*)$/.exec(line);
+      if (entry && entry[2] !== "INTERNAL" && preservedOptions.has(entry[1]) && (entry[1] !== "NEON_MDF_PATH" || !sdkPathEnv(app.uri))) {
+        options.push(`-D${entry[1]}=${entry[3]}`);
+      }
+    }
+    return options;
+  } catch (error) {
+    if (error instanceof vscode4.FileSystemError && error.code === "FileNotFound") {
+      return [];
+    }
+    throw error;
+  }
+}
+async function configure(app, mode = "if-needed") {
+  const dir = vscode4.Uri.joinPath(app.uri, "build", PRESET);
+  const cache = vscode4.Uri.joinPath(dir, "CMakeCache.txt");
+  if (mode === "if-needed") {
     try {
-      await vscode4.workspace.fs.stat(vscode4.Uri.joinPath(app.uri, "build", PRESET, "CMakeCache.txt"));
+      await vscode4.workspace.fs.stat(cache);
+      await vscode4.workspace.fs.stat(vscode4.Uri.joinPath(dir, "build.ninja"));
       return;
     } catch (error) {
       if (!(error instanceof vscode4.FileSystemError) || error.code !== "FileNotFound") {
@@ -238,7 +267,11 @@ async function configure(app, force = false) {
       }
     }
   }
-  await requireSuccess(runTask(app, "Configure", ["--preset", PRESET]), "Configuration");
+  const args = ["--preset", PRESET];
+  if (mode === "fresh") {
+    args.push(...await freshOptions(app, cache), "--fresh");
+  }
+  await requireSuccess(runTask(app, "Configure", args), "Configuration");
 }
 async function runBuild(app, name, target, env) {
   const args = ["--build", "--preset", PRESET];
@@ -879,7 +912,7 @@ async function activate(context) {
   register("build", async () => {
     const app = await selectApplication(state);
     if (app) {
-      await configure(app);
+      await configure(app, "fresh");
       await runBuild(app, "Build");
     }
   });
@@ -899,7 +932,7 @@ async function activate(context) {
     const reopenMonitor = openMonitor || monitor.isOpen;
     state.setFlashStatus("Preparing");
     try {
-      await configure(app);
+      await configure(app, "fresh");
       await monitor.close();
       state.setFlashStatus("Running UART upload");
       await runBuild(app, "Flash via UART", "flash_uart_gt32u2086", {
@@ -928,7 +961,7 @@ async function activate(context) {
     if (app) {
       await configure(app);
       await runBuild(app, "Menuconfig", "menuconfig");
-      await configure(app, true);
+      await configure(app, "refresh");
     }
   });
   register("debug", async () => {

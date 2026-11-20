@@ -54,10 +54,43 @@ function runTask(
   });
 }
 
-export async function configure(app: Application, force = false): Promise<void> {
-  if (!force) {
+// Restore user options that must survive a fresh configure. CMake regenerates
+// compiler detection, paths derived from the preset and other internal entries.
+const preservedOptions = new Set([
+  "Python3_EXECUTABLE", "NEON_MDF_PATH", "NEON_MDF_PROFILE", "NEON_MDF_SECURE_BOOT",
+  "NEON_MDF_SIGNING_KEY", "NEON_MDF_GT32U2086_APP_VERSION",
+]);
+
+async function freshOptions(app: Application, cache: vscode.Uri): Promise<string[]> {
+  try {
+    const content = Buffer.from(await vscode.workspace.fs.readFile(cache)).toString("utf8");
+    const options: string[] = [];
+    for (const line of content.split(/\r?\n/)) {
+      const entry = /^([A-Za-z0-9_]+):([^=]+)=(.*)$/.exec(line);
+      if (entry && entry[2] !== "INTERNAL" && preservedOptions.has(entry[1]) &&
+          (entry[1] !== "NEON_MDF_PATH" || !sdkPathEnv(app.uri))) {
+        options.push(`-D${entry[1]}=${entry[3]}`);
+      }
+    }
+    return options;
+  } catch (error) {
+    if (error instanceof vscode.FileSystemError && error.code === "FileNotFound") {
+      return [];
+    }
+    throw error;
+  }
+}
+
+export async function configure(
+  app: Application,
+  mode: "if-needed" | "refresh" | "fresh" = "if-needed",
+): Promise<void> {
+  const dir = vscode.Uri.joinPath(app.uri, "build", PRESET);
+  const cache = vscode.Uri.joinPath(dir, "CMakeCache.txt");
+  if (mode === "if-needed") {
     try {
-      await vscode.workspace.fs.stat(vscode.Uri.joinPath(app.uri, "build", PRESET, "CMakeCache.txt"));
+      await vscode.workspace.fs.stat(cache);
+      await vscode.workspace.fs.stat(vscode.Uri.joinPath(dir, "build.ninja"));
       return;
     } catch (error) {
       if (!(error instanceof vscode.FileSystemError) || error.code !== "FileNotFound") {
@@ -65,7 +98,11 @@ export async function configure(app: Application, force = false): Promise<void> 
       }
     }
   }
-  await requireSuccess(runTask(app, "Configure", ["--preset", PRESET]), "Configuration");
+  const args = ["--preset", PRESET];
+  if (mode === "fresh") {
+    args.push(...await freshOptions(app, cache), "--fresh");
+  }
+  await requireSuccess(runTask(app, "Configure", args), "Configuration");
 }
 
 export async function runBuild(

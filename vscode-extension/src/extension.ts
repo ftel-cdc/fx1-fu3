@@ -61,7 +61,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   register("build", async () => {
     const app = await selectApplication(state);
     if (app) {
-      await configure(app);
+      await configure(app, "fresh");
       await runBuild(app, "Build");
     }
   });
@@ -81,7 +81,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const reopenMonitor = openMonitor || monitor.isOpen;
     state.setFlashStatus("Preparing");
     try {
-      await configure(app);
+      await configure(app, "fresh");
       await monitor.close();
       state.setFlashStatus("Running UART upload");
       await runBuild(app, "Flash via UART", "flash_uart_gt32u2086", {
@@ -110,7 +110,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (app) {
       await configure(app);
       await runBuild(app, "Menuconfig", "menuconfig");
-      await configure(app, true);
+      await configure(app, "refresh");
     }
   });
   register("debug", async () => {

@@ -18,7 +18,7 @@ npm run compile
 npm run vsix
 ```
 
-The last command creates `neon-mdf-tools-0.1.1.vsix`. In VS Code, open Extensions →
+The last command creates `neon-mdf-tools-0.1.3.vsix`. In VS Code, open Extensions →
 the `…` menu → **Install from VSIX...** and select the generated file. Press `F5`
 from the extension project to test in an Extension Development Host. `.vsix`
 packages and `dist/` are generated artifacts; rebuild them after extension changes.
@@ -53,17 +53,19 @@ described in [Setup](Setup.md).
 
 1. Click **Serial Port** under **Device** and choose the board's UART port,
    such as `/dev/ttyUSB0` on Linux.
-2. Under **Actions**, select **Build** to configure and build the application.
+2. Under **Actions**, select **Build** to configure with `--fresh` and build the application.
 3. Select **Flash via UART** to build as needed and program the image selected by CMake.
    Set boot mode `100` and press RESET when the task reports that UART is ready.
 4. Select **Serial Monitor** to open the UART terminal. Type directly into it
    to send characters such as `r` and Enter to the firmware.
 
-**Flash via UART** runs the `flash_uart_gt32u2086` CMake target with the selected
+**Flash via UART** also configures with `--fresh`, then runs the `flash_uart_gt32u2086` CMake target with the selected
 port and flash baud. It sets `NEON_MDF_UART_BYTE_GAP_MS=0` and
 `NEON_MDF_UART_LOG=progress`. Follow the task terminal for the reset prompt
 and upload progress. The status bar and Command Palette also expose the existing
-build and flash commands.
+build and flash commands. The extension carries forward the selected Python
+interpreter, SDK path override, memory profile, firmware version and signing
+options when using `--fresh`.
 
 Flash releases an open monitor session and opens a new one after a successful
 upload. **NEON-MDF: Build + Flash + Log** opens the monitor after programming
