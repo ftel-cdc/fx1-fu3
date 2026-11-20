@@ -1,19 +1,18 @@
-// selectTarget.ts - QuickPick selects target, real list from CMakePresets.json through presets.ts (not
 import * as vscode from "vscode";
+import { selectApplication } from "../application";
 import { NeonMdfState } from "../state";
 import { discoverTargets } from "../presets";
 
 export async function selectTargetCommand(state: NeonMdfState): Promise<void> {
-  const folder = vscode.workspace.workspaceFolders?.[0];
-  if (!folder) {
-    vscode.window.showWarningMessage("NEON-MDF: no workspace folder opened.");
+  const app = await selectApplication();
+  if (!app) {
     return;
   }
 
-  const targets = await discoverTargets(folder.uri);
+  const targets = (await discoverTargets(app.uri)).filter((target) => target.name === "GT32U2086");
   if (targets.length === 0) {
     vscode.window.showWarningMessage(
-      "NEON-MDF: No targets found in this workspace CMakePresets.json. Open an application folder such as examples/Blinky."
+      "NEON-MDF: This application has no GT32U2086 CMake preset."
     );
     return;
   }

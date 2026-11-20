@@ -1,7 +1,7 @@
 {
   "name": "neon-mdf-tools",
   "displayName": "NEON-MDF Tools",
-  "description": "Build, flash and monitor GT32U2086 applications with NEON-MDF.",
+  "description": "Build, flash, monitor, configure and debug GT32U2086 applications with NEON-MDF.",
   "publisher": "neon-mdf",
   "version": "0.1.0",
   "private": true,
@@ -12,10 +12,25 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:CMakePresets.json"
+    "workspaceContains:CMakePresets.json",
+    "workspaceContains:examples/*/CMakePresets.json"
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "taskDefinitions": [
+      {
+        "type": "neon-mdf",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identifier for this NEON-MDF task execution."
+          }
+        }
+      }
+    ],
     "commands": [
       {
         "command": "neonMdf.createApp",
@@ -65,6 +80,23 @@
     "configuration": {
       "title": "NEON-MDF",
       "properties": {
+        "neonMdf.baudRate": {
+          "type": "integer",
+          "default": 19200,
+          "description": "Application UART/Serial Monitor baud; independent of programming baud.",
+          "minimum": 1
+        },
+        "neonMdf.gt32u2086FlashBaudRate": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 19200,
+          "description": "GT32U2086 UART programming baud rate; must match the board ROMCODE. Passed when the CMake target runs; does not change the chip baud rate."
+        },
+        "neonMdf.sdkPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional absolute path to the neon-mdf SDK. Bundled applications locate it relative to their project directory by default."
+        },
         "neonMdf.target": {
           "type": "string",
           "default": "GT32U2086",
@@ -80,22 +112,6 @@
           ],
           "default": "uart",
           "description": "ROMCODE UART programming: select boot mode 100 and press RESET when the loader is ready."
-        },
-        "neonMdf.baudRate": {
-          "type": "number",
-          "default": 19200,
-          "description": "Application UART/Serial Monitor baud; independent of programming baud."
-        },
-        "neonMdf.gt32u2086FlashBaudRate": {
-          "type": "integer",
-          "minimum": 1,
-          "default": 19200,
-          "description": "GT32U2086 UART programming baud rate; must match the board ROMCODE. Passed when the CMake target runs; does not change the chip baud rate."
-        },
-        "neonMdf.sdkPath": {
-          "type": "string",
-          "default": "",
-          "description": "Absolute path to the neon-mdf SDK, similar to ESP-IDF idf.espIdfPath. Leave empty to infer it from the application location (../../neon-mdf), as in the bundled examples. Set this only when the SDK is elsewhere, using NEON-MDF: Select SDK Path... rather than editing it here."
         }
       }
     }
@@ -121,5 +137,10 @@
     "type": "git",
     "url": "https://github.com/ftel-cdc/neon_mdf.git",
     "directory": "vscode-extension"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    }
   }
 }

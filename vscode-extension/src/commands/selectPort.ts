@@ -38,7 +38,10 @@ export async function selectPortCommand(state: NeonMdfState): Promise<void> {
     if (!typed) {
       return;
     }
-    port = typed;
+    port = typed.trim();
+    if (!port) {
+      return;
+    }
   }
 
   await state.setPort(port);

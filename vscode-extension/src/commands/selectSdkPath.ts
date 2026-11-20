@@ -3,14 +3,14 @@
 import * as vscode from "vscode";
 import { getConfiguredSdkPath, setConfiguredSdkPath, looksLikeSdkRoot } from "../sdkPath";
 
-const BROWSE_LABEL = "$(folder-opened) Browse my neon-mdf directory...";
-const RESET_LABEL = "$(discard) reset to automatic";
+const BROWSE_LABEL = "$(folder-opened) Browse for the SDK...";
+const RESET_LABEL = "$(discard) Reset to automatic";
 
 export async function selectSdkPathCommand(): Promise<void> {
   const current = getConfiguredSdkPath();
 
   const items: vscode.QuickPickItem[] = [
-    { label: BROWSE_LABEL, description: "select 1 real SDK checkout" },
+    { label: BROWSE_LABEL, description: "Select a NEON-MDF SDK checkout" },
     {
       label: RESET_LABEL,
       description: "Clear the setting and use ../../neon-mdf relative to the application",

@@ -6,8 +6,8 @@ import * as path from "path";
 
 const SETTING_KEY = "sdkPath";
 
-export function getConfiguredSdkPath(): string | undefined {
-  const raw = vscode.workspace.getConfiguration("neonMdf").get<string>(SETTING_KEY, "");
+export function getConfiguredSdkPath(scope?: vscode.Uri): string | undefined {
+  const raw = vscode.workspace.getConfiguration("neonMdf", scope).get<string>(SETTING_KEY, "");
   const trimmed = raw?.trim();
   return trimmed ? trimmed : undefined;
 }
@@ -22,14 +22,14 @@ export async function setConfiguredSdkPath(sdkPath: string | undefined): Promise
  * Override NEON_MDF_PATH for CMake subprocesses when an SDK path is configured.
  * Leave the environment unchanged otherwise so application defaults apply.
  */
-export function sdkPathEnv(): Record<string, string> | undefined {
-  const configured = getConfiguredSdkPath();
+export function sdkPathEnv(scope?: vscode.Uri): Record<string, string> | undefined {
+  const configured = getConfiguredSdkPath(scope);
   return configured ? { NEON_MDF_PATH: configured } : undefined;
 }
 
 /** Resolve the configured SDK path, or <app>/../../neon-mdf by default. */
 export function resolveSdkPathUri(anchorDir: vscode.Uri): vscode.Uri {
-  const configured = getConfiguredSdkPath();
+  const configured = getConfiguredSdkPath(anchorDir);
   if (configured) {
     return vscode.Uri.file(configured);
   }

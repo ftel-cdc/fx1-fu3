@@ -1,8 +1,8 @@
 # GT32U2086 development in VS Code
 
-The NEON-MDF extension provides building, UART programming, serial monitoring,
-menuconfig and project creation. It invokes the same CMake presets/targets as
-the terminal; complete [Setup](Setup.md) first.
+NEON-MDF Tools provides serial port selection, an interactive UART monitor,
+building, UART programming, menuconfig, debugging and project creation. Complete
+[Setup](Setup.md) before running build tasks.
 
 ## Build and install the extension
 
@@ -29,49 +29,75 @@ runs within VS Code.
 
 ## Open an application
 
-Open the **application directory**, such as `examples/GPIO_Input_Output`, using
-**File → Open Folder**. The status bar displays GT32U2086, UART and the serial port.
+Open the repository or an application folder such as
+`examples/GPIO_Input_Output`. Commands use the application containing the
+active editor when possible. If several apps are available and the active
+editor is outside them, use the application picker.
 
-Examples locate the SDK at `../../neon-mdf`. For projects outside the repository,
-run **NEON-MDF: Select SDK Path...** and choose the `neon-mdf/` directory containing
-`tools/cmake/project.cmake`. Ensure VS Code terminals/tasks can access the same
-toolchain and Python dependencies. You can launch `code` from a terminal with
-`.venv` activated; if needed, configure first with `-DPython3_EXECUTABLE=...` as
-shown in [Setup](Setup.md).
+For an SDK outside the default location, run **NEON-MDF: Select SDK Path...**.
+Use **NEON-MDF: Create New App...** to create a bare-metal or FreeRTOS project.
+**Select Target** and **Select Transport** show the supported GT32U2086 preset
+and UART transport. VS Code tasks need access to the toolchain and Python environment
+described in [Setup](Setup.md).
 
 ## Build, program and view logs
 
-1. Select target **GT32U2086** and the board's serial port.
-2. Run **NEON-MDF: Build** to configure/build.
-3. Set `neonMdf.gt32u2086FlashBaudRate` to match ROMCODE (19200 by default).
-4. Run **NEON-MDF: Flash** or **NEON-MDF: Build + Flash + Log**.
-5. Select boot mode `100`, wait for the tool to report UART ready, then press RESET.
+1. Use **Select Port** in the status bar to choose the board's UART port.
+2. Use **Build** to configure and build the selected application.
+3. Use **Flash** to build as needed and program the image selected by CMake.
+   Set boot mode `100` and press RESET when the task reports that UART is ready.
+4. Use **Monitor** to open the UART terminal. Type directly into the terminal
+   to send characters such as `r` and Enter to the firmware.
 
-The extension closes its monitor before programming to release the port.
-Build + Flash + Log reopens the monitor after successful programming. If the
-application prints logs before the monitor opens, reset in boot mode `000` to
-view them again.
+Flash releases an open monitor session and opens a new one after a successful
+upload. **NEON-MDF: Build + Flash + Log** opens the monitor after programming
+even if it was closed before the upload. To build and program signed firmware,
+configure the application with the options in the [Secure Boot guide](SecureBoot.md).
+The extension uses the CMake flash target, which selects the signed artifact
+when signing is enabled. To see startup logs again, set boot mode `000` and reset the board with
+the monitor open.
 
-| Setting | Value / meaning |
+| Setting | Purpose |
 |---|---|
-| `neonMdf.target` | `GT32U2086` |
-| `neonMdf.transport` | `uart` |
-| `neonMdf.gt32u2086FlashBaudRate` | ROMCODE programming baud; default `19200` |
-| `neonMdf.baudRate` | Application/monitor baud; default `19200` |
-| `neonMdf.sdkPath` | SDK path when using a non-default location |
+| `neonMdf.gt32u2086FlashBaudRate` | ROMCODE UART rate, default `19200` |
+| `neonMdf.baudRate` | Application UART rate, default `19200` |
+| `neonMdf.sdkPath` | Optional SDK path override |
 
-Run **NEON-MDF: Serial Monitor** to open the UART terminal. Only one program
-should hold the port at a time. Application baud is independent of ROMCODE baud.
+## Menuconfig
 
-## Configure and create applications
+**Menuconfig** opens the SDK's terminal configuration UI. Save and exit to
+regenerate the build configuration. The next build uses the saved `sdkconfig`.
 
-**NEON-MDF: menuconfig** opens driver/application settings. Reconfigure after
-saving to apply changes. **NEON-MDF: Create New App...** creates a bare-metal or
-FreeRTOS project from a template, replacing the application name and SDK path;
-see [FirstApp](FirstApp.md).
+## Debug
 
-## Debugging
+Install [Cortex-Debug](https://github.com/Marus/cortex-debug) and set up OpenOCD
+and GDB for your board. The SDK ships an OpenOCD placeholder. Use adapter and
+target files verified for your GT32U2086 board.
 
-**NEON-MDF: Debug** reports the current support status. GT32U2086 does not yet
-have complete OpenOCD adapter/target/Flash configuration; see [Debugging](Debugging.md).
-Use UART output and board measurements to verify example behavior.
+Build and program the matching firmware first. Add a configuration like this
+to `.vscode/launch.json` in the open workspace folder. The executable path
+below assumes you opened `examples/GPIO_Input_Output`. For the repository root,
+prefix `build/` with `examples/GPIO_Input_Output/`. Adjust the OpenOCD config
+path to point to your board configuration.
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "GT32U2086: Attach",
+      "type": "cortex-debug",
+      "request": "attach",
+      "servertype": "openocd",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/GT32U2086/gt32u2086_gpio_input_output",
+      "configFiles": ["${workspaceFolder}/board-gt32u2086.cfg"]
+    }
+  ]
+}
+```
+
+Choose **Debug** from the NEON-MDF status bar to start the attach configuration.
+The extension offers a picker if the folder has multiple Cortex-Debug attach
+configurations. See the [Cortex-Debug configuration reference](https://github.com/Marus/cortex-debug/blob/master/debug_attributes.md)
+for adapter and GDB settings.

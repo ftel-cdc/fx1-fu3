@@ -2,7 +2,7 @@
 // Templates are read from the selected SDK rather than bundled in the extension.
 // Replace __APP_NAME__ and __NEON_MDF_RELATIVE_PATH__ using the chosen destination.
 import * as vscode from "vscode";
-import { resolveSdkPathUri, relativePathToSdk, looksLikeSdkRoot } from "../sdkPath";
+import { getConfiguredSdkPath, resolveSdkPathUri, relativePathToSdk, looksLikeSdkRoot } from "../sdkPath";
 
 const APP_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -54,7 +54,8 @@ async function copyTemplateDir(src: vscode.Uri, dest: vscode.Uri, tokens: Record
 }
 
 export async function createAppCommand(): Promise<void> {
-  const folder = vscode.workspace.workspaceFolders?.[0];
+  const active = vscode.window.activeTextEditor?.document.uri;
+  const folder = (active && vscode.workspace.getWorkspaceFolder(active)) ?? vscode.workspace.workspaceFolders?.[0];
   if (!folder) {
     vscode.window.showWarningMessage(
       "NEON-MDF: No workspace folder is open. Open the repository root (neon_mdf/) or an application such as examples/Blinky/."
@@ -67,7 +68,7 @@ export async function createAppCommand(): Promise<void> {
     placeHolder: "e.g. my_app",
     validateInput: (value) => {
       if (!value) {
-        return "app name not in";
+        return "Enter an application name.";
       }
       if (!APP_NAME_PATTERN.test(value)) {
         return "Use letters, digits and underscores; do not start with a digit, for example my_app";
@@ -105,10 +106,10 @@ export async function createAppCommand(): Promise<void> {
 
   const picked = await vscode.window.showQuickPick(
     [
-      { label: "$(folder) created in examples/ (recommended)", description: defaultDest.fsPath, dest: defaultDest },
-      { label: "$(folder-opened) select different folder...", description: "Browse for a destination directory", dest: undefined },
+      { label: "$(folder) Use suggested location", description: defaultDest.fsPath, dest: defaultDest },
+      { label: "$(folder-opened) Select another folder...", description: "Browse for a destination directory", dest: undefined },
     ],
-    { placeHolder: "create app at the top?" }
+    { placeHolder: "Choose where to create the application" }
   );
   if (!picked) {
     return;
@@ -133,18 +134,16 @@ export async function createAppCommand(): Promise<void> {
     return;
   }
 
-  // Resolve the SDK relative to the destination, matching the generated CMake
-  // project's source directory rather than the currently open workspace.
-  const sdkDir = resolveSdkPathUri(destDir);
+  // Locate the SDK from the open workspace before computing the new project's relative path.
+  const rootSdk = vscode.Uri.joinPath(folder.uri, "neon-mdf");
+  const sdkDir = !getConfiguredSdkPath(folder.uri) && await looksLikeSdkRoot(rootSdk)
+    ? rootSdk
+    : resolveSdkPathUri(folder.uri);
   if (!(await looksLikeSdkRoot(sdkDir))) {
-    const proceed = await vscode.window.showWarningMessage(
-      `NEON-MDF: No SDK found at ${sdkDir.fsPath}. For applications outside examples/, use "NEON-MDF: Select SDK Path..." to select the SDK. Create the application anyway? Building may fail until the SDK path is configured.`,
-      "still create",
-      "deactivate"
+    vscode.window.showErrorMessage(
+      `NEON-MDF: No SDK found at ${sdkDir.fsPath}. Run "NEON-MDF: Select SDK Path..." and choose the SDK directory.`
     );
-    if (proceed !== "still create") {
-      return;
-    }
+    return;
   }
 
   const templatesDir = vscode.Uri.joinPath(sdkDir, "tools", templateChoice.templateFolder);
@@ -162,7 +161,7 @@ export async function createAppCommand(): Promise<void> {
 
   const openNow = await vscode.window.showInformationMessage(
     `NEON-MDF: created app "${appName}" at ${destDir.fsPath}`,
-    "open in of each number"
+    "Open Application"
   );
   if (openNow) {
     await vscode.commands.executeCommand("vscode.openFolder", destDir, { forceNewWindow: true });
