@@ -18,10 +18,15 @@ npm run compile
 npm run vsix
 ```
 
-The last command creates `neon-mdf-tools-0.1.0.vsix`. In VS Code, open Extensions →
+The last command creates `neon-mdf-tools-0.1.1.vsix`. In VS Code, open Extensions →
 the `…` menu → **Install from VSIX...** and select the generated file. Press `F5`
 from the extension project to test in an Extension Development Host. `.vsix`
 packages and `dist/` are generated artifacts; rebuild them after extension changes.
+
+For Remote SSH, install the VSIX from the connected SSH window so build and
+UART operations use the remote host. Verify the version under **SSH: Installed**
+in the Extensions view, then run **Developer: Reload Window** if prompted.
+See the [VS Code Remote SSH notes](https://code.visualstudio.com/docs/remote/troubleshooting#_need-to-install-local-vsix-on-remote-endpoint).
 
 C/C++ and CMake Tools provide IntelliSense and standard CMake editor support.
 Node.js is only needed to develop/package the extension; the installed extension
@@ -30,9 +35,13 @@ runs within VS Code.
 ## Open an application
 
 Open the repository or an application folder such as
-`examples/GPIO_Input_Output`. Commands use the application containing the
-active editor when possible. If several apps are available and the active
-editor is outside them, use the application picker.
+`examples/GPIO_Input_Output`. Select the **NEON-MDF** icon in the left Activity
+Bar to open **Board Tools**, or run **NEON-MDF: Open Board Tools** from the
+Command Palette. If the icon is hidden, right-click the Activity Bar and
+enable **NEON-MDF**. The **Project** section shows the selected
+application, target and SDK path. Click **Application** to choose an app for
+this workspace. Until you choose one, commands use the app in the active
+editor when possible.
 
 For an SDK outside the default location, run **NEON-MDF: Select SDK Path...**.
 Use **NEON-MDF: Create New App...** to create a bare-metal or FreeRTOS project.
@@ -42,12 +51,19 @@ described in [Setup](Setup.md).
 
 ## Build, program and view logs
 
-1. Use **Select Port** in the status bar to choose the board's UART port.
-2. Use **Build** to configure and build the selected application.
-3. Use **Flash** to build as needed and program the image selected by CMake.
+1. Click **Serial Port** under **Device** and choose the board's UART port,
+   such as `/dev/ttyUSB0` on Linux.
+2. Under **Actions**, select **Build** to configure and build the application.
+3. Select **Flash via UART** to build as needed and program the image selected by CMake.
    Set boot mode `100` and press RESET when the task reports that UART is ready.
-4. Use **Monitor** to open the UART terminal. Type directly into the terminal
+4. Select **Serial Monitor** to open the UART terminal. Type directly into it
    to send characters such as `r` and Enter to the firmware.
+
+**Flash via UART** runs the `flash_uart_gt32u2086` CMake target with the selected
+port and flash baud. It sets `NEON_MDF_UART_BYTE_GAP_MS=0` and
+`NEON_MDF_UART_LOG=progress`. Follow the task terminal for the reset prompt
+and upload progress. The status bar and Command Palette also expose the existing
+build and flash commands.
 
 Flash releases an open monitor session and opens a new one after a successful
 upload. **NEON-MDF: Build + Flash + Log** opens the monitor after programming

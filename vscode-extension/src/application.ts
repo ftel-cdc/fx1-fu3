@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { discoverTargets } from "./presets";
+import type { NeonMdfState } from "./state";
 
 export interface Application {
   uri: vscode.Uri;
@@ -31,11 +32,10 @@ export async function findApplications(): Promise<Application[]> {
   return [...new Map(apps.map((app) => [app.uri.toString(), app])).values()];
 }
 
-export async function selectApplication(): Promise<Application | undefined> {
-  const apps = await findApplications();
-  if (apps.length === 0) {
-    vscode.window.showWarningMessage("NEON-MDF: Open an application folder or the NEON-MDF repository.");
-    return;
+export function resolveApplication(apps: Application[], selectedUri?: string): Application | undefined {
+  const selected = apps.find((app) => app.uri.toString() === selectedUri);
+  if (selected) {
+    return selected;
   }
   const active = vscode.window.activeTextEditor?.document.uri;
   const activeApp = active && apps.find((app) => {
@@ -45,13 +45,27 @@ export async function selectApplication(): Promise<Application | undefined> {
     const relative = path.relative(app.uri.fsPath, active.fsPath);
     return relative !== ".." && !relative.startsWith(".." + path.sep) && !path.isAbsolute(relative);
   });
-  if (activeApp || apps.length === 1) {
-    return activeApp || apps[0];
+  return activeApp || (apps.length === 1 ? apps[0] : undefined);
+}
+
+export async function selectApplication(state: NeonMdfState, prompt = false): Promise<Application | undefined> {
+  const apps = await findApplications();
+  if (apps.length === 0) {
+    vscode.window.showWarningMessage("NEON-MDF: Open an application folder or the NEON-MDF repository.");
+    return;
+  }
+  const current = resolveApplication(apps, state.selectedApplication);
+  if (!prompt && current) {
+    return current;
   }
   const choices = apps.map((app) => ({
     label: path.basename(app.uri.fsPath),
     description: vscode.workspace.asRelativePath(app.uri, true),
     app,
   })).sort((a, b) => a.label.localeCompare(b.label));
-  return (await vscode.window.showQuickPick(choices, { placeHolder: "Select a GT32U2086 application" }))?.app;
+  const choice = await vscode.window.showQuickPick(choices, { placeHolder: "Select a GT32U2086 application" });
+  if (choice) {
+    await state.setApplication(choice.app.uri);
+    return choice.app;
+  }
 }

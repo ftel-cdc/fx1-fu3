@@ -10,6 +10,7 @@ import { selectTransportCommand } from "./commands/selectTransport";
 import { NeonMdfSerialMonitor } from "./serialMonitor/monitor";
 import { NeonMdfState } from "./state";
 import { registerStatusBar } from "./statusBar";
+import { registerSidebar } from "./sidebar";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const state = new NeonMdfState(context);
@@ -54,15 +55,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await monitor.open(port, state.baudRate);
     }
   });
+  register("selectApp", async () => {
+    await selectApplication(state, true);
+  });
   register("build", async () => {
-    const app = await selectApplication();
+    const app = await selectApplication(state);
     if (app) {
       await configure(app);
       await runBuild(app, "Build");
     }
   });
   async function flash(openMonitor: boolean): Promise<void> {
-    const app = await selectApplication();
+    const app = await selectApplication(state);
     if (!app) {
       return;
     }
@@ -74,13 +78,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (!Number.isInteger(baudRate) || baudRate <= 0) {
       throw new Error("Set neonMdf.gt32u2086FlashBaudRate to a positive integer matching ROMCODE.");
     }
-    await configure(app);
     const reopenMonitor = openMonitor || monitor.isOpen;
-    await monitor.close();
-    await runBuild(app, "Flash", "flash_uart_gt32u2086", {
-      NEON_MDF_SERIAL_PORT: port,
-      NEON_MDF_SERIAL_BAUD: String(baudRate),
-    });
+    state.setFlashStatus("Preparing");
+    try {
+      await configure(app);
+      await monitor.close();
+      state.setFlashStatus("Running UART upload");
+      await runBuild(app, "Flash via UART", "flash_uart_gt32u2086", {
+        NEON_MDF_SERIAL_PORT: port,
+        NEON_MDF_SERIAL_BAUD: String(baudRate),
+        NEON_MDF_UART_BYTE_GAP_MS: "0",
+        NEON_MDF_UART_LOG: "progress",
+      });
+      state.setFlashStatus("Complete");
+    } catch (error) {
+      state.setFlashStatus("Failed or cancelled");
+      throw error;
+    }
     if (reopenMonitor) {
       await monitor.open(port, state.baudRate);
     }
@@ -92,7 +106,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   register("selectTarget", () => selectTargetCommand(state));
   register("selectTransport", () => selectTransportCommand(state));
   register("menuconfig", async () => {
-    const app = await selectApplication();
+    const app = await selectApplication(state);
     if (app) {
       await configure(app);
       await runBuild(app, "Menuconfig", "menuconfig");
@@ -100,12 +114,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   });
   register("debug", async () => {
-    const app = await selectApplication();
+    const app = await selectApplication(state);
     if (app) {
       await debugCommand(app);
     }
   });
 
+  registerSidebar(context, state);
+  context.subscriptions.push(vscode.commands.registerCommand("neonMdf.openBoardTools", () =>
+    vscode.commands.executeCommand("neonMdf.controlPanel.focus"),
+  ));
   if ((await findApplications()).length > 0) {
     registerStatusBar(context, state);
   }

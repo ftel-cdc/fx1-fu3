@@ -1,12 +1,32 @@
 import * as vscode from "vscode";
 
 const PORT_STATE_KEY = "neonMdf.selectedPort";
+const APPLICATION_STATE_KEY = "neonMdf.selectedApplication";
 
 export class NeonMdfState implements vscode.Disposable {
   private readonly change = new vscode.EventEmitter<void>();
   readonly onDidChange = this.change.event;
+  private uploadStatus = "Idle";
 
   constructor(private readonly context: vscode.ExtensionContext) {}
+
+  get selectedApplication(): string | undefined {
+    return this.context.workspaceState.get<string>(APPLICATION_STATE_KEY);
+  }
+
+  async setApplication(uri: vscode.Uri): Promise<void> {
+    await this.context.workspaceState.update(APPLICATION_STATE_KEY, uri.toString());
+    this.change.fire();
+  }
+
+  get flashStatus(): string {
+    return this.uploadStatus;
+  }
+
+  setFlashStatus(status: string): void {
+    this.uploadStatus = status;
+    this.change.fire();
+  }
 
   get target(): string {
     return "GT32U2086";

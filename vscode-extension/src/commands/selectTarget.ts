@@ -4,7 +4,7 @@ import { NeonMdfState } from "../state";
 import { discoverTargets } from "../presets";
 
 export async function selectTargetCommand(state: NeonMdfState): Promise<void> {
-  const app = await selectApplication();
+  const app = await selectApplication(state);
   if (!app) {
     return;
   }

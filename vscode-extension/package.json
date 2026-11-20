@@ -3,7 +3,7 @@
   "displayName": "NEON-MDF Tools",
   "description": "Build, flash, monitor, configure and debug GT32U2086 applications with NEON-MDF.",
   "publisher": "neon-mdf",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "engines": {
     "vscode": "^1.90.0"
@@ -15,6 +15,7 @@
     "workspaceContains:CMakePresets.json",
     "workspaceContains:examples/*/CMakePresets.json"
   ],
+  "extensionKind": ["workspace"],
   "main": "./dist/extension.js",
   "contributes": {
     "taskDefinitions": [
@@ -75,6 +76,14 @@
       {
         "command": "neonMdf.openMonitor",
         "title": "NEON-MDF: Serial Monitor"
+      },
+      {
+        "command": "neonMdf.selectApp",
+        "title": "NEON-MDF: Select Application..."
+      },
+      {
+        "command": "neonMdf.openBoardTools",
+        "title": "NEON-MDF: Open Board Tools"
       }
     ],
     "configuration": {
@@ -114,6 +123,23 @@
           "description": "ROMCODE UART programming: select boot mode 100 and press RESET when the loader is ready."
         }
       }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "neonMdf",
+          "title": "NEON-MDF",
+          "icon": "resources/neon-mdf.svg"
+        }
+      ]
+    },
+    "views": {
+      "neonMdf": [
+        {
+          "id": "neonMdf.controlPanel",
+          "name": "Board Tools"
+        }
+      ]
     }
   },
   "scripts": {

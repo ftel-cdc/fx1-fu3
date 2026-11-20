@@ -33,7 +33,7 @@ __export(extension_exports, {
   activate: () => activate
 });
 module.exports = __toCommonJS(extension_exports);
-var vscode14 = __toESM(require("vscode"));
+var vscode15 = __toESM(require("vscode"));
 
 // src/application.ts
 var path = __toESM(require("node:path"));
@@ -105,11 +105,10 @@ async function findApplications() {
   const apps = (await Promise.all((vscode2.workspace.workspaceFolders ?? []).map(discoverApps))).flat();
   return [...new Map(apps.map((app) => [app.uri.toString(), app])).values()];
 }
-async function selectApplication() {
-  const apps = await findApplications();
-  if (apps.length === 0) {
-    vscode2.window.showWarningMessage("NEON-MDF: Open an application folder or the NEON-MDF repository.");
-    return;
+function resolveApplication(apps, selectedUri) {
+  const selected = apps.find((app) => app.uri.toString() === selectedUri);
+  if (selected) {
+    return selected;
   }
   const active = vscode2.window.activeTextEditor?.document.uri;
   const activeApp = active && apps.find((app) => {
@@ -119,15 +118,28 @@ async function selectApplication() {
     const relative3 = path.relative(app.uri.fsPath, active.fsPath);
     return relative3 !== ".." && !relative3.startsWith(".." + path.sep) && !path.isAbsolute(relative3);
   });
-  if (activeApp || apps.length === 1) {
-    return activeApp || apps[0];
+  return activeApp || (apps.length === 1 ? apps[0] : void 0);
+}
+async function selectApplication(state, prompt = false) {
+  const apps = await findApplications();
+  if (apps.length === 0) {
+    vscode2.window.showWarningMessage("NEON-MDF: Open an application folder or the NEON-MDF repository.");
+    return;
+  }
+  const current = resolveApplication(apps, state.selectedApplication);
+  if (!prompt && current) {
+    return current;
   }
   const choices = apps.map((app) => ({
     label: path.basename(app.uri.fsPath),
     description: vscode2.workspace.asRelativePath(app.uri, true),
     app
   })).sort((a, b) => a.label.localeCompare(b.label));
-  return (await vscode2.window.showQuickPick(choices, { placeHolder: "Select a GT32U2086 application" }))?.app;
+  const choice = await vscode2.window.showQuickPick(choices, { placeHolder: "Select a GT32U2086 application" });
+  if (choice) {
+    await state.setApplication(choice.app.uri);
+    return choice.app;
+  }
 }
 
 // src/cmakeRunner.ts
@@ -504,7 +516,7 @@ async function selectSdkPathCommand() {
 // src/commands/selectTarget.ts
 var vscode9 = __toESM(require("vscode"));
 async function selectTargetCommand(state) {
-  const app = await selectApplication();
+  const app = await selectApplication(state);
   if (!app) {
     return;
   }
@@ -636,12 +648,28 @@ var NeonMdfSerialMonitor = class {
 // src/state.ts
 var vscode12 = __toESM(require("vscode"));
 var PORT_STATE_KEY = "neonMdf.selectedPort";
+var APPLICATION_STATE_KEY = "neonMdf.selectedApplication";
 var NeonMdfState = class {
   constructor(context) {
     this.context = context;
   }
   change = new vscode12.EventEmitter();
   onDidChange = this.change.event;
+  uploadStatus = "Idle";
+  get selectedApplication() {
+    return this.context.workspaceState.get(APPLICATION_STATE_KEY);
+  }
+  async setApplication(uri) {
+    await this.context.workspaceState.update(APPLICATION_STATE_KEY, uri.toString());
+    this.change.fire();
+  }
+  get flashStatus() {
+    return this.uploadStatus;
+  }
+  setFlashStatus(status) {
+    this.uploadStatus = status;
+    this.change.fire();
+  }
   get target() {
     return "GT32U2086";
   }
@@ -704,6 +732,106 @@ function registerStatusBar(context, state) {
   updateSelections();
 }
 
+// src/sidebar.ts
+var import_node_path = require("node:path");
+var vscode14 = __toESM(require("vscode"));
+var groups = ["Project", "Device", "Actions"];
+var Section = class extends vscode14.TreeItem {
+  constructor(group) {
+    super(group, vscode14.TreeItemCollapsibleState.Expanded);
+    this.group = group;
+    this.id = group;
+  }
+};
+function row(label, icon, command, description) {
+  const item = new vscode14.TreeItem(label);
+  item.iconPath = new vscode14.ThemeIcon(icon);
+  item.description = description;
+  if (command) {
+    item.command = { command: `neonMdf.${command}`, title: label };
+  }
+  return item;
+}
+function baudRow(label, baud, setting) {
+  const item = row(label, "settings-gear", void 0, String(baud));
+  item.command = {
+    command: "workbench.action.openSettings",
+    title: label,
+    arguments: [`@id:neonMdf.${setting}`]
+  };
+  return item;
+}
+function registerSidebar(context, state) {
+  const changed = new vscode14.EventEmitter();
+  context.subscriptions.push(
+    changed,
+    state.onDidChange(() => changed.fire()),
+    vscode14.window.onDidChangeActiveTextEditor(() => changed.fire()),
+    vscode14.workspace.onDidChangeWorkspaceFolders(() => changed.fire()),
+    vscode14.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("neonMdf")) {
+        changed.fire();
+      }
+    }),
+    vscode14.window.createTreeView("neonMdf.controlPanel", {
+      showCollapseAll: false,
+      treeDataProvider: {
+        onDidChangeTreeData: changed.event,
+        getTreeItem: (item) => item,
+        getChildren: async (item) => {
+          if (!item) {
+            return groups.map((group) => new Section(group));
+          }
+          if (!(item instanceof Section)) {
+            return [];
+          }
+          switch (item.group) {
+            case "Project": {
+              const app = resolveApplication(await findApplications(), state.selectedApplication);
+              const application = row(
+                "Application",
+                "folder-opened",
+                "selectApp",
+                app ? (0, import_node_path.basename)(app.uri.fsPath) : "Choose application"
+              );
+              application.tooltip = app?.uri.fsPath ?? "Select a GT32U2086 application";
+              const sdkPath = getConfiguredSdkPath(app?.uri);
+              const sdk = row("SDK Path", "settings-gear", "selectSdkPath", sdkPath ? (0, import_node_path.basename)(sdkPath) : "Auto");
+              sdk.tooltip = sdkPath ?? "Use the SDK linked by the application";
+              return [
+                application,
+                row("Target", "circuit-board", "selectTarget", state.target),
+                sdk,
+                row("Create New App\u2026", "add", "createApp")
+              ];
+            }
+            case "Device":
+              return [
+                row("Transport", "plug", "selectTransport", state.transport.toUpperCase()),
+                row("Serial Port", "plug", "selectPort", state.port ?? "Choose port"),
+                baudRow("Flash Baud", state.flashBaudRate, "gt32u2086FlashBaudRate"),
+                baudRow("Monitor Baud", state.baudRate, "baudRate"),
+                row("UART Upload", "info", void 0, state.flashStatus)
+              ];
+            case "Actions": {
+              const flash = row("Flash via UART", "arrow-down", "flash");
+              flash.tooltip = "Set boot mode 100. Press RESET when the terminal reports that UART is ready.";
+              return [
+                row("Build", "tools", "build"),
+                flash,
+                row("Build + Flash + Log", "run-all", "buildFlashMonitor"),
+                row("Serial Monitor", "terminal", "openMonitor"),
+                row("Menuconfig", "settings-gear", "menuconfig"),
+                row("Debug", "debug-alt", "debug")
+              ];
+            }
+          }
+        }
+      }
+    })
+  );
+}
+
 // src/extension.ts
 async function activate(context) {
   const state = new NeonMdfState(context);
@@ -711,16 +839,16 @@ async function activate(context) {
   let busy = false;
   context.subscriptions.push(state, monitor);
   function register(name, action) {
-    context.subscriptions.push(vscode14.commands.registerCommand(`neonMdf.${name}`, async () => {
+    context.subscriptions.push(vscode15.commands.registerCommand(`neonMdf.${name}`, async () => {
       if (busy) {
-        vscode14.window.showInformationMessage("NEON-MDF: Wait for the current operation to finish or stop its task.");
+        vscode15.window.showInformationMessage("NEON-MDF: Wait for the current operation to finish or stop its task.");
         return;
       }
       busy = true;
       try {
         await action();
       } catch (error) {
-        vscode14.window.showErrorMessage(`NEON-MDF: ${error instanceof Error ? error.message : String(error)}`);
+        vscode15.window.showErrorMessage(`NEON-MDF: ${error instanceof Error ? error.message : String(error)}`);
       } finally {
         busy = false;
       }
@@ -745,15 +873,18 @@ async function activate(context) {
       await monitor.open(port, state.baudRate);
     }
   });
+  register("selectApp", async () => {
+    await selectApplication(state, true);
+  });
   register("build", async () => {
-    const app = await selectApplication();
+    const app = await selectApplication(state);
     if (app) {
       await configure(app);
       await runBuild(app, "Build");
     }
   });
   async function flash(openMonitor) {
-    const app = await selectApplication();
+    const app = await selectApplication(state);
     if (!app) {
       return;
     }
@@ -765,13 +896,23 @@ async function activate(context) {
     if (!Number.isInteger(baudRate) || baudRate <= 0) {
       throw new Error("Set neonMdf.gt32u2086FlashBaudRate to a positive integer matching ROMCODE.");
     }
-    await configure(app);
     const reopenMonitor = openMonitor || monitor.isOpen;
-    await monitor.close();
-    await runBuild(app, "Flash", "flash_uart_gt32u2086", {
-      NEON_MDF_SERIAL_PORT: port,
-      NEON_MDF_SERIAL_BAUD: String(baudRate)
-    });
+    state.setFlashStatus("Preparing");
+    try {
+      await configure(app);
+      await monitor.close();
+      state.setFlashStatus("Running UART upload");
+      await runBuild(app, "Flash via UART", "flash_uart_gt32u2086", {
+        NEON_MDF_SERIAL_PORT: port,
+        NEON_MDF_SERIAL_BAUD: String(baudRate),
+        NEON_MDF_UART_BYTE_GAP_MS: "0",
+        NEON_MDF_UART_LOG: "progress"
+      });
+      state.setFlashStatus("Complete");
+    } catch (error) {
+      state.setFlashStatus("Failed or cancelled");
+      throw error;
+    }
     if (reopenMonitor) {
       await monitor.open(port, state.baudRate);
     }
@@ -783,7 +924,7 @@ async function activate(context) {
   register("selectTarget", () => selectTargetCommand(state));
   register("selectTransport", () => selectTransportCommand(state));
   register("menuconfig", async () => {
-    const app = await selectApplication();
+    const app = await selectApplication(state);
     if (app) {
       await configure(app);
       await runBuild(app, "Menuconfig", "menuconfig");
@@ -791,11 +932,16 @@ async function activate(context) {
     }
   });
   register("debug", async () => {
-    const app = await selectApplication();
+    const app = await selectApplication(state);
     if (app) {
       await debugCommand(app);
     }
   });
+  registerSidebar(context, state);
+  context.subscriptions.push(vscode15.commands.registerCommand(
+    "neonMdf.openBoardTools",
+    () => vscode15.commands.executeCommand("neonMdf.controlPanel.focus")
+  ));
   if ((await findApplications()).length > 0) {
     registerStatusBar(context, state);
   }
