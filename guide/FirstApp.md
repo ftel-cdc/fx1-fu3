@@ -5,10 +5,10 @@ The quickest approach is to create a project from a template or copy a suitable 
 
 ## Create from VS Code
 
-Open an example, run **NEON-MDF: Create New App...**, name the project and select
-bare-metal or FreeRTOS. The wizard copies the SDK template and replaces the
-application name and SDK path. See [VS Code](VSCode.md) for extension installation
-and SDK selection.
+Open the repository or an existing example and run **NEON-MDF: Create New App...**.
+Name the project, select bare-metal or FreeRTOS, and choose its destination.
+The wizard copies the SDK template and writes the application name and the
+relative SDK path. See [VS Code](VSCode.md) for installation and SDK selection.
 
 ## Create from a terminal
 
@@ -34,8 +34,7 @@ Save this as a temporary script and run it with `python`, or execute it in the
 Python REPL. `copytree` reports an error if the destination already exists.
 For a FreeRTOS application, replace `templates` with `templates_freertos`;
 kernel configuration is in `Inc/FreeRTOSConfig.h`. For applications outside the
-repository, replace `../../neon-mdf` with the correct relative SDK path, or use
-the VS Code wizard to calculate it automatically.
+repository, replace `../../neon-mdf` with the SDK path relative to your project.
 
 ## Project structure
 

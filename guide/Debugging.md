@@ -35,8 +35,9 @@ applications. See the IRQ relay mechanism in [GT32U2086](GT32U2086.md).
 
 Identify the adapter, JTAG transport, target script, Flash programming algorithm
 and board reset behavior before replacing the placeholder and validating a
-GDB/OpenOCD session. The extension's Debug command currently reports this
-integration status.
+GDB/OpenOCD session. The extension can start an attach session from a
+board-specific Cortex-Debug configuration. See [VS Code](VSCode.md#debug) for
+the configuration and workflow.
 
 BootROM firmware requires a header outside the raw ELF payload. When implementing
 a debugger workflow, keep the header and code consistent: verify that the probe's

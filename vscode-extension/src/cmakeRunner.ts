@@ -1,94 +1,153 @@
-// Shared CMake task runner. Commands use VS Code tasks for consistent terminal
-// output, problem matching and cancellation.
+import { randomUUID } from "node:crypto";
 import * as vscode from "vscode";
-import { sdkPathEnv } from "./sdkPath";
+import { Application } from "./application";
+import { resolveSdkPath, validateSdkPath } from "./sdkPath";
 
-const TASK_SOURCE = "NEON-MDF";
+const PRESET = "GT32U2086";
 
-export interface RunCMakeTargetOptions {
-  taskName: string;
-  preset: string;
-  /** set in if you want to build default target (`all`). */
-  cmakeTarget?: string;
-  cwd: vscode.Uri;
-  /** variable of each plugin field for the command shell - e.g. NEON_MDF_SERIAL_PORT. */
-  env?: Record<string, string>;
-  background?: boolean;
-}
-
-/**
- * look for the actual exit code of the program (not when the task just "starts") - the command above
- * only has this value to know if build/flash succeeds or fails and displays a similar error
- * message.
- */
-export function runCMakeTarget(options: RunCMakeTargetOptions): Promise<number | undefined> {
-  const args = ["--build", "--preset", options.preset];
-  if (options.cmakeTarget) {
-    args.push("--target", options.cmakeTarget);
-  }
-
-  const shellExec = new vscode.ShellExecution("cmake", args, {
-    cwd: options.cwd.fsPath,
-    // sdkPathEnv() only checks the value if the user has selected a separate SDK path (neonMdf.sdkPath) -
-    // it is not necessary to leave in, so that CMakeLists.txt/ settings.json of each app from the
-    // specified as before.
-    env: { ...sdkPathEnv(), ...options.env },
-  });
-
+function runTask(
+  app: Application,
+  name: string,
+  args: string[],
+  sdkDir?: vscode.Uri,
+  env: Record<string, string> = {},
+): Promise<number | undefined> {
+  const id = randomUUID();
+  // When the application must resolve its own SDK, do not forward a stale
+  // NEON_MDF_PATH inherited from the task environment.
+  const taskArgs = sdkDir ? args : ["-E", "env", "--unset=NEON_MDF_PATH", "cmake", ...args];
   const task = new vscode.Task(
-    { type: TASK_SOURCE, target: options.cmakeTarget ?? "all" },
-    vscode.TaskScope.Workspace,
-    options.taskName,
-    TASK_SOURCE,
-    shellExec,
-    []
-  );
-  task.presentationOptions = {
-    reveal: vscode.TaskRevealKind.Always,
-    panel: vscode.TaskPanelKind.Dedicated,
-  };
-  if (options.background) {
-    task.isBackground = true;
-  }
-
-  return new Promise((resolve) => {
-    const disposable = vscode.tasks.onDidEndTaskProcess((e) => {
-      if (e.execution.task === task) {
-        disposable.dispose();
-        resolve(e.exitCode);
-      }
-    });
-    vscode.tasks.executeTask(task);
-  });
-}
-
-/** `cmake --preset <preset>` (configure only, not build) - see configure.ts for "when to call" logic. */
-export function runCMakeConfigure(preset: string, cwd: vscode.Uri): Promise<number | undefined> {
-  const shellExec = new vscode.ShellExecution("cmake", ["--preset", preset], {
-    cwd: cwd.fsPath,
-    env: sdkPathEnv(),
-  });
-
-  const task = new vscode.Task(
-    { type: TASK_SOURCE, target: "configure" },
-    vscode.TaskScope.Workspace,
-    `NEON-MDF: configure (${preset})`,
-    TASK_SOURCE,
-    shellExec,
-    []
+    { type: "neon-mdf", id },
+    app.folder,
+    name,
+    "NEON-MDF",
+    new vscode.ProcessExecution("cmake", taskArgs, {
+      cwd: app.uri.fsPath,
+      env: { ...env, ...(sdkDir ? { NEON_MDF_PATH: sdkDir.fsPath } : {}) },
+    }),
+    [],
   );
   task.presentationOptions = {
     reveal: vscode.TaskRevealKind.Always,
     panel: vscode.TaskPanelKind.Dedicated,
   };
 
-  return new Promise((resolve) => {
-    const disposable = vscode.tasks.onDidEndTaskProcess((e) => {
-      if (e.execution.task === task) {
-        disposable.dispose();
-        resolve(e.exitCode);
+  return new Promise((resolve, reject) => {
+    const processEnd = vscode.tasks.onDidEndTaskProcess((event) => {
+      if (event.execution.task.definition.id === id) {
+        cleanup();
+        resolve(event.exitCode);
       }
     });
-    vscode.tasks.executeTask(task);
+    const taskEnd = vscode.tasks.onDidEndTask((event) => {
+      if (event.execution.task.definition.id === id) {
+        cleanup();
+        resolve(undefined);
+      }
+    });
+
+    function cleanup() {
+      processEnd.dispose();
+      taskEnd.dispose();
+    }
+
+    vscode.tasks.executeTask(task).then(undefined, (error) => {
+      cleanup();
+      reject(error);
+    });
   });
+}
+
+// Restore user options that must survive a fresh configure. CMake regenerates
+// compiler detection, paths derived from the preset and other internal entries.
+const preservedOptions = new Set([
+  "Python3_EXECUTABLE", "NEON_MDF_PATH", "NEON_MDF_PROFILE", "NEON_MDF_SECURE_BOOT",
+  "NEON_MDF_SIGNING_KEY", "NEON_MDF_GT32U2086_APP_VERSION",
+]);
+
+async function freshOptions(app: Application, cache: vscode.Uri, sdkDir?: vscode.Uri): Promise<string[]> {
+  try {
+    const content = Buffer.from(await vscode.workspace.fs.readFile(cache)).toString("utf8");
+    const options: string[] = [];
+    for (const line of content.split(/\r?\n/)) {
+      const entry = /^([A-Za-z0-9_]+):([^=]+)=(.*)$/.exec(line);
+      if (entry && entry[2] !== "INTERNAL" && preservedOptions.has(entry[1]) &&
+          (entry[1] !== "NEON_MDF_PATH" || (!sdkDir && await validateSdkPath(app.uri, entry[3])))) {
+        options.push(`-D${entry[1]}=${entry[3]}`);
+      }
+    }
+    return options;
+  } catch (error) {
+    if (error instanceof vscode.FileSystemError && error.code === "FileNotFound") {
+      return [];
+    }
+    throw error;
+  }
+}
+
+export async function configure(
+  app: Application,
+  mode: "refresh" | "fresh",
+  sdkPathOverride?: string,
+): Promise<void> {
+  const dir = vscode.Uri.joinPath(app.uri, "build", PRESET);
+  const cache = vscode.Uri.joinPath(dir, "CMakeCache.txt");
+  const sdkDir = (await resolveSdkPath(app.uri, sdkPathOverride))?.uri;
+  const args = ["--preset", PRESET];
+  if (mode === "fresh") {
+    const options = await freshOptions(app, cache, sdkDir);
+    if (!options.some((option) => option.startsWith("-DPython3_EXECUTABLE="))) {
+      const python = await findVirtualEnvPython(app, sdkDir);
+      if (python) {
+        options.push(`-DPython3_EXECUTABLE=${python}`);
+      }
+    }
+    args.push(...options, "--fresh");
+  }
+  await requireSuccess(runTask(app, "Configure", args, sdkDir), "Configuration");
+}
+
+async function findVirtualEnvPython(app: Application, sdkDir?: vscode.Uri): Promise<string | undefined> {
+  const roots = [app.uri, app.folder.uri];
+  if (sdkDir) {
+    roots.push(vscode.Uri.joinPath(sdkDir, ".."));
+  }
+  const executable = process.platform === "win32" ? ["Scripts", "python.exe"] : ["bin", "python"];
+  for (const root of roots) {
+    const candidate = vscode.Uri.joinPath(root, ".venv", ...executable);
+    try {
+      const stat = await vscode.workspace.fs.stat(candidate);
+      if ((stat.type & vscode.FileType.File) !== 0) {
+        return candidate.fsPath;
+      }
+    } catch (error) {
+      if (!(error instanceof vscode.FileSystemError) || error.code !== "FileNotFound") {
+        throw error;
+      }
+    }
+  }
+}
+
+export async function runBuild(
+  app: Application,
+  name: string,
+  sdkPathOverride?: string,
+  target?: string,
+  env?: Record<string, string>,
+): Promise<void> {
+  const args = ["--build", "--preset", PRESET];
+  if (target) {
+    args.push("--target", target);
+  }
+  const sdkDir = (await resolveSdkPath(app.uri, sdkPathOverride))?.uri;
+  await requireSuccess(runTask(app, name, args, sdkDir, env), name);
+}
+
+async function requireSuccess(result: Promise<number | undefined>, action: string): Promise<void> {
+  const exitCode = await result;
+  if (exitCode !== 0) {
+    throw new Error(exitCode === undefined
+      ? `${action} ended without a result. Check the task terminal.`
+      : `${action} failed (exit code ${exitCode}). Check the task terminal.`);
+  }
 }

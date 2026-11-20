@@ -11,3 +11,5 @@ __pycache__/
 /.venv/
 /vscode-extension/dist/
 /vscode-extension/*.vsix
+# Bundled extension release
+!/vscode-extension/neon-mdf-tools-0.1.5.vsix

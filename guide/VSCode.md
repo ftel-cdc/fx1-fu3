@@ -1,8 +1,8 @@
 # GT32U2086 development in VS Code
 
-The NEON-MDF extension provides building, UART programming, serial monitoring,
-menuconfig and project creation. It invokes the same CMake presets/targets as
-the terminal; complete [Setup](Setup.md) first.
+NEON-MDF Tools provides serial port selection, an interactive UART monitor,
+building, UART programming, menuconfig, debugging and project creation. Complete
+[Setup](Setup.md) before running build tasks.
 
 ## Build and install the extension
 
@@ -18,10 +18,15 @@ npm run compile
 npm run vsix
 ```
 
-The last command creates `neon-mdf-tools-0.1.0.vsix`. In VS Code, open Extensions →
+The last command creates `neon-mdf-tools-0.1.5.vsix`. In VS Code, open Extensions →
 the `…` menu → **Install from VSIX...** and select the generated file. Press `F5`
 from the extension project to test in an Extension Development Host. `.vsix`
 packages and `dist/` are generated artifacts; rebuild them after extension changes.
+
+For Remote SSH, install the VSIX from the connected SSH window so build and
+UART operations use the remote host. Verify the version under **SSH: Installed**
+in the Extensions view, then run **Developer: Reload Window** if prompted.
+See the [VS Code Remote SSH notes](https://code.visualstudio.com/docs/remote/troubleshooting#_need-to-install-local-vsix-on-remote-endpoint).
 
 C/C++ and CMake Tools provide IntelliSense and standard CMake editor support.
 Node.js is only needed to develop/package the extension; the installed extension
@@ -29,49 +34,94 @@ runs within VS Code.
 
 ## Open an application
 
-Open the **application directory**, such as `examples/GPIO_Input_Output`, using
-**File → Open Folder**. The status bar displays GT32U2086, UART and the serial port.
+Open the repository or an application folder such as
+`examples/GPIO_Input_Output`. Select the **NEON-MDF** icon in the left Activity
+Bar to open **Board Tools**, or run **NEON-MDF: Open Board Tools** from the
+Command Palette. If the icon is hidden, right-click the Activity Bar and
+enable **NEON-MDF**. The **Project** section shows the selected
+application, target and SDK path. Click **Application** to choose an app for
+this workspace. Until you choose one, commands use the app in the active
+editor when possible.
 
-Examples locate the SDK at `../../neon-mdf`. For projects outside the repository,
-run **NEON-MDF: Select SDK Path...** and choose the `neon-mdf/` directory containing
-`tools/cmake/project.cmake`. Ensure VS Code terminals/tasks can access the same
-toolchain and Python dependencies. You can launch `code` from a terminal with
-`.venv` activated; if needed, configure first with `-DPython3_EXECUTABLE=...` as
-shown in [Setup](Setup.md).
+Click **SDK Path** in the sidebar to browse for an SDK on the workspace host or
+return to **Auto**. Bundled applications locate the SDK relative to the checkout.
+The folder selection is saved for the current workspace. The extension ignores
+a default path from another machine if the SDK is missing there.
+Use **NEON-MDF: Create New App...** to create a bare-metal or FreeRTOS project.
+**Select Target** and **Select Transport** show the supported GT32U2086 preset
+and UART transport. VS Code tasks need access to the toolchain and Python environment
+described in [Setup](Setup.md).
 
 ## Build, program and view logs
 
-1. Select target **GT32U2086** and the board's serial port.
-2. Run **NEON-MDF: Build** to configure/build.
-3. Set `neonMdf.gt32u2086FlashBaudRate` to match ROMCODE (19200 by default).
-4. Run **NEON-MDF: Flash** or **NEON-MDF: Build + Flash + Log**.
-5. Select boot mode `100`, wait for the tool to report UART ready, then press RESET.
+1. Click **Serial Port** under **Device** and choose the board's UART port,
+   such as `/dev/ttyUSB0` on Linux.
+2. Under **Actions**, select **Build** to configure with `--fresh` and build the application.
+3. Select **Flash via UART** to build as needed and program the image selected by CMake.
+   Set boot mode `100` and press RESET when the task reports that UART is ready.
+4. Select **Serial Monitor** to open the UART terminal. Type directly into it
+   to send characters such as `r` and Enter to the firmware.
 
-The extension closes its monitor before programming to release the port.
-Build + Flash + Log reopens the monitor after successful programming. If the
-application prints logs before the monitor opens, reset in boot mode `000` to
-view them again.
+**Flash via UART** also configures with `--fresh`, then runs the `flash_uart_gt32u2086` CMake target with the selected
+port and flash baud. It sets `NEON_MDF_UART_BYTE_GAP_MS=0` and
+`NEON_MDF_UART_LOG=progress`. Follow the task terminal for the reset prompt
+and upload progress. The status bar and Command Palette also expose the existing
+build and flash commands. The extension carries forward the selected Python
+interpreter, memory profile, firmware version and signing options when using
+`--fresh`. It resolves the SDK path again on the workspace host.
+When no Python interpreter was explicitly configured, the extension looks for
+`.venv` in the application, workspace and SDK checkout before letting CMake pick
+a system interpreter. Install the SDK dependencies into that environment.
 
-| Setting | Value / meaning |
+Flash releases an open monitor session and opens a new one after a successful
+upload. **NEON-MDF: Build + Flash + Log** opens the monitor after programming
+even if it was closed before the upload. To build and program signed firmware,
+configure the application with the options in the [Secure Boot guide](SecureBoot.md).
+The extension uses the CMake flash target, which selects the signed artifact
+when signing is enabled. To see startup logs again, set boot mode `000` and reset the board with
+the monitor open.
+
+| Setting | Purpose |
 |---|---|
-| `neonMdf.target` | `GT32U2086` |
-| `neonMdf.transport` | `uart` |
-| `neonMdf.gt32u2086FlashBaudRate` | ROMCODE programming baud; default `19200` |
-| `neonMdf.baudRate` | Application/monitor baud; default `19200` |
-| `neonMdf.sdkPath` | SDK path when using a non-default location |
+| `neonMdf.gt32u2086FlashBaudRate` | ROMCODE UART rate, default `19200` |
+| `neonMdf.baudRate` | Application UART rate, default `19200` |
+| `neonMdf.sdkPath` | Optional SDK path override |
 
-Run **NEON-MDF: Serial Monitor** to open the UART terminal. Only one program
-should hold the port at a time. Application baud is independent of ROMCODE baud.
+## Menuconfig
 
-## Configure and create applications
+**Menuconfig** opens the SDK's terminal configuration UI. Save and exit to
+regenerate the build configuration. The next build uses the saved `sdkconfig`.
 
-**NEON-MDF: menuconfig** opens driver/application settings. Reconfigure after
-saving to apply changes. **NEON-MDF: Create New App...** creates a bare-metal or
-FreeRTOS project from a template, replacing the application name and SDK path;
-see [FirstApp](FirstApp.md).
+## Debug
 
-## Debugging
+Install [Cortex-Debug](https://github.com/Marus/cortex-debug) and set up OpenOCD
+and GDB for your board. The SDK ships an OpenOCD placeholder. Use adapter and
+target files verified for your GT32U2086 board.
 
-**NEON-MDF: Debug** reports the current support status. GT32U2086 does not yet
-have complete OpenOCD adapter/target/Flash configuration; see [Debugging](Debugging.md).
-Use UART output and board measurements to verify example behavior.
+Build and program the matching firmware first. Add a configuration like this
+to `.vscode/launch.json` in the open workspace folder. The executable path
+below assumes you opened `examples/GPIO_Input_Output`. For the repository root,
+prefix `build/` with `examples/GPIO_Input_Output/`. Adjust the OpenOCD config
+path to point to your board configuration.
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "GT32U2086: Attach",
+      "type": "cortex-debug",
+      "request": "attach",
+      "servertype": "openocd",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/GT32U2086/gt32u2086_gpio_input_output",
+      "configFiles": ["${workspaceFolder}/board-gt32u2086.cfg"]
+    }
+  ]
+}
+```
+
+Choose **Debug** from the NEON-MDF status bar to start the attach configuration.
+The extension offers a picker if the folder has multiple Cortex-Debug attach
+configurations. See the [Cortex-Debug configuration reference](https://github.com/Marus/cortex-debug/blob/master/debug_attributes.md)
+for adapter and GDB settings.

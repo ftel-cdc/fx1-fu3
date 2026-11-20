@@ -1,57 +1,55 @@
-// Global SDK path, similar to ESP-IDF idf.espIdfPath. An empty setting uses
-// the app-relative default: <app>/../../neon-mdf. A selected path is passed
-// through NEON_MDF_PATH so existing and generated apps can use another checkout.
+import * as path from "node:path";
 import * as vscode from "vscode";
-import * as path from "path";
 
-const SETTING_KEY = "sdkPath";
-
-export function getConfiguredSdkPath(): string | undefined {
-  const raw = vscode.workspace.getConfiguration("neonMdf").get<string>(SETTING_KEY, "");
-  const trimmed = raw?.trim();
-  return trimmed ? trimmed : undefined;
+/** Use the same filesystem authority as the app when resolving a host path. */
+export function sdkPathUri(anchor: vscode.Uri, sdkPath: string): vscode.Uri {
+  return anchor.with({ path: vscode.Uri.file(sdkPath).path, query: "", fragment: "" });
 }
 
-export async function setConfiguredSdkPath(sdkPath: string | undefined): Promise<void> {
-  await vscode.workspace
-    .getConfiguration("neonMdf")
-    .update(SETTING_KEY, sdkPath ?? "", vscode.ConfigurationTarget.Global);
-}
-
-/**
- * Override NEON_MDF_PATH for CMake subprocesses when an SDK path is configured.
- * Leave the environment unchanged otherwise so application defaults apply.
- */
-export function sdkPathEnv(): Record<string, string> | undefined {
-  const configured = getConfiguredSdkPath();
-  return configured ? { NEON_MDF_PATH: configured } : undefined;
-}
-
-/** Resolve the configured SDK path, or <app>/../../neon-mdf by default. */
-export function resolveSdkPathUri(anchorDir: vscode.Uri): vscode.Uri {
-  const configured = getConfiguredSdkPath();
-  if (configured) {
-    return vscode.Uri.file(configured);
-  }
-  return vscode.Uri.joinPath(anchorDir, "..", "..", "neon-mdf");
-}
-
-/** Return the app-to-SDK relative path with POSIX separators for CMake files. */
-export function relativePathToSdk(fromDir: vscode.Uri, sdkDir: vscode.Uri): string {
-  const rel = path.relative(fromDir.fsPath, sdkDir.fsPath);
-  return rel.split(path.sep).join("/");
-}
-
-async function fileExists(uri: vscode.Uri): Promise<boolean> {
+export async function looksLikeSdkRoot(dir: vscode.Uri): Promise<boolean> {
   try {
-    await vscode.workspace.fs.stat(uri);
-    return true;
+    const marker = await vscode.workspace.fs.stat(vscode.Uri.joinPath(dir, "tools", "cmake", "project.cmake"));
+    return (marker.type & vscode.FileType.File) !== 0;
   } catch {
     return false;
   }
 }
 
-/** Identify an SDK checkout by its tools/cmake/project.cmake marker. */
-export async function looksLikeSdkRoot(dir: vscode.Uri): Promise<boolean> {
-  return fileExists(vscode.Uri.joinPath(dir, "tools", "cmake", "project.cmake"));
+export async function validateSdkPath(anchor: vscode.Uri, sdkPath?: string): Promise<vscode.Uri | undefined> {
+  if (sdkPath && path.isAbsolute(sdkPath)) {
+    const uri = sdkPathUri(anchor, sdkPath);
+    if (await looksLikeSdkRoot(uri)) {
+      return uri;
+    }
+  }
+}
+
+/** An empty workspace override selects Auto even if a legacy setting still exists. */
+function configuredSdkPath(anchor: vscode.Uri, override?: string): string {
+  return override ?? vscode.workspace.getConfiguration("neonMdf", anchor).get("sdkPath", "").trim();
+}
+
+export async function resolveSdkPath(
+  anchor: vscode.Uri,
+  override?: string,
+): Promise<{ uri: vscode.Uri; automatic: boolean } | undefined> {
+  const configured = await validateSdkPath(anchor, configuredSdkPath(anchor, override));
+  if (configured) {
+    return { uri: configured, automatic: false };
+  }
+  // Support an open SDK repository and a bundled application under examples/.
+  for (const parts of [["neon-mdf"], ["..", "..", "neon-mdf"]]) {
+    const uri = vscode.Uri.joinPath(anchor, ...parts);
+    if (await looksLikeSdkRoot(uri)) {
+      return { uri, automatic: true };
+    }
+  }
+  const fromEnv = await validateSdkPath(anchor, process.env.NEON_MDF_PATH);
+  if (fromEnv) {
+    return { uri: fromEnv, automatic: true };
+  }
+}
+
+export function relativePathToSdk(fromDir: vscode.Uri, sdkDir: vscode.Uri): string {
+  return path.relative(fromDir.fsPath, sdkDir.fsPath).split(path.sep).join("/");
 }

@@ -1,10 +1,5 @@
-// - without hardcoding or parsing the fragile mcu_variants.cmake format. This is the single
-// diem to fix if later add new target and neon-mdf/cmake/presets/targets.json - extension
-// automatically sees, no need to fix source.
-//
-// intentionally did not resolve CMake's preset-inheritance tap features (`inherits`, `condition`) -
-// only read field directly + include phang 1 level. if a preset file in the future uses but that
-// feature, this function will ignore (not crash) seen because of mis guessing.
+// Read preset names from the application and its direct includes.
+// CMake evaluates preset inheritance and conditions when running a command.
 import * as vscode from "vscode";
 
 export interface TargetInfo {
@@ -52,10 +47,7 @@ function collectTargets(files: CMakePresetsFile[]): TargetInfo[] {
   return targets;
 }
 
-/**
- * read <workspaceFolder>/CMakePresets.json + include of no, look up the target list (empty if no file
- * is found or parsable - use this handle instead, e.g. currently "not project neon-mdf").
- */
+/** Return the application's visible configure presets. */
 export async function discoverTargets(workspaceFolder: vscode.Uri): Promise<TargetInfo[]> {
   const rootUri = vscode.Uri.joinPath(workspaceFolder, "CMakePresets.json");
   const root = await readJsonFile(rootUri);

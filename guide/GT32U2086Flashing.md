@@ -194,18 +194,19 @@ tool can check both profiles with `--check-only`, but will refuse to transmit th
 USART update service before opening UART port. Replacing `--boot-mode` only describes the required
 mode, does not control the boot pin and does not add QSPI recording service to ROMCODE.
 
-## Using extension VS Code
+## Using the VS Code extension
 
-1. Select target GT32U2086, transport UART and the serial port of your board.
-2. Set `neonMdf.gt32u2086FlashBaudRate` to ROMCODE baud matching; default of setting is
-   19200. `neonMdf.baudRate` is the application baud, independent of flash baud; when not set, monitor GT32U2086
-   uses 19200.
-3. Select NEON-MDF: Flash or Build + Flash + Log. The extension closes the open monitor, passes
-   port/baud when CMake is running and displays the tool in terminal.
-4. Select boot mode 100, wait for the UART message to appear, and then press RESET.
-5. With Build + Flash + Log, the app monitor is opened after a successful flash.
+1. Use **Select Port** to choose the board's UART port.
+2. Set `neonMdf.gt32u2086FlashBaudRate` to match ROMCODE and `neonMdf.baudRate`
+   to match the application. Both default to 19200.
+3. Use **Flash**. The extension releases any open monitor session before running
+   the SDK upload task.
+4. Select boot mode 100, wait until the tool reports that UART is ready, then press RESET.
+5. An open monitor session is restored after a successful upload. Use **Monitor**
+   to open one manually, or **Build + Flash + Log** to open it automatically
+   after programming.
 
-Select the GT32U2086 boot straps and reset manually when the loader is ready.
+See the [VS Code guide](VSCode.md) for installation and the remaining commands.
 
 ## Troubleshooting
 
