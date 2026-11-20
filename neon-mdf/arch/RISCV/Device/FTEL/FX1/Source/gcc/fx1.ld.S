@@ -59,10 +59,34 @@ SECTIONS
 /* Plan C12: the firmware regions of fx1_memory_map.h are disjoint and in
  * order, so no DMA buffer can overlap the image, the stacks or another buffer
  * region. (The image and the stacks are also bounded by MEMORY above.) */
+ASSERT(FX1_FW_IMAGE_BASE == FX1_FW_IMAGE_BASE, "fx1: image must start at CDC_FW")
 ASSERT(FX1_FW_IMAGE_BASE + FX1_FW_IMAGE_SIZE <= FX1_FW_STACK_BASE, "fx1: image region overlaps the stacks")
 ASSERT(FX1_FW_STACK_BASE + FX1_FW_STACK_SIZE * FX1_NUM_HARTS <= FX1_FW_SHARED_BASE,
        "fx1: stacks overlap the shared region")
+ASSERT(FX1_FW_SHARED_BASE + FX1_FW_SHARED_SIZE == FX1_CDC_RAW_IN0_BASE,
+       "fx1: shared region must end at RAW_IN0")
+/* Keep validating the legacy firmware/ISP aliases until their users migrate
+ * to the CDC_* partition names in fx1_memory_map.h. */
 ASSERT(FX1_FW_SHARED_BASE + FX1_FW_SHARED_SIZE <= FX1_FW_RAW_BUF_BASE, "fx1: shared region overlaps RAW buffers")
 ASSERT(FX1_FW_RAW_BUF_BASE < FX1_FW_YUV_BUF_BASE, "fx1: RAW and YUV buffer regions out of order")
 ASSERT(FX1_FW_YUV_BUF_BASE < FX1_FW_TEST_AREA_BASE, "fx1: YUV buffers and the test area out of order")
 ASSERT(FX1_FW_TEST_AREA_BASE < FX1_DDR_BASE + FX1_DDR_SIZE, "fx1: test area outside DDR")
+ASSERT(FX1_FW_STACK_BASE + FX1_FW_STACK_SIZE * FX1_NUM_HARTS <= FX1_FW_IMAGE_BASE + FX1_CDC_FW_SIZE,
+       "fx1: stacks exceed CDC_FW")
+ASSERT(FX1_FW_IMAGE_BASE + FX1_CDC_FW_SIZE == FX1_CDC_RAW_IN0_BASE, "fx1: CDC_FW/RAW_IN0 boundary mismatch")
+ASSERT(FX1_CDC_RAW_IN0_BASE + FX1_CDC_RAW_IN0_SIZE == FX1_CDC_ISP_OUT0_BASE, "fx1: RAW_IN0/ISP_OUT0 boundary mismatch")
+ASSERT(FX1_CDC_ISP_OUT0_BASE + FX1_CDC_ISP_OUT0_SIZE == FX1_CDC_VPU_OUT0_BASE, "fx1: ISP_OUT0/VPU_OUT0 boundary mismatch")
+ASSERT(FX1_CDC_VPU_OUT0_BASE + FX1_CDC_VPU_OUT0_SIZE == FX1_CDC_NPU_WGT0_BASE, "fx1: VPU_OUT0/NPU_WGT0 boundary mismatch")
+ASSERT(FX1_CDC_NPU_WGT0_BASE + FX1_CDC_NPU_WGT0_SIZE == FX1_CDC_NPU_WORK0_BASE, "fx1: NPU_WGT0/NPU_WORK0 boundary mismatch")
+ASSERT(FX1_HAS_WIN_BASE >= FX1_CDC_NPU_WORK0_BASE &&
+       FX1_HAS_WIN_BASE + FX1_HAS_WIN_SIZE == FX1_CDC_NPU_WORK0_BASE + FX1_CDC_NPU_WORK0_SIZE,
+       "fx1: HAS window must overlay upper NPU_WORK0")
+ASSERT(FX1_CDC_NPU_WORK0_BASE + FX1_CDC_NPU_WORK0_SIZE == FX1_BLOB_BASE, "fx1: NPU_WORK0/BLOB boundary mismatch")
+ASSERT(FX1_BLOB_BASE + FX1_BLOB_SIZE == FX1_ARENA_BASE, "fx1: BLOB/ARENA boundary mismatch")
+ASSERT(FX1_ARENA_BASE + FX1_ARENA_SIZE == FX1_RUNTIME_DDR_END, "fx1: ARENA must end at runtime map limit")
+ASSERT(FX1_RUNTIME_DDR_BASE == FX1_DDR_BASE && FX1_RUNTIME_DDR_BASE == FX1_FW_IMAGE_BASE,
+       "fx1: runtime map and CDC_FW must start at physical DDR base")
+ASSERT(FX1_RUNTIME_DDR_END <= FX1_DDR_END, "fx1: runtime map exceeds physical DDR")
+ASSERT(FX1_RUNTIME_DDR_END - FX1_RUNTIME_DDR_BASE == FX1_RUNTIME_DDR_SIZE,
+       "fx1: runtime DDR window size mismatch")
+ASSERT(FX1_DDR_BASE + FX1_DDR_SIZE == FX1_DDR_END, "fx1: physical DDR size/end mismatch")

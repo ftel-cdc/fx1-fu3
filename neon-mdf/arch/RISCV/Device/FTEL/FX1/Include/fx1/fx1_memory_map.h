@@ -55,6 +55,7 @@
 
 #define FX1_DDR_BASE            FX1_U32(0x80000000)
 #define FX1_DDR_SIZE            FX1_U32(0x20000000) /* 512 MiB                        */
+#define FX1_DDR_END             FX1_U32(0xA0000000) /* physical end, exclusive         */
 
 /* ---- Harts ----------------------------------------------------------------- */
 #define FX1_NUM_HARTS           FX1_U32(2)
@@ -112,6 +113,30 @@
 #define FX1_FW_YUV_BUF_BASE     FX1_U32(0x88000000)
 #define FX1_FW_TEST_AREA_BASE   FX1_U32(0x90000000)
 
+
+#define FX1_RUNTIME_DDR_BASE    FX1_U32(0x80000000) /* lower 256 MiB reserved for runtime */
+#define FX1_RUNTIME_DDR_SIZE    FX1_U32(0x10000000) /* 256 MiB                            */
+#define FX1_RUNTIME_DDR_END     FX1_U32(0x90000000) /* runtime end                       */
+
+#define FX1_CDC_FW_BASE         FX1_U32(0x80000000)
+#define FX1_CDC_FW_SIZE         FX1_U32(0x01000000) /* 16 MiB                         */
+#define FX1_CDC_RAW_IN0_BASE    FX1_U32(0x81000000)
+#define FX1_CDC_RAW_IN0_SIZE    FX1_U32(0x01000000) /* 16 MiB                         */
+#define FX1_CDC_ISP_OUT0_BASE   FX1_U32(0x82000000)
+#define FX1_CDC_ISP_OUT0_SIZE   FX1_U32(0x02000000) /* 32 MiB                         */
+#define FX1_CDC_VPU_OUT0_BASE   FX1_U32(0x84000000)
+#define FX1_CDC_VPU_OUT0_SIZE   FX1_U32(0x02000000) /* 32 MiB                         */
+#define FX1_CDC_NPU_WGT0_BASE   FX1_U32(0x86000000)
+#define FX1_CDC_NPU_WGT0_SIZE   FX1_U32(0x02000000) /* 32 MiB                         */
+#define FX1_CDC_NPU_WORK0_BASE  FX1_U32(0x88000000)
+#define FX1_CDC_NPU_WORK0_SIZE  FX1_U32(0x04000000) /* 64 MiB                         */
+#define FX1_HAS_WIN_SIZE        FX1_U32(0x01000000) /* overlay within NPU_WORK0       */
+#define FX1_HAS_WIN_BASE        FX1_U32(0x8B000000)
+#define FX1_BLOB_BASE           FX1_U32(0x8C000000)
+#define FX1_BLOB_SIZE           FX1_U32(0x03000000) /* 48 MiB                         */
+#define FX1_ARENA_BASE          FX1_U32(0x8F000000)
+#define FX1_ARENA_SIZE          FX1_U32(0x01000000) /* 16 MiB                         */
+
 /* ---- Map consistency (C and C++ only) ------------------------------------- */
 #if !defined(__ASSEMBLER__) && !defined(FX1_LINKER_SCRIPT)
 #define FX1_MAP_END(b, s) ((unsigned long long)(b) + (unsigned long long)(s))
@@ -122,6 +147,12 @@
 #define FX1_MAP_ASSERT(c, m) _Static_assert(c, m)
 #endif
 FX1_MAP_ASSERT(FX1_MAP_END(FX1_DDR_BASE, FX1_DDR_SIZE) <= 0x100000000ull, "DDR aperture overflows 32 bits");
+FX1_MAP_ASSERT(FX1_RUNTIME_DDR_BASE >= FX1_DDR_BASE &&
+               FX1_MAP_END(FX1_RUNTIME_DDR_BASE, FX1_RUNTIME_DDR_SIZE) <= FX1_DDR_END,
+               "runtime DDR window exceeds physical DDR");
+FX1_MAP_ASSERT(FX1_MAP_END(FX1_ARENA_BASE, FX1_ARENA_SIZE) == FX1_RUNTIME_DDR_END,
+               "runtime partitions must fill the runtime DDR window");
+FX1_MAP_ASSERT(FX1_HAS_WIN_SIZE <= FX1_CDC_NPU_WORK0_SIZE, "HAS window exceeds NPU_WORK0");
 FX1_MAP_ASSERT(FX1_MAP_DISJOINT(FX1_BOOTROM_BASE, FX1_BOOTROM_SIZE, FX1_SRAM_BASE, FX1_SRAM_SIZE), "ROM/SRAM overlap");
 FX1_MAP_ASSERT(FX1_MAP_DISJOINT(FX1_SRAM_BASE, FX1_SRAM_SIZE, FX1_CLINT_BASE, FX1_CLINT_SIZE), "SRAM/CLINT overlap");
 FX1_MAP_ASSERT(FX1_MAP_DISJOINT(FX1_DDR3_CSR_BASE, FX1_DDR3_CSR_APERTURE_SIZE, FX1_DDR_SYSCTRL_BASE, FX1_DDR_SYSCTRL_SIZE),

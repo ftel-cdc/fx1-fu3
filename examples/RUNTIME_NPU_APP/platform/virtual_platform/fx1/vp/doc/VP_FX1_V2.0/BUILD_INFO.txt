@@ -1,0 +1,16 @@
+Package             : VP_FX1_V2.0
+Built UTC           : 2026-07-21T04:00:30Z
+CDC-VP commit       : 0bb2c991765ff294956fbf9e57c301494c4a8720
+CDC-VP worktree     : dirty
+VP build type       : Debug
+NPU v4              : enabled
+Host GCC            : 11.5.0
+Host G++            : g++ (GCC) 11.5.0 20240719 (Red Hat 11.5.0-14)
+RISC-V GCC          : riscv-none-elf-gcc (xPack GNU RISC-V Embedded GCC x86_64) 15.2.0
+FreeRTOS commit     : 0adc196d4bd52a2d91102b525b0aafc1e14a2386
+TFLM commit         : 096563546742ba81adb6f012ab718d196a48e02d
+Firmware options    : NPU=1 TFLM=1, rv32imac_zicsr/ilp32
+VP SHA-256          : 70a5bd7347c47ba983591f8d3f5b6b66ca42878d7314904dde3873f96aef3fa3
+Firmware SHA-256    : de38702e9c38ef4420f0f01e0b51769ca589060974d3cf8ac3639baee781b1c3
+TFLM lib SHA-256    : 2f27636bda0ca1150d60c2199892a513bf39cf21d1756979bda96b8b7550a11f
+TFLM archive path   : sw/bootloader/sources/VP_FX1_V2.0/third_party/tflite-micro/prebuilt/libtensorflow-microlite.a
