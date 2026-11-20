@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import * as vscode from "vscode";
 import { Application } from "./application";
-import { sdkPathEnv } from "./sdkPath";
+import { resolveSdkPath, validateSdkPath } from "./sdkPath";
 
 const PRESET = "GT32U2086";
 
@@ -9,17 +9,21 @@ function runTask(
   app: Application,
   name: string,
   args: string[],
+  sdkDir?: vscode.Uri,
   env: Record<string, string> = {},
 ): Promise<number | undefined> {
   const id = randomUUID();
+  // When the application must resolve its own SDK, do not forward a stale
+  // NEON_MDF_PATH inherited from the task environment.
+  const taskArgs = sdkDir ? args : ["-E", "env", "--unset=NEON_MDF_PATH", "cmake", ...args];
   const task = new vscode.Task(
     { type: "neon-mdf", id },
     app.folder,
     name,
     "NEON-MDF",
-    new vscode.ProcessExecution("cmake", args, {
+    new vscode.ProcessExecution("cmake", taskArgs, {
       cwd: app.uri.fsPath,
-      env: { ...sdkPathEnv(app.uri), ...env },
+      env: { ...env, ...(sdkDir ? { NEON_MDF_PATH: sdkDir.fsPath } : {}) },
     }),
     [],
   );
@@ -61,14 +65,14 @@ const preservedOptions = new Set([
   "NEON_MDF_SIGNING_KEY", "NEON_MDF_GT32U2086_APP_VERSION",
 ]);
 
-async function freshOptions(app: Application, cache: vscode.Uri): Promise<string[]> {
+async function freshOptions(app: Application, cache: vscode.Uri, sdkDir?: vscode.Uri): Promise<string[]> {
   try {
     const content = Buffer.from(await vscode.workspace.fs.readFile(cache)).toString("utf8");
     const options: string[] = [];
     for (const line of content.split(/\r?\n/)) {
       const entry = /^([A-Za-z0-9_]+):([^=]+)=(.*)$/.exec(line);
       if (entry && entry[2] !== "INTERNAL" && preservedOptions.has(entry[1]) &&
-          (entry[1] !== "NEON_MDF_PATH" || !sdkPathEnv(app.uri))) {
+          (entry[1] !== "NEON_MDF_PATH" || (!sdkDir && await validateSdkPath(app.uri, entry[3])))) {
         options.push(`-D${entry[1]}=${entry[3]}`);
       }
     }
@@ -83,31 +87,23 @@ async function freshOptions(app: Application, cache: vscode.Uri): Promise<string
 
 export async function configure(
   app: Application,
-  mode: "if-needed" | "refresh" | "fresh" = "if-needed",
+  mode: "refresh" | "fresh",
+  sdkPathOverride?: string,
 ): Promise<void> {
   const dir = vscode.Uri.joinPath(app.uri, "build", PRESET);
   const cache = vscode.Uri.joinPath(dir, "CMakeCache.txt");
-  if (mode === "if-needed") {
-    try {
-      await vscode.workspace.fs.stat(cache);
-      await vscode.workspace.fs.stat(vscode.Uri.joinPath(dir, "build.ninja"));
-      return;
-    } catch (error) {
-      if (!(error instanceof vscode.FileSystemError) || error.code !== "FileNotFound") {
-        throw error;
-      }
-    }
-  }
+  const sdkDir = (await resolveSdkPath(app.uri, sdkPathOverride))?.uri;
   const args = ["--preset", PRESET];
   if (mode === "fresh") {
-    args.push(...await freshOptions(app, cache), "--fresh");
+    args.push(...await freshOptions(app, cache, sdkDir), "--fresh");
   }
-  await requireSuccess(runTask(app, "Configure", args), "Configuration");
+  await requireSuccess(runTask(app, "Configure", args, sdkDir), "Configuration");
 }
 
 export async function runBuild(
   app: Application,
   name: string,
+  sdkPathOverride?: string,
   target?: string,
   env?: Record<string, string>,
 ): Promise<void> {
@@ -115,7 +111,8 @@ export async function runBuild(
   if (target) {
     args.push("--target", target);
   }
-  await requireSuccess(runTask(app, name, args, env), name);
+  const sdkDir = (await resolveSdkPath(app.uri, sdkPathOverride))?.uri;
+  await requireSuccess(runTask(app, name, args, sdkDir, env), name);
 }
 
 async function requireSuccess(result: Promise<number | undefined>, action: string): Promise<void> {

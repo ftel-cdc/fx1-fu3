@@ -1,60 +1,46 @@
-// Validate and save the SDK directory in the global neonMdf.sdkPath setting.
-// Resetting the setting restores the default app-relative SDK path.
 import * as vscode from "vscode";
-import { getConfiguredSdkPath, setConfiguredSdkPath, looksLikeSdkRoot } from "../sdkPath";
+import { findApplications, resolveApplication } from "../application";
+import { looksLikeSdkRoot, resolveSdkPath } from "../sdkPath";
+import { NeonMdfState } from "../state";
 
-const BROWSE_LABEL = "$(folder-opened) Browse for the SDK...";
-const RESET_LABEL = "$(discard) Reset to automatic";
+export async function selectSdkPathCommand(state: NeonMdfState): Promise<void> {
+  const app = resolveApplication(await findApplications(), state.selectedApplication);
+  const anchor = app?.uri ?? vscode.workspace.workspaceFolders?.[0]?.uri;
+  if (!anchor) {
+    vscode.window.showWarningMessage("NEON-MDF: Open a workspace before selecting its SDK.");
+    return;
+  }
 
-export async function selectSdkPathCommand(): Promise<void> {
-  const current = getConfiguredSdkPath();
-
-  const items: vscode.QuickPickItem[] = [
-    { label: BROWSE_LABEL, description: "Select a NEON-MDF SDK checkout" },
-    {
-      label: RESET_LABEL,
-      description: "Clear the setting and use ../../neon-mdf relative to the application",
-    },
+  const current = await resolveSdkPath(anchor, state.sdkPathOverride);
+  const items = [
+    { label: "$(folder-opened) Browse for the SDK...", value: "browse" },
+    { label: "$(discard) Reset to automatic", value: "auto" },
   ];
-
-  const placeHolder = current
-    ? `in use: ${current}`
-    : "using default (automatically inferred from app value) - select to change";
-
-  const picked = await vscode.window.showQuickPick(items, { placeHolder });
+  const picked = await vscode.window.showQuickPick(items, {
+    placeHolder: current ? `Current SDK: ${current.uri.fsPath}` : "Choose a NEON-MDF SDK directory",
+  });
   if (!picked) {
     return;
   }
-
-  if (picked.label === RESET_LABEL) {
-    await setConfiguredSdkPath(undefined);
-    vscode.window.showInformationMessage("NEON-MDF: reset to default SDK path (automatic).");
+  if (picked.value === "auto") {
+    await state.setSdkPath("");
     return;
   }
 
-  const chosen = await vscode.window.showOpenDialog({
+  const selected = await vscode.window.showOpenDialog({
     canSelectFolders: true,
     canSelectFiles: false,
     canSelectMany: false,
     openLabel: "Select SDK Path",
-    defaultUri: current ? vscode.Uri.file(current) : undefined,
+    defaultUri: current?.uri ?? anchor,
   });
-  if (!chosen || chosen.length === 0) {
+  const dir = selected?.[0];
+  if (!dir) {
     return;
   }
-
-  const dir = chosen[0];
-  if (!(await looksLikeSdkRoot(dir))) {
-    const proceed = await vscode.window.showWarningMessage(
-      `NEON-MDF: ${dir.fsPath} does not contain tools/cmake/project.cmake. Use this SDK path anyway?`,
-      "still use",
-      "deactivate"
-    );
-    if (proceed !== "still use") {
-      return;
-    }
+  if (dir.scheme !== anchor.scheme || dir.authority !== anchor.authority || !(await looksLikeSdkRoot(dir))) {
+    vscode.window.showErrorMessage("NEON-MDF: Choose a directory on the workspace host that contains tools/cmake/project.cmake.");
+    return;
   }
-
-  await setConfiguredSdkPath(dir.fsPath);
-  vscode.window.showInformationMessage(`NEON-MDF: selected SDK path: ${dir.fsPath}`);
+  await state.setSdkPath(dir.fsPath);
 }

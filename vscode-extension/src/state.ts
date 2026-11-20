@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 
 const PORT_STATE_KEY = "neonMdf.selectedPort";
+const SDK_PATH_STATE_KEY = "neonMdf.workspaceSdkPath";
 const APPLICATION_STATE_KEY = "neonMdf.selectedApplication";
 
 export class NeonMdfState implements vscode.Disposable {
@@ -16,6 +17,15 @@ export class NeonMdfState implements vscode.Disposable {
 
   async setApplication(uri: vscode.Uri): Promise<void> {
     await this.context.workspaceState.update(APPLICATION_STATE_KEY, uri.toString());
+    this.change.fire();
+  }
+
+  get sdkPathOverride(): string | undefined {
+    return this.context.workspaceState.get<string>(SDK_PATH_STATE_KEY);
+  }
+
+  async setSdkPath(path: string): Promise<void> {
+    await this.context.workspaceState.update(SDK_PATH_STATE_KEY, path);
     this.change.fire();
   }
 

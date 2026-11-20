@@ -61,8 +61,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   register("build", async () => {
     const app = await selectApplication(state);
     if (app) {
-      await configure(app, "fresh");
-      await runBuild(app, "Build");
+      await configure(app, "fresh", state.sdkPathOverride);
+      await runBuild(app, "Build", state.sdkPathOverride);
     }
   });
   async function flash(openMonitor: boolean): Promise<void> {
@@ -81,10 +81,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const reopenMonitor = openMonitor || monitor.isOpen;
     state.setFlashStatus("Preparing");
     try {
-      await configure(app, "fresh");
+      await configure(app, "fresh", state.sdkPathOverride);
       await monitor.close();
       state.setFlashStatus("Running UART upload");
-      await runBuild(app, "Flash via UART", "flash_uart_gt32u2086", {
+      await runBuild(app, "Flash via UART", state.sdkPathOverride, "flash_uart_gt32u2086", {
         NEON_MDF_SERIAL_PORT: port,
         NEON_MDF_SERIAL_BAUD: String(baudRate),
         NEON_MDF_UART_BYTE_GAP_MS: "0",
@@ -101,16 +101,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
   register("flash", () => flash(false));
   register("buildFlashMonitor", () => flash(true));
-  register("createApp", createAppCommand);
-  register("selectSdkPath", selectSdkPathCommand);
+  register("createApp", () => createAppCommand(state.sdkPathOverride));
+  register("selectSdkPath", () => selectSdkPathCommand(state));
   register("selectTarget", () => selectTargetCommand(state));
   register("selectTransport", () => selectTransportCommand(state));
   register("menuconfig", async () => {
     const app = await selectApplication(state);
     if (app) {
-      await configure(app);
-      await runBuild(app, "Menuconfig", "menuconfig");
-      await configure(app, "refresh");
+      await configure(app, "fresh", state.sdkPathOverride);
+      await runBuild(app, "Menuconfig", state.sdkPathOverride, "menuconfig");
+      await configure(app, "refresh", state.sdkPathOverride);
     }
   });
   register("debug", async () => {

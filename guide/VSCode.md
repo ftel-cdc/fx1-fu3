@@ -18,7 +18,7 @@ npm run compile
 npm run vsix
 ```
 
-The last command creates `neon-mdf-tools-0.1.3.vsix`. In VS Code, open Extensions →
+The last command creates `neon-mdf-tools-0.1.4.vsix`. In VS Code, open Extensions →
 the `…` menu → **Install from VSIX...** and select the generated file. Press `F5`
 from the extension project to test in an Extension Development Host. `.vsix`
 packages and `dist/` are generated artifacts; rebuild them after extension changes.
@@ -43,7 +43,10 @@ application, target and SDK path. Click **Application** to choose an app for
 this workspace. Until you choose one, commands use the app in the active
 editor when possible.
 
-For an SDK outside the default location, run **NEON-MDF: Select SDK Path...**.
+Click **SDK Path** in the sidebar to browse for an SDK on the workspace host or
+return to **Auto**. Bundled applications locate the SDK relative to the checkout.
+The folder selection is saved for the current workspace. The extension ignores
+a default path from another machine if the SDK is missing there.
 Use **NEON-MDF: Create New App...** to create a bare-metal or FreeRTOS project.
 **Select Target** and **Select Transport** show the supported GT32U2086 preset
 and UART transport. VS Code tasks need access to the toolchain and Python environment
@@ -64,8 +67,8 @@ port and flash baud. It sets `NEON_MDF_UART_BYTE_GAP_MS=0` and
 `NEON_MDF_UART_LOG=progress`. Follow the task terminal for the reset prompt
 and upload progress. The status bar and Command Palette also expose the existing
 build and flash commands. The extension carries forward the selected Python
-interpreter, SDK path override, memory profile, firmware version and signing
-options when using `--fresh`.
+interpreter, memory profile, firmware version and signing options when using
+`--fresh`. It resolves the SDK path again on the workspace host.
 
 Flash releases an open monitor session and opens a new one after a successful
 upload. **NEON-MDF: Build + Flash + Log** opens the monitor after programming

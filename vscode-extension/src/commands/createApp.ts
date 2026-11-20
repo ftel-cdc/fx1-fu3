@@ -2,7 +2,7 @@
 // Templates are read from the selected SDK rather than bundled in the extension.
 // Replace __APP_NAME__ and __NEON_MDF_RELATIVE_PATH__ using the chosen destination.
 import * as vscode from "vscode";
-import { getConfiguredSdkPath, resolveSdkPathUri, relativePathToSdk, looksLikeSdkRoot } from "../sdkPath";
+import { resolveSdkPath, relativePathToSdk, looksLikeSdkRoot } from "../sdkPath";
 
 const APP_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -53,7 +53,7 @@ async function copyTemplateDir(src: vscode.Uri, dest: vscode.Uri, tokens: Record
   }
 }
 
-export async function createAppCommand(): Promise<void> {
+export async function createAppCommand(sdkPathOverride?: string): Promise<void> {
   const active = vscode.window.activeTextEditor?.document.uri;
   const folder = (active && vscode.workspace.getWorkspaceFolder(active)) ?? vscode.workspace.workspaceFolders?.[0];
   if (!folder) {
@@ -135,13 +135,10 @@ export async function createAppCommand(): Promise<void> {
   }
 
   // Locate the SDK from the open workspace before computing the new project's relative path.
-  const rootSdk = vscode.Uri.joinPath(folder.uri, "neon-mdf");
-  const sdkDir = !getConfiguredSdkPath(folder.uri) && await looksLikeSdkRoot(rootSdk)
-    ? rootSdk
-    : resolveSdkPathUri(folder.uri);
-  if (!(await looksLikeSdkRoot(sdkDir))) {
+  const sdkDir = (await resolveSdkPath(folder.uri, sdkPathOverride))?.uri;
+  if (!sdkDir) {
     vscode.window.showErrorMessage(
-      `NEON-MDF: No SDK found at ${sdkDir.fsPath}. Run "NEON-MDF: Select SDK Path..." and choose the SDK directory.`
+      'NEON-MDF: No SDK found. Run "NEON-MDF: Select SDK Path..." and choose the SDK directory.'
     );
     return;
   }

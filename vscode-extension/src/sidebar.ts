@@ -1,7 +1,7 @@
 import { basename } from "node:path";
 import * as vscode from "vscode";
 import { findApplications, resolveApplication } from "./application";
-import { getConfiguredSdkPath } from "./sdkPath";
+import { resolveSdkPath } from "./sdkPath";
 import { NeonMdfState } from "./state";
 
 type Group = "Project" | "Device" | "Actions";
@@ -64,9 +64,11 @@ export function registerSidebar(context: vscode.ExtensionContext, state: NeonMdf
               const application = row("Application", "folder-opened", "selectApp",
                                       app ? basename(app.uri.fsPath) : "Choose application");
               application.tooltip = app?.uri.fsPath ?? "Select a GT32U2086 application";
-              const sdkPath = getConfiguredSdkPath(app?.uri);
-              const sdk = row("SDK Path", "settings-gear", "selectSdkPath", sdkPath ? basename(sdkPath) : "Auto");
-              sdk.tooltip = sdkPath ?? "Use the SDK linked by the application";
+              const anchor = app?.uri ?? vscode.workspace.workspaceFolders?.[0]?.uri;
+              const resolved = anchor && await resolveSdkPath(anchor, state.sdkPathOverride);
+              const sdk = row("SDK Path", "settings-gear", "selectSdkPath",
+                              resolved && !resolved.automatic ? basename(resolved.uri.fsPath) : "Auto");
+              sdk.tooltip = resolved?.uri.fsPath ?? "Select an SDK directory on the workspace host";
               return [
                 application,
                 row("Target", "circuit-board", "selectTarget", state.target),

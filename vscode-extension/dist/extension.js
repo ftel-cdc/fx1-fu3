@@ -147,56 +147,63 @@ var import_node_crypto = require("node:crypto");
 var vscode4 = __toESM(require("vscode"));
 
 // src/sdkPath.ts
+var path2 = __toESM(require("node:path"));
 var vscode3 = __toESM(require("vscode"));
-var path2 = __toESM(require("path"));
-var SETTING_KEY = "sdkPath";
-function getConfiguredSdkPath(scope) {
-  const raw = vscode3.workspace.getConfiguration("neonMdf", scope).get(SETTING_KEY, "");
-  const trimmed = raw?.trim();
-  return trimmed ? trimmed : void 0;
+function sdkPathUri(anchor, sdkPath) {
+  return anchor.with({ path: vscode3.Uri.file(sdkPath).path, query: "", fragment: "" });
 }
-async function setConfiguredSdkPath(sdkPath) {
-  await vscode3.workspace.getConfiguration("neonMdf").update(SETTING_KEY, sdkPath ?? "", vscode3.ConfigurationTarget.Global);
-}
-function sdkPathEnv(scope) {
-  const configured = getConfiguredSdkPath(scope);
-  return configured ? { NEON_MDF_PATH: configured } : void 0;
-}
-function resolveSdkPathUri(anchorDir) {
-  const configured = getConfiguredSdkPath(anchorDir);
-  if (configured) {
-    return vscode3.Uri.file(configured);
-  }
-  return vscode3.Uri.joinPath(anchorDir, "..", "..", "neon-mdf");
-}
-function relativePathToSdk(fromDir, sdkDir) {
-  const rel = path2.relative(fromDir.fsPath, sdkDir.fsPath);
-  return rel.split(path2.sep).join("/");
-}
-async function fileExists(uri) {
+async function looksLikeSdkRoot(dir) {
   try {
-    await vscode3.workspace.fs.stat(uri);
-    return true;
+    const marker = await vscode3.workspace.fs.stat(vscode3.Uri.joinPath(dir, "tools", "cmake", "project.cmake"));
+    return (marker.type & vscode3.FileType.File) !== 0;
   } catch {
     return false;
   }
 }
-async function looksLikeSdkRoot(dir) {
-  return fileExists(vscode3.Uri.joinPath(dir, "tools", "cmake", "project.cmake"));
+async function validateSdkPath(anchor, sdkPath) {
+  if (sdkPath && path2.isAbsolute(sdkPath)) {
+    const uri = sdkPathUri(anchor, sdkPath);
+    if (await looksLikeSdkRoot(uri)) {
+      return uri;
+    }
+  }
+}
+function configuredSdkPath(anchor, override) {
+  return override ?? vscode3.workspace.getConfiguration("neonMdf", anchor).get("sdkPath", "").trim();
+}
+async function resolveSdkPath(anchor, override) {
+  const configured = await validateSdkPath(anchor, configuredSdkPath(anchor, override));
+  if (configured) {
+    return { uri: configured, automatic: false };
+  }
+  for (const parts of [["neon-mdf"], ["..", "..", "neon-mdf"]]) {
+    const uri = vscode3.Uri.joinPath(anchor, ...parts);
+    if (await looksLikeSdkRoot(uri)) {
+      return { uri, automatic: true };
+    }
+  }
+  const fromEnv = await validateSdkPath(anchor, process.env.NEON_MDF_PATH);
+  if (fromEnv) {
+    return { uri: fromEnv, automatic: true };
+  }
+}
+function relativePathToSdk(fromDir, sdkDir) {
+  return path2.relative(fromDir.fsPath, sdkDir.fsPath).split(path2.sep).join("/");
 }
 
 // src/cmakeRunner.ts
 var PRESET = "GT32U2086";
-function runTask(app, name, args, env = {}) {
+function runTask(app, name, args, sdkDir, env = {}) {
   const id = (0, import_node_crypto.randomUUID)();
+  const taskArgs = sdkDir ? args : ["-E", "env", "--unset=NEON_MDF_PATH", "cmake", ...args];
   const task = new vscode4.Task(
     { type: "neon-mdf", id },
     app.folder,
     name,
     "NEON-MDF",
-    new vscode4.ProcessExecution("cmake", args, {
+    new vscode4.ProcessExecution("cmake", taskArgs, {
       cwd: app.uri.fsPath,
-      env: { ...sdkPathEnv(app.uri), ...env }
+      env: { ...env, ...sdkDir ? { NEON_MDF_PATH: sdkDir.fsPath } : {} }
     }),
     []
   );
@@ -235,13 +242,13 @@ var preservedOptions = /* @__PURE__ */ new Set([
   "NEON_MDF_SIGNING_KEY",
   "NEON_MDF_GT32U2086_APP_VERSION"
 ]);
-async function freshOptions(app, cache) {
+async function freshOptions(app, cache, sdkDir) {
   try {
     const content = Buffer.from(await vscode4.workspace.fs.readFile(cache)).toString("utf8");
     const options = [];
     for (const line of content.split(/\r?\n/)) {
       const entry = /^([A-Za-z0-9_]+):([^=]+)=(.*)$/.exec(line);
-      if (entry && entry[2] !== "INTERNAL" && preservedOptions.has(entry[1]) && (entry[1] !== "NEON_MDF_PATH" || !sdkPathEnv(app.uri))) {
+      if (entry && entry[2] !== "INTERNAL" && preservedOptions.has(entry[1]) && (entry[1] !== "NEON_MDF_PATH" || !sdkDir && await validateSdkPath(app.uri, entry[3]))) {
         options.push(`-D${entry[1]}=${entry[3]}`);
       }
     }
@@ -253,32 +260,23 @@ async function freshOptions(app, cache) {
     throw error;
   }
 }
-async function configure(app, mode = "if-needed") {
+async function configure(app, mode, sdkPathOverride) {
   const dir = vscode4.Uri.joinPath(app.uri, "build", PRESET);
   const cache = vscode4.Uri.joinPath(dir, "CMakeCache.txt");
-  if (mode === "if-needed") {
-    try {
-      await vscode4.workspace.fs.stat(cache);
-      await vscode4.workspace.fs.stat(vscode4.Uri.joinPath(dir, "build.ninja"));
-      return;
-    } catch (error) {
-      if (!(error instanceof vscode4.FileSystemError) || error.code !== "FileNotFound") {
-        throw error;
-      }
-    }
-  }
+  const sdkDir = (await resolveSdkPath(app.uri, sdkPathOverride))?.uri;
   const args = ["--preset", PRESET];
   if (mode === "fresh") {
-    args.push(...await freshOptions(app, cache), "--fresh");
+    args.push(...await freshOptions(app, cache, sdkDir), "--fresh");
   }
-  await requireSuccess(runTask(app, "Configure", args), "Configuration");
+  await requireSuccess(runTask(app, "Configure", args, sdkDir), "Configuration");
 }
-async function runBuild(app, name, target, env) {
+async function runBuild(app, name, sdkPathOverride, target, env) {
   const args = ["--build", "--preset", PRESET];
   if (target) {
     args.push("--target", target);
   }
-  await requireSuccess(runTask(app, name, args, env), name);
+  const sdkDir = (await resolveSdkPath(app.uri, sdkPathOverride))?.uri;
+  await requireSuccess(runTask(app, name, args, sdkDir, env), name);
 }
 async function requireSuccess(result, action) {
   const exitCode = await result;
@@ -324,7 +322,7 @@ async function copyTemplateDir(src, dest, tokens) {
     }
   }
 }
-async function createAppCommand() {
+async function createAppCommand(sdkPathOverride) {
   const active = vscode5.window.activeTextEditor?.document.uri;
   const folder = (active && vscode5.workspace.getWorkspaceFolder(active)) ?? vscode5.workspace.workspaceFolders?.[0];
   if (!folder) {
@@ -396,11 +394,10 @@ async function createAppCommand() {
     vscode5.window.showErrorMessage(`NEON-MDF: directory already exists: ${destDir.fsPath}`);
     return;
   }
-  const rootSdk = vscode5.Uri.joinPath(folder.uri, "neon-mdf");
-  const sdkDir = !getConfiguredSdkPath(folder.uri) && await looksLikeSdkRoot(rootSdk) ? rootSdk : resolveSdkPathUri(folder.uri);
-  if (!await looksLikeSdkRoot(sdkDir)) {
+  const sdkDir = (await resolveSdkPath(folder.uri, sdkPathOverride))?.uri;
+  if (!sdkDir) {
     vscode5.window.showErrorMessage(
-      `NEON-MDF: No SDK found at ${sdkDir.fsPath}. Run "NEON-MDF: Select SDK Path..." and choose the SDK directory.`
+      'NEON-MDF: No SDK found. Run "NEON-MDF: Select SDK Path..." and choose the SDK directory.'
     );
     return;
   }
@@ -500,50 +497,44 @@ async function selectPortCommand(state) {
 
 // src/commands/selectSdkPath.ts
 var vscode8 = __toESM(require("vscode"));
-var BROWSE_LABEL = "$(folder-opened) Browse for the SDK...";
-var RESET_LABEL = "$(discard) Reset to automatic";
-async function selectSdkPathCommand() {
-  const current = getConfiguredSdkPath();
+async function selectSdkPathCommand(state) {
+  const app = resolveApplication(await findApplications(), state.selectedApplication);
+  const anchor = app?.uri ?? vscode8.workspace.workspaceFolders?.[0]?.uri;
+  if (!anchor) {
+    vscode8.window.showWarningMessage("NEON-MDF: Open a workspace before selecting its SDK.");
+    return;
+  }
+  const current = await resolveSdkPath(anchor, state.sdkPathOverride);
   const items = [
-    { label: BROWSE_LABEL, description: "Select a NEON-MDF SDK checkout" },
-    {
-      label: RESET_LABEL,
-      description: "Clear the setting and use ../../neon-mdf relative to the application"
-    }
+    { label: "$(folder-opened) Browse for the SDK...", value: "browse" },
+    { label: "$(discard) Reset to automatic", value: "auto" }
   ];
-  const placeHolder = current ? `in use: ${current}` : "using default (automatically inferred from app value) - select to change";
-  const picked = await vscode8.window.showQuickPick(items, { placeHolder });
+  const picked = await vscode8.window.showQuickPick(items, {
+    placeHolder: current ? `Current SDK: ${current.uri.fsPath}` : "Choose a NEON-MDF SDK directory"
+  });
   if (!picked) {
     return;
   }
-  if (picked.label === RESET_LABEL) {
-    await setConfiguredSdkPath(void 0);
-    vscode8.window.showInformationMessage("NEON-MDF: reset to default SDK path (automatic).");
+  if (picked.value === "auto") {
+    await state.setSdkPath("");
     return;
   }
-  const chosen = await vscode8.window.showOpenDialog({
+  const selected = await vscode8.window.showOpenDialog({
     canSelectFolders: true,
     canSelectFiles: false,
     canSelectMany: false,
     openLabel: "Select SDK Path",
-    defaultUri: current ? vscode8.Uri.file(current) : void 0
+    defaultUri: current?.uri ?? anchor
   });
-  if (!chosen || chosen.length === 0) {
+  const dir = selected?.[0];
+  if (!dir) {
     return;
   }
-  const dir = chosen[0];
-  if (!await looksLikeSdkRoot(dir)) {
-    const proceed = await vscode8.window.showWarningMessage(
-      `NEON-MDF: ${dir.fsPath} does not contain tools/cmake/project.cmake. Use this SDK path anyway?`,
-      "still use",
-      "deactivate"
-    );
-    if (proceed !== "still use") {
-      return;
-    }
+  if (dir.scheme !== anchor.scheme || dir.authority !== anchor.authority || !await looksLikeSdkRoot(dir)) {
+    vscode8.window.showErrorMessage("NEON-MDF: Choose a directory on the workspace host that contains tools/cmake/project.cmake.");
+    return;
   }
-  await setConfiguredSdkPath(dir.fsPath);
-  vscode8.window.showInformationMessage(`NEON-MDF: selected SDK path: ${dir.fsPath}`);
+  await state.setSdkPath(dir.fsPath);
 }
 
 // src/commands/selectTarget.ts
@@ -681,6 +672,7 @@ var NeonMdfSerialMonitor = class {
 // src/state.ts
 var vscode12 = __toESM(require("vscode"));
 var PORT_STATE_KEY = "neonMdf.selectedPort";
+var SDK_PATH_STATE_KEY = "neonMdf.workspaceSdkPath";
 var APPLICATION_STATE_KEY = "neonMdf.selectedApplication";
 var NeonMdfState = class {
   constructor(context) {
@@ -694,6 +686,13 @@ var NeonMdfState = class {
   }
   async setApplication(uri) {
     await this.context.workspaceState.update(APPLICATION_STATE_KEY, uri.toString());
+    this.change.fire();
+  }
+  get sdkPathOverride() {
+    return this.context.workspaceState.get(SDK_PATH_STATE_KEY);
+  }
+  async setSdkPath(path3) {
+    await this.context.workspaceState.update(SDK_PATH_STATE_KEY, path3);
     this.change.fire();
   }
   get flashStatus() {
@@ -828,9 +827,15 @@ function registerSidebar(context, state) {
                 app ? (0, import_node_path.basename)(app.uri.fsPath) : "Choose application"
               );
               application.tooltip = app?.uri.fsPath ?? "Select a GT32U2086 application";
-              const sdkPath = getConfiguredSdkPath(app?.uri);
-              const sdk = row("SDK Path", "settings-gear", "selectSdkPath", sdkPath ? (0, import_node_path.basename)(sdkPath) : "Auto");
-              sdk.tooltip = sdkPath ?? "Use the SDK linked by the application";
+              const anchor = app?.uri ?? vscode14.workspace.workspaceFolders?.[0]?.uri;
+              const resolved = anchor && await resolveSdkPath(anchor, state.sdkPathOverride);
+              const sdk = row(
+                "SDK Path",
+                "settings-gear",
+                "selectSdkPath",
+                resolved && !resolved.automatic ? (0, import_node_path.basename)(resolved.uri.fsPath) : "Auto"
+              );
+              sdk.tooltip = resolved?.uri.fsPath ?? "Select an SDK directory on the workspace host";
               return [
                 application,
                 row("Target", "circuit-board", "selectTarget", state.target),
@@ -912,8 +917,8 @@ async function activate(context) {
   register("build", async () => {
     const app = await selectApplication(state);
     if (app) {
-      await configure(app, "fresh");
-      await runBuild(app, "Build");
+      await configure(app, "fresh", state.sdkPathOverride);
+      await runBuild(app, "Build", state.sdkPathOverride);
     }
   });
   async function flash(openMonitor) {
@@ -932,10 +937,10 @@ async function activate(context) {
     const reopenMonitor = openMonitor || monitor.isOpen;
     state.setFlashStatus("Preparing");
     try {
-      await configure(app, "fresh");
+      await configure(app, "fresh", state.sdkPathOverride);
       await monitor.close();
       state.setFlashStatus("Running UART upload");
-      await runBuild(app, "Flash via UART", "flash_uart_gt32u2086", {
+      await runBuild(app, "Flash via UART", state.sdkPathOverride, "flash_uart_gt32u2086", {
         NEON_MDF_SERIAL_PORT: port,
         NEON_MDF_SERIAL_BAUD: String(baudRate),
         NEON_MDF_UART_BYTE_GAP_MS: "0",
@@ -952,16 +957,16 @@ async function activate(context) {
   }
   register("flash", () => flash(false));
   register("buildFlashMonitor", () => flash(true));
-  register("createApp", createAppCommand);
-  register("selectSdkPath", selectSdkPathCommand);
+  register("createApp", () => createAppCommand(state.sdkPathOverride));
+  register("selectSdkPath", () => selectSdkPathCommand(state));
   register("selectTarget", () => selectTargetCommand(state));
   register("selectTransport", () => selectTransportCommand(state));
   register("menuconfig", async () => {
     const app = await selectApplication(state);
     if (app) {
-      await configure(app);
-      await runBuild(app, "Menuconfig", "menuconfig");
-      await configure(app, "refresh");
+      await configure(app, "fresh", state.sdkPathOverride);
+      await runBuild(app, "Menuconfig", state.sdkPathOverride, "menuconfig");
+      await configure(app, "refresh", state.sdkPathOverride);
     }
   });
   register("debug", async () => {

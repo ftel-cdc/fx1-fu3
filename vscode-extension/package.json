@@ -3,7 +3,7 @@
   "displayName": "NEON-MDF Tools",
   "description": "Build, flash, monitor, configure and debug GT32U2086 applications with NEON-MDF.",
   "publisher": "neon-mdf",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "engines": {
     "vscode": "^1.90.0"
@@ -104,7 +104,7 @@
         "neonMdf.sdkPath": {
           "type": "string",
           "default": "",
-          "description": "Optional absolute path to the neon-mdf SDK. Bundled applications locate it relative to their project directory by default."
+          "description": "Optional default SDK path on the workspace host. Use Select SDK Path to choose a path for the current workspace or enable automatic detection."
         },
         "neonMdf.target": {
           "type": "string",
