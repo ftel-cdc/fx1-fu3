@@ -1,0 +1,45 @@
+name: SDK validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  firmware:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install firmware tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi ninja-build cmake
+          python -m pip install -r neon-mdf/tools/requirements.txt cryptography
+      - name: Build examples and run regressions
+        run: python .github/scripts/validate_sdk.py --work-dir build/validation
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: firmware-validation
+          path: build/validation/**/*.log
+  extension:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: vscode-extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: vscode-extension/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run compile

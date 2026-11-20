@@ -70,6 +70,10 @@ def main():
     with open(args.cmake_out, "w", encoding="utf-8") as f:
         f.write("\n".join(cmake_lines) + "\n")
 
+    # Track sourced Kconfig files as well as the top-level configuration.
+    with open(os.path.join(os.path.dirname(os.path.abspath(args.cmake_out)), "kconfig_inputs.txt"), "w", encoding="utf-8") as f:
+        f.write("\n".join(os.path.abspath(p) for p in kconf.kconfig_filenames) + "\n")
+
     print(f"sdkconfig: {args.sdkconfig}")
     print(f"sdkconfig.h: {args.header_out}")
     print(f"sdkconfig.cmake: {args.cmake_out}")

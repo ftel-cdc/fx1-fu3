@@ -44,9 +44,9 @@ SPI_W5500/
 
 | Directory | Status | Firmware target |
 |---|---|---|
-| [ADC_Sampling](ADC_Sampling/README.md) | TODO skeleton | `gt32u2086_adc_sampling` |
-| [AES_Known_Vector](AES_Known_Vector/README.md) | TODO skeleton | `gt32u2086_aes_known_vector` |
-| [CRC_Known_Vector](CRC_Known_Vector/README.md) | TODO skeleton | `gt32u2086_crc_known_vector` |
+| [ADC_Sampling](ADC_Sampling/README.md) | Implemented; board verification required | `gt32u2086_adc_sampling` |
+| [AES_Known_Vector](AES_Known_Vector/README.md) | Implemented; board verification required | `gt32u2086_aes_known_vector` |
+| [CRC_Known_Vector](CRC_Known_Vector/README.md) | Implemented; board verification required | `gt32u2086_crc_known_vector` |
 | [Flash_Read_Write](Flash_Read_Write/README.md) | Implemented | `gt32u2086_flash_read_write` |
 | [FreeRTOS_Peripheral_Queue](FreeRTOS_Peripheral_Queue/README.md) | Implemented | `gt32u2086_freertos_peripheral_queue` |
 | [GPIO_Input_Output](GPIO_Input_Output/README.md) | Implemented | `gt32u2086_gpio_input_output` |
@@ -56,16 +56,16 @@ SPI_W5500/
 | [PWM_Output](PWM_Output/README.md) | Implemented | `gt32u2086_pwm_output` |
 | [QSPI_Flash_Read_Write](QSPI_Flash_Read_Write/README.md) | Implemented | `gt32u2086_qspi_flash_read_write` |
 | [QSPI_XIP_Read](QSPI_XIP_Read/README.md) | Implemented | `gt32u2086_qspi_xip_read` |
-| [RTC_Calendar](RTC_Calendar/README.md) | TODO skeleton | `gt32u2086_rtc_calendar` |
+| [RTC_Calendar](RTC_Calendar/README.md) | Implemented; board verification required | `gt32u2086_rtc_calendar` |
 | [SPI_DMA](SPI_DMA/README.md) | Implemented | `gt32u2086_spi_dma` |
 | [SPI_W5500](SPI_W5500/README.md) | Implemented | `gt32u2086_spi_w5500` |
 | [TIM_Periodic_Interrupt](TIM_Periodic_Interrupt/README.md) | Implemented | `gt32u2086_tim_periodic_interrupt` |
-| [TRNG_Read](TRNG_Read/README.md) | TODO skeleton | `gt32u2086_trng_read` |
+| [TRNG_Read](TRNG_Read/README.md) | Implemented; board verification required | `gt32u2086_trng_read` |
 | [UART_DMA](UART_DMA/README.md) | Implemented | `gt32u2086_uart_dma` |
 | [UART_ECHO_Polling](UART_ECHO_Polling/README.md) | Implemented | `gt32u2086_uart_echo_polling` |
 | [UART_RX_Interrupt](UART_RX_Interrupt/README.md) | Implemented | `gt32u2086_uart_rx_interrupt` |
 
-TODO skeletons print their status when started with `r`. `Flash_Read_Write` accesses internal
+Implemented; board verification requireds print their status when started with `r`. `Flash_Read_Write` accesses internal
 GT32U2086 Flash. `QSPI_Flash_Read_Write` tests an external NOR by indirect Single/Dual/Quad transfers;
 `QSPI_XIP_Read` programs a known pattern and verifies it through the memory-mapped AHB window.
 Both QSPI apps run from internal Flash and reserve an external NOR sector for destructive tests.
@@ -125,6 +125,9 @@ CR and LF each work as Enter; a CRLF pair produces only one new prompt. Other un
 
 Read each application's README for pins and remaining hardware limitations. UART DMA retains
 its existing word-oriented peripheral profile and timeout-recovery limitations. The TIM1 example
-retains its UPDATE-flag acknowledgement behavior, which needs confirmation on the FPGA.
+uses live UPDATE status and disables its IRQ if the bounded wait expires; measure timing on the FPGA.
 A successful build does not validate physical timing, wiring, interrupt acknowledgement or DMA
 handshakes. The SPI/W5500 example needs a matching bitstream/pin route and an attached W5500.
+
+See [hardware support and acceptance checks](../guide/HardwareValidation.md) for capability limits and
+required board evidence. The source and automated build checks do not establish hardware validation.

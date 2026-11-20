@@ -1,6 +1,6 @@
 # CRC_Known_Vector
 
-CRC Known Vector example skeleton.
+CRC-8 known vectors and length boundary checks.
 
 This is an independent GT32U2086 firmware. Its UART terminal waits at boot; press `r` without Enter
 to start the example at the `fpga:>>` prompt.
@@ -26,13 +26,18 @@ releases the port. Use the board's UART-download/normal-boot straps as described
 
 ## Run
 
-After `r`, the firmware prints [TODO] and returns to the terminal. Peripheral behavior has not been implemented.
+Press `r` to open the CRC menu. Keys `1..6` run the fixed vectors, minimum/maximum
+length and invalid-length checks; `a` runs all six; `q` or Ctrl+C returns.
+The polynomial is `0x07`, initial value and xor-out are zero, without reflection.
+API length counts **32-bit words**, each consumed MSB first, rather than bytes.
+For example, nine words containing ASCII codes are not the nine-byte CRC stream.
+The result and persistent flags own full words even though the CRC is logically 8 bits.
 
 When the run function completes or its stop key is pressed, the application returns to its
 UART terminal. Press `r` again to repeat the example. While the run function is active, its own
 menu/data keys apply; `r` only starts a run when the application is at `fpga:>>`.
 At this prompt, Enter starts a new line and prints `fpga:>>` again. CR, LF and CRLF are
 supported; CRLF produces only one new prompt.
-Configure with `cmake --build --preset GT32U2086 --target menuconfig`, then build again.
+Configure with `cmake --build --preset GT32U2086 --target menuconfig`, then build again; changes to `sdkconfig` are applied automatically.
 `CONFIG_GT32U2086_EXAMPLE_FIXED_CLOCK_HZ` must match the actual FPGA clock. Timeout values ending in
 `_POLLS` are polling budgets, not milliseconds.

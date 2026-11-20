@@ -7,8 +7,8 @@
 # CLI and VS Code both invoke the same menuconfig target.
 #
 # Provides neon_mdf_kconfig (the generated header include directory), CONFIG_*
-# variables in the caller's scope, and the menuconfig custom target. Reconfigure
-# after saving menuconfig settings to apply changes to the build.
+# variables in the caller's scope, and the menuconfig custom target. Saved
+# menuconfig settings apply automatically on the next build.
 function(neon_mdf_process_kconfig APP_DIR)
   # Configure-time subprocesses inherit this environment. Pass the variable
   # separately to the menuconfig build command, which runs in a new process.
@@ -52,6 +52,11 @@ function(neon_mdf_process_kconfig APP_DIR)
   endif()
 
   include(${_cmake_out})
+  file(STRINGS "${_config_dir}/kconfig_inputs.txt" _kconfig_inputs)
+  file(GLOB _app_kconfig CONFIGURE_DEPENDS "${APP_DIR}/Kconfig")
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${_sdkconfig_file}" ${_app_kconfig}
+    "${NEON_MDF_PATH}/tools/kconfig/gen_config_header.py" ${_kconfig_inputs})
 
   if(NOT TARGET neon_mdf_kconfig)
     add_library(neon_mdf_kconfig INTERFACE)
@@ -63,7 +68,7 @@ function(neon_mdf_process_kconfig APP_DIR)
       COMMAND ${CMAKE_COMMAND} -E env KCONFIG_CONFIG=${_sdkconfig_file} NEON_MDF_APP_KCONFIG=${APP_DIR}/Kconfig ${NEON_MDF_PYTHON3} -m menuconfig ${_kconfig_file}
       WORKING_DIRECTORY ${_kconfig_dir}
       USES_TERMINAL
-      COMMENT "open menuconfig - save to ${_sdkconfig_file} (run cmake configure again after saving to apply)"
+      COMMENT "open menuconfig - save to ${_sdkconfig_file}; the next build applies changes"
     )
   endif()
 

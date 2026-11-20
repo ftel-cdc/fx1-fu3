@@ -3,7 +3,7 @@
   "displayName": "NEON-MDF Tools",
   "description": "Build, flash, monitor, configure and debug GT32U2086 applications with NEON-MDF.",
   "publisher": "neon-mdf",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "engines": {
     "vscode": "^1.90.0"
@@ -15,7 +15,9 @@
     "workspaceContains:CMakePresets.json",
     "workspaceContains:examples/*/CMakePresets.json"
   ],
-  "extensionKind": ["workspace"],
+  "extensionKind": [
+    "workspace"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "taskDefinitions": [

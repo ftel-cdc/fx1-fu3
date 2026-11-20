@@ -1,8 +1,8 @@
 /**
  * @file rtc_calendar.h
- * @brief Testcase skeleton for RTC_Calendar.
+ * @brief RTC readback, ticking, rollover and validation checks.
  * @details
- * Declares the entry point; peripheral behavior will be added later.
+ * Declares the standalone application testcase entry point.
  */
 
 #ifndef GT32U2086_EXAMPLE_RTC_CALENDAR_H

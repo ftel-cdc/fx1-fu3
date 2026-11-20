@@ -1,8 +1,8 @@
 /**
  * @file trng_read.h
- * @brief Testcase skeleton for TRNG_Read.
+ * @brief TRNG polling, timeout recovery and digital BIST smoke checks.
  * @details
- * Declares the entry point; peripheral behavior will be added later.
+ * Declares the standalone application testcase entry point.
  */
 
 #ifndef GT32U2086_EXAMPLE_TRNG_READ_H

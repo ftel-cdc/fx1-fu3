@@ -72,6 +72,10 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
+For a known 10 MHz FPGA, configure the template with
+`cmake --preset GT32U2086 -DNEON_APP_FIXED_CLOCK_HZ=10000000`. The default `0`
+uses CRM clock detection. See [board configuration](BoardConfiguration.md).
+
 The template enables UART through the default driver configuration. Check
 `CONFIG_NEON_MDF_DRIVER_UART=y` in `sdkconfig` if the application calls `printf`.
 The main output is `build/GT32U2086/MyApp_image.bin`; a `.bin` without `_image`

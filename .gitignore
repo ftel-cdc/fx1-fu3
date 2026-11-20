@@ -1,4 +1,5 @@
 /examples/*/build/
+/build/
 /examples/*/sdkconfig.old
 /.claude
 /.vscode
@@ -12,4 +13,4 @@ __pycache__/
 /vscode-extension/dist/
 /vscode-extension/*.vsix
 # Bundled extension release
-!/vscode-extension/neon-mdf-tools-0.1.5.vsix
+!/vscode-extension/neon-mdf-tools-0.1.6.vsix

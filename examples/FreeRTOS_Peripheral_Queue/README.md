@@ -134,7 +134,7 @@ supported; CRLF produces only one new prompt.
 
 ## Configuration and checks
 
-Configure with `cmake --build --preset GT32U2086 --target menuconfig`, then build again.
+Configure with `cmake --build --preset GT32U2086 --target menuconfig`, then build again; changes to `sdkconfig` are applied automatically.
 
 | Setting | Default | Purpose |
 | --- | --- | --- |

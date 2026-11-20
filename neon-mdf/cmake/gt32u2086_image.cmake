@@ -5,7 +5,8 @@ include(${CMAKE_CURRENT_LIST_DIR}/gt32u2086_flash.cmake)
 # The raw payload and boot image use an _xip suffix before .bin for XIP.
 function(neon_mdf_add_gt32u2086_image target)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
-  include("${NEON_MDF_PATH}/mcu-description/generated/GT32U2086_image.cmake")
+  get_target_property(_generated ${NEON_MDF_DEVICE_TARGET} NEON_MDF_GENERATED_DIR)
+  include("${_generated}/GT32U2086_image.cmake")
   if(NOT NEON_MDF_GT32U2086_IMAGE_HEADER_SIZE EQUAL 128)
     message(FATAL_ERROR "GT32U2086 requires the RTL BootROM v5 128-byte image header")
   endif()
@@ -22,7 +23,7 @@ function(neon_mdf_add_gt32u2086_image target)
   set(_builder "${NEON_MDF_PATH}/tools/gt32u2086_image.py")
   set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS
     "${_builder}"
-    "${NEON_MDF_PATH}/mcu-description/generated/GT32U2086_image.cmake")
+    "${_generated}/GT32U2086_image.cmake")
   add_custom_command(TARGET ${target} POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -O binary
             $<TARGET_FILE:${target}> "${_payload}"

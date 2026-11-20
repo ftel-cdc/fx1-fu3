@@ -92,7 +92,7 @@ UART terminal. Press `r` again to repeat the example. While the run function is 
 menu/data keys apply; `r` only starts a run when the application is at `fpga:>>`.
 At this prompt, Enter starts a new line and prints `fpga:>>` again. CR, LF and CRLF are
 supported; CRLF produces only one new prompt.
-Configure with `cmake --build --preset GT32U2086 --target menuconfig`, then build again.
+Configure with `cmake --build --preset GT32U2086 --target menuconfig`, then build again; changes to `sdkconfig` are applied automatically.
 `CONFIG_GT32U2086_EXAMPLE_FIXED_CLOCK_HZ` must match the actual FPGA clock. Timeout values ending in
 `_POLLS` are polling budgets, not milliseconds.
 

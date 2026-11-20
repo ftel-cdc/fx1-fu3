@@ -1,8 +1,8 @@
 /**
  * @file aes_known_vector.h
- * @brief Testcase skeleton for AES_Known_Vector.
+ * @brief AES-128 ECB encryption and decryption known-answer checks.
  * @details
- * Declares the entry point; peripheral behavior will be added later.
+ * Declares the standalone application testcase entry point.
  */
 
 #ifndef GT32U2086_EXAMPLE_AES_KNOWN_VECTOR_H

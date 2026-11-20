@@ -12,8 +12,8 @@ Arm GNU Toolchain, `NEON_MDF_TARGET=GT32U2086` and `build/GT32U2086` as the outp
 5. Drivers and console add sources according to configuration. The application registers its executable and optionally FreeRTOS.
 
 Python reads the YAML; CMake receives the memory layout through
-`mcu-description/generated/GT32U2086_image.cmake`. Reconfigure after changing
-YAML. CMake uses `Python3_EXECUTABLE` for device generation, Kconfig and
+`build/GT32U2086/generated/GT32U2086/GT32U2086_image.cmake`. YAML and generator
+changes trigger CMake configuration automatically. CMake uses `Python3_EXECUTABLE` for device generation, Kconfig and
 packaging; select the `.venv` interpreter as described in [Setup](Setup.md).
 
 ## Building and linking
@@ -72,5 +72,11 @@ cmake --build --preset GT32U2086
 
 Use `--fresh` after changing the toolchain, Python or checkout path. The new
 preset uses `build/GT32U2086`; old binaries are not outputs of the current source.
-Generated sources are shared between applications/profiles, so configure and
-build sequentially, especially when changing `NEON_MDF_PROFILE`.
+Each build directory owns its generated headers, startup, linker script, SVD
+and image fragment under `generated/GT32U2086/`. Separate normal/XIP build
+directories may run concurrently; do not run two configurations in one directory.
+For example, configure XIP with `cmake --preset GT32U2086 -B build/GT32U2086-xip -DNEON_MDF_PROFILE=xip`,
+then build with `cmake --build build/GT32U2086-xip`.
+Changes to `sdkconfig`, sourced Kconfig files and device YAML are tracked by CMake.
+CLI and direct builds regenerate configuration before compiling.
+See [automated validation](HardwareValidation.md#automated-checks).

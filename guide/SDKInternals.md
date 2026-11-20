@@ -21,8 +21,10 @@ word-only SRAM. BootROM processes the header and publishes vector information
 through the SRAM relay before entering the application.
 
 Generated startup/linker files are in
-`arch/CortexM/CMSIS/Device/GT32U2086/Source/gcc/`. Edit the YAML/generator to change
-the output. See [GT32U2086](GT32U2086.md).
+the application's `build/GT32U2086/generated/GT32U2086/`, with device headers in
+its `include/` subdirectory. Source-tree generated files are reference snapshots;
+CMake uses the build-local outputs. Edit the YAML/generator to change the output.
+See [GT32U2086](GT32U2086.md).
 
 ## From build to programming
 

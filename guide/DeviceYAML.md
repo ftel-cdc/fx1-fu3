@@ -97,5 +97,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-Do not configure/build profiles concurrently because generated outputs share
-source-tree paths. See the [build system](BuildSystem.md).
+CMake writes outputs under each build directory’s `generated/GT32U2086/`.
+The manual command defaults to `build/generated/GT32U2086/normal` below the
+current directory; use `--output-dir /path/to/output` to override it.
+Use separate build directories for concurrent profiles. See [build system](BuildSystem.md).

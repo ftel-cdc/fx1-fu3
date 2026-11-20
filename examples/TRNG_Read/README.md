@@ -1,6 +1,6 @@
 # TRNG_Read
 
-TRNG Read example skeleton.
+TRNG polling, timeout recovery and digital BIST smoke checks.
 
 This is an independent GT32U2086 firmware. Its UART terminal waits at boot; press `r` without Enter
 to start the example at the `fpga:>>` prompt.
@@ -26,13 +26,17 @@ releases the port. Use the board's UART-download/normal-boot straps as described
 
 ## Run
 
-After `r`, the firmware prints [TODO] and returns to the terminal. Peripheral behavior has not been implemented.
+Press `r` to initialize the generator and attempt 16 bounded reads, then run
+the digital LFSR BIST. The example prints register snapshots and read status.
+On an FPGA without an analog ring-oscillator entropy source, clean timeout handling
+is reported as `PASS (Timeout Path)`. That result checks driver error handling,
+not random-data availability or entropy quality; digital BIST is also a separate check.
 
 When the run function completes or its stop key is pressed, the application returns to its
 UART terminal. Press `r` again to repeat the example. While the run function is active, its own
 menu/data keys apply; `r` only starts a run when the application is at `fpga:>>`.
 At this prompt, Enter starts a new line and prints `fpga:>>` again. CR, LF and CRLF are
 supported; CRLF produces only one new prompt.
-Configure with `cmake --build --preset GT32U2086 --target menuconfig`, then build again.
+Configure with `cmake --build --preset GT32U2086 --target menuconfig`, then build again; changes to `sdkconfig` are applied automatically.
 `CONFIG_GT32U2086_EXAMPLE_FIXED_CLOCK_HZ` must match the actual FPGA clock. Timeout values ending in
 `_POLLS` are polling budgets, not milliseconds.

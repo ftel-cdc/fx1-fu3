@@ -26,11 +26,13 @@
 ==================================================================================================*/
 /* Two interrupts per second: LED on for 500 ms, off for 500 ms. */
 #define TIM_PERIODIC_TICK_HZ 2U
+#define TIM_PERIODIC_FLAG_WAIT_POLLS 1000000U
 
 /*==================================================================================================
 *                                         LOCAL VARIABLES
 ==================================================================================================*/
 volatile uint32_t g_tim_periodic_ticks;
+static volatile uint32_t tim_periodic_irq_fault;
 
 /*==================================================================================================
 *                                         GLOBAL FUNCTIONS
@@ -50,8 +52,14 @@ void TIM1_IRQHandler(void) {
 
     neon_gpio_toggle_pin(GPIOB, NEON_GPIO_PIN_7);
     ++g_tim_periodic_ticks;
-    /* Wait until UPDATE reads inactive before leaving the ISR. */
+    /* Bound the level-IRQ wait. A stuck source is disabled for main to clean up. */
+    uint32_t remaining = TIM_PERIODIC_FLAG_WAIT_POLLS;
     while ((TIM1->STT_CH0 & NEON_TIM_FLAG_UPDATE) != 0U) {
+        if (--remaining == 0U) {
+            NVIC_DisableIRQ(TIM1_IRQn);
+            tim_periodic_irq_fault = 1U;
+            break;
+        }
     }
     __DSB();
 }
@@ -91,6 +99,7 @@ void tim_periodic_interrupt_run(neon_uart_handle_t *uart) {
     neon_crm_peripheral_reset(NEON_CRM_PERIPHERAL_TIMER1);
     neon_tim_deinit(TIM1, NEON_TIM_CHANNEL_1);
     g_tim_periodic_ticks = 0U;
+    tim_periodic_irq_fault = 0U;
 
     neon_tim_config_t tim_config;
     neon_tim_get_default_config(&tim_config);
@@ -125,6 +134,10 @@ void tim_periodic_interrupt_run(neon_uart_handle_t *uart) {
 
     uint32_t last_count = 0U;
     for (;;) {
+        if (tim_periodic_irq_fault != 0U) {
+            printf("[ERROR] TIM1 UPDATE stayed active; IRQ disabled. Check the timer clock/bitstream.\n");
+            break;
+        }
         uint32_t count = g_tim_periodic_ticks;
         if ((count - last_count) >= TIM_PERIODIC_TICK_HZ) {
             /* Log once per second; printf stays outside the ISR. */

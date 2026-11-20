@@ -167,3 +167,11 @@ required when changing the option structure.
    relevant `CMakeLists.txt` (see section 3).
 5. `cmake --preset <TARGET>` back (configure) so that `sdkconfig.h`/`.cmake` generated Kconfig matches
    new — old build (`build/`) does not update itself.
+
+## Automatic build refresh
+
+CMake tracks `sdkconfig`, sourced Kconfig files and the configuration generator.
+The next CLI or direct CMake build applies saved settings automatically.
+The explicit configure steps above remain valid and are useful when inspecting
+configuration output. Changing a compiler, interpreter or build profile still
+requires an explicit configure; use separate build directories for profiles.

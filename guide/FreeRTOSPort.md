@@ -20,6 +20,10 @@ path and links the device target so the kernel/port inherit its word-only SRAM
 policy. Cortex-M0 flags are applied to both kernel and port. Preserve this
 integration when adding applications.
 
+The vendored kernel contains word-only patches for byte fields, task names,
+memory access and static-object ABI layout. Preserve these when updating
+upstream and rebuild application/kernel objects together.
+
 ## Clock, heap and stack
 
 `configCPU_CLOCK_HZ` uses `SystemCoreClock`; the clock must match the hardware.
@@ -28,6 +32,8 @@ FPGA peripheral examples typically set
 `configMINIMAL_STACK_SIZE` and stack sizes passed to `xTaskCreate` are measured
 in **words**, whereas `configTOTAL_HEAP_SIZE` is in **bytes**. Check the linker
 map and actual stack usage before increasing task/queue counts.
+New templates accept `-DNEON_APP_FIXED_CLOCK_HZ=10000000` for a known 10 MHz
+FPGA; the default `0` uses CRM clock detection. See [board configuration](BoardConfiguration.md).
 
 ## Exception handlers and BootROM
 

@@ -64,8 +64,8 @@ cmake --build --preset GT32U2086
 
 Profile is the image parameter affecting linker and code should be selected in the configure step.
 Port/baud is a communication parameter when flashing, only transmitted at the target flash run. The
-files device/linker created automatically are now shared: configure and build each profile
-sequentially, do not build simultaneously normal/XIP in the same SDK.
+generated device/linker files belong to the build directory. For concurrent normal/XIP
+builds use separate directories, for example `-B build/GT32U2086-xip` for XIP.
 
 Check the image before flashing, from the root repository:
 

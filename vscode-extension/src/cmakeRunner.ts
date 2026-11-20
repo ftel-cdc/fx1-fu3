@@ -63,6 +63,7 @@ function runTask(
 const preservedOptions = new Set([
   "Python3_EXECUTABLE", "NEON_MDF_PATH", "NEON_MDF_PROFILE", "NEON_MDF_SECURE_BOOT",
   "NEON_MDF_SIGNING_KEY", "NEON_MDF_GT32U2086_APP_VERSION",
+  "NEON_APP_FIXED_CLOCK_HZ", "NEON_PRINTF_FIXED_CLOCK_HZ",
 ]);
 
 async function freshOptions(app: Application, cache: vscode.Uri, sdkDir?: vscode.Uri): Promise<string[]> {

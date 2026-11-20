@@ -20,29 +20,23 @@ from mcu_desc.loader import load_device, DeviceDescriptionError  # noqa: E402
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DEVICES_DIR = os.path.join(REPO_ROOT, "mcu-description", "devices")
-GENERATED_DIR = os.path.join(REPO_ROOT, "mcu-description", "generated")
 
 
 def _ensure_dir(path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
 
-def generate_cortex_m(device):
+def generate_cortex_m(device, output_dir):
     from backends.cortex_m import gen_cmsis_header, gen_linker_script, gen_startup_vector, gen_svd
 
-    cmsis_device_root = os.path.join(
-        REPO_ROOT, "arch", "CortexM", "CMSIS", "Device", device.family
-    )
-    include_dir = os.path.join(cmsis_device_root, "Include")
-    gcc_dir = os.path.join(cmsis_device_root, "Source", "gcc")
-    linker_dir = os.path.join(gcc_dir, "linker")
+    include_dir = os.path.join(output_dir, "include")
 
     header_name = f"{device.device}.h"
     header_path = os.path.join(include_dir, header_name)
     alias_header_path = os.path.join(include_dir, "mcu_device.h")
-    linker_path = os.path.join(linker_dir, device.linker_filename("flash"))
-    startup_path = os.path.join(gcc_dir, f"startup_{device.device}.s")
-    svd_path = os.path.join(GENERATED_DIR, f"{device.device}.svd")
+    linker_path = os.path.join(output_dir, device.linker_filename("flash"))
+    startup_path = os.path.join(output_dir, f"startup_{device.device}.s")
+    svd_path = os.path.join(output_dir, f"{device.device}.svd")
 
     outputs = [header_path, alias_header_path, linker_path, startup_path, svd_path]
     for p in outputs:
@@ -58,7 +52,7 @@ def generate_cortex_m(device):
         from mcu_desc.memory_layout import image_layout, pick_flash
         layout = image_layout(device)
         flash = pick_flash(device)
-        image_fragment = os.path.join(GENERATED_DIR, "GT32U2086_image.cmake")
+        image_fragment = os.path.join(output_dir, "GT32U2086_image.cmake")
         with open(image_fragment, "w", encoding="utf-8") as f:
             f.write("# Generated from GT32U2086.yaml; do not edit.\n")
             for name, value in (
@@ -76,7 +70,7 @@ def generate_cortex_m(device):
     return outputs
 
 
-def generate_one(device_name, profile="normal"):
+def generate_one(device_name, profile="normal", output_dir=None):
     yaml_path = os.path.join(DEVICES_DIR, f"{device_name}.yaml")
     if not os.path.isfile(yaml_path):
         print(f"error: not found {yaml_path}", file=sys.stderr)
@@ -89,7 +83,8 @@ def generate_one(device_name, profile="normal"):
         sys.exit(1)
 
     if device.device == "GT32U2086" and device.arch == "cortex-m0":
-        outputs = generate_cortex_m(device)
+        destination = output_dir or os.path.join(os.getcwd(), "build", "generated", device_name, profile)
+        outputs = generate_cortex_m(device, os.path.abspath(destination))
     else:
         print(f"error: arch '{device.arch}' not accepted", file=sys.stderr)
         sys.exit(1)
@@ -105,13 +100,14 @@ def main():
     group.add_argument("--device", help="device name, e.g. GT32U2086 (mcu-description/devices/GT32U2086.yaml file matching)")
     group.add_argument("--all", action="store_true", help="create for the whole device in mcu-description/devices/")
     ap.add_argument("--profile", default="normal", help="Memory profile: normal (default) or xip")
+    ap.add_argument("--output-dir", help="Output directory; defaults to build/generated/<device>/<profile> in the current directory")
     args = ap.parse_args()
 
     if args.all:
         for yaml_path in sorted(glob.glob(os.path.join(DEVICES_DIR, "*.yaml"))):
-            generate_one(os.path.splitext(os.path.basename(yaml_path))[0], args.profile)
+            generate_one(os.path.splitext(os.path.basename(yaml_path))[0], args.profile, args.output_dir)
     else:
-        generate_one(args.device, args.profile)
+        generate_one(args.device, args.profile, args.output_dir)
 
 
 if __name__ == "__main__":

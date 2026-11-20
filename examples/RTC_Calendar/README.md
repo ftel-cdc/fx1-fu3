@@ -1,6 +1,6 @@
 # RTC_Calendar
 
-RTC Calendar example skeleton.
+RTC readback, ticking, rollover and validation checks.
 
 This is an independent GT32U2086 firmware. Its UART terminal waits at boot; press `r` without Enter
 to start the example at the `fpga:>>` prompt.
@@ -26,13 +26,18 @@ releases the port. Use the board's UART-download/normal-boot straps as described
 
 ## Run
 
-After `r`, the firmware prints [TODO] and returns to the terminal. Peripheral behavior has not been implemented.
+Press `r` to open the RTC menu: `1` checks set/get, `2` checks five consecutive
+second increments, `3` checks minute/leap-day/year rollover and `4` checks leap
+years and invalid inputs. `q` or Ctrl+C exits and deinitializes RTC.
+Set `CONFIG_RTC_CALENDAR_PRESCALER` for the actual RTC source when overriding the
+source default. The example prints the selected divider and hardware registers;
+measure second timing on the board. Public date/time fields are decimal.
 
 When the run function completes or its stop key is pressed, the application returns to its
 UART terminal. Press `r` again to repeat the example. While the run function is active, its own
 menu/data keys apply; `r` only starts a run when the application is at `fpga:>>`.
 At this prompt, Enter starts a new line and prints `fpga:>>` again. CR, LF and CRLF are
 supported; CRLF produces only one new prompt.
-Configure with `cmake --build --preset GT32U2086 --target menuconfig`, then build again.
+Configure with `cmake --build --preset GT32U2086 --target menuconfig`, then build again; changes to `sdkconfig` are applied automatically.
 `CONFIG_GT32U2086_EXAMPLE_FIXED_CLOCK_HZ` must match the actual FPGA clock. Timeout values ending in
 `_POLLS` are polling budgets, not milliseconds.

@@ -1,8 +1,8 @@
 /**
  * @file crc_known_vector.h
- * @brief Testcase skeleton for CRC_Known_Vector.
+ * @brief CRC-8 known vectors and length boundary checks.
  * @details
- * Declares the entry point; peripheral behavior will be added later.
+ * Declares the standalone application testcase entry point.
  */
 
 #ifndef GT32U2086_EXAMPLE_CRC_KNOWN_VECTOR_H

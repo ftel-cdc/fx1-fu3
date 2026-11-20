@@ -33,9 +33,9 @@
 #define CONFIG_RTC_CALENDAR_PRESCALER 360U
 #endif
 
-#define TEST_RTC_INSTANCE        RTC
-#define RTC_CPSR_EXPECTED_RESET  0x00002710U
-#define RTC_WAIT_POLL_LIMIT      100000000U
+#define TEST_RTC_INSTANCE RTC
+#define RTC_CPSR_EXPECTED_RESET 0x00002710U
+#define RTC_WAIT_POLL_LIMIT 100000000U
 
 /*==================================================================================================
 -                                   PRIVATE FUNCTION PROTOTYPES
@@ -49,10 +49,8 @@ static void print_hardware_registers(void);
 static bool set_and_check_time(const neon_rtc_time_t *expected);
 static bool set_and_check_date(const neon_rtc_date_t *expected);
 static bool wait_for_next_second(const neon_rtc_time_t *previous, neon_rtc_time_t *actual);
-static bool wait_for_datetime_rollover(const neon_rtc_date_t *target_date,
-                                       const neon_rtc_time_t *target_time,
-                                       neon_rtc_date_t *actual_date,
-                                       neon_rtc_time_t *actual_time);
+static bool wait_for_datetime_rollover(const neon_rtc_date_t *target_date, const neon_rtc_time_t *target_time,
+                                       neon_rtc_date_t *actual_date, neon_rtc_time_t *actual_time);
 static void run_basic_readback_test(void);
 static void run_live_tracking_test(void);
 static void run_rollover_test(void);
@@ -129,10 +127,9 @@ static bool wait_for_date(const neon_rtc_date_t *expected, neon_rtc_date_t *actu
 
 static void print_hardware_registers(void) {
     const uint32_t cpsr = TEST_RTC_INSTANCE->CPSR;
-    printf("[RTC REG] CPSR=0x%08lX (EN=%s DIV=%lu) RTIME=0x%08lX RDATE=0x%08lX\n",
-           (unsigned long)cpsr, ((cpsr & (1UL << 31)) != 0U) ? "ON" : "OFF",
-           (unsigned long)(cpsr & 0x03FFFFFFU), (unsigned long)TEST_RTC_INSTANCE->RTIME,
-           (unsigned long)TEST_RTC_INSTANCE->RDATE);
+    printf("[RTC REG] CPSR=0x%08lX (EN=%s DIV=%lu) RTIME=0x%08lX RDATE=0x%08lX\n", (unsigned long)cpsr,
+           ((cpsr & (1UL << 31)) != 0U) ? "ON" : "OFF", (unsigned long)(cpsr & 0x03FFFFFFU),
+           (unsigned long)TEST_RTC_INSTANCE->RTIME, (unsigned long)TEST_RTC_INSTANCE->RDATE);
 }
 
 static bool set_and_check_time(const neon_rtc_time_t *expected) {
@@ -143,9 +140,8 @@ static bool set_and_check_time(const neon_rtc_time_t *expected) {
         return false;
     }
     if (!wait_for_time(expected, &actual)) {
-        printf("[FAIL] Timed out waiting for RTC time latch. Last=%02lu:%02lu:%02lu\n",
-               (unsigned long)actual.hour, (unsigned long)actual.minute,
-               (unsigned long)actual.second);
+        printf("[FAIL] Timed out waiting for RTC time latch. Last=%02lu:%02lu:%02lu\n", (unsigned long)actual.hour,
+               (unsigned long)actual.minute, (unsigned long)actual.second);
         return false;
     }
     return true;
@@ -159,9 +155,8 @@ static bool set_and_check_date(const neon_rtc_date_t *expected) {
         return false;
     }
     if (!wait_for_date(expected, &actual)) {
-        printf("[FAIL] Timed out waiting for RTC date latch. Last=%04lu-%02lu-%02lu\n",
-               (unsigned long)actual.year, (unsigned long)actual.month,
-               (unsigned long)actual.date);
+        printf("[FAIL] Timed out waiting for RTC date latch. Last=%04lu-%02lu-%02lu\n", (unsigned long)actual.year,
+               (unsigned long)actual.month, (unsigned long)actual.date);
         return false;
     }
     return true;
@@ -190,10 +185,8 @@ static bool wait_for_next_second(const neon_rtc_time_t *previous, neon_rtc_time_
     return false;
 }
 
-static bool wait_for_datetime_rollover(const neon_rtc_date_t *target_date,
-                                       const neon_rtc_time_t *target_time,
-                                       neon_rtc_date_t *actual_date,
-                                       neon_rtc_time_t *actual_time) {
+static bool wait_for_datetime_rollover(const neon_rtc_date_t *target_date, const neon_rtc_time_t *target_time,
+                                       neon_rtc_date_t *actual_date, neon_rtc_time_t *actual_time) {
     for (uint32_t poll = 0U; poll < RTC_WAIT_POLL_LIMIT; ++poll) {
         const neon_status_t status = read_consistent_datetime(actual_date, actual_time);
         if (status != NEON_OK) {
@@ -221,15 +214,12 @@ static void run_basic_readback_test(void) {
         return;
     }
 
-    printf("  Expected: %04lu-%02lu-%02lu %02lu:%02lu:%02lu\n",
-           (unsigned long)expected_date.year, (unsigned long)expected_date.month,
-           (unsigned long)expected_date.date, (unsigned long)expected_time.hour,
+    printf("  Expected: %04lu-%02lu-%02lu %02lu:%02lu:%02lu\n", (unsigned long)expected_date.year,
+           (unsigned long)expected_date.month, (unsigned long)expected_date.date, (unsigned long)expected_time.hour,
            (unsigned long)expected_time.minute, (unsigned long)expected_time.second);
-    printf("  Actual  : %04lu-%02lu-%02lu %02lu:%02lu:%02lu (weekday %lu)\n",
-           (unsigned long)actual_date.year, (unsigned long)actual_date.month,
-           (unsigned long)actual_date.date, (unsigned long)actual_time.hour,
-           (unsigned long)actual_time.minute, (unsigned long)actual_time.second,
-           (unsigned long)actual_date.day);
+    printf("  Actual  : %04lu-%02lu-%02lu %02lu:%02lu:%02lu (weekday %lu)\n", (unsigned long)actual_date.year,
+           (unsigned long)actual_date.month, (unsigned long)actual_date.date, (unsigned long)actual_time.hour,
+           (unsigned long)actual_time.minute, (unsigned long)actual_time.second, (unsigned long)actual_date.day);
 
     if (date_equal(&actual_date, &expected_date) && time_equal(&actual_time, &expected_time)) {
         printf("[PASS] Date and time readback matched.\n");
@@ -252,14 +242,12 @@ static void run_live_tracking_test(void) {
     for (uint32_t i = 0U; i < 5U; ++i) {
         if (!wait_for_next_second(&previous, &actual)) {
             printf("[FAIL] RTC did not advance by exactly one second; last=%02lu:%02lu:%02lu\n",
-                   (unsigned long)actual.hour, (unsigned long)actual.minute,
-                   (unsigned long)actual.second);
+                   (unsigned long)actual.hour, (unsigned long)actual.minute, (unsigned long)actual.second);
             print_hardware_registers();
             return;
         }
-        printf("  [%lu/5] %02lu:%02lu:%02lu\n", (unsigned long)(i + 1U),
-               (unsigned long)actual.hour, (unsigned long)actual.minute,
-               (unsigned long)actual.second);
+        printf("  [%lu/5] %02lu:%02lu:%02lu\n", (unsigned long)(i + 1U), (unsigned long)actual.hour,
+               (unsigned long)actual.minute, (unsigned long)actual.second);
         previous = actual;
     }
     printf("[PASS] RTC advanced through five consecutive second values.\n");
@@ -289,14 +277,12 @@ static void run_rollover_test(void) {
         return;
     }
     if (!wait_for_time(&minute_target, &actual_time)) {
-        printf("[FAIL] Minute rollover timeout/mismatch; last=%02lu:%02lu:%02lu\n",
-               (unsigned long)actual_time.hour, (unsigned long)actual_time.minute,
-               (unsigned long)actual_time.second);
+        printf("[FAIL] Minute rollover timeout/mismatch; last=%02lu:%02lu:%02lu\n", (unsigned long)actual_time.hour,
+               (unsigned long)actual_time.minute, (unsigned long)actual_time.second);
         return;
     }
-    printf("  [PASS] Minute rollover reached %02lu:%02lu:%02lu.\n",
-           (unsigned long)actual_time.hour, (unsigned long)actual_time.minute,
-           (unsigned long)actual_time.second);
+    printf("  [PASS] Minute rollover reached %02lu:%02lu:%02lu.\n", (unsigned long)actual_time.hour,
+           (unsigned long)actual_time.minute, (unsigned long)actual_time.second);
 
     /* 3b. Leap day rollover (2028-02-28 23:59:58 -> 2028-02-29 00:00:00) */
     if (!set_and_check_date(&leap_start_date) || !set_and_check_time(&midnight_start)) {
@@ -305,14 +291,12 @@ static void run_rollover_test(void) {
     }
     if (!wait_for_datetime_rollover(&leap_target_date, &midnight_target, &actual_date, &actual_time)) {
         printf("[FAIL] Leap-day rollover timeout/mismatch; last=%04lu-%02lu-%02lu %02lu:%02lu:%02lu\n",
-               (unsigned long)actual_date.year, (unsigned long)actual_date.month,
-               (unsigned long)actual_date.date, (unsigned long)actual_time.hour,
-               (unsigned long)actual_time.minute, (unsigned long)actual_time.second);
+               (unsigned long)actual_date.year, (unsigned long)actual_date.month, (unsigned long)actual_date.date,
+               (unsigned long)actual_time.hour, (unsigned long)actual_time.minute, (unsigned long)actual_time.second);
         return;
     }
-    printf("  [PASS] Leap-day rollover reached %04lu-%02lu-%02lu %02lu:%02lu:%02lu.\n",
-           (unsigned long)actual_date.year, (unsigned long)actual_date.month,
-           (unsigned long)actual_date.date, (unsigned long)actual_time.hour,
+    printf("  [PASS] Leap-day rollover reached %04lu-%02lu-%02lu %02lu:%02lu:%02lu.\n", (unsigned long)actual_date.year,
+           (unsigned long)actual_date.month, (unsigned long)actual_date.date, (unsigned long)actual_time.hour,
            (unsigned long)actual_time.minute, (unsigned long)actual_time.second);
 
     /* 3c. Year rollover (2026-12-31 23:59:58 -> 2027-01-01 00:00:00) */
@@ -322,14 +306,12 @@ static void run_rollover_test(void) {
     }
     if (!wait_for_datetime_rollover(&year_target_date, &midnight_target, &actual_date, &actual_time)) {
         printf("[FAIL] Year rollover timeout/mismatch; last=%04lu-%02lu-%02lu %02lu:%02lu:%02lu\n",
-               (unsigned long)actual_date.year, (unsigned long)actual_date.month,
-               (unsigned long)actual_date.date, (unsigned long)actual_time.hour,
-               (unsigned long)actual_time.minute, (unsigned long)actual_time.second);
+               (unsigned long)actual_date.year, (unsigned long)actual_date.month, (unsigned long)actual_date.date,
+               (unsigned long)actual_time.hour, (unsigned long)actual_time.minute, (unsigned long)actual_time.second);
         return;
     }
-    printf("  [PASS] Year rollover reached %04lu-%02lu-%02lu %02lu:%02lu:%02lu.\n",
-           (unsigned long)actual_date.year, (unsigned long)actual_date.month,
-           (unsigned long)actual_date.date, (unsigned long)actual_time.hour,
+    printf("  [PASS] Year rollover reached %04lu-%02lu-%02lu %02lu:%02lu:%02lu.\n", (unsigned long)actual_date.year,
+           (unsigned long)actual_date.month, (unsigned long)actual_date.date, (unsigned long)actual_time.hour,
            (unsigned long)actual_time.minute, (unsigned long)actual_time.second);
 
     print_hardware_registers();
@@ -353,10 +335,8 @@ static void run_validation_test(void) {
     }
 
     printf("  Valid leap date: %s\n", valid_date_ok ? "accepted and read back" : "FAIL");
-    printf("  Invalid date rejected: %s (status=%d)\n", invalid_date_ok ? "yes" : "NO",
-           (int)invalid_date_status);
-    printf("  Invalid time rejected: %s (status=%d)\n", invalid_time_ok ? "yes" : "NO",
-           (int)invalid_time_status);
+    printf("  Invalid date rejected: %s (status=%d)\n", invalid_date_ok ? "yes" : "NO", (int)invalid_date_status);
+    printf("  Invalid time rejected: %s (status=%d)\n", invalid_time_ok ? "yes" : "NO", (int)invalid_time_status);
     if (valid_date_ok && invalid_date_ok && invalid_time_ok && date_equal(&actual_date, &valid_leap_date)) {
         printf("[PASS] Leap date accepted; invalid date/time rejected.\n");
     } else {
@@ -386,7 +366,7 @@ void rtc_calendar_run(void) {
         .clock_frequency_hz = 0U,
         .prescaler = (uint32_t)CONFIG_RTC_CALENDAR_PRESCALER,
     };
-    uint8_t reset_asserted = 1U;
+    uint32_t reset_asserted = 1U;
     bool running = true;
 
     if (uart == NULL) {
@@ -406,15 +386,18 @@ void rtc_calendar_run(void) {
         printf("[ERROR] RTC CRM reset failed (Status=%d).\n", (int)status);
         return;
     }
-    (void)neon_crm_is_peripheral_reset_asserted(NEON_CRM_PERIPHERAL_RTC, &reset_asserted);
-    printf("[RTC] CRM reset OK (SW_RST_N_1=0x%08lX, asserted=%u).\n",
-           (unsigned long)CRM->SW_RST_N_1, (unsigned int)reset_asserted);
+    status = neon_crm_is_peripheral_reset_asserted(NEON_CRM_PERIPHERAL_RTC, (uint8_t *)&reset_asserted);
+    if (status != NEON_OK) {
+        printf("[ERROR] RTC CRM reset status read failed (Status=%d).\n", (int)status);
+        return;
+    }
+    printf("[RTC] CRM reset OK (SW_RST_N_1=0x%08lX, asserted=%u).\n", (unsigned long)CRM->SW_RST_N_1,
+           (unsigned int)reset_asserted);
 
-    printf("[RTC] Reading CPSR reset value at 0x%08lX...\n",
-           (unsigned long)(uintptr_t)&TEST_RTC_INSTANCE->CPSR);
+    printf("[RTC] Reading CPSR reset value at 0x%08lX...\n", (unsigned long)(uintptr_t)&TEST_RTC_INSTANCE->CPSR);
     const uint32_t rtc_cpsr_reset_value = TEST_RTC_INSTANCE->CPSR;
-    printf("[RTC] CPSR after reset=0x%08lX (expected 0x%08lX).\n",
-           (unsigned long)rtc_cpsr_reset_value, (unsigned long)RTC_CPSR_EXPECTED_RESET);
+    printf("[RTC] CPSR after reset=0x%08lX (expected 0x%08lX).\n", (unsigned long)rtc_cpsr_reset_value,
+           (unsigned long)RTC_CPSR_EXPECTED_RESET);
     if (rtc_cpsr_reset_value != RTC_CPSR_EXPECTED_RESET) {
         printf("[WARN] RTC CPSR reset-value mismatch; continuing with explicit init.\n");
     }

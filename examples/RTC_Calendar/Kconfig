@@ -14,3 +14,15 @@ config GT32U2086_EXAMPLE_RX_TIMEOUT_POLLS
 
 endmenu
 
+menu "RTC calendar"
+
+config RTC_CALENDAR_PRESCALER
+    int "RTC source divider (source Hz / 100)"
+    range 1 67108863
+    default 360
+    help
+        Match the actual RTC source. The reference configuration uses 360;
+        verify second timing on the board rather than inferring it from SystemCoreClock.
+
+endmenu
+

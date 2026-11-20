@@ -20,7 +20,8 @@ GT32U2086 / BootROM v5
 |---|---|
 | `neon-mdf/mcu-description/devices/GT32U2086.yaml` | Memory map, registers, IRQs and profiles |
 | `neon-mdf/mcu-description/tools/` | Loader/model and Cortex-M0 code generation backend |
-| `neon-mdf/arch/CortexM/CMSIS/Device/GT32U2086/` | Headers, startup, linker scripts and system/runtime code |
+| `neon-mdf/arch/CortexM/CMSIS/Device/GT32U2086/` | Handwritten system/runtime code and generated reference snapshots |
+| `<application>/build/GT32U2086/generated/GT32U2086/` | Build-local device headers, startup, linker, SVD and image metadata |
 | `neon-mdf/arch/CortexM/CMSIS/CMSIS_5/` | CMSIS-Core, restricted to Cortex-M0 core and compiler headers |
 | `neon-mdf/components/driver/` | Public APIs and GT32U2086 peripheral backends |
 | `neon-mdf/components/console/` | `printf` formatter, `_write` and UART connection |
@@ -40,8 +41,8 @@ generator instead of their output. `system_GT32U2086.c/.h` and
 
 `profile_param` selects internal Flash (`normal`) or QSPI XIP (`xip`). The
 physical memory map stays fixed; profiles define the header, IRQ relay and
-application memory ranges. Outputs currently share source-tree paths, so
-configure/build profiles sequentially. See [Device YAML](DeviceYAML.md).
+application memory ranges. Each build directory owns its generated device
+files, allowing concurrent normal/XIP builds in separate directories. See [Device YAML](DeviceYAML.md).
 
 ## Drivers and runtime
 

@@ -75,7 +75,7 @@ When the run function completes, the application returns to its UART terminal.
 Press `r` again to repeat the example. This is a bounded one-shot test with no inner menu.
 At this prompt, Enter starts a new line and prints `fpga:>>` again. CR, LF and CRLF are
 supported; CRLF produces only one new prompt.
-Configure with `cmake --build --preset GT32U2086 --target menuconfig`, then build again.
+Configure with `cmake --build --preset GT32U2086 --target menuconfig`, then build again; changes to `sdkconfig` are applied automatically.
 `CONFIG_GT32U2086_EXAMPLE_FIXED_CLOCK_HZ` must match the actual FPGA clock for I2C timing and the write
 delay to be correct. `CONFIG_I2C_DMA_TIMEOUT_POLLS` is a polling budget, not milliseconds.
 Enable both `CONFIG_NEON_MDF_DRIVER_I2C` and `CONFIG_NEON_MDF_DRIVER_DMA`.

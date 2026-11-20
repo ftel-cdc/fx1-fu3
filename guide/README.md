@@ -8,6 +8,7 @@ then choose a guide for your next task.
 | Guide | Contents |
 |---|---|
 | [Environment setup](Setup.md) | Windows/Linux/macOS tools, Python venv, PATH and toolchain verification |
+| [Board configuration](BoardConfiguration.md) | Actual clocks, connector pins, bitstreams and storage reservations |
 | [Your first application](FirstApp.md) | Create bare-metal or FreeRTOS projects, understand files, build and run |
 | [VS Code](VSCode.md) | Install the extension, select SDK/UART port, build, program and monitor |
 | [Example index](../examples/README.md) | Peripheral examples and connection requirements |
@@ -15,6 +16,7 @@ then choose a guide for your next task.
 | [Printf / logging](PrintfLogging.md) | UART console, formatter, baud and formatting limitations |
 | [FreeRTOS](FreeRTOSPort.md) | Cortex-M0 port, heap/stack, interrupt handlers and queues |
 | [Debugging](Debugging.md) | Image validation, UART logging and JTAG/OpenOCD integration status |
+| [Hardware acceptance](HardwareValidation.md) | Support limits, board evidence and automated regressions |
 
 ## Hardware and firmware images
 
