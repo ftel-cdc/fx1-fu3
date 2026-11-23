@@ -1,12 +1,12 @@
 /**
  * @file test_neon_camera_runtime.c
  * @brief Host tests of the camera runtime start/stop sequencing and 3A loop on the real MIPI, CSI and ISP HAL
- * (sim backends), with a fake sensor and 3A.
+ * (MIPI/ISP sim backends and CSI register fixture), with a fake sensor and 3A.
  */
 
 #include "test_common.h"
 #include "neon_camera_runtime.h"
-#include "csi/platform/fx1/fx1_csi_simulation.h"
+#include "host/csi_mmio.h"
 #include "isp/platform/fx1/fx1_isp_simulation.h"
 #include "mipi/platform/fx1/fx1_mipi_simulation.h"
 #include "fx1_registers.h"
@@ -158,6 +158,7 @@ static void make_isp_config(neon_isp_config_t *config)
 
 static void make_rig(rig_t *r)
 {
+    csi_mmio_reset();
     (void)memset(&g_fake, 0, sizeof(g_fake));
     g_fake.latency = 2U;
     (void)memset(r, 0, sizeof(*r));
@@ -463,6 +464,7 @@ static void test_frames_flow_after_start(void)
 
 static void make_runtime_config(neon_camera_runtime_config_t *config, uint32_t width, uint32_t height)
 {
+    csi_mmio_reset();
     neon_camera_runtime_get_default_config(config);
     config->sensor = &g_fake;
     config->sensor_ops = &SENSOR_OPS;
@@ -508,7 +510,7 @@ static void test_init_derives_configuration(void)
     (void)memset(&g_fake, 0, sizeof(g_fake));
     make_runtime_config(&config, WIDTH, HEIGHT);
     /* 2 RAW buffers of 4096, and 4 NV12 frames of a 2048 byte Y plane and a 1024 byte UV plane. */
-    CHECK_EQ(config.memory_bytes, 2U * 4096U + 4U * (2048U + 1024U));
+    CHECK_EQ(config.memory_bytes, 2U * (2U * 4096U) + 4U * (2048U + 1024U));
     init_runtime(&rt, &config);
 
     CHECK(p->sensor == &g_fake);
@@ -530,13 +532,13 @@ static void test_init_derives_configuration(void)
     CHECK_EQ(p->mipi_ready_timeout_polls, NEON_CAMERA_RUNTIME_DEFAULT_READY_POLLS);
 
     CHECK_EQ(p->csi_config.raw_format, NEON_CSI_RAW12);
-    CHECK_EQ(p->csi_config.output_format, NEON_CSI_OUTPUT_RAW16);
+    CHECK_EQ(p->csi_config.pixel_packing, NEON_CSI_PACKING_UNPACKED16);
     CHECK_EQ(p->csi_config.width, WIDTH);
     CHECK_EQ(p->csi_config.height, HEIGHT);
-    CHECK_EQ(p->csi_config.dma.line_padding_bytes, 0U);
+    CHECK_EQ(p->csi_config.dma.line_pitch_bytes, 128U);
     CHECK_EQ(p->csi_config.dma.buffer_size_bytes, 4096U);
     CHECK_EQ(p->csi_config.dma.base_addr[0], REGION_BASE);
-    CHECK_EQ(p->csi_config.dma.base_addr[1], REGION_BASE + 0x1000UL);
+    CHECK_EQ(p->csi_config.dma.base_addr[1], REGION_BASE + 0x2000UL);
 
     /* The scalar fields agree with the ISP configuration that the earlier tests wrote by hand. */
     make_isp_config(&hand);
@@ -551,7 +553,7 @@ static void test_init_derives_configuration(void)
     CHECK_EQ(p->isp_config.output_uv_bytes, hand.output_uv_bytes);
     CHECK(p->isp_config.stats_aec && p->isp_config.stats_awb && p->isp_config.stats_af);
     for (i = 0U; i < rt.isp.caps.output_buffers; i++) {
-        CHECK_EQ(p->isp_config.output_y_addr[i], REGION_BASE + 0x2000UL + i * 0xC00UL);
+        CHECK_EQ(p->isp_config.output_y_addr[i], REGION_BASE + 0x4000UL + i * 0xC00UL);
         CHECK_EQ(p->isp_config.output_uv_addr[i], p->isp_config.output_y_addr[i] + 0x800UL);
     }
 
@@ -559,6 +561,9 @@ static void test_init_derives_configuration(void)
     CHECK_EQ(neon_csi_calculate_layout(&p->csi_config, &layout), NEON_OK);
     CHECK_EQ(layout.line_pitch_bytes, p->isp_config.input_stride_bytes);
     CHECK_EQ(layout.frame_bytes, p->csi_config.dma.buffer_size_bytes);
+    CHECK_EQ(layout.buffer_bytes, 2U * layout.frame_bytes);
+    CHECK(p->csi_config.dma.base_addr[0] + layout.buffer_bytes <= p->csi_config.dma.base_addr[1]);
+    CHECK(p->csi_config.dma.base_addr[1] + layout.buffer_bytes <= p->isp_config.output_y_addr[0]);
 }
 
 static void test_init_runs_the_pipeline(void)
@@ -613,7 +618,7 @@ static void test_init_memory(void)
     (void)memset(&g_fake, 0, sizeof(g_fake));
     make_runtime_config(&config, WIDTH, HEIGHT);
     need = config.memory_bytes;
-    CHECK_EQ(need, 20480U);
+    CHECK_EQ(need, 28672U);
     CHECK_EQ(neon_camera_runtime_memory_bytes(&config, NULL), NEON_INVALID_PARAM);
     CHECK_EQ(neon_camera_runtime_memory_bytes(NULL, &need), NEON_INVALID_PARAM);
 
@@ -669,8 +674,8 @@ static void test_init_rejections(void)
     config.height = 0U;
     CHECK_EQ(neon_camera_runtime_memory_bytes(&config, &bytes), NEON_INVALID_PARAM);
     config.height = HEIGHT;
-    config.width = 33U; /* The receiver packs two RAW12 pixels per three bytes. */
-    CHECK_EQ(neon_camera_runtime_memory_bytes(&config, &bytes), NEON_INVALID_PARAM);
+    config.width = 33U; /* Unpacked RAW16 permits odd widths; ISP validation happens at start. */
+    CHECK_EQ(neon_camera_runtime_memory_bytes(&config, &bytes), NEON_OK);
     config.width = WIDTH;
     config.raw_depth = (neon_isp_raw_depth_t)8;
     CHECK_EQ(neon_camera_runtime_memory_bytes(&config, &bytes), NEON_INVALID_PARAM);
@@ -691,7 +696,7 @@ static void test_init_pads_the_pitch(void)
     /* 1922 pixels are 3844 bytes, which the DMA cannot read in place: the receiver pads each line. */
     make_runtime_config(&config, 1922U, 32U);
     init_runtime(&rt, &config);
-    CHECK_EQ(rt.pipeline.csi_config.dma.line_padding_bytes, 12U);
+    CHECK_EQ(rt.pipeline.csi_config.dma.line_pitch_bytes, 3856U);
     CHECK_EQ(rt.pipeline.isp_config.input_stride_bytes, 3856U);
     CHECK_EQ(rt.pipeline.csi_config.dma.buffer_size_bytes, 3856U * 32U);
     CHECK_EQ(rt.pipeline.isp_config.y_stride_bytes, 1936U);

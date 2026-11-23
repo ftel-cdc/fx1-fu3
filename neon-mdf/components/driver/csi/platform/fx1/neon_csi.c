@@ -70,7 +70,7 @@
 #define CSI_REG(name) ((uintptr_t)NEON_FX1_MIPI_CSI2_BASE + NEON_FX1_MIPI_CSI2_##name##_OFFSET)
 
 /* Limits of the FX1 receiver (MAS v1.4). */
-#define CSI_DMA_ALIGN           8U      /* Addresses, sizes and the stride: bits 2:0 are ignored. */
+#define CSI_DMA_ALIGN           NEON_CSI_FX1_DMA_ALIGN_BYTES
 #define CSI_MAX_BYTES_PER_LINE  0xFFFFU /* LINE_PITCH.bytes_per_line is 16 bits. */
 #define CSI_MAX_LINE_PADDING    0xFFU   /* LINE_PITCH.line_padding is 8 bits. */
 #define CSI_META_PAYLOAD_OFFSET 0x80U   /* Embedded payload offset in a metadata area; also its minimum size. */

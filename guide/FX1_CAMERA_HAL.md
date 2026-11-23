@@ -1,15 +1,18 @@
 # FX1 camera HAL: MIPI D-PHY, CSI-2 và ISP
 
-Phạm vi: lớp HAL của `mipi`, `csi` và `isp` cho `neon_camera_runtime`. Ba module cùng một bố cục.
-Nguồn: MAS "FTEL MIPI CSI-2 controller" V1.1 và "FTEL IP ISP" v1.0 (repo `Neon-Isp/MAS`).
+Phạm vi: HAL `mipi`, `csi`, `isp` và `neon_camera_runtime` trên FX1.
+CSI hiện theo HAS v1.2 / MAS v1.4, có driver thanh ghi tại
+`components/driver/csi/platform/fx1/neon_csi.c` và extension API `neon_csi_fx1.h`.
+MIPI và ISP HAL vẫn dùng backend mô phỏng. Đường `ftel_isp` riêng đã chạy MMIO/VP;
+binary 3A trong component này chưa thay 3A reference của camera runtime.
 
-Trạng thái: API, luật dùng chung và backend mô phỏng (sim) của cả ba module xong, có test chạy trên host.
-Backend ghi thanh ghi FX1 **chưa viết cho module nào** (xem mục 9). Phần ISP nằm ở mục 11.
+Kiểm chứng port ngày 23/11/2026: runtime đã chuyển sang API CSI mới, cấp đủ vùng
+VC0/VC1 cho mỗi buffer, tránh chồng RAW với buffer kế tiếp hoặc output ISP.
 
 ## 1. Kiến trúc
 
 ```text
-components/driver/mipi/                       (csi/ và isp/ có cùng bố cục)
+components/driver/mipi/                       (isp/ có cùng bố cục)
   neon_mipi.h                                 API công khai, handle do caller cấp. Ngoài platform/ chỉ có header
   CMakeLists.txt
   platform/common/
@@ -21,11 +24,10 @@ components/driver/mipi/                       (csi/ và isp/ có cùng bố cụ
     (fx1_mipi_regs.c)                         backend ghi thanh ghi, chưa viết
 ```
 
-Luồng gọi: `neon_camera_runtime` gọi hàm trực tiếp (trả `neon_status_t`) → `neon_mipi.c`/`neon_csi.c` →
-`neon_*_hw_*` của backend chip. Tên file csi tương ứng: `neon_csi.c`, `neon_csi_hw.h`, `fx1_csi_caps.c`,
-`fx1_csi_simulation.c/.h`. Khác `mipi` một file: csi có thêm header công khai `neon_csi_events.h`
-(25 bit sự kiện `NEON_CSI_EVENT_*`), do `neon_csi.h` include nên caller chỉ cần include `neon_csi.h`. Nhờ đó
-`neon_csi.h` chỉ còn 4 macro sức chứa struct.
+Luồng MIPI/ISP: runtime gọi API chung → `platform/common/neon_*.c` → backend chip.
+CSI gọi trực tiếp driver `csi/platform/fx1/neon_csi.c`, truy cập BSP MMIO.
+`csi/neon_csi.h` định nghĩa event theo nhóm và sub-event; extension FX1 nằm trong
+`csi/platform/fx1/neon_csi_fx1.h`. Các header/backend mô phỏng CSI cũ đã được bỏ.
 
 `isp` giống hệt về bố cục: `neon_isp.h`, `neon_isp_events.h` (16 bit sự kiện `NEON_ISP_EVENT_*`, do `neon_isp.h`
 include), `platform/common/neon_isp.c` + `neon_isp_hw.h`, `platform/fx1/fx1_isp_caps.c`,
@@ -55,40 +57,43 @@ Dừng theo thứ tự ngược lại: sensor `stop_stream`, `neon_isp_stop`, `n
 
 - `neon_mipi_lock/unlock`: `csi_start` khóa link, `release` bị từ chối khi `lock_count != 0`.
 - `phy_epoch` tăng sau mỗi lần `neon_mipi_recover`. Receiver đang chạy thấy epoch đổi thì bật sự kiện phần
-  mềm `NEON_CSI_EVENT_LINK_RESET` (bit 31) và vẫn giữ cấu hình, vì reset PHY không xóa thanh ghi CSI.
+  mềm `NEON_CSI_SUB_EVENT_SYSTEM_LINK_RESET` trong nhóm SYSTEM và vẫn giữ cấu hình, vì reset PHY không xóa thanh ghi CSI.
 - `config_epoch` chỉ tăng khi `NEON_MIPI_RECOVER_FULL` (`full_reset` khôi phục cả register file). Receiver
-  chuyển sang `NEON_CSI_STATE_CONFIG_LOST`: gọi `neon_csi_stop`, `neon_csi_configure`, `neon_csi_start` lại.
-- `neon_csi_recover(SOFT)` chỉ chạy khi `clock_hs_active`: `soft_reset` đồng bộ vào `rxbyteclkhs`, clock lane
+  chuyển về `NEON_CSI_STATE_IDLE`, bỏ lease và khóa link; configure/start lại sau khi link sẵn sàng.
+- `neon_csi_recover(handle)` chỉ chạy khi `clock_hs_active`: `soft_reset` đồng bộ vào `rxbyteclkhs`, clock lane
   đang Stop State thì lệnh không có tác dụng. Khi đó trả `NEON_ERROR`, leo lên `neon_mipi_recover(FULL)`.
   Sau soft reset cả hai buffer thuộc về phần cứng, frame phần mềm đang giữ mất.
 
 ## 4. Buffer và frame context
 
-- Hai buffer ping-pong. Sau `acquire_frame` phần mềm sở hữu buffer đó tới `release_frame`.
-- Khi cả hai buffer đã đầy, frame thứ ba bị phần cứng bỏ trước (`FRAME_DROPPED`, `frame_drop_count`). Số
-  frame (`frame_id_bits` bit) vẫn tăng, nên chỗ nhảy `frame_id` cho thấy frame mất.
-- `error_policy`: `RELEASE_WITH_ERROR` giao buffer lỗi với `state == SW_ERROR` và `last_valid_line`.
-  `DISCARD_AND_REWIND` ghi lại buffer đó, phần mềm không thấy gì ngoài `FRAME_DROPPED`.
-- Thanh ghi FRAME_ID/TIMESTAMP chỉ mô tả frame hoàn tất gần nhất. Muốn context chính xác cho từng buffer
-  phải bật `metadata.enable` (record trong DDR). Khi không bật và đã có frame mới hơn, `neon_csi_frame_t`
-  có `context_valid == false` và các trường context bằng 0.
-- Chọn frame cũ nhất khi cả hai đầy: so `frame_id` theo modulo `2^frame_id_bits` khi có metadata. Không có metadata thì
-  HAL giả định DMA luân phiên bắt đầu từ side 0. Giả định đó đúng khi phần mềm trả buffer theo thứ tự đã lấy,
-  **cần xác nhận trên VP**.
+Hai buffer ping-pong. Sau `acquire_frame`, phần mềm giữ buffer tới `release_frame`.
+Mỗi buffer dành chỗ cho RAW VC0, RAW VC1, metadata VC0 và metadata VC1. VC1 vẫn
+được dành chỗ khi chỉ nhận VC0. Frame ID chạy 1..0x3fff rồi về 1; driver chọn ID cũ
+nhất trong hai side kể cả khi không bật metadata, không cấp trùng buffer đang giữ.
+
+Error policy nằm trong `neon_csi_fx1_dma_config_t`: DISCARD hoặc RELEASE_WITH_ERROR.
+Không có metadata, timestamp là snapshot thanh ghi; metadata lưu context từng frame
+trong DDR. Xem giới hạn chi tiết trong `neon_csi_fx1.h`.
 
 ## 5. Layout đầu ra
 
-`neon_csi_calculate_layout` tính `bytes_per_line`, `line_pitch_bytes`, `frame_bytes` mà không cần phần cứng.
-Base và pitch phải chia hết cho `caps.dma_align_bytes` (FX1: 16), để ISP IDMA đọc trực tiếp (ISP MAS bảng 154).
-`RAW16` = một halfword 16 bit cho mỗi pixel, **căn phải**. `PACKED` = đóng gói CSI-2 gốc.
+`neon_csi_calculate_layout` trả `bytes_per_line`, `line_pitch_bytes`, `frame_bytes`
+và `buffer_bytes`. `frame_bytes` là một VC; `buffer_bytes` là toàn bộ vùng DMA cần cấp.
+Base, kích thước vùng và pitch của CSI phải căn 8 byte (`NEON_CSI_FX1_DMA_ALIGN_BYTES`).
+Runtime phối hợp với căn DMA ISP 16 byte, dùng `layout.buffer_bytes` làm khoảng cách
+buffer RAW. Trường `dma.line_pitch_bytes` gồm cả pixel và padding, padding tối đa 255 byte.
+
+`NEON_CSI_PACKING_UNPACKED16` ghi mỗi pixel vào halfword căn phải;
+`NEON_CSI_PACKING_NATIVE` giữ đóng gói CSI-2 gốc. Runtime yêu cầu unpacked RAW12
+để ISP đọc trực tiếp; RAW10 căn phải bị từ chối.
 
 ## 6. Sự kiện
 
-`neon_csi_get_events` và `neon_isp_get_events` trả các bit sự kiện do HAL đánh số (sticky, W1C). CSI có thêm bit
-31 do phần mềm. FX1 hiện đặt bit CSI 0 đến 23 trùng IRQ_STATUS, nhưng backend phải dịch tường minh. Thứ tự bit
-thật của `DMA_IRQ_STAT` và `COMMON_IRQ_STATUS` của ISP chưa xác nhận (MAS chỉ nói bit 2 là IDMA_DONE), nên bit
-ISP là số logic của HAL. `caps.supported_events` cho biết chip nào có sự kiện nào. Mask chỉ quyết định
-`irq_pending`, không ẩn bit trạng thái. `clear_events` ghi đúng các bit đã xử lý.
+CSI dùng `neon_csi_get_events` lấy nhóm event; `neon_csi_take_sub_events` lấy và xóa
+sub-event của đúng nhóm. `caps.supported_sub_events[]` mô tả hỗ trợ. Driver dịch
+IRQ_STATUS sang event/sub-event và ghi W1C cho đúng nguồn đã lấy, giữ nguồn chưa xử lý.
+FRAME_START và PACKET_SHORT không có IRQ trên FX1. API ISP tiếp tục dùng event mask
+trong `neon_isp_events.h`.
 
 ## 7. Dùng trong runtime
 
@@ -120,7 +125,7 @@ neon_camera_runtime_deinit(&rt);              /* NEON_BUSY nếu còn chạy, kh
 | Suy ra | Từ đâu |
 |---|---|
 | `csi_config`: định dạng, hình học, RAW16 | `width`, `height`, `raw_depth` |
-| `line_padding_bytes` | làm pitch chia hết cho độ căn DMA (lớn hơn của csi và isp). Ví dụ 1922 điểm ảnh = 3844 byte, đệm 12 byte thành 3856 |
+| `line_pitch_bytes` | làm pitch chia hết cho độ căn DMA (lớn hơn của csi và isp). Ví dụ 1922 điểm ảnh = 3844 byte, đệm 12 byte thành 3856 |
 | `isp_config.input_stride_bytes`, `csi_config.dma.buffer_size_bytes` | đúng pitch và `frame_bytes` mà `neon_csi_calculate_layout` trả về |
 | stride Y và UV, số byte từng plane | `width` căn lên độ căn DMA. UV xen kẽ ở nửa bề rộng nên cùng stride với Y |
 | địa chỉ mọi buffer | cắt từ vùng `memory_base`: các buffer RAW của csi trước, rồi với mỗi buffer ra của ISP là plane Y rồi plane UV, mỗi mảnh làm tròn lên độ căn. Số buffer lấy từ caps |
@@ -228,8 +233,7 @@ khung và cỡ record metadata không phải thanh ghi nên YAML không khai bá
 5. **Bit sự kiện ISP**: thứ tự bit thật của `DMA_IRQ_STAT` và `COMMON_IRQ_STATUS` phải lấy từ workbook CSR.
 6. **Giả định khi suy ra `mean_*` của ISP**: `awb.count` là số ô đồng vị trí, và mẫu AEC rộng 12 bit (chia 16).
    Cần so với silicon vì vòng 3A đang chạy trên các giá trị này.
-7. `dma_align_bytes` của ISP (16 byte) và của CSI trùng nhau vì cùng độ rộng AXI. Hiện mỗi module khai báo
-   riêng trong `fx1_*_caps.c`.
+7. ISP cần căn DMA 16 byte, CSI cần 8 byte; runtime dùng bội chung và dành đủ hai VC cho mỗi buffer.
 8. **Tuning**: binary profile ISP và tuning 3A đã nạp được qua `init` (mục 7.1). Còn mở:
    - **Định dạng binary**: profile ISP dùng đúng định dạng `profile.bin` của VP, không có header, phiên bản hay
      checksum. `Neon-Isp/DECLARE_ISP_TUNNING.md` cảnh báo `tuning.bin` của firmware thật có thể khác định dạng, và
@@ -244,8 +248,7 @@ khung và cỡ record metadata không phải thanh ghi nên YAML không khai bá
      dùng thống kê **theo zone** (lưới 16×16, histogram green 64 bin, 16 ô AF), mà ISP HAL chỉ trả tổng toàn
      khung (phần cứng có lưới tới 32×24, MAS 6.21). Loader của 3A reference nhận đúng một struct
      `neon_camera_3a_profile_t`, nên binary của nó phụ thuộc layout struct của trình biên dịch.
-9. Chưa build bằng cmake (máy phát triển không có cmake). Các `CMakeLists.txt` và `Kconfig` mới chỉ kiểm
-   cú pháp Kconfig và biên dịch bằng `make` trong `tests/camera_hal`.
+9. Cấu hình bật camera runtime đã cross-build qua CMake với toolchain FX1; hoạt động MIPI/ISP thật còn phụ thuộc backend MMIO.
 
 ## 10. Chạy test
 
@@ -255,10 +258,16 @@ make -C neon-mdf/tests/camera_hal test BUILD=/tmp/camhal   # build ra thư mục
 make -C neon-mdf/tests/camera_hal fuzz        # fuzz theo mô hình, có ASan/UBSan, chậm hơn
 ```
 
-Gồm `test_neon_mipi` (86 kiểm tra), `test_neon_csi` (455), `test_neon_isp` (597) và `test_neon_camera_runtime`
-(390; sensor giả, mipi, csi và isp thật trên backend sim). Phần `init` của runtime chạy cả chuỗi bằng 3A
-reference thật và đối chiếu các giá trị suy ra với cấu hình viết tay. Biên dịch với
-`-Wall -Wextra -Wpedantic -Wconversion -Werror`, và đã chạy sạch dưới `-fsanitize=address,undefined`.
+Gồm `test_neon_mipi` (86 kiểm tra), `test_neon_csi` (97), `test_neon_isp` (597)
+và `test_neon_camera_runtime` (393). CSI test biên dịch driver thật với MMIO fixture
+trong `tests/camera_hal/host`; MIPI/ISP dùng backend sim. Fixture chỉ mô hình W1C,
+release buffer, source switching và FIFO pop, không mô phỏng DMA DDR hoặc timing CDC.
+Bài runtime kiểm tra đủ vùng VC1 và không chồng output ISP.
+
+Biên dịch với `-Wall -Wextra -Wpedantic -Wconversion -Werror`. Fuzz dùng ASan/UBSan:
+ISP 20.000 seed; CSI 100 seed / 300.000 thao tác, có quay vòng frame ID, release lệch
+thứ tự, recovery và restart. Nếu chạy dưới ptrace, LeakSanitizer không hoạt động;
+dùng `ASAN_OPTIONS=detect_leaks=0 make -C neon-mdf/tests/camera_hal fuzz` trong môi trường đó.
 
 ## 11. ISP HAL
 
@@ -332,7 +341,7 @@ neon_isp_load_profile(&isp, bin, size, &info);  /* ISP dừng; xong thì phải 
 Hồi quy cần xử lý (chưa sửa): diff chưa commit của `neon-mdf/CMakeLists.txt` và `neon-mdf/Kconfig` bỏ
 `add_subdirectory(components/ftel_isp)` và `rsource components/ftel_isp/Kconfig`. `examples/FX1_ISP_Image`
 cần target `neon_mdf_ftel_isp` và `CONFIG_NEON_MDF_FTEL_ISP=y` nên sẽ dừng khi configure. `FX1_ISP_Image_FreeRTOS`
-và `ISP_Bayer_AE` cũng tham chiếu `ftel_isp` trong CMakeLists. Chưa build để xác nhận vì máy chưa có cmake.
+và `ISP_Bayer_AE` cũng tham chiếu `ftel_isp` trong CMakeLists. Đã cross-build và chạy VP trong lần kiểm chứng port.
 
 ## 12. Rà soát tính đúng đắn (2026-11-16)
 

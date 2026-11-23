@@ -40,6 +40,7 @@ extern "C" {
 *                                        DEFINES AND MACROS
 ==================================================================================================*/
 #define NEON_CSI_FX1_BUFFER_COUNT 2U  /* Ping-pong slots of the Buffer Manager; reported as caps.buffer_count. */
+#define NEON_CSI_FX1_DMA_ALIGN_BYTES 8U /* Buffer addresses, regions and line pitch. */
 #define NEON_CSI_FX1_VC_COUNT 2U      /* VC0 and VC1 with their own frame context; reported as caps.vc_count. */
 #define NEON_CSI_FX1_EXTRACT_SLOTS 2U /* Fields the Embedded Data Path can extract per frame (N_EXTRACT). */
 

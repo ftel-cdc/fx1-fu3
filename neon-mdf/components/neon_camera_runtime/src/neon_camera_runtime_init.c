@@ -1,4 +1,5 @@
 #include "neon_camera_runtime.h"
+#include "csi/platform/fx1/neon_csi_fx1.h"
 
 #include <string.h>
 
@@ -92,15 +93,15 @@ static neon_status_t make_plan(const neon_camera_runtime_config_t *config, plan_
     }
 
     /* One alignment for the pitch and for every buffer that satisfies both DMA engines. */
-    plan->align = alignment_lcm(csi_caps.dma_align_bytes, plan->isp_caps.dma_align_bytes);
-    if (plan->align == 0U && (csi_caps.dma_align_bytes != 0U || plan->isp_caps.dma_align_bytes != 0U)) {
+    plan->align = alignment_lcm(NEON_CSI_FX1_DMA_ALIGN_BYTES, plan->isp_caps.dma_align_bytes);
+    if (plan->align == 0U) {
         return NEON_NOT_SUPPORTED;
     }
     padding = (uint32_t)(align_up(plan->layout.bytes_per_line, plan->align) - plan->layout.bytes_per_line);
     if (padding > UINT16_MAX) {
         return NEON_NOT_SUPPORTED;
     }
-    plan->csi_config.dma.line_padding_bytes = (uint16_t)padding;
+    plan->csi_config.dma.line_pitch_bytes = plan->layout.bytes_per_line + padding;
     status = neon_csi_calculate_layout(&plan->csi_config, &plan->layout);
     if (status != NEON_OK) {
         return status;
@@ -117,7 +118,9 @@ static neon_status_t make_plan(const neon_camera_runtime_config_t *config, plan_
     plan->uv_stride = plan->y_stride; /* Interleaved Cb/Cr at half the width: the same bytes per line as Y. */
     plan->y_bytes = plan->y_stride * config->height;
     plan->uv_bytes = plan->uv_stride * ((config->height + 1U) / 2U);
-    plan->raw_slot = (uint32_t)align_up(plan->layout.frame_bytes, plan->align);
+    /* FX1 reserves both VC regions even for one exposure. Keep the next CSI buffer and ISP outputs
+     * beyond the complete DMA allocation, not just the active VC0 frame. */
+    plan->raw_slot = (uint32_t)align_up(plan->layout.buffer_bytes, plan->align);
     plan->y_slot = (uint32_t)align_up(plan->y_bytes, plan->align);
     plan->uv_slot = (uint32_t)align_up(plan->uv_bytes, plan->align);
     plan->raw_buffers = csi_caps.buffer_count;
