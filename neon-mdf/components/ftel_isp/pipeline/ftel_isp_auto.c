@@ -69,9 +69,10 @@ ftel_isp_status_t ftel_isp_auto_init(ftel_isp_auto_t *handle, void *memory, size
         (height + w->info.aec_rows - 1u) / w->info.aec_rows};
     proposed.aec.sample_min_clip = 0u;
     proposed.aec.sample_max_clip = 4095u;
+    /* Tuning UE/OE is for ROI screening, not hardware qualification. */
     proposed.awb = (awb_stat_config_t){.enable = true,
         .num_zone_x = w->info.awb_columns, .num_zone_y = w->info.awb_rows,
-        .underexposed_limit = w->info.awb_ue_raw12, .saturation_limit = w->info.awb_oe_raw12,
+        .underexposed_limit = 0u, .saturation_limit = 4095u,
         .context_id = 1u};
     proposed.wb = (wb_config_t){.enable = true,
         .gain_r = w->info.initial.wb_red_q8, .gain_g = 256u,
