@@ -1,0 +1,221 @@
+{
+  "schema": "cdc-vp/fx1-sdk-manifest/1",
+  "package": "VP_FX1_V3.0",
+  "platform": "fx1_soc",
+  "generated_utc": "2026-10-22T10:38:42Z",
+  "summary": "FX1 SoC VP: 2 x RV32IMAFC (VP++) harts, FX1 bus, CLINT, PLIC, PL011-style UART, SYS_DMA, FX1 ISP, DDR3 controller (ECC, preinitialized by the VP before the harts start). FreeRTOS V11.2.0 CLI on hart 0, boot IP check on hart 1. Not a superset of VP_FX1_V2.0: different CPU, ABI and memory map; see README.md.",
+  "source": {
+    "repository": "CDC-VP",
+    "package_revision": "32228f671443ca574b1749e46c8175ed8bbfb554",
+    "dirty_at_package_time": false,
+    "binary_revision": "32228f671443ca574b1749e46c8175ed8bbfb554",
+    "binary_tree_state_at_configure": "clean",
+    "revision_matches_binary": true
+  },
+  "build": {
+    "vp_build_type": "Release",
+    "host_cxx": "GNU 11.5.0",
+    "cmake_build_type": "Release",
+    "systemc_home": "/opt/systemc-2.3.4",
+    "cross_gcc": "riscv-none-elf-gcc (xPack GNU RISC-V Embedded GCC x86_64) 15.2.0",
+    "firmware_abi": "-march=rv32imafc_zicsr_zifencei -mabi=ilp32f -mcmodel=medany"
+  },
+  "upstream": {
+    "riscv_vp_plusplus": {
+      "base_revision": "7a36fe859cae242f513ca6ad16ab8238f1e82977",
+      "patches": {
+        "0001-b710fa7b-dbbcache-fixed-random-cycle-counting.patch": "16758c959a534e71c23254599ac7229c0ff85d3b4e1dc67ee3c82cc96f23b8ad",
+        "0002-d12-rv32-index-eew64-illegal.patch": "de147236d885b6a76584ad1ac83da6f4d6cab975a0464b40acdb9c619090a319",
+        "0003-d13-bus-error-is-an-access-fault.patch": "c3535b21b849581af340b755ad1d22c33647c88dc3b9659072b75fd7fefce84b",
+        "0004-d19-cycle-baseline-survives-reset.patch": "e1ce2d42f3fd30114b35240098a49e6df6ce091c5389d308d5fe1afe8a351054",
+        "0005-resolution-independent-instr-time.patch": "9d1dde49ccd3f176051215ea48a5370601a59a3d16a7b059f5e560faeff20e5c"
+      }
+    },
+    "freertos_kernel": {
+      "version": "V11.2.0",
+      "commit": "0adc196d4bd52a2d91102b525b0aafc1e14a2386"
+    },
+    "systemc": "2.3.4 (Accellera), shipped as libsystemc.so.2.3"
+  },
+  "memory_map": {
+    "status": "VP placeholder values, pending the HAS; firmware must use fx1_memory_map.h, not literals",
+    "regions": [
+      {
+        "name": "BOOTROM",
+        "base": "0x00000000",
+        "size": "0x00200000"
+      },
+      {
+        "name": "SRAM",
+        "base": "0x01000000",
+        "size": "0x00100000"
+      },
+      {
+        "name": "CLINT",
+        "base": "0x02000000",
+        "size": "0x00010000"
+      },
+      {
+        "name": "PLIC",
+        "base": "0x0c000000",
+        "size": "0x01000000"
+      },
+      {
+        "name": "UART",
+        "base": "0x10000000",
+        "size": "0x00010000"
+      },
+      {
+        "name": "SYS_DMA_CSR",
+        "base": "0x10010000",
+        "size": "0x00010000"
+      },
+      {
+        "name": "SIM_CTRL",
+        "base": "0x10020000",
+        "size": "0x00010000"
+      },
+      {
+        "name": "I2C0",
+        "base": "0x10030000",
+        "size": "0x00010000"
+      },
+      {
+        "name": "ISP_CSR",
+        "base": "0x11000000",
+        "size": "0x00010000"
+      },
+      {
+        "name": "MIPI_CSR",
+        "base": "0x11040000",
+        "size": "0x00010000"
+      },
+      {
+        "name": "DDR3_CSR",
+        "base": "0x12000000",
+        "size": "0x00010000"
+      },
+      {
+        "name": "DDR_SYSCTRL",
+        "base": "0x12010000",
+        "size": "0x00010000"
+      },
+      {
+        "name": "DDR",
+        "base": "0x80000000",
+        "size": "0x20000000"
+      }
+    ],
+    "plic_sources": {
+      "UART": 1,
+      "SYS_DMA": 2,
+      "ISP": 3,
+      "NPU": 4,
+      "H264_H265": 5,
+      "ETH": 6,
+      "MIPI": 7,
+      "DDR": 8,
+      "I2C0": 9
+    },
+    "harts": 2,
+    "mtime_hz": 20000000,
+    "firmware_image": {
+      "base": "0x80000000",
+      "size": "0x00400000"
+    }
+  },
+  "modeled": [
+    "2 harts RV32IMAFC M-mode (VP++)",
+    "FX1 bus with exclusive monitor",
+    "CLINT",
+    "PLIC",
+    "UART (PL011-style) + host TCP bridge",
+    "SYS_DMA",
+    "FX1 ISP",
+    "DDR3 controller (NATIVE_R2, DDR3-1600, 2 ranks 4 Gb x8, ECC; CSR, init, training, scrub, power, error injection from the host)",
+    "DDR_SYSCTRL sideband glue (VP only)",
+    "boot SRAM",
+    "sim-control finisher (VP only)",
+    "I2C0 host (functional)",
+    "camera with --camera: CSI-2 RX controller + DMA (MIPI_DMA), detailed D-PHY RX model, CCS-subset camera sensor model on I2C0"
+  ],
+  "absent": [
+    "NPU",
+    "H.264/H.265",
+    "Ethernet",
+    "SPI/QSPI",
+    "timers/WDT/PWM",
+    "GPIO",
+    "RTC",
+    "ADC",
+    "TRNG",
+    "OTP",
+    "PMU/CMU/clock-reset",
+    "caches",
+    "MMU"
+  ],
+  "camera": {
+    "built": true,
+    "option": "--camera [--camera-raw FILE]",
+    "dphy_model": "mipirxphy, converted to SystemC from RTL/netlists/analog models",
+    "dphy_model_provenance": "pending: supplier, owner and original licence not confirmed",
+    "firmware": "camera manager (CSI-2 -> ISP -> NV12), FreeRTOS CLI `camera` commands, camera and camera -> ISP examples",
+    "open_items": [
+      "RAW12 zero-copy writes the ISP's IDMA_BUF_ADDR outside the ISP driver: to be confirmed by the ISP owner"
+    ]
+  },
+  "isp_samples": [
+    {
+      "name": "d65",
+      "raw": "D65_raw_2688x1520_5376.raw",
+      "raw_sha256": "b0a001c3cfd89155561a23300925e54fcf126dde622b33b7a2cb05eaa744168b",
+      "profile_id": "shared_bggr_2688x1520_full",
+      "profile": "profiles/shared_bggr_2688x1520_full/profile.csrw",
+      "profile_sha256": "2da2871b7f9484dce12863c3d69d5683fcd145389560a5c622303a21ca525cb7",
+      "profile_bin_sha256": "de965ba72b35ec31e2c4d92f9753bb8a991658a13a1048e93d5242e827539a20",
+      "expected_nv12_sha256": "a24d0a566b65f1c4f434d9a42a1ffe18e3c2a8640a7ba4296ed67ecdf7a0e347",
+      "frames": 2,
+      "internal_only": false,
+      "auto_policy": "neutral-v1",
+      "auto_frames": 3,
+      "expected_auto_nv12_sha256": "a24d0a566b65f1c4f434d9a42a1ffe18e3c2a8640a7ba4296ed67ecdf7a0e347"
+    }
+  ],
+  "artefacts": {
+    "vp/bin/VP_FX1_V3.0/fx1_soc": {
+      "sha256": "22d7567382063807368d35b02ac24ff2e33ee86526eed19f7d3a2bf6674afebb",
+      "bytes": 30396896,
+      "tracked_by_sdk_repo": true
+    },
+    "vp/bin/VP_FX1_V3.0/libsystemc.so.2.3": {
+      "sha256": "25a3befe38f80b4bad3c7bac18f1e8ecdbfcfe69aef2939ac60f494770d4e518",
+      "bytes": 2413840,
+      "tracked_by_sdk_repo": true
+    },
+    "sw/bootloader/build/VP_FX1_V3.0/freertos_cli.dis": {
+      "sha256": "778d068517196b5564341060f4aa71253846dff5c6c22bd0984bce93aecc698d",
+      "bytes": 778479,
+      "tracked_by_sdk_repo": false
+    },
+    "sw/bootloader/build/VP_FX1_V3.0/freertos_cli.elf": {
+      "sha256": "9c2234aaab4a54e3317198feacf2c872cddcb8d066a958165b96e8223c4d308b",
+      "bytes": 525176,
+      "tracked_by_sdk_repo": false
+    },
+    "sw/bootloader/build/VP_FX1_V3.0/freertos_cli.map": {
+      "sha256": "85fb03c1463e486709ab15640b961c39da5509c486572a111524059c03901c6f",
+      "bytes": 94636,
+      "tracked_by_sdk_repo": false
+    },
+    "sw/bootloader/build/VP_FX1_V3.0/freertos_cli.sections.txt": {
+      "sha256": "28c29aa1871f04dbe5f48793ae6aeec6705080ad23fafa021fb037cb0f03d0c8",
+      "bytes": 633,
+      "tracked_by_sdk_repo": false
+    },
+    "sw/bootloader/build/VP_FX1_V3.0/fx1.ld": {
+      "sha256": "8556ff2c6d09fee15635ebf08dc200ee59b4a3b25168118569f72eedec49be42",
+      "bytes": 1323,
+      "tracked_by_sdk_repo": false
+    }
+  }
+}

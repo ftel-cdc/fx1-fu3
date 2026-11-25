@@ -1,0 +1,6 @@
+VP_FX1 SoC SDK
+CDC-VP source : 446bc77
+Built (UTC)   : 2026-07-07T08:22:16Z
+CPU backend   : riscv_vp (Bremen RV32IMAC)
+ABI           : rv32imac / ilp32, link base 0x80000000
+Memory/IRQ map: vp/doc/VP_FX1_SOC/peripheral_memory_map.md (docs @ 446bc77)
