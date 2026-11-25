@@ -47,10 +47,9 @@ components/
 ├── driver/                           # một target neon_mdf_driver
 │   ├── csi/                          # neon_csi.h + platform/fx1/neon_csi.c
 │   ├── phy/                          # neon_phy.h + platform/fx1/ (D-PHY)
-│   ├── isp/                          # neon_isp.h + platform/fx1/ (thanh ghi lấy từ ftel_isp) – xem mục 12
+│   ├── isp/                          # neon_isp.h + mã FTEL ISP v1.07 đã hợp nhất vào đây – xem mục 12
 │   ├── i2c/                          # neon_i2c.h
 │   └── gpio/                         # neon_gpio.h
-├── ftel_isp/                         # ISP v1.07 + 3A của vendor – TODO: tách vào driver/isp và neon_media_runtime/isp (mục 12)
 └── neon_media_runtime/               # thư mục nhóm
     ├── CMakeLists.txt                # chỉ add_subdirectory() các phần con theo Kconfig
     ├── core/
@@ -66,12 +65,7 @@ components/
     │   ├── sensor/                   # quản lý sensor + drivers/<tên_sensor>, tpg/
     │   ├── capture/                  # nhận frame từ CSI-2, xoay buffer
     │   └── control/                  # thực thi exposure/gain/focus, xử lý độ trễ áp dụng
-    ├── isp/
-    │   ├── include/
-    │   ├── pipeline/                 # điều phối luồng ISP
-    │   ├── statistics/               # nhận và chuẩn hoá statistics
-    │   ├── iq/                       # calibration + tuning (tách ra khi có tool tuning)
-    │   └── algorithms/               # AE, AWB, AF
+    ├── isp/                          # TODO: để trống, người phụ trách isp điền cấu trúc (mục 8)
     ├── video/                        # để sau
     ├── display/                      # để sau
     └── audio/                        # để sau
@@ -161,11 +155,7 @@ neon_mdf_media_isp ─────► neon_mdf_media_core
 
 ## 8. isp
 
-- **pipeline**: cấu hình input theo format của camera, start/stop theo thứ tự của core.
-- **statistics**: nhận statistics từ driver ISP, gắn `frame_id`, bỏ statistics của frame lỗi hoặc frame bị drop.
-- **algorithms**: AE (Auto Exposure), AWB (Auto White Balance), AF (Auto Focus). Phần thuần thuật toán không đụng thanh ghi hay RTOS, để chạy test trên PC được bằng statistics dump.
-- **iq**: dữ liệu calibration theo sensor/module (black level, LSC (Lens Shading Correction), ma trận màu) và cơ chế tuning.
-- Task 3A riêng, priority và stack qua Kconfig (`CONFIG_NEON_MDF_MEDIA_3A_TASK_PRIORITY`, `CONFIG_NEON_MDF_MEDIA_3A_TASK_STACK_SIZE`); có option tắt task để gọi tay khi debug.
+TODO: để trống, người phụ trách isp điền.
 
 ## 9. Mô hình task (FreeRTOS)
 
@@ -198,7 +188,7 @@ Các điểm này được driver CSI-2 thể hiện thành capability hoặc AP
 | M1 | Driver CSI-2 + TPG chạy trên FreeRTOS, dump RAW | Frame TPG đúng trong DDR |
 | M2 | `core/buffer` + `camera/capture`, pool N buffer | Stream liên tục, không leak, đếm drop đúng |
 | M3 | Sensor thật qua I2C, `camera/control` | Ảnh RAW từ sensor, chỉnh exposure/gain được |
-| M4 | `core/pipeline` + `isp/pipeline` | Pipeline CSI-2 → ISP chạy, start/stop ổn định |
+| M4 | `core/pipeline` + `isp` | Pipeline CSI-2 → ISP chạy, start/stop ổn định |
 | M5 | Statistics + AE/AWB + IQ | Ảnh hội tụ phơi sáng và cân bằng trắng |
 | M6 | Error recovery, HDR | Tự phục hồi khi có lỗi, ghép cặp Long/Short đúng |
 | Sau | video / display / audio, `core/clock` cho A/V sync | Thêm từng component theo nhu cầu |
@@ -208,7 +198,7 @@ Các điểm này được driver CSI-2 thể hiện thành capability hoặc AP
 - [x] Driver ISP cho `neon_mdf_media_isp` là `driver/isp` (`neon_isp.h`), cùng layout với `csi` và `phy`.
 - [ ] TODO: tách phần FTEL đã hợp nhất trong `components/driver/isp` thành hai phần:
   - Phần thanh ghi (các khối Bayer/RGB/YUV, output, DMA, đọc statistics, `registers/`) thành backend `driver/isp/platform/fx1/`. Hiện backend FX1 mới có simulation.
-  - Phần thuật toán (`isp_3a`, `ftel_isp_auto` và thư viện `libisp_3a.a`; AE tham chiếu trong driver đã được bỏ) chuyển vào `neon_media_runtime/isp/algorithms`.
+  - Phần thuật toán (`isp_3a`, `ftel_isp_auto` và thư viện `libisp_3a.a`; AE tham chiếu trong driver đã được bỏ) chuyển vào `neon_media_runtime/isp/`.
 - [ ] `neon_isp.h` có phải đổi để khớp ISP FX1 không: 4 slot xoay vòng, một frame chạy mỗi lần, WB chỉ áp khi ISP rảnh?
 - [ ] ISP có output DMA riêng không, hay app chỉ nhận RAW từ CSI-2?
 - [ ] CVA6 trên FX1 có hỗ trợ Zicbom (lệnh quản lý cache theo dòng) không?
