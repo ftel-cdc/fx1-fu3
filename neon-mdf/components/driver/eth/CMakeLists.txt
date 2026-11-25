@@ -6,6 +6,7 @@ if(CONFIG_NEON_MDF_DRIVER_ETH)
   )
   if(NEON_MDF_TARGET_${NEON_MDF_TARGET}_FAMILY STREQUAL "FX1")
     target_sources(neon_mdf_driver PRIVATE
+      platform/common/neon_eth_phy.c
       platform/fx1/reference/eth_drv.c
       platform/fx1/reference/fx1_eth.c
     )

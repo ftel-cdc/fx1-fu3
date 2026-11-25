@@ -1,6 +1,7 @@
 /**
  * @file main.c
- * @brief Check Neon ETH on FX1: polling, PLIC, ring wraps and stop/restart.
+ * @brief Check Neon ETH on FX1: PHY scan/MDIO/link, polling, PLIC, ring wraps, short frames,
+ *        live rate switch and stop/restart.
  */
 #include "neon.h"
 #include "fx1_fw.h"
@@ -31,12 +32,14 @@ static void check(int ok, const char *name) {
 static void receive_frame(void *context, const uint8_t *data, uint32_t size_bytes, uint32_t status) {
     (void)context;
     ++received;
-    if (size_bytes != expected_size || (status & 0x00070000U) != 0U) {
+    /* The MAC pads short frames with zeros to 60 bytes (ETH_TX_MIN_FRAME 64 with FCS). */
+    uint32_t wire_size = expected_size < 60U ? 60U : expected_size;
+    if (size_bytes != wire_size || (status & NEON_ETH_RX_STATUS_ERROR_MASK) != 0U) {
         ++bad_frames;
         return;
     }
     for (uint32_t i = 0U; i < size_bytes; ++i) {
-        if (data[i] != frame[i]) {
+        if (data[i] != (i < expected_size ? frame[i] : 0U)) {
             ++bad_frames;
             return;
         }
@@ -87,8 +90,15 @@ int main(void) {
     neon_eth_info_t info;
     neon_eth_stats_t stats;
     neon_eth_handle_t *duplicate = NULL;
-    neon_eth_config_t config = {
-        .mac_address = {0x02U, 0x00U, 0x46U, 0x58U, 0x31U, 0x01U}, .speed_mbps = 100U, .phy_loopback = 1U};
+    neon_eth_link_t link;
+    neon_eth_config_t config;
+    uint16_t phy_id1 = 0U;
+    check(neon_eth_get_default_config(&config) == NEON_OK && config.autonegotiation == 1U &&
+              config.phy_address == NEON_ETH_PHY_ADDRESS_SCAN,
+          "default config: autonegotiation, PHY scan");
+    config.autonegotiation = 0U;
+    config.speed_mbps = 100U;
+    config.phy_loopback = 1U;
     check(neon_eth_init(&eth, NEON_ETH0) == NEON_OK, "acquire ETH0");
     check(neon_eth_init(&duplicate, NEON_ETH0) == NEON_BUSY, "reject duplicate owner");
     check(neon_eth_transmit(eth, NULL, 60U) == NEON_INVALID_PARAM, "reject NULL TX");
@@ -97,12 +107,24 @@ int main(void) {
     config.speed_mbps = 100U;
     check(neon_eth_set_config(eth, &config) == NEON_OK, "configure 100 Mbps PHY loopback");
     check(neon_eth_register_callback(eth, receive_frame, NULL) == NEON_OK, "register RX callback");
+    config.phy_address = 32U;
+    check(neon_eth_set_config(eth, &config) == NEON_INVALID_PARAM, "reject PHY address 32");
+    config.phy_address = NEON_ETH_PHY_ADDRESS_SCAN;
+    check(neon_eth_set_config(eth, &config) == NEON_OK, "restore PHY scan");
     check(neon_eth_probe(eth, &info) == NEON_OK && info.mac_id == 0x45544801U && info.phy_id1 == 0x0007U &&
-              info.phy_id2 == 0xc0f1U,
-          "MAC and MDIO PHY identity");
+              info.phy_id2 == 0xc0f1U && info.phy_address == 1U,
+          "MAC identity, PHY found by scan at MDIO 1");
+    check(neon_eth_mdio_read(eth, 0U, 2U, &phy_id1) == NEON_ERROR, "MDIO 0 does not answer");
+    check(neon_eth_mdio_read(eth, 1U, 32U, &phy_id1) == NEON_INVALID_PARAM, "reject MDIO register 32");
     check(neon_eth_start(eth) == NEON_OK, "start MAC/DMA");
     check(neon_eth_deinit(eth) == NEON_BUSY, "retain live DMA handle");
     check(neon_eth_set_config(eth, &config) == NEON_BUSY, "reject live reconfiguration");
+    check(neon_eth_mdio_read(eth, 1U, 2U, &phy_id1) == NEON_OK && phy_id1 == 0x0007U, "MDIO read while running");
+    check(neon_eth_mdio_write(eth, 1U, 0U, 0x3100U) == NEON_BUSY, "refuse BMCR write while running");
+    check(neon_eth_get_link(eth, &link) == NEON_OK && link.up == 1U && link.speed_mbps == 100U &&
+              link.full_duplex == 1U,
+          "PHY loopback link 100 full duplex");
+    check(neon_eth_set_speed(eth, 1000U) == NEON_INVALID_PARAM, "reject MAC rate 1000");
     const uint32_t sizes[] = {60U, 61U, 512U, 1514U};
     for (uint32_t i = 0U; i < 40U; ++i) {
         exchange(i, sizes[i % 4U]);
@@ -116,14 +138,19 @@ int main(void) {
     fx1_global_irq_enable();
     exchange(40U, 1514U);
     check(irq_count > 0U, "PLIC source 6 invokes Neon IRQ handler");
+    check(neon_eth_transmit(eth, frame, 13U) == NEON_INVALID_PARAM, "reject 13-byte frame");
+    exchange(43U, 42U);
+    check(neon_eth_set_speed(eth, 10U) == NEON_OK, "switch running MAC to 10 Mbps");
+    check(neon_eth_set_speed(eth, 100U) == NEON_OK, "switch running MAC back to 100 Mbps");
+    exchange(44U, 1000U);
     check(neon_eth_stop(eth, 20000U) == NEON_OK, "quiescent stop");
     check(neon_eth_stop(eth, 0U) == NEON_OK, "repeat stop");
     check(neon_eth_start(eth) == NEON_OK, "restart rings");
     exchange(41U, 61U);
     check(neon_eth_stop(eth, 20000U) == NEON_OK, "stop after restart");
-    check(neon_eth_get_stats(eth, &stats) == NEON_OK && stats.tx_frames == 42U && stats.rx_frames == 42U &&
+    check(neon_eth_get_stats(eth, &stats) == NEON_OK && stats.tx_frames == 44U && stats.rx_frames == 44U &&
               stats.tx_errors == 0U && stats.rx_errors == 0U,
-          "42 TX/RX frames without descriptor errors");
+          "44 TX/RX frames without descriptor errors");
     check(neon_eth_deinit(eth) == NEON_OK, "release stopped handle");
     check(neon_eth_get_state(eth) == NEON_ETH_STATE_RESET, "released handle invalid");
     check(neon_eth_init(&eth, NEON_ETH0) == NEON_OK, "reacquire for 10 Mbps");

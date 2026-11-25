@@ -8,14 +8,16 @@ headers. The FX1 backend is selected by family through `CMakeLists.txt`, with
 eth/
   neon_eth.h                         public API, opaque driver-owned handle
   CMakeLists.txt                     optional family dispatch
-  platform/fx1/neon_eth.c             Neon API and single-instance ownership
+  platform/fx1/neon_eth.c             Neon API, single-instance ownership, live rate switch
+  platform/common/neon_eth_phy.c      Clause 22 PHY layer (scan, VSC8531 RMII, autoneg), private
   platform/fx1/reference/             imported MAC/DMA implementation, private
 ```
 
 The reference files are copied from `duyphan95z/fx1`, dev commit
 `3b368050398947c420f6d5f4504700e92fa0fa9c`, directory
 `sw/bootloader/sources/VP_FX1_V3.0/drivers/eth/`:
-`eth_drv.[ch]` and `fx1_eth.[ch]` are unchanged. Their names, comments and
+`eth_drv.[ch]` and `fx1_eth.[ch]` are unchanged (the PHY and the live rate
+switch are implemented outside them). Their names, comments and
 format are retained under the convention's third-party-wrapper exception.
 `reference/eth_regs.h` is a compatibility layer: it maps the original names
 to the header generated from `mcu-description/devices/FX1.yaml`. None of these
@@ -29,16 +31,40 @@ The reference driver implements the side effects required by MAS v1.0.7.
 
 ## Lifecycle
 
-`init` acquires the sole ETH0 handle on hart 0 with defaults (locally
-administered MAC `02:00:46:58:31:01`, 100 Mbps, PHY address 1). `set_config`
-optionally replaces MAC/speed/PHY-loopback before the first `start`.
+`init` acquires the sole ETH0 handle on hart 0 with the defaults of
+`neon_eth_get_default_config()` (locally administered MAC `02:00:46:58:31:01`,
+autonegotiation, PHY address scan). `set_config` replaces them before the first
+`start`; start from the defaults so new fields keep sane values.
 Register an RX callback, optionally `probe`, then `start` and `transmit`.
+
+## PHY
+
+The PHY belongs to this layer, not to the reference core (`cfg.phy_addr = -1`).
+The first `start` finds it (fixed address or the lowest of 0..31 whose ID1 is not
+0x0000/0xFFFF), then:
+
+- Microchip VSC8531 (ID 0x0007/0x057x, FPGA FMC+ card): selects RMII through
+  register 23[12:11] = 01 and a soft reset when it is still RGMII (managed mode);
+  in unmanaged mode the strap already did it (`docs/md/fpga/eth_fmc02_rmii_rework.md`).
+- autonegotiation: advertises 10/100 **full duplex only** (the MAC has no
+  half-duplex path), drops 1000BASE-T advertisement on PHYs with extended status,
+  restarts autonegotiation. The MAC starts at `speed_mbps`; the owner polls
+  `neon_eth_get_link()` and applies the result with `neon_eth_set_speed()`,
+  which follows MAS Table 9-7 while running (MAC enables off, MACs idle,
+  `ETH_RMII_CFG`, enables on; DMA keeps running).
+- forced rate or PHY loopback: BMCR written once, autonegotiation off.
+
+`neon_eth_mdio_read/write` give raw Clause 22 access for board bring-up; BMCR
+writes are refused while running. The VP PHY (ID 0x0007/0xC0F1 at MDIO 1)
+models BMSR link/AN-complete and ANLPAR 0x45E1 with `--eth-peer loopback|partner`,
+no link with `none`; the link does not change during a run.
 `process` delivers RX and reclaims TX; call it within its returned polling
 interval even when no IRQ arrives. Stop before deinit; after successful deinit
 all saved pointers to that handle are invalid. A later init acquires the same
 static storage. Reconfigure by stop/deinit/init, not by changing live rings.
 
-TX copies 60..1514 bytes (DA through payload, no FCS). RX callback data is
+TX copies 14..1514 bytes (DA through payload, no FCS); the MAC zero-pads
+frames shorter than 60 bytes. RX callback data is
 borrowed until the callback returns; copy it to retain it. DES0 is supplied
 for error/checksum inspection; error/truncated frames are not guaranteed valid
 network packets. Callbacks must not reenter the driver.
