@@ -1,5 +1,5 @@
 # Tích hợp driver ISP với FreeRTOS: owner task, IRQ, ticket và recovery.
-set(_isp_root "${NEON_MDF_PATH}/components/ftel_isp")
+set(_isp_root "${NEON_MDF_PATH}/components/driver/isp")
 add_library(ftel_isp_freertos STATIC ftel_isp_freertos.c)
 add_library(neon_mdf::ftel_isp_freertos ALIAS ftel_isp_freertos)
 target_include_directories(ftel_isp_freertos

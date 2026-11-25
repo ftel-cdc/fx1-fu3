@@ -8,6 +8,69 @@ Example hiện bật binary 3A trong `sdkconfig`. Xem
 trí `.a`/hai `.bin`, chế độ replay, AWB held và lựa chọn thử unscreened AWB.
 Pipeline vẫn dùng `.csrw`; startup WB lấy từ tuning binary khi 3A được bật.
 
+## Contract CSR/MAS ngày 24/11/2026
+
+Source hiện nhắm CSR XLSX 626 thanh ghi/886 field và MAS ngày 24/11/2026.
+`COMMON_VER_ID` vẫn là `0x00010007`; driver còn yêu cầu capability INPUT_PAD
+và INPUT_STREAM. VP cũ 621/867 chưa chạy được firmware này. Các kết quả VP
+ngày 23/11 ở cuối trang là baseline trước cập nhật, không xác nhận contract mới.
+Chỉ build và chạy host checks trong lúc chờ VP mới; chưa xác nhận chất lượng ảnh,
+handshake stream hay timing/recovery trên VP mới.
+
+- IFMT: `ifmt.crop=false` mặc định padding cùng màu CFA; DDR giữ kích thước
+  chẵn có giới hạn 3840×2160. AXI4-Stream không replay được hàng parity cuối:
+  pad-height là `min(H-SV,2160)&~1`. `crop=true` giữ geometry legacy.
+- Hai profile example đặt rõ `COMMON_INPUT_FORMAT 0x4` (RAW12, crop) để giữ
+  geometry lưới AEC/AWB hiện có. Chuyển sang pad cần tính lại vùng thống kê,
+  crop/resize và dữ liệu UE/OE ROI; không tái dùng fixture một cách mặc định.
+- CNF dùng `CNF_GF_EPS` 16 bit, đơn vị luma². Example chọn startup default 200;
+  đây không phải phép chuyển đổi tương đương từ hai threshold cũ. Generator từ
+  chối `CNF_CHROMA_TH`/`CNF_LUMA_TH`; profile bên ngoài cần chuyển rõ ràng.
+- LSC: UQ3.18 nonzero, unity `0x40000`, tối đa `0x1FFFFF`. CCM matrix/offset
+  signed Q3.9; offset code 512 cộng một mức pixel. Không dùng quy ước offset
+  theo pixel trực tiếp của extension VP cũ.
+- `ifmt.source=IFMT_SOURCE_STREAM`, `ifmt.drop` chọn nguồn và hold/drop.
+  `ifmt_read_stream_status()` đọc lỗi/counter; clear lỗi stream và DMA_ERR.STREAM
+  là hai thao tác riêng. `isp_init()` cấu hình nguồn và bỏ IDMA buffers/stride
+  khi stream. API submit/release `isp_stream_*` vẫn dành cho DDR; caller live
+  quản lý admission, output ownership và bật DMA riêng sau init. `DMA_CTRL.IDMA_EN`
+  bật đường vào cho cả hai nguồn; không đánh dấu IDMA buffer VALID khi live.
+- `aec_global_stats_t` bổ sung `ue_percent_q8`/`oe_percent_q8` của frame leased;
+  100% = `0x6400`. Đây là thống kê AEC toàn frame, không thay UE/OE từng ROI AWB.
+- Chờ `LSC_PROFILE_STATUS.PREP_BUSY` trước ghi IDLE kế tiếp; chờ
+  `TUNE_STATUS.CHECK_BUSY` sau xác nhận bảng. Dùng COMMON_STATUS.BUSY khi chờ
+  hết frame; BUSY riêng của block không đảm bảo toàn pipeline đã drain.
+
+Từ gốc SDK, đặt `CSR_FILE` trỏ tới workbook mới rồi tái sinh:
+
+```sh
+python3 neon-mdf/mcu-description/tools/import_fx1_isp.py \
+  --csr "$CSR_FILE" \
+  --regmap neon-mdf/arch/RISCV/Device/FTEL/FX1/Include/fx1_isp/fx1_isp_csr.h \
+  --generate-regmap --driver-regmaps neon-mdf/components/driver/isp/registers
+python3 neon-mdf/mcu-description/tools/generate.py --device FX1
+python3 neon-mdf/mcu-description/tools/check_fx1.py --csr "$CSR_FILE"
+make -C neon-mdf/tests/camera_hal test
+```
+
+Kiểm tra phần mềm ngày 25/11/2026:
+
+- CSR trực tiếp ↔ regmap ↔ YAML ↔ SVD: PASS, 626 register/886 field,
+  10.283 hằng số C; tái sinh lần hai khớp từng byte.
+- Host camera HAL và contract mới: PASS, 1.255 checks, 0 lỗi; gồm 82 checks
+  cho geometry, giới hạn hệ số, capability, timeout, stream readout và AEC lease.
+- Generator từ chối profile CNF cũ, LSC zero/8x và register không ánh xạ.
+- GCC RISC-V 15.2: ISP Image 3A bật/5 frame, Image 3A tắt/1 frame với camera
+  runtime bật, Image FreeRTOS và các target ISP_Bayer_AE đều cross-build PASS.
+- Chưa chạy firmware mới trên VP. Các kiểm tra host dùng MMIO fixture, không
+  xác nhận timing/handshake của RTL hoặc VP mới.
+
+Khi VP mới sẵn sàng, kiểm chứng pad/crop cả bốn CFA, DDR/stream hold/drop,
+short/long line và early SOF, IRQ stream bit 7, timeout/check completion,
+LSC zero/max/active-load rejection, AEC lease/Q7.8 và DMA recovery. Sau đó chạy
+A/A_awb 5 frame, lưu từng frame riêng và so ảnh với baseline cũ; CNF mới có
+thuật toán khác nên không yêu cầu ảnh khớp byte.
+
 ## 1. Chuẩn bị
 
 Thực hiện [bước chuẩn bị terminal](FX1_FREERTOS.md#1-chuẩn-bị-terminal) từ
@@ -139,7 +202,7 @@ CH0 NV12. Có thể đổi gain/CCM, các bảng và enable của khối trong s
 Giữ đúng thứ tự lệnh nạp/confirm. Register lạ, LUT thiếu hoặc các mode chưa
 hỗ trợ sẽ bị từ chối. Cấu hình còn phải qua kiểm tra tham số của driver khi chạy.
 Driver BLC hỗ trợ G0..G7; generator profile của app ánh xạ G0.
-LSC dùng UQ4.18, hệ số tối đa 8x (`0x200000`).
+LSC dùng UQ3.18, hệ số hợp lệ `0x000001..0x1FFFFF` (nhỏ hơn 8x).
 Input app cố định 2688×1520; runner hỗ trợ ba cách đóng gói RAW ở mục 3.
 Đổi Bayer trong profile phải tương ứng dữ liệu RAW (runner không tự nhận Bayer).
 

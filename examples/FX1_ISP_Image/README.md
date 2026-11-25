@@ -48,7 +48,7 @@ binary thay WB của profile nên ảnh không còn dùng hash chuẩn đó.
 Các file bàn giao đặt tại:
 
 ```text
-neon-mdf/components/ftel_isp/algorithms/isp_3a/
+neon-mdf/components/driver/isp/algorithms/isp_3a/
   include/fpt_3a.h
   lib/fx1/libisp_3a.a
 examples/FX1_ISP_Image/profile/
@@ -67,7 +67,7 @@ assembly `.incbin`, giữ chúng ở vùng read-only trong ELF. Không sửa hea
 profile hay file trong `build/.../generated/` bằng tay.
 
 Chế độ mặc định `FX1_3A_REPLAY=ON` vì binary IMX675 mô tả 2592×1944 RGGB
-RAW10, khác RAW của example. AE tạo đề xuất tham chiếu, không áp exposure/gain
+RAW10, khác RAW của example. 3A binary tạo đề xuất exposure/gain, không áp exposure/gain
 lên ảnh RAW đã nạp. Các giá trị `3A_EFFECTIVE_*` giữ metadata baseline của
 replay; không phải controls đã được xác nhận trên sensor thật.
 

@@ -206,9 +206,9 @@ Các điểm này được driver CSI-2 thể hiện thành capability hoặc AP
 ## 12. Câu hỏi mở
 
 - [x] Driver ISP cho `neon_mdf_media_isp` là `driver/isp` (`neon_isp.h`), cùng layout với `csi` và `phy`.
-- [ ] TODO: tách `components/ftel_isp` thành hai phần, rồi bỏ component này:
+- [ ] TODO: tách phần FTEL đã hợp nhất trong `components/driver/isp` thành hai phần:
   - Phần thanh ghi (các khối Bayer/RGB/YUV, output, DMA, đọc statistics, `registers/`) thành backend `driver/isp/platform/fx1/`. Hiện backend FX1 mới có simulation.
-  - Phần thuật toán (`isp_3a`, AE tham chiếu, `ftel_isp_auto` và thư viện `libisp_3a.a`) chuyển vào `neon_media_runtime/isp/algorithms`.
+  - Phần thuật toán (`isp_3a`, `ftel_isp_auto` và thư viện `libisp_3a.a`; AE tham chiếu trong driver đã được bỏ) chuyển vào `neon_media_runtime/isp/algorithms`.
 - [ ] `neon_isp.h` có phải đổi để khớp ISP FX1 không: 4 slot xoay vòng, một frame chạy mỗi lần, WB chỉ áp khi ISP rảnh?
 - [ ] ISP có output DMA riêng không, hay app chỉ nhận RAW từ CSI-2?
 - [ ] CVA6 trên FX1 có hỗ trợ Zicbom (lệnh quản lý cache theo dòng) không?

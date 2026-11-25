@@ -63,6 +63,10 @@ def array(name, field, count):
     return data
 
 scalar('ifmt.bayer', 'COMMON_BAYER')
+scalar('ifmt.depth', 'COMMON_INPUT_FORMAT', mask=3)
+scalar('ifmt.crop', 'COMMON_INPUT_FORMAT', 2, 1)
+put('ifmt.source', 'IFMT_SOURCE_DDR')
+put('ifmt.drop', 'false')
 scalar('blc.enable', 'BLC_CTRL', mask=1)
 require(get('BLC_GAIN_SEL') & 7 == 0, 'Profile schema configures BLC gain group 0 only')
 scalar('blc.gain_level', 'BLC_GAIN_SEL', mask=7)
@@ -85,7 +89,8 @@ require(get('LSC_PROFILE_SEL') in (1, 2), 'Cold-init LSC supports resident 1 or 
 require(pairs_by_name.get('LSC_LOAD_CTRL', []) == [0x100 | values['LSC_PROFILE_SEL'], 0x200 | values['LSC_PROFILE_SEL']], 'LSC_LOAD_CTRL must BEGIN/VALIDATE the selected resident')
 used.add('LSC_LOAD_CTRL')
 count = 4 * (values['LSC_MESH_NODES'] & 255) * (values['LSC_MESH_NODES'] >> 8)
-array('LSC_COEF_DATA', 'full_lsc', count)
+lsc_data = array('LSC_COEF_DATA', 'full_lsc', count)
+require(all(1 <= v <= 0x1fffff for v in lsc_data), 'LSC requires nonzero UQ3.18, less than 8x')
 for i in range(3):
     put(f'lsc.coefficients[{i}]', 'full_lsc' if i == values['LSC_PROFILE_SEL'] else 'NULL')
     put(f'lsc.coefficient_count[{i}]', count if i == values['LSC_PROFILE_SEL'] else 0)
@@ -122,8 +127,7 @@ lines += ['    for (unsigned i = 0; i < 64; ++i) {',
           '    for (unsigned i = 0; i < 32; ++i) {',
           '        cfg->ee.resident[0].contrast_positive[i] = full_ee[128+i];',
           '        cfg->ee.resident[0].contrast_negative[i] = full_ee[160+i];', '    }']
-scalar('cnf.chroma_threshold', 'CNF_CHROMA_TH')
-scalar('cnf.luma_threshold', 'CNF_LUMA_TH')
+scalar('cnf.gf_eps', 'CNF_GF_EPS', mask=0xffff)
 require(get('CNF_CTRL') & ~5 == 0, 'Unsupported CNF_CTRL bits')
 scalar('output.channel[0].resizer.enable', 'RESIZER_CTRL', mask=1)
 scalar('output.channel[0].resizer.preset', 'RESIZER_CTRL', 3, 31)

@@ -13,7 +13,7 @@ neon_mdf_add_freertos(FX1 ${CMAKE_CURRENT_SOURCE_DIR}/Inc)
 neon_mdf_add_executable(isp_bayer_ae Src/main.c)
 target_link_libraries(isp_bayer_ae PRIVATE neon_mdf::ftel_isp neon_mdf::freertos)
 # Regmap chỉ dùng cho các kiểm tra readback trong chương trình bring-up.
-target_include_directories(isp_bayer_ae PRIVATE ${NEON_MDF_PATH}/components/ftel_isp)
+target_include_directories(isp_bayer_ae PRIVATE ${NEON_MDF_PATH}/components/driver/isp)
 set_target_properties(isp_bayer_ae PROPERTIES SUFFIX ".elf")
 # Runner VP tùy chọn; configure/build ELF không cần repo/binary VP.
 include(${NEON_MDF_PATH}/cmake/runners/fx1-vp.cmake)

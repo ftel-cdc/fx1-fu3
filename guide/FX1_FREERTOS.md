@@ -143,8 +143,8 @@ lưu FPU, không bật thêm cơ chế lưu native của kernel.
 | `neon-mdf/rtos/FreeRTOS-Kernel/` | Kernel hiện có, dùng chung các target |
 | `neon-mdf/rtos/port/fx1/` | Nối trap/PLIC và lưu context FPU FX1 |
 | `neon-mdf/rtos/services/ftel_isp/` | Worker ISP, queue/ticket, IRQ, timeout và recovery |
-| `neon-mdf/components/ftel_isp/include/ftel_isp.h` | API Bayer/AEC/frame độc lập OS |
-| `neon-mdf/components/ftel_isp/pipeline/` | Init, submit/collect/recovery; giữ API init/stream toàn pipeline |
+| `neon-mdf/components/driver/isp/include/ftel_isp.h` | API Bayer/AEC/frame độc lập OS |
+| `neon-mdf/components/driver/isp/pipeline/` | Init, submit/collect/recovery; giữ API init/stream toàn pipeline |
 | `neon-mdf/mcu-description/devices/FX1.yaml` | Mô tả CPU, memory, IRQ và thanh ghi |
 | `neon-mdf/arch/RISCV/Device/FTEL/FX1/` | BSP, startup/linker local, header sinh từ YAML và IRQ adapter |
 | `examples/ISP_Bayer_AE/Inc/FreeRTOSConfig.h` | Cấu hình FreeRTOS cho các bài ISP |

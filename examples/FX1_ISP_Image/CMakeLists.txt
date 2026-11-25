@@ -65,8 +65,8 @@ if(TARGET neon_mdf_isp_3a_binary)
   set_target_properties(fx1_isp_image_vp PROPERTIES EXCLUDE_FROM_ALL TRUE)
   target_link_libraries(fx1_isp_image_vp PRIVATE neon_mdf_ftel_isp)
   target_include_directories(fx1_isp_image_vp PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated"
-    "${NEON_MDF_PATH}/components/ftel_isp/pipeline"
-    "${NEON_MDF_PATH}/components/ftel_isp/algorithms/isp_3a/include")
+    "${NEON_MDF_PATH}/components/driver/isp/pipeline"
+    "${NEON_MDF_PATH}/components/driver/isp/algorithms/isp_3a/include")
   target_compile_definitions(fx1_isp_image_vp PRIVATE ${_image_definitions})
   target_link_options(fx1_isp_image_vp PRIVATE -Wl,--wrap=ftel_isp_auto_collect)
   if(FX1_IMAGE_FRAME_COUNT GREATER 4)

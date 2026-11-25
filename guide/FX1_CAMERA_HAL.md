@@ -336,12 +336,13 @@ neon_isp_load_profile(&isp, bin, size, &info);  /* ISP dừng; xong thì phải 
 | 6 | Vòng đời | Xong: `init/deinit/get_caps/get_status/start/stop/recover` |
 | 7 | `int` và bảng ops | Xong: `neon_status_t`, hàm gọi trực tiếp, runtime đã đổi theo |
 | 8 | Backend mô phỏng thật | Xong: `fx1_isp_simulation.c` (hook: scene, process, lỗi AXI, observer, đếm) |
-| 9 | Hai bản ISP | **Chưa làm**: backend ghi thanh ghi của `driver/isp` chưa có. `components/ftel_isp` chạy từng frame ở slot 0 bằng polling, không có vòng DMA quay, nên chỉ làm điểm xuất phát chứ chưa bọc thẳng được |
+| 9 | Hai bản ISP | **Chưa làm**: backend ghi thanh ghi của `driver/isp` chưa có. `components/driver/isp` chạy từng frame ở slot 0 bằng polling, không có vòng DMA quay, nên chỉ làm điểm xuất phát chứ chưa bọc thẳng được |
 
-Hồi quy cần xử lý (chưa sửa): diff chưa commit của `neon-mdf/CMakeLists.txt` và `neon-mdf/Kconfig` bỏ
-`add_subdirectory(components/ftel_isp)` và `rsource components/ftel_isp/Kconfig`. `examples/FX1_ISP_Image`
-cần target `neon_mdf_ftel_isp` và `CONFIG_NEON_MDF_FTEL_ISP=y` nên sẽ dừng khi configure. `FX1_ISP_Image_FreeRTOS`
-và `ISP_Bayer_AE` cũng tham chiếu `ftel_isp` trong CMakeLists. Đã cross-build và chạy VP trong lần kiểm chứng port.
+Mã ISP thanh ghi đã được hợp nhất trực tiếp vào `components/driver/isp`, giữ nguyên
+`neon_mdf_ftel_isp` và alias `neon_mdf::ftel_isp`. CMake của driver tạo target này
+khi `CONFIG_NEON_MDF_FTEL_ISP` hoặc `NEON_MDF_ENABLE_FTEL_ISP` bật; Kconfig được nạp
+từ `components/driver/isp/Kconfig`. Hai API ISP vẫn giữ nguyên hành vi và backend.
+Các example `FX1_ISP_Image`, `FX1_ISP_Image_FreeRTOS` và `ISP_Bayer_AE` tiếp tục dùng target tương thích.
 
 ## 12. Rà soát tính đúng đắn (2026-11-16)
 

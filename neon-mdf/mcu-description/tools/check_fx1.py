@@ -21,8 +21,8 @@ def check(args):
     header = args.regmap or ROOT / "arch/RISCV/Device/FTEL/FX1/Include/fx1_isp/fx1_isp_csr.h"
     device = load_device(description)
     registers = next(p for p in device.peripherals if p.name == "ISP").registers
-    if args.isp_sdk is not None:
-        expected, _ = isp_block(args.isp_sdk / "docs/FTEL_IP_ISP_CSR_v1.07.xlsx", header)
+    if args.csr is not None or args.isp_sdk is not None:
+        expected, _ = isp_block(args.csr if args.csr is not None else args.isp_sdk / "docs/FTEL_IP_ISP_CSR_v1.07.xlsx", header)
         actual = description.read_text(encoding="utf-8")
         if BEGIN + actual.split(BEGIN, 1)[1].split(END, 1)[0] + END != expected:
             raise ValueError("Phần ISP trong YAML lệch CSR/regmap; chạy lại import_fx1_isp.py")
@@ -40,7 +40,7 @@ def check(args):
     # Biên dịch đối chiếu từng macro độc lập; không chỉ so hai lần cùng bộ dữ liệu Python.
     definitions = subprocess.check_output(
         [args.cc, "-E", "-dM", "-x", "c", "-I", str(include),
-         "-I", str(ROOT / "components/ftel_isp/registers"),
+         "-I", str(ROOT / "components/driver/isp/registers"),
          "-I", str(args.bsp_include), "-"],
         input="\n".join(source) + "\n", text=True)
     names = re.findall(r"^#define\s+(FX1_ISP_\w+)\s+", definitions, re.M)
@@ -71,7 +71,7 @@ def check(args):
         cfile = Path(temp) / "registers.c"
         cfile.write_text("\n".join(source) + "\n", encoding="utf-8")
         subprocess.run([args.cc, "-std=c11", "-Wall", "-Wextra", "-Werror", "-fsyntax-only",
-                        "-I", str(include), "-I", str(ROOT / "components/ftel_isp/registers"),
+                        "-I", str(include), "-I", str(ROOT / "components/driver/isp/registers"),
                         "-I", str(args.bsp_include),
                         str(cfile)], check=True)
     svd = ET.parse(ROOT / "mcu-description/generated/FX1.svd").getroot()
@@ -128,11 +128,12 @@ def check(args):
                 peripheral_slots=len(device.peripherals), registers=sum(len(p.registers) for p in device.peripherals),
                 irq_sources=len(device.interrupts), c_constants_compared=checks, svd_registers=svd_count,
                 invalid_descriptions_rejected=rejected, compiler=args.cc,
-                csr_xlsx_checked=args.isp_sdk is not None, regmap=str(header), bsp_include=str(args.bsp_include))
+                csr_xlsx_checked=args.csr is not None or args.isp_sdk is not None, regmap=str(header), bsp_include=str(args.bsp_include))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--csr", type=Path, help="Đối chiếu trực tiếp CSR XLSX")
     parser.add_argument("--isp-sdk", type=Path, help="Tùy chọn: đối chiếu thêm CSR XLSX trong repo SDK tham khảo")
     parser.add_argument("--regmap", type=Path, help="Đối chiếu header cụ thể, ví dụ regmap local trong module")
     parser.add_argument("--bsp-include", type=Path)

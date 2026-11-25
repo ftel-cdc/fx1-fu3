@@ -1,3 +1,5 @@
+# Contract 2026-11-24. Explicit legacy crop preserves the existing statistics grid.
+COMMON_INPUT_FORMAT 0x4
 # Application-owned tuning profile; WB, exposure via DG and normalized CCM.
 # Shared fixed full test profile for 2688x1520 BGGR frames.
 # V2 colour/detail tuning selected 2026-10-13; WB gains stay fixed across inputs.
@@ -1118,8 +1120,8 @@ EE_BETA 0x4000
 EE_CLAMP 0x281E
 EE_LUT_CTRL 0x100
 EE_CTRL 0x1
-CNF_CHROMA_TH 0x1E
-CNF_LUMA_TH 0x14
+# Guided-filter epsilon uses new units; 200 is the CSR startup default.
+CNF_GF_EPS 0xC8
 CNF_CTRL 0x5
 RESIZER_CTRL 0x2D
 AEC_ZONE_CFG 0x1820

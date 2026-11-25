@@ -20,7 +20,7 @@
 #define NEON_FX1_ACCESS_UNKNOWN 7u
 #define NEON_FX1_ACCESS_WO 8u
 
-/* ISP FX1 CSR v1.07 + VP extension 0x20261109 (ISP-UPD-001/002/007); FX1 header is authoritative. */
+/* ISP FX1 v1.07; đủ register/field từ sheet Flat Registers của CSR. Địa chỉ base theo BSP VP_FX1_V3.0; không thay thế xác nhận map silicon. */
 #define NEON_FX1_ISP_BASE 0x11000000u
 /* Fixed register-map revision date, BCD; not a build timestamp. */
 #define NEON_FX1_ISP_COMMON_VER_DATE_OFFSET FX1_ISP_COMMON_VER_DATE_OFFSET
@@ -87,7 +87,7 @@
 #define NEON_FX1_ISP_COMMON_CTRL_SOFT_RST_SHIFT FX1_ISP_COMMON_CTRL_SOFT_RST_SHIFT
 #define NEON_FX1_ISP_COMMON_CTRL_SOFT_RST_WIDTH FX1_ISP_COMMON_CTRL_SOFT_RST_WIDTH
 #define NEON_FX1_ISP_COMMON_CTRL_SOFT_RST_MASK FX1_ISP_COMMON_CTRL_SOFT_RST_MASK
-#define NEON_FX1_ISP_COMMON_CTRL_SOFT_RST_ACCESS NEON_FX1_ACCESS_W1SC
+#define NEON_FX1_ISP_COMMON_CTRL_SOFT_RST_ACCESS NEON_FX1_ACCESS_W1P
 #define NEON_FX1_ISP_COMMON_CTRL_SOFT_RST_RESET FX1_ISP_COMMON_CTRL_SOFT_RST_RESET
 /* Software Frame Trigger (compatibility) Retained for register compatibility only. A write of 1 is accepted, self-clears and has no effect on the input DMA, admission or any other state. The input DMA starts a frame whenever its head buffer is valid; mark exactly one input buffer valid for single-shot operation. */
 #define NEON_FX1_ISP_COMMON_CTRL_FRAME_START_SHIFT FX1_ISP_COMMON_CTRL_FRAME_START_SHIFT
@@ -99,8 +99,8 @@
 #define NEON_FX1_ISP_COMMON_CTRL_RW_MASK 0x00000001u
 #define NEON_FX1_ISP_COMMON_CTRL_W1C_MASK 0x00000000u
 #define NEON_FX1_ISP_COMMON_CTRL_W1S_MASK 0x00000004u
-#define NEON_FX1_ISP_COMMON_CTRL_W1P_MASK 0x00000000u
-#define NEON_FX1_ISP_COMMON_CTRL_W1SC_MASK 0x00000002u
+#define NEON_FX1_ISP_COMMON_CTRL_W1P_MASK 0x00000002u
+#define NEON_FX1_ISP_COMMON_CTRL_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_COMMON_CTRL_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_COMMON_CTRL_WO_MASK 0x00000000u
 /* COMMON: global pipeline status, read-only. */
@@ -196,12 +196,12 @@
 #define NEON_FX1_ISP_COMMON_IRQ_EN_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_COMMON_IRQ_EN_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_COMMON_IRQ_EN_WO_MASK 0x00000000u
-/* COMMON: input frame width before Bayer phase alignment. The Input Formatter may discard one leading column, then rounds the remaining width down to even. Program legal DMA geometry. Input-domain changes require stopped/drained legacy mode; reject in profile mode with MODE, preserve state. Accepted changes invalidate dependent LSC/EE residents and output geometry. */
+/* Even external width 32..3842. CROP=0: active W=min(Win,3840)&~1 with IDMA replay; CROP=1: active W=(Win-SH)&~1. Active dimension must be 32..3840. IDMA allocation uses external dimensions; downstream uses active geometry. */
 #define NEON_FX1_ISP_COMMON_FRAME_WIDTH_OFFSET FX1_ISP_COMMON_FRAME_WIDTH_OFFSET
 #define NEON_FX1_ISP_COMMON_FRAME_WIDTH_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_COMMON_FRAME_WIDTH_RESET_KNOWN 1u
 #define NEON_FX1_ISP_COMMON_FRAME_WIDTH_RESET FX1_ISP_COMMON_FRAME_WIDTH_RESET
-/* External Samples Per Line Even external input width before Bayer phase trim, 32..3842. Active W=(Win-SH)&~1 must be 32..3840. IDMA reads the external width; downstream coordinates use the derived active width. */
+/* Even external width 32..3842. CROP=0: active W=min(Win,3840)&~1 with IDMA replay; CROP=1: active W=(Win-SH)&~1. Active dimension must be 32..3840. IDMA allocation uses external dimensions; downstream uses active geometry. */
 #define NEON_FX1_ISP_COMMON_FRAME_WIDTH_H_ACTIVE_SHIFT FX1_ISP_COMMON_FRAME_WIDTH_H_ACTIVE_SHIFT
 #define NEON_FX1_ISP_COMMON_FRAME_WIDTH_H_ACTIVE_WIDTH FX1_ISP_COMMON_FRAME_WIDTH_H_ACTIVE_WIDTH
 #define NEON_FX1_ISP_COMMON_FRAME_WIDTH_H_ACTIVE_MASK FX1_ISP_COMMON_FRAME_WIDTH_H_ACTIVE_MASK
@@ -215,12 +215,12 @@
 #define NEON_FX1_ISP_COMMON_FRAME_WIDTH_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_COMMON_FRAME_WIDTH_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_COMMON_FRAME_WIDTH_WO_MASK 0x00000000u
-/* COMMON: input frame height before Bayer phase alignment. The Input Formatter may discard one leading row, then rounds the remaining height down to even. Input DMA requires an even input height. Input-domain changes require stopped/drained legacy mode; reject in profile mode with MODE, preserve state. Accepted changes invalidate dependent LSC/EE residents and output geometry. */
+/* Even external height 32..2162. CROP=0: active H=min(Hin,2160)&~1 with IDMA replay; CROP=1: active H=(Hin-SV)&~1. Active dimension must be 32..2160. IDMA allocation uses external dimensions; downstream uses active geometry. */
 #define NEON_FX1_ISP_COMMON_FRAME_HEIGHT_OFFSET FX1_ISP_COMMON_FRAME_HEIGHT_OFFSET
 #define NEON_FX1_ISP_COMMON_FRAME_HEIGHT_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_COMMON_FRAME_HEIGHT_RESET_KNOWN 1u
 #define NEON_FX1_ISP_COMMON_FRAME_HEIGHT_RESET FX1_ISP_COMMON_FRAME_HEIGHT_RESET
-/* External Lines Per Frame Even external input height before Bayer phase trim, 32..2162. Active H=(Hin-SV)&~1 must be 32..2160. IDMA reads the external height; downstream coordinates use the derived active height. */
+/* Even external height 32..2162. CROP=0: active H=min(Hin,2160)&~1 with IDMA replay; CROP=1: active H=(Hin-SV)&~1. Active dimension must be 32..2160. IDMA allocation uses external dimensions; downstream uses active geometry. */
 #define NEON_FX1_ISP_COMMON_FRAME_HEIGHT_V_ACTIVE_SHIFT FX1_ISP_COMMON_FRAME_HEIGHT_V_ACTIVE_SHIFT
 #define NEON_FX1_ISP_COMMON_FRAME_HEIGHT_V_ACTIVE_WIDTH FX1_ISP_COMMON_FRAME_HEIGHT_V_ACTIVE_WIDTH
 #define NEON_FX1_ISP_COMMON_FRAME_HEIGHT_V_ACTIVE_MASK FX1_ISP_COMMON_FRAME_HEIGHT_V_ACTIVE_MASK
@@ -291,18 +291,18 @@
 #define NEON_FX1_ISP_BLC_CTRL_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_CTRL_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_CTRL_WO_MASK 0x00000000u
-/* Select BLC profile G0..G7 (ISP-UPD-002). Apply per-channel scale of selected BLC profile; 0 selects unity. */
+/* BLC: selects one of eight offset and per-channel range-scale profiles, G0..G7. */
 #define NEON_FX1_ISP_BLC_GAIN_SEL_OFFSET FX1_ISP_BLC_GAIN_SEL_OFFSET
 #define NEON_FX1_ISP_BLC_GAIN_SEL_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_GAIN_SEL_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_GAIN_SEL_RESET FX1_ISP_BLC_GAIN_SEL_RESET
-/* Select BLC profile G0..G7 (ISP-UPD-002). */
+/* Active Offset/Scale Profile Select Selects the complete DFT, R/Gr/Gb/B trims and R/Gr/Gb/B scales for profile G0..G7. Captured at accepted SOF. */
 #define NEON_FX1_ISP_BLC_GAIN_SEL_GAIN_LEVEL_SHIFT FX1_ISP_BLC_GAIN_SEL_GAIN_LEVEL_SHIFT
 #define NEON_FX1_ISP_BLC_GAIN_SEL_GAIN_LEVEL_WIDTH FX1_ISP_BLC_GAIN_SEL_GAIN_LEVEL_WIDTH
 #define NEON_FX1_ISP_BLC_GAIN_SEL_GAIN_LEVEL_MASK FX1_ISP_BLC_GAIN_SEL_GAIN_LEVEL_MASK
 #define NEON_FX1_ISP_BLC_GAIN_SEL_GAIN_LEVEL_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_GAIN_SEL_GAIN_LEVEL_RESET FX1_ISP_BLC_GAIN_SEL_GAIN_LEVEL_RESET
-/* Apply per-channel scale of selected BLC profile; 0 selects unity. */
+/* Range Rescale Enable 1 applies the selected Bayer-channel scale after pedestal subtraction. 0 selects exact unity for every channel. Reset 1; captured with the frame configuration. */
 #define NEON_FX1_ISP_BLC_GAIN_SEL_RANGE_SCALE_EN_SHIFT FX1_ISP_BLC_GAIN_SEL_RANGE_SCALE_EN_SHIFT
 #define NEON_FX1_ISP_BLC_GAIN_SEL_RANGE_SCALE_EN_WIDTH FX1_ISP_BLC_GAIN_SEL_RANGE_SCALE_EN_WIDTH
 #define NEON_FX1_ISP_BLC_GAIN_SEL_RANGE_SCALE_EN_MASK FX1_ISP_BLC_GAIN_SEL_RANGE_SCALE_EN_MASK
@@ -696,12 +696,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G3_B_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G3_B_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G3_B_WO_MASK 0x00000000u
-/* BLC_OFS_G4_DFT; FX1 VP extension. */
+/* BLC: profile G4 shared pedestal. Subtracted from every channel; the per-channel registers add a trim on top. */
 #define NEON_FX1_ISP_BLC_OFS_G4_DFT_OFFSET FX1_ISP_BLC_OFS_G4_DFT_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G4_DFT_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G4_DFT_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G4_DFT_RESET FX1_ISP_BLC_OFS_G4_DFT_RESET
-/* OFS_G4_DFT */
+/* Profile G4 Shared Black Level Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 200. */
 #define NEON_FX1_ISP_BLC_OFS_G4_DFT_OFS_G4_DFT_SHIFT FX1_ISP_BLC_OFS_G4_DFT_OFS_G4_DFT_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G4_DFT_OFS_G4_DFT_WIDTH FX1_ISP_BLC_OFS_G4_DFT_OFS_G4_DFT_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G4_DFT_OFS_G4_DFT_MASK FX1_ISP_BLC_OFS_G4_DFT_OFS_G4_DFT_MASK
@@ -715,12 +715,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G4_DFT_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G4_DFT_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G4_DFT_WO_MASK 0x00000000u
-/* BLC_OFS_G4_R; FX1 VP extension. */
+/* BLC: profile G4 red trim. */
 #define NEON_FX1_ISP_BLC_OFS_G4_R_OFFSET FX1_ISP_BLC_OFS_G4_R_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G4_R_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G4_R_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G4_R_RESET FX1_ISP_BLC_OFS_G4_R_RESET
-/* OFS_G4_R */
+/* Profile G4 Red Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G4_R_OFS_G4_R_SHIFT FX1_ISP_BLC_OFS_G4_R_OFS_G4_R_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G4_R_OFS_G4_R_WIDTH FX1_ISP_BLC_OFS_G4_R_OFS_G4_R_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G4_R_OFS_G4_R_MASK FX1_ISP_BLC_OFS_G4_R_OFS_G4_R_MASK
@@ -734,12 +734,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G4_R_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G4_R_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G4_R_WO_MASK 0x00000000u
-/* BLC_OFS_G4_GR; FX1 VP extension. */
+/* BLC: profile G4 green-on-red-row trim. */
 #define NEON_FX1_ISP_BLC_OFS_G4_GR_OFFSET FX1_ISP_BLC_OFS_G4_GR_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G4_GR_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G4_GR_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G4_GR_RESET FX1_ISP_BLC_OFS_G4_GR_RESET
-/* OFS_G4_GR */
+/* Profile G4 Green-Red Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G4_GR_OFS_G4_GR_SHIFT FX1_ISP_BLC_OFS_G4_GR_OFS_G4_GR_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G4_GR_OFS_G4_GR_WIDTH FX1_ISP_BLC_OFS_G4_GR_OFS_G4_GR_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G4_GR_OFS_G4_GR_MASK FX1_ISP_BLC_OFS_G4_GR_OFS_G4_GR_MASK
@@ -753,12 +753,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G4_GR_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G4_GR_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G4_GR_WO_MASK 0x00000000u
-/* BLC_OFS_G4_GB; FX1 VP extension. */
+/* BLC: profile G4 green-on-blue-row trim. */
 #define NEON_FX1_ISP_BLC_OFS_G4_GB_OFFSET FX1_ISP_BLC_OFS_G4_GB_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G4_GB_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G4_GB_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G4_GB_RESET FX1_ISP_BLC_OFS_G4_GB_RESET
-/* OFS_G4_GB */
+/* Profile G4 Green-Blue Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G4_GB_OFS_G4_GB_SHIFT FX1_ISP_BLC_OFS_G4_GB_OFS_G4_GB_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G4_GB_OFS_G4_GB_WIDTH FX1_ISP_BLC_OFS_G4_GB_OFS_G4_GB_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G4_GB_OFS_G4_GB_MASK FX1_ISP_BLC_OFS_G4_GB_OFS_G4_GB_MASK
@@ -772,12 +772,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G4_GB_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G4_GB_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G4_GB_WO_MASK 0x00000000u
-/* BLC_OFS_G4_B; FX1 VP extension. */
+/* BLC: profile G4 blue trim. */
 #define NEON_FX1_ISP_BLC_OFS_G4_B_OFFSET FX1_ISP_BLC_OFS_G4_B_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G4_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G4_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G4_B_RESET FX1_ISP_BLC_OFS_G4_B_RESET
-/* OFS_G4_B */
+/* Profile G4 Blue Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G4_B_OFS_G4_B_SHIFT FX1_ISP_BLC_OFS_G4_B_OFS_G4_B_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G4_B_OFS_G4_B_WIDTH FX1_ISP_BLC_OFS_G4_B_OFS_G4_B_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G4_B_OFS_G4_B_MASK FX1_ISP_BLC_OFS_G4_B_OFS_G4_B_MASK
@@ -791,12 +791,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G4_B_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G4_B_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G4_B_WO_MASK 0x00000000u
-/* BLC_OFS_G5_DFT; FX1 VP extension. */
+/* BLC: profile G5 shared pedestal. Subtracted from every channel; the per-channel registers add a trim on top. */
 #define NEON_FX1_ISP_BLC_OFS_G5_DFT_OFFSET FX1_ISP_BLC_OFS_G5_DFT_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G5_DFT_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G5_DFT_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G5_DFT_RESET FX1_ISP_BLC_OFS_G5_DFT_RESET
-/* OFS_G5_DFT */
+/* Profile G5 Shared Black Level Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 200. */
 #define NEON_FX1_ISP_BLC_OFS_G5_DFT_OFS_G5_DFT_SHIFT FX1_ISP_BLC_OFS_G5_DFT_OFS_G5_DFT_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G5_DFT_OFS_G5_DFT_WIDTH FX1_ISP_BLC_OFS_G5_DFT_OFS_G5_DFT_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G5_DFT_OFS_G5_DFT_MASK FX1_ISP_BLC_OFS_G5_DFT_OFS_G5_DFT_MASK
@@ -810,12 +810,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G5_DFT_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G5_DFT_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G5_DFT_WO_MASK 0x00000000u
-/* BLC_OFS_G5_R; FX1 VP extension. */
+/* BLC: profile G5 red trim. */
 #define NEON_FX1_ISP_BLC_OFS_G5_R_OFFSET FX1_ISP_BLC_OFS_G5_R_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G5_R_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G5_R_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G5_R_RESET FX1_ISP_BLC_OFS_G5_R_RESET
-/* OFS_G5_R */
+/* Profile G5 Red Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G5_R_OFS_G5_R_SHIFT FX1_ISP_BLC_OFS_G5_R_OFS_G5_R_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G5_R_OFS_G5_R_WIDTH FX1_ISP_BLC_OFS_G5_R_OFS_G5_R_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G5_R_OFS_G5_R_MASK FX1_ISP_BLC_OFS_G5_R_OFS_G5_R_MASK
@@ -829,12 +829,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G5_R_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G5_R_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G5_R_WO_MASK 0x00000000u
-/* BLC_OFS_G5_GR; FX1 VP extension. */
+/* BLC: profile G5 green-on-red-row trim. */
 #define NEON_FX1_ISP_BLC_OFS_G5_GR_OFFSET FX1_ISP_BLC_OFS_G5_GR_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G5_GR_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G5_GR_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G5_GR_RESET FX1_ISP_BLC_OFS_G5_GR_RESET
-/* OFS_G5_GR */
+/* Profile G5 Green-Red Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G5_GR_OFS_G5_GR_SHIFT FX1_ISP_BLC_OFS_G5_GR_OFS_G5_GR_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G5_GR_OFS_G5_GR_WIDTH FX1_ISP_BLC_OFS_G5_GR_OFS_G5_GR_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G5_GR_OFS_G5_GR_MASK FX1_ISP_BLC_OFS_G5_GR_OFS_G5_GR_MASK
@@ -848,12 +848,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G5_GR_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G5_GR_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G5_GR_WO_MASK 0x00000000u
-/* BLC_OFS_G5_GB; FX1 VP extension. */
+/* BLC: profile G5 green-on-blue-row trim. */
 #define NEON_FX1_ISP_BLC_OFS_G5_GB_OFFSET FX1_ISP_BLC_OFS_G5_GB_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G5_GB_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G5_GB_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G5_GB_RESET FX1_ISP_BLC_OFS_G5_GB_RESET
-/* OFS_G5_GB */
+/* Profile G5 Green-Blue Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G5_GB_OFS_G5_GB_SHIFT FX1_ISP_BLC_OFS_G5_GB_OFS_G5_GB_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G5_GB_OFS_G5_GB_WIDTH FX1_ISP_BLC_OFS_G5_GB_OFS_G5_GB_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G5_GB_OFS_G5_GB_MASK FX1_ISP_BLC_OFS_G5_GB_OFS_G5_GB_MASK
@@ -867,12 +867,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G5_GB_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G5_GB_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G5_GB_WO_MASK 0x00000000u
-/* BLC_OFS_G5_B; FX1 VP extension. */
+/* BLC: profile G5 blue trim. */
 #define NEON_FX1_ISP_BLC_OFS_G5_B_OFFSET FX1_ISP_BLC_OFS_G5_B_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G5_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G5_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G5_B_RESET FX1_ISP_BLC_OFS_G5_B_RESET
-/* OFS_G5_B */
+/* Profile G5 Blue Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G5_B_OFS_G5_B_SHIFT FX1_ISP_BLC_OFS_G5_B_OFS_G5_B_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G5_B_OFS_G5_B_WIDTH FX1_ISP_BLC_OFS_G5_B_OFS_G5_B_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G5_B_OFS_G5_B_MASK FX1_ISP_BLC_OFS_G5_B_OFS_G5_B_MASK
@@ -886,12 +886,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G5_B_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G5_B_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G5_B_WO_MASK 0x00000000u
-/* BLC_OFS_G6_DFT; FX1 VP extension. */
+/* BLC: profile G6 shared pedestal. Subtracted from every channel; the per-channel registers add a trim on top. */
 #define NEON_FX1_ISP_BLC_OFS_G6_DFT_OFFSET FX1_ISP_BLC_OFS_G6_DFT_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G6_DFT_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G6_DFT_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G6_DFT_RESET FX1_ISP_BLC_OFS_G6_DFT_RESET
-/* OFS_G6_DFT */
+/* Profile G6 Shared Black Level Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 200. */
 #define NEON_FX1_ISP_BLC_OFS_G6_DFT_OFS_G6_DFT_SHIFT FX1_ISP_BLC_OFS_G6_DFT_OFS_G6_DFT_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G6_DFT_OFS_G6_DFT_WIDTH FX1_ISP_BLC_OFS_G6_DFT_OFS_G6_DFT_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G6_DFT_OFS_G6_DFT_MASK FX1_ISP_BLC_OFS_G6_DFT_OFS_G6_DFT_MASK
@@ -905,12 +905,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G6_DFT_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G6_DFT_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G6_DFT_WO_MASK 0x00000000u
-/* BLC_OFS_G6_R; FX1 VP extension. */
+/* BLC: profile G6 red trim. */
 #define NEON_FX1_ISP_BLC_OFS_G6_R_OFFSET FX1_ISP_BLC_OFS_G6_R_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G6_R_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G6_R_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G6_R_RESET FX1_ISP_BLC_OFS_G6_R_RESET
-/* OFS_G6_R */
+/* Profile G6 Red Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G6_R_OFS_G6_R_SHIFT FX1_ISP_BLC_OFS_G6_R_OFS_G6_R_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G6_R_OFS_G6_R_WIDTH FX1_ISP_BLC_OFS_G6_R_OFS_G6_R_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G6_R_OFS_G6_R_MASK FX1_ISP_BLC_OFS_G6_R_OFS_G6_R_MASK
@@ -924,12 +924,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G6_R_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G6_R_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G6_R_WO_MASK 0x00000000u
-/* BLC_OFS_G6_GR; FX1 VP extension. */
+/* BLC: profile G6 green-on-red-row trim. */
 #define NEON_FX1_ISP_BLC_OFS_G6_GR_OFFSET FX1_ISP_BLC_OFS_G6_GR_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G6_GR_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G6_GR_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G6_GR_RESET FX1_ISP_BLC_OFS_G6_GR_RESET
-/* OFS_G6_GR */
+/* Profile G6 Green-Red Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G6_GR_OFS_G6_GR_SHIFT FX1_ISP_BLC_OFS_G6_GR_OFS_G6_GR_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G6_GR_OFS_G6_GR_WIDTH FX1_ISP_BLC_OFS_G6_GR_OFS_G6_GR_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G6_GR_OFS_G6_GR_MASK FX1_ISP_BLC_OFS_G6_GR_OFS_G6_GR_MASK
@@ -943,12 +943,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G6_GR_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G6_GR_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G6_GR_WO_MASK 0x00000000u
-/* BLC_OFS_G6_GB; FX1 VP extension. */
+/* BLC: profile G6 green-on-blue-row trim. */
 #define NEON_FX1_ISP_BLC_OFS_G6_GB_OFFSET FX1_ISP_BLC_OFS_G6_GB_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G6_GB_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G6_GB_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G6_GB_RESET FX1_ISP_BLC_OFS_G6_GB_RESET
-/* OFS_G6_GB */
+/* Profile G6 Green-Blue Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G6_GB_OFS_G6_GB_SHIFT FX1_ISP_BLC_OFS_G6_GB_OFS_G6_GB_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G6_GB_OFS_G6_GB_WIDTH FX1_ISP_BLC_OFS_G6_GB_OFS_G6_GB_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G6_GB_OFS_G6_GB_MASK FX1_ISP_BLC_OFS_G6_GB_OFS_G6_GB_MASK
@@ -962,12 +962,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G6_GB_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G6_GB_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G6_GB_WO_MASK 0x00000000u
-/* BLC_OFS_G6_B; FX1 VP extension. */
+/* BLC: profile G6 blue trim. */
 #define NEON_FX1_ISP_BLC_OFS_G6_B_OFFSET FX1_ISP_BLC_OFS_G6_B_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G6_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G6_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G6_B_RESET FX1_ISP_BLC_OFS_G6_B_RESET
-/* OFS_G6_B */
+/* Profile G6 Blue Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G6_B_OFS_G6_B_SHIFT FX1_ISP_BLC_OFS_G6_B_OFS_G6_B_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G6_B_OFS_G6_B_WIDTH FX1_ISP_BLC_OFS_G6_B_OFS_G6_B_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G6_B_OFS_G6_B_MASK FX1_ISP_BLC_OFS_G6_B_OFS_G6_B_MASK
@@ -981,12 +981,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G6_B_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G6_B_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G6_B_WO_MASK 0x00000000u
-/* BLC_OFS_G7_DFT; FX1 VP extension. */
+/* BLC: profile G7 shared pedestal. Subtracted from every channel; the per-channel registers add a trim on top. */
 #define NEON_FX1_ISP_BLC_OFS_G7_DFT_OFFSET FX1_ISP_BLC_OFS_G7_DFT_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G7_DFT_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G7_DFT_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G7_DFT_RESET FX1_ISP_BLC_OFS_G7_DFT_RESET
-/* OFS_G7_DFT */
+/* Profile G7 Shared Black Level Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 200. */
 #define NEON_FX1_ISP_BLC_OFS_G7_DFT_OFS_G7_DFT_SHIFT FX1_ISP_BLC_OFS_G7_DFT_OFS_G7_DFT_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G7_DFT_OFS_G7_DFT_WIDTH FX1_ISP_BLC_OFS_G7_DFT_OFS_G7_DFT_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G7_DFT_OFS_G7_DFT_MASK FX1_ISP_BLC_OFS_G7_DFT_OFS_G7_DFT_MASK
@@ -1000,12 +1000,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G7_DFT_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G7_DFT_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G7_DFT_WO_MASK 0x00000000u
-/* BLC_OFS_G7_R; FX1 VP extension. */
+/* BLC: profile G7 red trim. */
 #define NEON_FX1_ISP_BLC_OFS_G7_R_OFFSET FX1_ISP_BLC_OFS_G7_R_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G7_R_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G7_R_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G7_R_RESET FX1_ISP_BLC_OFS_G7_R_RESET
-/* OFS_G7_R */
+/* Profile G7 Red Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G7_R_OFS_G7_R_SHIFT FX1_ISP_BLC_OFS_G7_R_OFS_G7_R_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G7_R_OFS_G7_R_WIDTH FX1_ISP_BLC_OFS_G7_R_OFS_G7_R_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G7_R_OFS_G7_R_MASK FX1_ISP_BLC_OFS_G7_R_OFS_G7_R_MASK
@@ -1019,12 +1019,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G7_R_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G7_R_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G7_R_WO_MASK 0x00000000u
-/* BLC_OFS_G7_GR; FX1 VP extension. */
+/* BLC: profile G7 green-on-red-row trim. */
 #define NEON_FX1_ISP_BLC_OFS_G7_GR_OFFSET FX1_ISP_BLC_OFS_G7_GR_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G7_GR_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G7_GR_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G7_GR_RESET FX1_ISP_BLC_OFS_G7_GR_RESET
-/* OFS_G7_GR */
+/* Profile G7 Green-Red Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G7_GR_OFS_G7_GR_SHIFT FX1_ISP_BLC_OFS_G7_GR_OFS_G7_GR_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G7_GR_OFS_G7_GR_WIDTH FX1_ISP_BLC_OFS_G7_GR_OFS_G7_GR_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G7_GR_OFS_G7_GR_MASK FX1_ISP_BLC_OFS_G7_GR_OFS_G7_GR_MASK
@@ -1038,12 +1038,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G7_GR_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G7_GR_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G7_GR_WO_MASK 0x00000000u
-/* BLC_OFS_G7_GB; FX1 VP extension. */
+/* BLC: profile G7 green-on-blue-row trim. */
 #define NEON_FX1_ISP_BLC_OFS_G7_GB_OFFSET FX1_ISP_BLC_OFS_G7_GB_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G7_GB_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G7_GB_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G7_GB_RESET FX1_ISP_BLC_OFS_G7_GB_RESET
-/* OFS_G7_GB */
+/* Profile G7 Green-Blue Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G7_GB_OFS_G7_GB_SHIFT FX1_ISP_BLC_OFS_G7_GB_OFS_G7_GB_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G7_GB_OFS_G7_GB_WIDTH FX1_ISP_BLC_OFS_G7_GB_OFS_G7_GB_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G7_GB_OFS_G7_GB_MASK FX1_ISP_BLC_OFS_G7_GB_OFS_G7_GB_MASK
@@ -1057,12 +1057,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G7_GB_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G7_GB_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G7_GB_WO_MASK 0x00000000u
-/* BLC_OFS_G7_B; FX1 VP extension. */
+/* BLC: profile G7 blue trim. */
 #define NEON_FX1_ISP_BLC_OFS_G7_B_OFFSET FX1_ISP_BLC_OFS_G7_B_OFFSET
 #define NEON_FX1_ISP_BLC_OFS_G7_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_OFS_G7_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_OFS_G7_B_RESET FX1_ISP_BLC_OFS_G7_B_RESET
-/* OFS_G7_B */
+/* Profile G7 Blue Black Level Trim Unsigned 12-bit Bayer code, 0..4095. The shared pedestal and selected channel trim are added exactly in 13 bits before subtraction, without wrap or saturation; the residual clamps at zero. Reset 0. */
 #define NEON_FX1_ISP_BLC_OFS_G7_B_OFS_G7_B_SHIFT FX1_ISP_BLC_OFS_G7_B_OFS_G7_B_SHIFT
 #define NEON_FX1_ISP_BLC_OFS_G7_B_OFS_G7_B_WIDTH FX1_ISP_BLC_OFS_G7_B_OFS_G7_B_WIDTH
 #define NEON_FX1_ISP_BLC_OFS_G7_B_OFS_G7_B_MASK FX1_ISP_BLC_OFS_G7_B_OFS_G7_B_MASK
@@ -1076,12 +1076,12 @@
 #define NEON_FX1_ISP_BLC_OFS_G7_B_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G7_B_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_OFS_G7_B_WO_MASK 0x00000000u
-/* BLC_SCALE_G0_R; FX1 VP extension. */
+/* BLC: profile G0 R range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G0_R_OFFSET FX1_ISP_BLC_SCALE_G0_R_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G0_R_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G0_R_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G0_R_RESET FX1_ISP_BLC_SCALE_G0_R_RESET
-/* SCALE_G0_R */
+/* Profile G0 R Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G0_R_SCALE_G0_R_SHIFT FX1_ISP_BLC_SCALE_G0_R_SCALE_G0_R_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G0_R_SCALE_G0_R_WIDTH FX1_ISP_BLC_SCALE_G0_R_SCALE_G0_R_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G0_R_SCALE_G0_R_MASK FX1_ISP_BLC_SCALE_G0_R_SCALE_G0_R_MASK
@@ -1095,12 +1095,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G0_R_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G0_R_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G0_R_WO_MASK 0x00000000u
-/* BLC_SCALE_G0_GR; FX1 VP extension. */
+/* BLC: profile G0 GR range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G0_GR_OFFSET FX1_ISP_BLC_SCALE_G0_GR_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G0_GR_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G0_GR_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G0_GR_RESET FX1_ISP_BLC_SCALE_G0_GR_RESET
-/* SCALE_G0_GR */
+/* Profile G0 GR Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G0_GR_SCALE_G0_GR_SHIFT FX1_ISP_BLC_SCALE_G0_GR_SCALE_G0_GR_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G0_GR_SCALE_G0_GR_WIDTH FX1_ISP_BLC_SCALE_G0_GR_SCALE_G0_GR_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G0_GR_SCALE_G0_GR_MASK FX1_ISP_BLC_SCALE_G0_GR_SCALE_G0_GR_MASK
@@ -1114,12 +1114,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G0_GR_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G0_GR_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G0_GR_WO_MASK 0x00000000u
-/* BLC_SCALE_G0_GB; FX1 VP extension. */
+/* BLC: profile G0 GB range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G0_GB_OFFSET FX1_ISP_BLC_SCALE_G0_GB_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G0_GB_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G0_GB_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G0_GB_RESET FX1_ISP_BLC_SCALE_G0_GB_RESET
-/* SCALE_G0_GB */
+/* Profile G0 GB Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G0_GB_SCALE_G0_GB_SHIFT FX1_ISP_BLC_SCALE_G0_GB_SCALE_G0_GB_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G0_GB_SCALE_G0_GB_WIDTH FX1_ISP_BLC_SCALE_G0_GB_SCALE_G0_GB_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G0_GB_SCALE_G0_GB_MASK FX1_ISP_BLC_SCALE_G0_GB_SCALE_G0_GB_MASK
@@ -1133,12 +1133,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G0_GB_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G0_GB_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G0_GB_WO_MASK 0x00000000u
-/* BLC_SCALE_G0_B; FX1 VP extension. */
+/* BLC: profile G0 B range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G0_B_OFFSET FX1_ISP_BLC_SCALE_G0_B_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G0_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G0_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G0_B_RESET FX1_ISP_BLC_SCALE_G0_B_RESET
-/* SCALE_G0_B */
+/* Profile G0 B Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G0_B_SCALE_G0_B_SHIFT FX1_ISP_BLC_SCALE_G0_B_SCALE_G0_B_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G0_B_SCALE_G0_B_WIDTH FX1_ISP_BLC_SCALE_G0_B_SCALE_G0_B_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G0_B_SCALE_G0_B_MASK FX1_ISP_BLC_SCALE_G0_B_SCALE_G0_B_MASK
@@ -1152,12 +1152,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G0_B_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G0_B_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G0_B_WO_MASK 0x00000000u
-/* BLC_SCALE_G1_R; FX1 VP extension. */
+/* BLC: profile G1 R range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G1_R_OFFSET FX1_ISP_BLC_SCALE_G1_R_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G1_R_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G1_R_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G1_R_RESET FX1_ISP_BLC_SCALE_G1_R_RESET
-/* SCALE_G1_R */
+/* Profile G1 R Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G1_R_SCALE_G1_R_SHIFT FX1_ISP_BLC_SCALE_G1_R_SCALE_G1_R_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G1_R_SCALE_G1_R_WIDTH FX1_ISP_BLC_SCALE_G1_R_SCALE_G1_R_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G1_R_SCALE_G1_R_MASK FX1_ISP_BLC_SCALE_G1_R_SCALE_G1_R_MASK
@@ -1171,12 +1171,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G1_R_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G1_R_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G1_R_WO_MASK 0x00000000u
-/* BLC_SCALE_G1_GR; FX1 VP extension. */
+/* BLC: profile G1 GR range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G1_GR_OFFSET FX1_ISP_BLC_SCALE_G1_GR_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G1_GR_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G1_GR_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G1_GR_RESET FX1_ISP_BLC_SCALE_G1_GR_RESET
-/* SCALE_G1_GR */
+/* Profile G1 GR Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G1_GR_SCALE_G1_GR_SHIFT FX1_ISP_BLC_SCALE_G1_GR_SCALE_G1_GR_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G1_GR_SCALE_G1_GR_WIDTH FX1_ISP_BLC_SCALE_G1_GR_SCALE_G1_GR_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G1_GR_SCALE_G1_GR_MASK FX1_ISP_BLC_SCALE_G1_GR_SCALE_G1_GR_MASK
@@ -1190,12 +1190,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G1_GR_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G1_GR_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G1_GR_WO_MASK 0x00000000u
-/* BLC_SCALE_G1_GB; FX1 VP extension. */
+/* BLC: profile G1 GB range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G1_GB_OFFSET FX1_ISP_BLC_SCALE_G1_GB_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G1_GB_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G1_GB_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G1_GB_RESET FX1_ISP_BLC_SCALE_G1_GB_RESET
-/* SCALE_G1_GB */
+/* Profile G1 GB Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G1_GB_SCALE_G1_GB_SHIFT FX1_ISP_BLC_SCALE_G1_GB_SCALE_G1_GB_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G1_GB_SCALE_G1_GB_WIDTH FX1_ISP_BLC_SCALE_G1_GB_SCALE_G1_GB_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G1_GB_SCALE_G1_GB_MASK FX1_ISP_BLC_SCALE_G1_GB_SCALE_G1_GB_MASK
@@ -1209,12 +1209,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G1_GB_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G1_GB_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G1_GB_WO_MASK 0x00000000u
-/* BLC_SCALE_G1_B; FX1 VP extension. */
+/* BLC: profile G1 B range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G1_B_OFFSET FX1_ISP_BLC_SCALE_G1_B_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G1_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G1_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G1_B_RESET FX1_ISP_BLC_SCALE_G1_B_RESET
-/* SCALE_G1_B */
+/* Profile G1 B Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G1_B_SCALE_G1_B_SHIFT FX1_ISP_BLC_SCALE_G1_B_SCALE_G1_B_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G1_B_SCALE_G1_B_WIDTH FX1_ISP_BLC_SCALE_G1_B_SCALE_G1_B_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G1_B_SCALE_G1_B_MASK FX1_ISP_BLC_SCALE_G1_B_SCALE_G1_B_MASK
@@ -1228,12 +1228,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G1_B_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G1_B_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G1_B_WO_MASK 0x00000000u
-/* BLC_SCALE_G2_R; FX1 VP extension. */
+/* BLC: profile G2 R range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G2_R_OFFSET FX1_ISP_BLC_SCALE_G2_R_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G2_R_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G2_R_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G2_R_RESET FX1_ISP_BLC_SCALE_G2_R_RESET
-/* SCALE_G2_R */
+/* Profile G2 R Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G2_R_SCALE_G2_R_SHIFT FX1_ISP_BLC_SCALE_G2_R_SCALE_G2_R_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G2_R_SCALE_G2_R_WIDTH FX1_ISP_BLC_SCALE_G2_R_SCALE_G2_R_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G2_R_SCALE_G2_R_MASK FX1_ISP_BLC_SCALE_G2_R_SCALE_G2_R_MASK
@@ -1247,12 +1247,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G2_R_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G2_R_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G2_R_WO_MASK 0x00000000u
-/* BLC_SCALE_G2_GR; FX1 VP extension. */
+/* BLC: profile G2 GR range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G2_GR_OFFSET FX1_ISP_BLC_SCALE_G2_GR_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G2_GR_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G2_GR_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G2_GR_RESET FX1_ISP_BLC_SCALE_G2_GR_RESET
-/* SCALE_G2_GR */
+/* Profile G2 GR Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G2_GR_SCALE_G2_GR_SHIFT FX1_ISP_BLC_SCALE_G2_GR_SCALE_G2_GR_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G2_GR_SCALE_G2_GR_WIDTH FX1_ISP_BLC_SCALE_G2_GR_SCALE_G2_GR_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G2_GR_SCALE_G2_GR_MASK FX1_ISP_BLC_SCALE_G2_GR_SCALE_G2_GR_MASK
@@ -1266,12 +1266,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G2_GR_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G2_GR_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G2_GR_WO_MASK 0x00000000u
-/* BLC_SCALE_G2_GB; FX1 VP extension. */
+/* BLC: profile G2 GB range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G2_GB_OFFSET FX1_ISP_BLC_SCALE_G2_GB_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G2_GB_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G2_GB_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G2_GB_RESET FX1_ISP_BLC_SCALE_G2_GB_RESET
-/* SCALE_G2_GB */
+/* Profile G2 GB Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G2_GB_SCALE_G2_GB_SHIFT FX1_ISP_BLC_SCALE_G2_GB_SCALE_G2_GB_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G2_GB_SCALE_G2_GB_WIDTH FX1_ISP_BLC_SCALE_G2_GB_SCALE_G2_GB_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G2_GB_SCALE_G2_GB_MASK FX1_ISP_BLC_SCALE_G2_GB_SCALE_G2_GB_MASK
@@ -1285,12 +1285,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G2_GB_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G2_GB_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G2_GB_WO_MASK 0x00000000u
-/* BLC_SCALE_G2_B; FX1 VP extension. */
+/* BLC: profile G2 B range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G2_B_OFFSET FX1_ISP_BLC_SCALE_G2_B_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G2_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G2_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G2_B_RESET FX1_ISP_BLC_SCALE_G2_B_RESET
-/* SCALE_G2_B */
+/* Profile G2 B Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G2_B_SCALE_G2_B_SHIFT FX1_ISP_BLC_SCALE_G2_B_SCALE_G2_B_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G2_B_SCALE_G2_B_WIDTH FX1_ISP_BLC_SCALE_G2_B_SCALE_G2_B_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G2_B_SCALE_G2_B_MASK FX1_ISP_BLC_SCALE_G2_B_SCALE_G2_B_MASK
@@ -1304,12 +1304,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G2_B_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G2_B_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G2_B_WO_MASK 0x00000000u
-/* BLC_SCALE_G3_R; FX1 VP extension. */
+/* BLC: profile G3 R range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G3_R_OFFSET FX1_ISP_BLC_SCALE_G3_R_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G3_R_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G3_R_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G3_R_RESET FX1_ISP_BLC_SCALE_G3_R_RESET
-/* SCALE_G3_R */
+/* Profile G3 R Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G3_R_SCALE_G3_R_SHIFT FX1_ISP_BLC_SCALE_G3_R_SCALE_G3_R_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G3_R_SCALE_G3_R_WIDTH FX1_ISP_BLC_SCALE_G3_R_SCALE_G3_R_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G3_R_SCALE_G3_R_MASK FX1_ISP_BLC_SCALE_G3_R_SCALE_G3_R_MASK
@@ -1323,12 +1323,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G3_R_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G3_R_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G3_R_WO_MASK 0x00000000u
-/* BLC_SCALE_G3_GR; FX1 VP extension. */
+/* BLC: profile G3 GR range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G3_GR_OFFSET FX1_ISP_BLC_SCALE_G3_GR_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G3_GR_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G3_GR_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G3_GR_RESET FX1_ISP_BLC_SCALE_G3_GR_RESET
-/* SCALE_G3_GR */
+/* Profile G3 GR Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G3_GR_SCALE_G3_GR_SHIFT FX1_ISP_BLC_SCALE_G3_GR_SCALE_G3_GR_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G3_GR_SCALE_G3_GR_WIDTH FX1_ISP_BLC_SCALE_G3_GR_SCALE_G3_GR_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G3_GR_SCALE_G3_GR_MASK FX1_ISP_BLC_SCALE_G3_GR_SCALE_G3_GR_MASK
@@ -1342,12 +1342,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G3_GR_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G3_GR_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G3_GR_WO_MASK 0x00000000u
-/* BLC_SCALE_G3_GB; FX1 VP extension. */
+/* BLC: profile G3 GB range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G3_GB_OFFSET FX1_ISP_BLC_SCALE_G3_GB_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G3_GB_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G3_GB_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G3_GB_RESET FX1_ISP_BLC_SCALE_G3_GB_RESET
-/* SCALE_G3_GB */
+/* Profile G3 GB Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G3_GB_SCALE_G3_GB_SHIFT FX1_ISP_BLC_SCALE_G3_GB_SCALE_G3_GB_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G3_GB_SCALE_G3_GB_WIDTH FX1_ISP_BLC_SCALE_G3_GB_SCALE_G3_GB_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G3_GB_SCALE_G3_GB_MASK FX1_ISP_BLC_SCALE_G3_GB_SCALE_G3_GB_MASK
@@ -1361,12 +1361,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G3_GB_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G3_GB_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G3_GB_WO_MASK 0x00000000u
-/* BLC_SCALE_G3_B; FX1 VP extension. */
+/* BLC: profile G3 B range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G3_B_OFFSET FX1_ISP_BLC_SCALE_G3_B_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G3_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G3_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G3_B_RESET FX1_ISP_BLC_SCALE_G3_B_RESET
-/* SCALE_G3_B */
+/* Profile G3 B Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G3_B_SCALE_G3_B_SHIFT FX1_ISP_BLC_SCALE_G3_B_SCALE_G3_B_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G3_B_SCALE_G3_B_WIDTH FX1_ISP_BLC_SCALE_G3_B_SCALE_G3_B_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G3_B_SCALE_G3_B_MASK FX1_ISP_BLC_SCALE_G3_B_SCALE_G3_B_MASK
@@ -1380,12 +1380,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G3_B_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G3_B_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G3_B_WO_MASK 0x00000000u
-/* BLC_SCALE_G4_R; FX1 VP extension. */
+/* BLC: profile G4 R range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G4_R_OFFSET FX1_ISP_BLC_SCALE_G4_R_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G4_R_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G4_R_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G4_R_RESET FX1_ISP_BLC_SCALE_G4_R_RESET
-/* SCALE_G4_R */
+/* Profile G4 R Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G4_R_SCALE_G4_R_SHIFT FX1_ISP_BLC_SCALE_G4_R_SCALE_G4_R_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G4_R_SCALE_G4_R_WIDTH FX1_ISP_BLC_SCALE_G4_R_SCALE_G4_R_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G4_R_SCALE_G4_R_MASK FX1_ISP_BLC_SCALE_G4_R_SCALE_G4_R_MASK
@@ -1399,12 +1399,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G4_R_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G4_R_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G4_R_WO_MASK 0x00000000u
-/* BLC_SCALE_G4_GR; FX1 VP extension. */
+/* BLC: profile G4 GR range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G4_GR_OFFSET FX1_ISP_BLC_SCALE_G4_GR_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G4_GR_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G4_GR_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G4_GR_RESET FX1_ISP_BLC_SCALE_G4_GR_RESET
-/* SCALE_G4_GR */
+/* Profile G4 GR Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G4_GR_SCALE_G4_GR_SHIFT FX1_ISP_BLC_SCALE_G4_GR_SCALE_G4_GR_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G4_GR_SCALE_G4_GR_WIDTH FX1_ISP_BLC_SCALE_G4_GR_SCALE_G4_GR_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G4_GR_SCALE_G4_GR_MASK FX1_ISP_BLC_SCALE_G4_GR_SCALE_G4_GR_MASK
@@ -1418,12 +1418,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G4_GR_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G4_GR_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G4_GR_WO_MASK 0x00000000u
-/* BLC_SCALE_G4_GB; FX1 VP extension. */
+/* BLC: profile G4 GB range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G4_GB_OFFSET FX1_ISP_BLC_SCALE_G4_GB_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G4_GB_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G4_GB_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G4_GB_RESET FX1_ISP_BLC_SCALE_G4_GB_RESET
-/* SCALE_G4_GB */
+/* Profile G4 GB Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G4_GB_SCALE_G4_GB_SHIFT FX1_ISP_BLC_SCALE_G4_GB_SCALE_G4_GB_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G4_GB_SCALE_G4_GB_WIDTH FX1_ISP_BLC_SCALE_G4_GB_SCALE_G4_GB_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G4_GB_SCALE_G4_GB_MASK FX1_ISP_BLC_SCALE_G4_GB_SCALE_G4_GB_MASK
@@ -1437,12 +1437,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G4_GB_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G4_GB_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G4_GB_WO_MASK 0x00000000u
-/* BLC_SCALE_G4_B; FX1 VP extension. */
+/* BLC: profile G4 B range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G4_B_OFFSET FX1_ISP_BLC_SCALE_G4_B_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G4_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G4_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G4_B_RESET FX1_ISP_BLC_SCALE_G4_B_RESET
-/* SCALE_G4_B */
+/* Profile G4 B Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G4_B_SCALE_G4_B_SHIFT FX1_ISP_BLC_SCALE_G4_B_SCALE_G4_B_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G4_B_SCALE_G4_B_WIDTH FX1_ISP_BLC_SCALE_G4_B_SCALE_G4_B_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G4_B_SCALE_G4_B_MASK FX1_ISP_BLC_SCALE_G4_B_SCALE_G4_B_MASK
@@ -1456,12 +1456,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G4_B_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G4_B_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G4_B_WO_MASK 0x00000000u
-/* BLC_SCALE_G5_R; FX1 VP extension. */
+/* BLC: profile G5 R range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G5_R_OFFSET FX1_ISP_BLC_SCALE_G5_R_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G5_R_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G5_R_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G5_R_RESET FX1_ISP_BLC_SCALE_G5_R_RESET
-/* SCALE_G5_R */
+/* Profile G5 R Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G5_R_SCALE_G5_R_SHIFT FX1_ISP_BLC_SCALE_G5_R_SCALE_G5_R_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G5_R_SCALE_G5_R_WIDTH FX1_ISP_BLC_SCALE_G5_R_SCALE_G5_R_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G5_R_SCALE_G5_R_MASK FX1_ISP_BLC_SCALE_G5_R_SCALE_G5_R_MASK
@@ -1475,12 +1475,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G5_R_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G5_R_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G5_R_WO_MASK 0x00000000u
-/* BLC_SCALE_G5_GR; FX1 VP extension. */
+/* BLC: profile G5 GR range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G5_GR_OFFSET FX1_ISP_BLC_SCALE_G5_GR_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G5_GR_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G5_GR_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G5_GR_RESET FX1_ISP_BLC_SCALE_G5_GR_RESET
-/* SCALE_G5_GR */
+/* Profile G5 GR Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G5_GR_SCALE_G5_GR_SHIFT FX1_ISP_BLC_SCALE_G5_GR_SCALE_G5_GR_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G5_GR_SCALE_G5_GR_WIDTH FX1_ISP_BLC_SCALE_G5_GR_SCALE_G5_GR_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G5_GR_SCALE_G5_GR_MASK FX1_ISP_BLC_SCALE_G5_GR_SCALE_G5_GR_MASK
@@ -1494,12 +1494,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G5_GR_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G5_GR_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G5_GR_WO_MASK 0x00000000u
-/* BLC_SCALE_G5_GB; FX1 VP extension. */
+/* BLC: profile G5 GB range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G5_GB_OFFSET FX1_ISP_BLC_SCALE_G5_GB_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G5_GB_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G5_GB_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G5_GB_RESET FX1_ISP_BLC_SCALE_G5_GB_RESET
-/* SCALE_G5_GB */
+/* Profile G5 GB Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G5_GB_SCALE_G5_GB_SHIFT FX1_ISP_BLC_SCALE_G5_GB_SCALE_G5_GB_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G5_GB_SCALE_G5_GB_WIDTH FX1_ISP_BLC_SCALE_G5_GB_SCALE_G5_GB_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G5_GB_SCALE_G5_GB_MASK FX1_ISP_BLC_SCALE_G5_GB_SCALE_G5_GB_MASK
@@ -1513,12 +1513,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G5_GB_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G5_GB_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G5_GB_WO_MASK 0x00000000u
-/* BLC_SCALE_G5_B; FX1 VP extension. */
+/* BLC: profile G5 B range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G5_B_OFFSET FX1_ISP_BLC_SCALE_G5_B_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G5_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G5_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G5_B_RESET FX1_ISP_BLC_SCALE_G5_B_RESET
-/* SCALE_G5_B */
+/* Profile G5 B Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G5_B_SCALE_G5_B_SHIFT FX1_ISP_BLC_SCALE_G5_B_SCALE_G5_B_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G5_B_SCALE_G5_B_WIDTH FX1_ISP_BLC_SCALE_G5_B_SCALE_G5_B_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G5_B_SCALE_G5_B_MASK FX1_ISP_BLC_SCALE_G5_B_SCALE_G5_B_MASK
@@ -1532,12 +1532,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G5_B_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G5_B_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G5_B_WO_MASK 0x00000000u
-/* BLC_SCALE_G6_R; FX1 VP extension. */
+/* BLC: profile G6 R range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G6_R_OFFSET FX1_ISP_BLC_SCALE_G6_R_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G6_R_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G6_R_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G6_R_RESET FX1_ISP_BLC_SCALE_G6_R_RESET
-/* SCALE_G6_R */
+/* Profile G6 R Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G6_R_SCALE_G6_R_SHIFT FX1_ISP_BLC_SCALE_G6_R_SCALE_G6_R_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G6_R_SCALE_G6_R_WIDTH FX1_ISP_BLC_SCALE_G6_R_SCALE_G6_R_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G6_R_SCALE_G6_R_MASK FX1_ISP_BLC_SCALE_G6_R_SCALE_G6_R_MASK
@@ -1551,12 +1551,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G6_R_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G6_R_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G6_R_WO_MASK 0x00000000u
-/* BLC_SCALE_G6_GR; FX1 VP extension. */
+/* BLC: profile G6 GR range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G6_GR_OFFSET FX1_ISP_BLC_SCALE_G6_GR_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G6_GR_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G6_GR_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G6_GR_RESET FX1_ISP_BLC_SCALE_G6_GR_RESET
-/* SCALE_G6_GR */
+/* Profile G6 GR Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G6_GR_SCALE_G6_GR_SHIFT FX1_ISP_BLC_SCALE_G6_GR_SCALE_G6_GR_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G6_GR_SCALE_G6_GR_WIDTH FX1_ISP_BLC_SCALE_G6_GR_SCALE_G6_GR_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G6_GR_SCALE_G6_GR_MASK FX1_ISP_BLC_SCALE_G6_GR_SCALE_G6_GR_MASK
@@ -1570,12 +1570,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G6_GR_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G6_GR_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G6_GR_WO_MASK 0x00000000u
-/* BLC_SCALE_G6_GB; FX1 VP extension. */
+/* BLC: profile G6 GB range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G6_GB_OFFSET FX1_ISP_BLC_SCALE_G6_GB_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G6_GB_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G6_GB_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G6_GB_RESET FX1_ISP_BLC_SCALE_G6_GB_RESET
-/* SCALE_G6_GB */
+/* Profile G6 GB Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G6_GB_SCALE_G6_GB_SHIFT FX1_ISP_BLC_SCALE_G6_GB_SCALE_G6_GB_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G6_GB_SCALE_G6_GB_WIDTH FX1_ISP_BLC_SCALE_G6_GB_SCALE_G6_GB_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G6_GB_SCALE_G6_GB_MASK FX1_ISP_BLC_SCALE_G6_GB_SCALE_G6_GB_MASK
@@ -1589,12 +1589,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G6_GB_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G6_GB_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G6_GB_WO_MASK 0x00000000u
-/* BLC_SCALE_G6_B; FX1 VP extension. */
+/* BLC: profile G6 B range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G6_B_OFFSET FX1_ISP_BLC_SCALE_G6_B_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G6_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G6_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G6_B_RESET FX1_ISP_BLC_SCALE_G6_B_RESET
-/* SCALE_G6_B */
+/* Profile G6 B Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G6_B_SCALE_G6_B_SHIFT FX1_ISP_BLC_SCALE_G6_B_SCALE_G6_B_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G6_B_SCALE_G6_B_WIDTH FX1_ISP_BLC_SCALE_G6_B_SCALE_G6_B_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G6_B_SCALE_G6_B_MASK FX1_ISP_BLC_SCALE_G6_B_SCALE_G6_B_MASK
@@ -1608,12 +1608,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G6_B_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G6_B_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G6_B_WO_MASK 0x00000000u
-/* BLC_SCALE_G7_R; FX1 VP extension. */
+/* BLC: profile G7 R range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G7_R_OFFSET FX1_ISP_BLC_SCALE_G7_R_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G7_R_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G7_R_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G7_R_RESET FX1_ISP_BLC_SCALE_G7_R_RESET
-/* SCALE_G7_R */
+/* Profile G7 R Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G7_R_SCALE_G7_R_SHIFT FX1_ISP_BLC_SCALE_G7_R_SCALE_G7_R_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G7_R_SCALE_G7_R_WIDTH FX1_ISP_BLC_SCALE_G7_R_SCALE_G7_R_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G7_R_SCALE_G7_R_MASK FX1_ISP_BLC_SCALE_G7_R_SCALE_G7_R_MASK
@@ -1627,12 +1627,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G7_R_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G7_R_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G7_R_WO_MASK 0x00000000u
-/* BLC_SCALE_G7_GR; FX1 VP extension. */
+/* BLC: profile G7 GR range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G7_GR_OFFSET FX1_ISP_BLC_SCALE_G7_GR_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G7_GR_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G7_GR_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G7_GR_RESET FX1_ISP_BLC_SCALE_G7_GR_RESET
-/* SCALE_G7_GR */
+/* Profile G7 GR Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G7_GR_SCALE_G7_GR_SHIFT FX1_ISP_BLC_SCALE_G7_GR_SCALE_G7_GR_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G7_GR_SCALE_G7_GR_WIDTH FX1_ISP_BLC_SCALE_G7_GR_SCALE_G7_GR_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G7_GR_SCALE_G7_GR_MASK FX1_ISP_BLC_SCALE_G7_GR_SCALE_G7_GR_MASK
@@ -1646,12 +1646,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G7_GR_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G7_GR_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G7_GR_WO_MASK 0x00000000u
-/* BLC_SCALE_G7_GB; FX1 VP extension. */
+/* BLC: profile G7 GB range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G7_GB_OFFSET FX1_ISP_BLC_SCALE_G7_GB_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G7_GB_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G7_GB_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G7_GB_RESET FX1_ISP_BLC_SCALE_G7_GB_RESET
-/* SCALE_G7_GB */
+/* Profile G7 GB Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G7_GB_SCALE_G7_GB_SHIFT FX1_ISP_BLC_SCALE_G7_GB_SCALE_G7_GB_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G7_GB_SCALE_G7_GB_WIDTH FX1_ISP_BLC_SCALE_G7_GB_SCALE_G7_GB_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G7_GB_SCALE_G7_GB_MASK FX1_ISP_BLC_SCALE_G7_GB_SCALE_G7_GB_MASK
@@ -1665,12 +1665,12 @@
 #define NEON_FX1_ISP_BLC_SCALE_G7_GB_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G7_GB_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_BLC_SCALE_G7_GB_WO_MASK 0x00000000u
-/* BLC_SCALE_G7_B; FX1 VP extension. */
+/* BLC: profile G7 B range-scale coefficient. Applied to the matching Bayer channel after DFT plus channel-trim subtraction and zero clamp. */
 #define NEON_FX1_ISP_BLC_SCALE_G7_B_OFFSET FX1_ISP_BLC_SCALE_G7_B_OFFSET
 #define NEON_FX1_ISP_BLC_SCALE_G7_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_BLC_SCALE_G7_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_BLC_SCALE_G7_B_RESET FX1_ISP_BLC_SCALE_G7_B_RESET
-/* SCALE_G7_B */
+/* Profile G7 B Range Scale Unsigned UQ2.16; unity 65536. Software supplies S_ch(g) = max / (W - (DFT[g] + TRIM_ch[g])) for a positive denominator and a representable coefficient. For a Bayer12 full-code-range white reference, W = max = 4095. RANGE_SCALE_EN=0 selects exact unity; hardware does not divide. */
 #define NEON_FX1_ISP_BLC_SCALE_G7_B_SCALE_G7_B_SHIFT FX1_ISP_BLC_SCALE_G7_B_SCALE_G7_B_SHIFT
 #define NEON_FX1_ISP_BLC_SCALE_G7_B_SCALE_G7_B_WIDTH FX1_ISP_BLC_SCALE_G7_B_SCALE_G7_B_WIDTH
 #define NEON_FX1_ISP_BLC_SCALE_G7_B_SCALE_G7_B_MASK FX1_ISP_BLC_SCALE_G7_B_SCALE_G7_B_MASK
@@ -1766,12 +1766,12 @@
 #define NEON_FX1_ISP_LSC_PROFILE_SEL_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_LSC_PROFILE_SEL_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_LSC_PROFILE_SEL_WO_MASK 0x00000000u
-/* LSC: sequential mesh loading into an inactive profile. Issue LOAD_BEGIN, write exactly 4*nx*ny coefficients, then LOAD_VALIDATE. Command priority is ABORT, VALIDATE, BEGIN. Begin while busy or validate while idle sets LOAD_PROTOCOL. Profile mode additionally sets TUNE_ERROR.LOCKED for every rejected destination (sealed, pending or in-flight); an in-flight destination sets both LOCKED and ACTIVE_LOAD_REJECT. */
+/* LSC: sequential mesh loading into an inactive profile. Issue LOAD_BEGIN, write exactly 4*nx*ny coefficients, then LOAD_VALIDATE. Command priority is ABORT, VALIDATE, BEGIN. Begin while busy or validate while idle sets LOAD_PROTOCOL; a Begin into a rejected destination (active, or pinned in profile mode) sets only its rejection bits, even while busy, and the open load continues. Profile mode additionally sets TUNE_ERROR.LOCKED for every rejected destination (sealed, pending or in-flight); an in-flight destination sets both LOCKED and ACTIVE_LOAD_REJECT. */
 #define NEON_FX1_ISP_LSC_LOAD_CTRL_OFFSET FX1_ISP_LSC_LOAD_CTRL_OFFSET
 #define NEON_FX1_ISP_LSC_LOAD_CTRL_ACCESS NEON_FX1_ACCESS_MIXED
 #define NEON_FX1_ISP_LSC_LOAD_CTRL_RESET_KNOWN 1u
 #define NEON_FX1_ISP_LSC_LOAD_CTRL_RESET FX1_ISP_LSC_LOAD_CTRL_RESET
-/* Load Destination Profile Destination profile for the load, 0..2. Loading the active profile is refused with ACTIVE_LOAD_REJECT. Active means selected by an admitted, unretired frame with LSC enabled, or in legacy mode the LSC_PROFILE_SEL profile while LSC_CTRL.EN=1 and ACTIVE_VALID=1. After reset no profile is active. */
+/* Load Destination Profile Destination profile for the load, 0..2. Loading the active profile is refused with ACTIVE_LOAD_REJECT. Active means selected by a frame admitted with LSC enabled and not yet retired, or in legacy mode, while LSC_CTRL.EN=1, the resident named by LSC_PROFILE_SEL if it is valid, otherwise LSC_PROFILE_STATUS.ACTIVE_PROFILE if that resident is valid. After reset no profile is active. */
 #define NEON_FX1_ISP_LSC_LOAD_CTRL_LOAD_PROFILE_SHIFT FX1_ISP_LSC_LOAD_CTRL_LOAD_PROFILE_SHIFT
 #define NEON_FX1_ISP_LSC_LOAD_CTRL_LOAD_PROFILE_WIDTH FX1_ISP_LSC_LOAD_CTRL_LOAD_PROFILE_WIDTH
 #define NEON_FX1_ISP_LSC_LOAD_CTRL_LOAD_PROFILE_MASK FX1_ISP_LSC_LOAD_CTRL_LOAD_PROFILE_MASK
@@ -1803,19 +1803,19 @@
 #define NEON_FX1_ISP_LSC_LOAD_CTRL_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_LSC_LOAD_CTRL_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_LSC_LOAD_CTRL_WO_MASK 0x00000000u
-/* Node gain UQ4.18 [21:0]; unity 0x40000, maximum 8x (0x200000), ISP-UPD-001. */
+/* LSC: coefficient write port. The address is implicit and advances on every accepted write, in the order R, Gr, Gb, B within a node, then x, then y. Profile mode additionally rejects sealed, pending and in-flight resident destinations with TUNE_ERROR.LOCKED. */
 #define NEON_FX1_ISP_LSC_COEF_DATA_OFFSET FX1_ISP_LSC_COEF_DATA_OFFSET
 #define NEON_FX1_ISP_LSC_COEF_DATA_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_LSC_COEF_DATA_RESET_KNOWN 1u
 #define NEON_FX1_ISP_LSC_COEF_DATA_RESET FX1_ISP_LSC_COEF_DATA_RESET
-/* Node gain UQ4.18 [21:0]; unity 0x40000, maximum 8x (0x200000), ISP-UPD-001. */
+/* Mesh Coefficient Write Data UQ3.18. Valid gain range (0,8), codes 0x000001..0x1FFFFF; unity is 0x040000. An accepted zero-code write still advances the scalar count but sets COEF_RANGE and the load's internal range flag. LOAD_VALIDATE cannot validate that load; W1C does not clear the internal flag. A write after LOAD_FULL is discarded and sets LOAD_PROTOCOL. Scalar load order is R, Gr, Gb, B at each node, then X, then Y. */
 #define NEON_FX1_ISP_LSC_COEF_DATA_COEF_DATA_SHIFT FX1_ISP_LSC_COEF_DATA_COEF_DATA_SHIFT
 #define NEON_FX1_ISP_LSC_COEF_DATA_COEF_DATA_WIDTH FX1_ISP_LSC_COEF_DATA_COEF_DATA_WIDTH
 #define NEON_FX1_ISP_LSC_COEF_DATA_COEF_DATA_MASK FX1_ISP_LSC_COEF_DATA_COEF_DATA_MASK
 #define NEON_FX1_ISP_LSC_COEF_DATA_COEF_DATA_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_LSC_COEF_DATA_COEF_DATA_RESET FX1_ISP_LSC_COEF_DATA_COEF_DATA_RESET
 #define NEON_FX1_ISP_LSC_COEF_DATA_RO_MASK 0x00000000u
-#define NEON_FX1_ISP_LSC_COEF_DATA_RW_MASK 0x003FFFFFu
+#define NEON_FX1_ISP_LSC_COEF_DATA_RW_MASK 0x001FFFFFu
 #define NEON_FX1_ISP_LSC_COEF_DATA_W1C_MASK 0x00000000u
 #define NEON_FX1_ISP_LSC_COEF_DATA_W1S_MASK 0x00000000u
 #define NEON_FX1_ISP_LSC_COEF_DATA_W1P_MASK 0x00000000u
@@ -1888,7 +1888,13 @@
 #define NEON_FX1_ISP_LSC_PROFILE_STATUS_GEOMETRY_VALID_MASK FX1_ISP_LSC_PROFILE_STATUS_GEOMETRY_VALID_MASK
 #define NEON_FX1_ISP_LSC_PROFILE_STATUS_GEOMETRY_VALID_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_LSC_PROFILE_STATUS_GEOMETRY_VALID_RESET FX1_ISP_LSC_PROFILE_STATUS_GEOMETRY_VALID_RESET
-#define NEON_FX1_ISP_LSC_PROFILE_STATUS_RO_MASK 0x000000F7u
+/* Geometry Preparation Busy 1 = LSC geometry preparation is running after a change of the node counts or of the active image size. While this bit is 1, an IDLE-class write is rejected with TUNE_ERROR.MODE; when it is 0 the other terms of the idle condition still apply. After a write that changes LSC_MESH_NODES or the active image size, software polls this bit until it reads 0 before writing IDLE-class registers. */
+#define NEON_FX1_ISP_LSC_PROFILE_STATUS_PREP_BUSY_SHIFT FX1_ISP_LSC_PROFILE_STATUS_PREP_BUSY_SHIFT
+#define NEON_FX1_ISP_LSC_PROFILE_STATUS_PREP_BUSY_WIDTH FX1_ISP_LSC_PROFILE_STATUS_PREP_BUSY_WIDTH
+#define NEON_FX1_ISP_LSC_PROFILE_STATUS_PREP_BUSY_MASK FX1_ISP_LSC_PROFILE_STATUS_PREP_BUSY_MASK
+#define NEON_FX1_ISP_LSC_PROFILE_STATUS_PREP_BUSY_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_LSC_PROFILE_STATUS_PREP_BUSY_RESET FX1_ISP_LSC_PROFILE_STATUS_PREP_BUSY_RESET
+#define NEON_FX1_ISP_LSC_PROFILE_STATUS_RO_MASK 0x000001F7u
 #define NEON_FX1_ISP_LSC_PROFILE_STATUS_RW_MASK 0x00000000u
 #define NEON_FX1_ISP_LSC_PROFILE_STATUS_W1C_MASK 0x00000000u
 #define NEON_FX1_ISP_LSC_PROFILE_STATUS_W1S_MASK 0x00000000u
@@ -1901,7 +1907,7 @@
 #define NEON_FX1_ISP_LSC_ERROR_ACCESS NEON_FX1_ACCESS_W1C
 #define NEON_FX1_ISP_LSC_ERROR_RESET_KNOWN 1u
 #define NEON_FX1_ISP_LSC_ERROR_RESET FX1_ISP_LSC_ERROR_RESET
-/* Load Targeted Active Profile A load targeted the profile currently in use. */
+/* Load Targeted Active Profile A LOAD_BEGIN targeted an active profile (see LSC_LOAD_CTRL.LOAD_PROFILE); no load was started. */
 #define NEON_FX1_ISP_LSC_ERROR_ACTIVE_LOAD_REJECT_SHIFT FX1_ISP_LSC_ERROR_ACTIVE_LOAD_REJECT_SHIFT
 #define NEON_FX1_ISP_LSC_ERROR_ACTIVE_LOAD_REJECT_WIDTH FX1_ISP_LSC_ERROR_ACTIVE_LOAD_REJECT_WIDTH
 #define NEON_FX1_ISP_LSC_ERROR_ACTIVE_LOAD_REJECT_MASK FX1_ISP_LSC_ERROR_ACTIVE_LOAD_REJECT_MASK
@@ -1913,7 +1919,7 @@
 #define NEON_FX1_ISP_LSC_ERROR_PROFILE_SEL_REJECT_MASK FX1_ISP_LSC_ERROR_PROFILE_SEL_REJECT_MASK
 #define NEON_FX1_ISP_LSC_ERROR_PROFILE_SEL_REJECT_ACCESS NEON_FX1_ACCESS_W1C
 #define NEON_FX1_ISP_LSC_ERROR_PROFILE_SEL_REJECT_RESET FX1_ISP_LSC_ERROR_PROFILE_SEL_REJECT_RESET
-/* Coefficient Out Of Range A written coefficient exceeded the legal gain range 0..4 inclusive in UQ3.18, or LOAD_VALIDATE found such a coefficient in the load. The load stays invalid until the next LOAD_BEGIN or LOAD_ABORT; clearing this bit does not make it valid. Sticky W1C; a simultaneous new error wins over clear. */
+/* Coefficient Out Of Range An accepted zero coefficient code sets this sticky W1C bit and the load's internal range flag. The write is counted; LOAD_VALIDATE keeps the profile invalid while the range flag is set. W1C clears this status bit, not the internal load flag; validation sets COEF_RANGE again for a flagged load. */
 #define NEON_FX1_ISP_LSC_ERROR_COEF_RANGE_SHIFT FX1_ISP_LSC_ERROR_COEF_RANGE_SHIFT
 #define NEON_FX1_ISP_LSC_ERROR_COEF_RANGE_WIDTH FX1_ISP_LSC_ERROR_COEF_RANGE_WIDTH
 #define NEON_FX1_ISP_LSC_ERROR_COEF_RANGE_MASK FX1_ISP_LSC_ERROR_COEF_RANGE_MASK
@@ -1931,7 +1937,7 @@
 #define NEON_FX1_ISP_LSC_ERROR_GEOMETRY_INVALID_MASK FX1_ISP_LSC_ERROR_GEOMETRY_INVALID_MASK
 #define NEON_FX1_ISP_LSC_ERROR_GEOMETRY_INVALID_ACCESS NEON_FX1_ACCESS_W1C
 #define NEON_FX1_ISP_LSC_ERROR_GEOMETRY_INVALID_RESET FX1_ISP_LSC_ERROR_GEOMETRY_INVALID_RESET
-/* Load Protocol Violation The load sequence was violated -- data written with no load open or after LOAD_FULL, or validate without begin. */
+/* Load Protocol Violation A LOAD_BEGIN while a load is open, while GEOMETRY_VALID=0 or with LOAD_PROFILE=3 (a Begin into a rejected destination sets only its rejection bits, see LSC_LOAD_CTRL); a LOAD_VALIDATE with no load open; or coefficient data written with no load open or after LOAD_FULL. */
 #define NEON_FX1_ISP_LSC_ERROR_LOAD_PROTOCOL_SHIFT FX1_ISP_LSC_ERROR_LOAD_PROTOCOL_SHIFT
 #define NEON_FX1_ISP_LSC_ERROR_LOAD_PROTOCOL_WIDTH FX1_ISP_LSC_ERROR_LOAD_PROTOCOL_WIDTH
 #define NEON_FX1_ISP_LSC_ERROR_LOAD_PROTOCOL_MASK FX1_ISP_LSC_ERROR_LOAD_PROTOCOL_MASK
@@ -2336,7 +2342,7 @@
 #define NEON_FX1_ISP_DEMOSAIC_STATUS_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_DEMOSAIC_STATUS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_DEMOSAIC_STATUS_RESET FX1_ISP_DEMOSAIC_STATUS_RESET
-/* The Demosaic Block Busy 1 while the block holds in-flight pixels. Follow the block-specific configuration and LUT loading sequence; busy alone does not grant permission to rewrite live tables. */
+/* The Demosaic Block Busy 1 while the block itself holds pixels: the block's own busy, as defined in its MAS section. It can read 0 inside a frame (line fill, input gaps), so it does not show that a frame has drained; use COMMON_STATUS.BUSY = 0 for no frame in flight. Follow the block-specific configuration and LUT loading sequence; busy alone does not grant permission to rewrite live tables. */
 #define NEON_FX1_ISP_DEMOSAIC_STATUS_BUSY_SHIFT FX1_ISP_DEMOSAIC_STATUS_BUSY_SHIFT
 #define NEON_FX1_ISP_DEMOSAIC_STATUS_BUSY_WIDTH FX1_ISP_DEMOSAIC_STATUS_BUSY_WIDTH
 #define NEON_FX1_ISP_DEMOSAIC_STATUS_BUSY_MASK FX1_ISP_DEMOSAIC_STATUS_BUSY_MASK
@@ -2546,12 +2552,12 @@
 #define NEON_FX1_ISP_CCM_CBB_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_CCM_CBB_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_CCM_CBB_WO_MASK 0x00000000u
-/* Signed 12-bit offset in output pixel levels; code 1 adds one level (ISP-UPD-007). */
+/* CCM: red offset, added after the matrix. */
 #define NEON_FX1_ISP_CCM_OFS_R_OFFSET FX1_ISP_CCM_OFS_R_OFFSET
 #define NEON_FX1_ISP_CCM_OFS_R_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_CCM_OFS_R_RESET_KNOWN 1u
 #define NEON_FX1_ISP_CCM_OFS_R_RESET FX1_ISP_CCM_OFS_R_RESET
-/* Signed 12-bit offset in output pixel levels; code 1 adds one level (ISP-UPD-007). */
+/* Red Post-Matrix Offset Signed two's-complement Q3.9, 12 bits. Unity is 0x200; range -4.0 through 4.0-1/512. Offsets use the same fractional scale as the accumulator and are added before the final shift. */
 #define NEON_FX1_ISP_CCM_OFS_R_OFFSET_R_SHIFT FX1_ISP_CCM_OFS_R_OFFSET_R_SHIFT
 #define NEON_FX1_ISP_CCM_OFS_R_OFFSET_R_WIDTH FX1_ISP_CCM_OFS_R_OFFSET_R_WIDTH
 #define NEON_FX1_ISP_CCM_OFS_R_OFFSET_R_MASK FX1_ISP_CCM_OFS_R_OFFSET_R_MASK
@@ -2565,12 +2571,12 @@
 #define NEON_FX1_ISP_CCM_OFS_R_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_CCM_OFS_R_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_CCM_OFS_R_WO_MASK 0x00000000u
-/* Signed 12-bit offset in output pixel levels; code 1 adds one level (ISP-UPD-007). */
+/* CCM: green offset, added after the matrix. */
 #define NEON_FX1_ISP_CCM_OFS_G_OFFSET FX1_ISP_CCM_OFS_G_OFFSET
 #define NEON_FX1_ISP_CCM_OFS_G_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_CCM_OFS_G_RESET_KNOWN 1u
 #define NEON_FX1_ISP_CCM_OFS_G_RESET FX1_ISP_CCM_OFS_G_RESET
-/* Signed 12-bit offset in output pixel levels; code 1 adds one level (ISP-UPD-007). */
+/* Green Post-Matrix Offset Signed two's-complement Q3.9, 12 bits. Unity is 0x200; range -4.0 through 4.0-1/512. Offsets use the same fractional scale as the accumulator and are added before the final shift. */
 #define NEON_FX1_ISP_CCM_OFS_G_OFFSET_G_SHIFT FX1_ISP_CCM_OFS_G_OFFSET_G_SHIFT
 #define NEON_FX1_ISP_CCM_OFS_G_OFFSET_G_WIDTH FX1_ISP_CCM_OFS_G_OFFSET_G_WIDTH
 #define NEON_FX1_ISP_CCM_OFS_G_OFFSET_G_MASK FX1_ISP_CCM_OFS_G_OFFSET_G_MASK
@@ -2584,12 +2590,12 @@
 #define NEON_FX1_ISP_CCM_OFS_G_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_CCM_OFS_G_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_CCM_OFS_G_WO_MASK 0x00000000u
-/* Signed 12-bit offset in output pixel levels; code 1 adds one level (ISP-UPD-007). */
+/* CCM: blue offset, added after the matrix. */
 #define NEON_FX1_ISP_CCM_OFS_B_OFFSET FX1_ISP_CCM_OFS_B_OFFSET
 #define NEON_FX1_ISP_CCM_OFS_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_CCM_OFS_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_CCM_OFS_B_RESET FX1_ISP_CCM_OFS_B_RESET
-/* Signed 12-bit offset in output pixel levels; code 1 adds one level (ISP-UPD-007). */
+/* Blue Post-Matrix Offset Signed two's-complement Q3.9, 12 bits. Unity is 0x200; range -4.0 through 4.0-1/512. Offsets use the same fractional scale as the accumulator and are added before the final shift. */
 #define NEON_FX1_ISP_CCM_OFS_B_OFFSET_B_SHIFT FX1_ISP_CCM_OFS_B_OFFSET_B_SHIFT
 #define NEON_FX1_ISP_CCM_OFS_B_OFFSET_B_WIDTH FX1_ISP_CCM_OFS_B_OFFSET_B_WIDTH
 #define NEON_FX1_ISP_CCM_OFS_B_OFFSET_B_MASK FX1_ISP_CCM_OFS_B_OFFSET_B_MASK
@@ -2608,7 +2614,7 @@
 #define NEON_FX1_ISP_CCM_STATUS_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_CCM_STATUS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_CCM_STATUS_RESET FX1_ISP_CCM_STATUS_RESET
-/* Colour Matrix Busy 1 while the block holds in-flight pixels. Follow the block-specific configuration and LUT loading sequence; busy alone does not grant permission to rewrite live tables. */
+/* Colour Matrix Busy 1 while the block itself holds pixels: the block's own busy, as defined in its MAS section. It can read 0 inside a frame (line fill, input gaps), so it does not show that a frame has drained; use COMMON_STATUS.BUSY = 0 for no frame in flight. Follow the block-specific configuration and LUT loading sequence; busy alone does not grant permission to rewrite live tables. */
 #define NEON_FX1_ISP_CCM_STATUS_BUSY_SHIFT FX1_ISP_CCM_STATUS_BUSY_SHIFT
 #define NEON_FX1_ISP_CCM_STATUS_BUSY_WIDTH FX1_ISP_CCM_STATUS_BUSY_WIDTH
 #define NEON_FX1_ISP_CCM_STATUS_BUSY_MASK FX1_ISP_CCM_STATUS_BUSY_MASK
@@ -2715,7 +2721,7 @@
 #define NEON_FX1_ISP_GAMMA_STATUS_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_GAMMA_STATUS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_GAMMA_STATUS_RESET FX1_ISP_GAMMA_STATUS_RESET
-/* The Gamma Block Busy 1 while the block holds in-flight pixels. Follow the block-specific configuration and LUT loading sequence; busy alone does not grant permission to rewrite live tables. */
+/* The Gamma Block Busy 1 while the block itself holds pixels: the block's own busy, as defined in its MAS section. It can read 0 inside a frame (line fill, input gaps), so it does not show that a frame has drained; use COMMON_STATUS.BUSY = 0 for no frame in flight. Follow the block-specific configuration and LUT loading sequence; busy alone does not grant permission to rewrite live tables. */
 #define NEON_FX1_ISP_GAMMA_STATUS_BUSY_SHIFT FX1_ISP_GAMMA_STATUS_BUSY_SHIFT
 #define NEON_FX1_ISP_GAMMA_STATUS_BUSY_WIDTH FX1_ISP_GAMMA_STATUS_BUSY_WIDTH
 #define NEON_FX1_ISP_GAMMA_STATUS_BUSY_MASK FX1_ISP_GAMMA_STATUS_BUSY_MASK
@@ -2898,7 +2904,7 @@
 #define NEON_FX1_ISP_GTM_STATUS_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_GTM_STATUS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_GTM_STATUS_RESET FX1_ISP_GTM_STATUS_RESET
-/* The Tone-Mapping Block Busy 1 while the block holds in-flight pixels. Follow the block-specific configuration and LUT loading sequence; busy alone does not grant permission to rewrite live tables. */
+/* The Tone-Mapping Block Busy 1 while the block itself holds pixels: the block's own busy, as defined in its MAS section. It can read 0 inside a frame (line fill, input gaps), so it does not show that a frame has drained; use COMMON_STATUS.BUSY = 0 for no frame in flight. Follow the block-specific configuration and LUT loading sequence; busy alone does not grant permission to rewrite live tables. */
 #define NEON_FX1_ISP_GTM_STATUS_BUSY_SHIFT FX1_ISP_GTM_STATUS_BUSY_SHIFT
 #define NEON_FX1_ISP_GTM_STATUS_BUSY_WIDTH FX1_ISP_GTM_STATUS_BUSY_WIDTH
 #define NEON_FX1_ISP_GTM_STATUS_BUSY_MASK FX1_ISP_GTM_STATUS_BUSY_MASK
@@ -2955,7 +2961,7 @@
 #define NEON_FX1_ISP_NR_2D_STATUS_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_NR_2D_STATUS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_NR_2D_STATUS_RESET FX1_ISP_NR_2D_STATUS_RESET
-/* The 2D Noise-Reduction Block Busy 1 while the block holds in-flight pixels. Follow the block-specific configuration and LUT loading sequence; busy alone does not grant permission to rewrite live tables. */
+/* The 2D Noise-Reduction Block Busy 1 while the block itself holds pixels: the block's own busy, as defined in its MAS section. It can read 0 inside a frame (line fill, input gaps), so it does not show that a frame has drained; use COMMON_STATUS.BUSY = 0 for no frame in flight. Follow the block-specific configuration and LUT loading sequence; busy alone does not grant permission to rewrite live tables. */
 #define NEON_FX1_ISP_NR_2D_STATUS_BUSY_SHIFT FX1_ISP_NR_2D_STATUS_BUSY_SHIFT
 #define NEON_FX1_ISP_NR_2D_STATUS_BUSY_WIDTH FX1_ISP_NR_2D_STATUS_BUSY_WIDTH
 #define NEON_FX1_ISP_NR_2D_STATUS_BUSY_MASK FX1_ISP_NR_2D_STATUS_BUSY_MASK
@@ -3068,7 +3074,7 @@
 #define NEON_FX1_ISP_EE_ALPHA_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_ALPHA_RESET_KNOWN 1u
 #define NEON_FX1_ISP_EE_ALPHA_RESET FX1_ISP_EE_ALPHA_RESET
-/* Fine-Scale Sharpening Strength UQ1.15; 0x8000 = 1.0 and is the maximum. Larger values are clamped to 1.0 by the hardware rather than wrapping. */
+/* Fine-Scale Sharpening Strength UQ1.15; 0x8000 = 1.0 and is the maximum. Larger values are clamped to 1.0 by the hardware rather than wrapping. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_ALPHA_ALPHA_SHIFT FX1_ISP_EE_ALPHA_ALPHA_SHIFT
 #define NEON_FX1_ISP_EE_ALPHA_ALPHA_WIDTH FX1_ISP_EE_ALPHA_ALPHA_WIDTH
 #define NEON_FX1_ISP_EE_ALPHA_ALPHA_MASK FX1_ISP_EE_ALPHA_ALPHA_MASK
@@ -3087,7 +3093,7 @@
 #define NEON_FX1_ISP_EE_BETA_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_BETA_RESET_KNOWN 1u
 #define NEON_FX1_ISP_EE_BETA_RESET FX1_ISP_EE_BETA_RESET
-/* Coarse-Scale Sharpening Strength UQ1.15; 0x8000 = 1.0 and is the maximum, clamped as ALPHA is. The coarse term broadens the halo; usually set below ALPHA. */
+/* Coarse-Scale Sharpening Strength UQ1.15; 0x8000 = 1.0 and is the maximum, clamped as ALPHA is. The coarse term broadens the halo; usually set below ALPHA. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_BETA_BETA_SHIFT FX1_ISP_EE_BETA_BETA_SHIFT
 #define NEON_FX1_ISP_EE_BETA_BETA_WIDTH FX1_ISP_EE_BETA_BETA_WIDTH
 #define NEON_FX1_ISP_EE_BETA_BETA_MASK FX1_ISP_EE_BETA_BETA_MASK
@@ -3106,13 +3112,13 @@
 #define NEON_FX1_ISP_EE_CLAMP_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_CLAMP_RESET_KNOWN 1u
 #define NEON_FX1_ISP_EE_CLAMP_RESET FX1_ISP_EE_CLAMP_RESET
-/* Positive Correction Limit Largest positive correction, in 8-bit luma counts. */
+/* Positive Correction Limit Largest positive correction, in 8-bit luma counts. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_CLAMP_CLAMP_POS_SHIFT FX1_ISP_EE_CLAMP_CLAMP_POS_SHIFT
 #define NEON_FX1_ISP_EE_CLAMP_CLAMP_POS_WIDTH FX1_ISP_EE_CLAMP_CLAMP_POS_WIDTH
 #define NEON_FX1_ISP_EE_CLAMP_CLAMP_POS_MASK FX1_ISP_EE_CLAMP_CLAMP_POS_MASK
 #define NEON_FX1_ISP_EE_CLAMP_CLAMP_POS_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_CLAMP_CLAMP_POS_RESET FX1_ISP_EE_CLAMP_CLAMP_POS_RESET
-/* Negative Correction Limit Largest negative correction, in 8-bit luma counts. */
+/* Negative Correction Limit Largest negative correction, in 8-bit luma counts. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_CLAMP_CLAMP_NEG_SHIFT FX1_ISP_EE_CLAMP_CLAMP_NEG_SHIFT
 #define NEON_FX1_ISP_EE_CLAMP_CLAMP_NEG_WIDTH FX1_ISP_EE_CLAMP_CLAMP_NEG_WIDTH
 #define NEON_FX1_ISP_EE_CLAMP_CLAMP_NEG_MASK FX1_ISP_EE_CLAMP_CLAMP_NEG_MASK
@@ -3131,19 +3137,19 @@
 #define NEON_FX1_ISP_EE_FEATURE_EN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_FEATURE_EN_RESET_KNOWN 1u
 #define NEON_FX1_ISP_EE_FEATURE_EN_RESET FX1_ISP_EE_FEATURE_EN_RESET
-/* Activity Modulation Enable 1 = modulate by local activity, from the ACT LUT. Suppresses sharpening in flat areas, where it would only amplify noise. */
+/* Activity Modulation Enable 1 = modulate by local activity, from the ACT LUT. Suppresses sharpening in flat areas, where it would only amplify noise. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_FEATURE_EN_ACTIVITY_EN_SHIFT FX1_ISP_EE_FEATURE_EN_ACTIVITY_EN_SHIFT
 #define NEON_FX1_ISP_EE_FEATURE_EN_ACTIVITY_EN_WIDTH FX1_ISP_EE_FEATURE_EN_ACTIVITY_EN_WIDTH
 #define NEON_FX1_ISP_EE_FEATURE_EN_ACTIVITY_EN_MASK FX1_ISP_EE_FEATURE_EN_ACTIVITY_EN_MASK
 #define NEON_FX1_ISP_EE_FEATURE_EN_ACTIVITY_EN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_FEATURE_EN_ACTIVITY_EN_RESET FX1_ISP_EE_FEATURE_EN_ACTIVITY_EN_RESET
-/* Contrast Modulation Enable 1 = modulate by local contrast, from the CPOS and CNEG LUTs. Separate tables for positive and negative excursions. */
+/* Contrast Modulation Enable 1 = modulate by local contrast, from the CPOS and CNEG LUTs. Separate tables for positive and negative excursions. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_FEATURE_EN_CONTRAST_EN_SHIFT FX1_ISP_EE_FEATURE_EN_CONTRAST_EN_SHIFT
 #define NEON_FX1_ISP_EE_FEATURE_EN_CONTRAST_EN_WIDTH FX1_ISP_EE_FEATURE_EN_CONTRAST_EN_WIDTH
 #define NEON_FX1_ISP_EE_FEATURE_EN_CONTRAST_EN_MASK FX1_ISP_EE_FEATURE_EN_CONTRAST_EN_MASK
 #define NEON_FX1_ISP_EE_FEATURE_EN_CONTRAST_EN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_FEATURE_EN_CONTRAST_EN_RESET FX1_ISP_EE_FEATURE_EN_CONTRAST_EN_RESET
-/* Radial Modulation Enable 1 = modulate by distance from the image centre, using the R2 thresholds and the four radial gains. Lets the corners be sharpened differently from the centre. */
+/* Radial Modulation Enable 1 = modulate by distance from the image centre, using the R2 thresholds and the four radial gains. Lets the corners be sharpened differently from the centre. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_FEATURE_EN_RADIAL_EN_SHIFT FX1_ISP_EE_FEATURE_EN_RADIAL_EN_SHIFT
 #define NEON_FX1_ISP_EE_FEATURE_EN_RADIAL_EN_WIDTH FX1_ISP_EE_FEATURE_EN_RADIAL_EN_WIDTH
 #define NEON_FX1_ISP_EE_FEATURE_EN_RADIAL_EN_MASK FX1_ISP_EE_FEATURE_EN_RADIAL_EN_MASK
@@ -3162,13 +3168,13 @@
 #define NEON_FX1_ISP_EE_RADIAL_CENTER_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_RADIAL_CENTER_RESET_KNOWN 1u
 #define NEON_FX1_ISP_EE_RADIAL_CENTER_RESET FX1_ISP_EE_RADIAL_CENTER_RESET
-/* Radial Centre Column (x2) Twice the centre column. For a 1920-wide frame the centre is 1919/2, so this is 1919. */
+/* Radial Centre Column (x2) Twice the centre column. For a 1920-wide frame the centre is 1919/2, so this is 1919. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_RADIAL_CENTER_CENTER_X2_SHIFT FX1_ISP_EE_RADIAL_CENTER_CENTER_X2_SHIFT
 #define NEON_FX1_ISP_EE_RADIAL_CENTER_CENTER_X2_WIDTH FX1_ISP_EE_RADIAL_CENTER_CENTER_X2_WIDTH
 #define NEON_FX1_ISP_EE_RADIAL_CENTER_CENTER_X2_MASK FX1_ISP_EE_RADIAL_CENTER_CENTER_X2_MASK
 #define NEON_FX1_ISP_EE_RADIAL_CENTER_CENTER_X2_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_RADIAL_CENTER_CENTER_X2_RESET FX1_ISP_EE_RADIAL_CENTER_CENTER_X2_RESET
-/* Radial Centre Row (x2) Twice the centre row. */
+/* Radial Centre Row (x2) Twice the centre row. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_RADIAL_CENTER_CENTER_Y2_SHIFT FX1_ISP_EE_RADIAL_CENTER_CENTER_Y2_SHIFT
 #define NEON_FX1_ISP_EE_RADIAL_CENTER_CENTER_Y2_WIDTH FX1_ISP_EE_RADIAL_CENTER_CENTER_Y2_WIDTH
 #define NEON_FX1_ISP_EE_RADIAL_CENTER_CENTER_Y2_MASK FX1_ISP_EE_RADIAL_CENTER_CENTER_Y2_MASK
@@ -3187,7 +3193,7 @@
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH0_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH0_RESET_KNOWN 1u
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH0_RESET FX1_ISP_EE_RADIAL_R2_TH0_RESET
-/* Radial Zone 0 Boundary Squared radius at which zone 0 ends, in units of (2*pixel)^2 to match the doubled centre coordinates. */
+/* Radial Zone 0 Boundary Squared radius at which zone 0 ends, in units of (2*pixel)^2 to match the doubled centre coordinates. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH0_R2_TH0_SHIFT FX1_ISP_EE_RADIAL_R2_TH0_R2_TH0_SHIFT
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH0_R2_TH0_WIDTH FX1_ISP_EE_RADIAL_R2_TH0_R2_TH0_WIDTH
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH0_R2_TH0_MASK FX1_ISP_EE_RADIAL_R2_TH0_R2_TH0_MASK
@@ -3206,7 +3212,7 @@
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH1_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH1_RESET_KNOWN 1u
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH1_RESET FX1_ISP_EE_RADIAL_R2_TH1_RESET
-/* Radial Zone 1 Boundary Squared radius at which zone 1 ends, in units of (2*pixel)^2 to match the doubled centre coordinates. Must not be below R2_TH0. Zones are tested in order and the first match wins; in profile mode SEAL rejects decreasing thresholds with RADIAL_EN=1 (INVALID). */
+/* Radial Zone 1 Boundary Squared radius at which zone 1 ends, in units of (2*pixel)^2 to match the doubled centre coordinates. Must not be below R2_TH0. Zones are tested in order and the first match wins; in profile mode SEAL rejects decreasing thresholds with RADIAL_EN=1 (INVALID). External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH1_R2_TH1_SHIFT FX1_ISP_EE_RADIAL_R2_TH1_R2_TH1_SHIFT
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH1_R2_TH1_WIDTH FX1_ISP_EE_RADIAL_R2_TH1_R2_TH1_WIDTH
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH1_R2_TH1_MASK FX1_ISP_EE_RADIAL_R2_TH1_R2_TH1_MASK
@@ -3225,7 +3231,7 @@
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH2_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH2_RESET_KNOWN 1u
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH2_RESET FX1_ISP_EE_RADIAL_R2_TH2_RESET
-/* Radial Zone 2 Boundary Squared radius at which zone 2 ends, in units of (2*pixel)^2 to match the doubled centre coordinates. Must not be below R2_TH1. Zones are tested in order and the first match wins; in profile mode SEAL rejects decreasing thresholds with RADIAL_EN=1 (INVALID). */
+/* Radial Zone 2 Boundary Squared radius at which zone 2 ends, in units of (2*pixel)^2 to match the doubled centre coordinates. Must not be below R2_TH1. Zones are tested in order and the first match wins; in profile mode SEAL rejects decreasing thresholds with RADIAL_EN=1 (INVALID). External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH2_R2_TH2_SHIFT FX1_ISP_EE_RADIAL_R2_TH2_R2_TH2_SHIFT
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH2_R2_TH2_WIDTH FX1_ISP_EE_RADIAL_R2_TH2_R2_TH2_WIDTH
 #define NEON_FX1_ISP_EE_RADIAL_R2_TH2_R2_TH2_MASK FX1_ISP_EE_RADIAL_R2_TH2_R2_TH2_MASK
@@ -3244,13 +3250,13 @@
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_01_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_01_RESET_KNOWN 1u
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_01_RESET FX1_ISP_EE_RADIAL_GAIN_01_RESET
-/* Radial Gain, Innermost Zone UQ1.15 gain applied inside R2_TH0; 0x8000 = 1.0 = no change. */
+/* Radial Gain, Innermost Zone UQ1.15 gain applied inside R2_TH0; 0x8000 = 1.0 = no change. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_01_GAIN0_SHIFT FX1_ISP_EE_RADIAL_GAIN_01_GAIN0_SHIFT
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_01_GAIN0_WIDTH FX1_ISP_EE_RADIAL_GAIN_01_GAIN0_WIDTH
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_01_GAIN0_MASK FX1_ISP_EE_RADIAL_GAIN_01_GAIN0_MASK
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_01_GAIN0_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_01_GAIN0_RESET FX1_ISP_EE_RADIAL_GAIN_01_GAIN0_RESET
-/* Radial Gain, Zone 1 UQ1.15 gain applied between R2_TH0 and R2_TH1; 0x8000 = 1.0 = no change. */
+/* Radial Gain, Zone 1 UQ1.15 gain applied between R2_TH0 and R2_TH1; 0x8000 = 1.0 = no change. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_01_GAIN1_SHIFT FX1_ISP_EE_RADIAL_GAIN_01_GAIN1_SHIFT
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_01_GAIN1_WIDTH FX1_ISP_EE_RADIAL_GAIN_01_GAIN1_WIDTH
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_01_GAIN1_MASK FX1_ISP_EE_RADIAL_GAIN_01_GAIN1_MASK
@@ -3269,13 +3275,13 @@
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_23_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_23_RESET_KNOWN 1u
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_23_RESET FX1_ISP_EE_RADIAL_GAIN_23_RESET
-/* Radial Gain, Zone 2 UQ1.15 gain applied between R2_TH1 and R2_TH2; 0x8000 = 1.0 = no change. */
+/* Radial Gain, Zone 2 UQ1.15 gain applied between R2_TH1 and R2_TH2; 0x8000 = 1.0 = no change. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_23_GAIN2_SHIFT FX1_ISP_EE_RADIAL_GAIN_23_GAIN2_SHIFT
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_23_GAIN2_WIDTH FX1_ISP_EE_RADIAL_GAIN_23_GAIN2_WIDTH
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_23_GAIN2_MASK FX1_ISP_EE_RADIAL_GAIN_23_GAIN2_MASK
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_23_GAIN2_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_23_GAIN2_RESET FX1_ISP_EE_RADIAL_GAIN_23_GAIN2_RESET
-/* Radial Gain, Outermost Zone UQ1.15 gain applied beyond R2_TH2; 0x8000 = 1.0 = no change. */
+/* Radial Gain, Outermost Zone UQ1.15 gain applied beyond R2_TH2; 0x8000 = 1.0 = no change. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_23_GAIN3_SHIFT FX1_ISP_EE_RADIAL_GAIN_23_GAIN3_SHIFT
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_23_GAIN3_WIDTH FX1_ISP_EE_RADIAL_GAIN_23_GAIN3_WIDTH
 #define NEON_FX1_ISP_EE_RADIAL_GAIN_23_GAIN3_MASK FX1_ISP_EE_RADIAL_GAIN_23_GAIN3_MASK
@@ -3357,7 +3363,7 @@
 #define NEON_FX1_ISP_EE_STATUS_ACCESS NEON_FX1_ACCESS_MIXED
 #define NEON_FX1_ISP_EE_STATUS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_EE_STATUS_RESET FX1_ISP_EE_STATUS_RESET
-/* Block holds in-flight pixels. Profile mode protects active/sealed/pending/referenced residents; another unreferenced resident may be loaded. */
+/* EE Busy 1 while the block itself holds pixels: the block's own busy, as defined in its MAS section. It can read 0 inside a frame (line fill, input gaps), so it does not show that a frame has drained; use COMMON_STATUS.BUSY = 0 for no frame in flight. Profile mode protects active/sealed/pending/referenced residents; another unreferenced resident may be loaded. */
 #define NEON_FX1_ISP_EE_STATUS_BUSY_SHIFT FX1_ISP_EE_STATUS_BUSY_SHIFT
 #define NEON_FX1_ISP_EE_STATUS_BUSY_WIDTH FX1_ISP_EE_STATUS_BUSY_WIDTH
 #define NEON_FX1_ISP_EE_STATUS_BUSY_MASK FX1_ISP_EE_STATUS_BUSY_MASK
@@ -3414,7 +3420,7 @@
 #define NEON_FX1_ISP_EE_LUT_RDATA_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_EE_LUT_RDATA_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_EE_LUT_RDATA_WO_MASK 0x00000000u
-/* CNF: chroma noise filter control. A 5x5 filter that averages chroma over neighbours whose luma and chroma are both close enough, so it smooths noise without bleeding colour across edges. */
+/* CNF: chroma noise filter control. A 5x5 luma-guided filter (guided image filter, radius 2): chroma is fitted as a local linear function of luma, so noise is averaged in flat areas while chroma edges that coincide with luma edges are kept. */
 #define NEON_FX1_ISP_CNF_CTRL_OFFSET FX1_ISP_CNF_CTRL_OFFSET
 #define NEON_FX1_ISP_CNF_CTRL_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_CNF_CTRL_RESET_KNOWN 1u
@@ -3425,7 +3431,7 @@
 #define NEON_FX1_ISP_CNF_CTRL_EN_MASK FX1_ISP_CNF_CTRL_EN_MASK
 #define NEON_FX1_ISP_CNF_CTRL_EN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_CNF_CTRL_EN_RESET FX1_ISP_CNF_CTRL_EN_RESET
-/* Reserved Update Control Readable/writable compatibility field with no commit effect. Enable and thresholds are sampled at accepted SOF. */
+/* Reserved Update Control Readable/writable compatibility field with no commit effect. Enable and CNF_GF_EPS are sampled at accepted SOF. */
 #define NEON_FX1_ISP_CNF_CTRL_UPDATED_SHIFT FX1_ISP_CNF_CTRL_UPDATED_SHIFT
 #define NEON_FX1_ISP_CNF_CTRL_UPDATED_WIDTH FX1_ISP_CNF_CTRL_UPDATED_WIDTH
 #define NEON_FX1_ISP_CNF_CTRL_UPDATED_MASK FX1_ISP_CNF_CTRL_UPDATED_MASK
@@ -3439,45 +3445,26 @@
 #define NEON_FX1_ISP_CNF_CTRL_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_CNF_CTRL_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_CNF_CTRL_WO_MASK 0x00000000u
-/* CNF: how different a neighbour's chroma may be and still be averaged in. */
-#define NEON_FX1_ISP_CNF_CHROMA_TH_OFFSET FX1_ISP_CNF_CHROMA_TH_OFFSET
-#define NEON_FX1_ISP_CNF_CHROMA_TH_ACCESS NEON_FX1_ACCESS_RW
-#define NEON_FX1_ISP_CNF_CHROMA_TH_RESET_KNOWN 1u
-#define NEON_FX1_ISP_CNF_CHROMA_TH_RESET FX1_ISP_CNF_CHROMA_TH_RESET
-/* Chroma Similarity Threshold Legal range 0..510, in chroma counts. Compared against abs(U-Uc)+abs(V-Vc). Code 511 is reserved, accepted by the register, and behaves as 510. */
-#define NEON_FX1_ISP_CNF_CHROMA_TH_CHROMA_TH_SHIFT FX1_ISP_CNF_CHROMA_TH_CHROMA_TH_SHIFT
-#define NEON_FX1_ISP_CNF_CHROMA_TH_CHROMA_TH_WIDTH FX1_ISP_CNF_CHROMA_TH_CHROMA_TH_WIDTH
-#define NEON_FX1_ISP_CNF_CHROMA_TH_CHROMA_TH_MASK FX1_ISP_CNF_CHROMA_TH_CHROMA_TH_MASK
-#define NEON_FX1_ISP_CNF_CHROMA_TH_CHROMA_TH_ACCESS NEON_FX1_ACCESS_RW
-#define NEON_FX1_ISP_CNF_CHROMA_TH_CHROMA_TH_RESET FX1_ISP_CNF_CHROMA_TH_CHROMA_TH_RESET
-#define NEON_FX1_ISP_CNF_CHROMA_TH_RO_MASK 0x00000000u
-#define NEON_FX1_ISP_CNF_CHROMA_TH_RW_MASK 0x000001FFu
-#define NEON_FX1_ISP_CNF_CHROMA_TH_W1C_MASK 0x00000000u
-#define NEON_FX1_ISP_CNF_CHROMA_TH_W1S_MASK 0x00000000u
-#define NEON_FX1_ISP_CNF_CHROMA_TH_W1P_MASK 0x00000000u
-#define NEON_FX1_ISP_CNF_CHROMA_TH_W1SC_MASK 0x00000000u
-#define NEON_FX1_ISP_CNF_CHROMA_TH_UNKNOWN_MASK 0x00000000u
-#define NEON_FX1_ISP_CNF_CHROMA_TH_WO_MASK 0x00000000u
-/* CNF: how different a neighbour's luma may be and still be averaged in. This is what keeps the filter from averaging across an edge. */
-#define NEON_FX1_ISP_CNF_LUMA_TH_OFFSET FX1_ISP_CNF_LUMA_TH_OFFSET
-#define NEON_FX1_ISP_CNF_LUMA_TH_ACCESS NEON_FX1_ACCESS_RW
-#define NEON_FX1_ISP_CNF_LUMA_TH_RESET_KNOWN 1u
-#define NEON_FX1_ISP_CNF_LUMA_TH_RESET FX1_ISP_CNF_LUMA_TH_RESET
-/* Luma Similarity Threshold T_Y, 0..255, in luma counts. */
-#define NEON_FX1_ISP_CNF_LUMA_TH_LUMA_TH_SHIFT FX1_ISP_CNF_LUMA_TH_LUMA_TH_SHIFT
-#define NEON_FX1_ISP_CNF_LUMA_TH_LUMA_TH_WIDTH FX1_ISP_CNF_LUMA_TH_LUMA_TH_WIDTH
-#define NEON_FX1_ISP_CNF_LUMA_TH_LUMA_TH_MASK FX1_ISP_CNF_LUMA_TH_LUMA_TH_MASK
-#define NEON_FX1_ISP_CNF_LUMA_TH_LUMA_TH_ACCESS NEON_FX1_ACCESS_RW
-#define NEON_FX1_ISP_CNF_LUMA_TH_LUMA_TH_RESET FX1_ISP_CNF_LUMA_TH_LUMA_TH_RESET
-#define NEON_FX1_ISP_CNF_LUMA_TH_RO_MASK 0x00000000u
-#define NEON_FX1_ISP_CNF_LUMA_TH_RW_MASK 0x000000FFu
-#define NEON_FX1_ISP_CNF_LUMA_TH_W1C_MASK 0x00000000u
-#define NEON_FX1_ISP_CNF_LUMA_TH_W1S_MASK 0x00000000u
-#define NEON_FX1_ISP_CNF_LUMA_TH_W1P_MASK 0x00000000u
-#define NEON_FX1_ISP_CNF_LUMA_TH_W1SC_MASK 0x00000000u
-#define NEON_FX1_ISP_CNF_LUMA_TH_UNKNOWN_MASK 0x00000000u
-#define NEON_FX1_ISP_CNF_LUMA_TH_WO_MASK 0x00000000u
-/* CNF: reserved strength control. The specified filter uses enable and the luma/chroma thresholds; this field has no processing effect. */
+/* CNF: guided-filter regularisation epsilon. Larger values smooth chroma more and keep fewer weak edges. */
+#define NEON_FX1_ISP_CNF_GF_EPS_OFFSET FX1_ISP_CNF_GF_EPS_OFFSET
+#define NEON_FX1_ISP_CNF_GF_EPS_ACCESS NEON_FX1_ACCESS_RW
+#define NEON_FX1_ISP_CNF_GF_EPS_RESET_KNOWN 1u
+#define NEON_FX1_ISP_CNF_GF_EPS_RESET FX1_ISP_CNF_GF_EPS_RESET
+/* Guided Filter Epsilon 0..65535, in 8-bit luma units squared. Windows whose luma variance is well below epsilon are smoothed; windows well above it keep chroma following luma. Every code is legal. */
+#define NEON_FX1_ISP_CNF_GF_EPS_GF_EPS_SHIFT FX1_ISP_CNF_GF_EPS_GF_EPS_SHIFT
+#define NEON_FX1_ISP_CNF_GF_EPS_GF_EPS_WIDTH FX1_ISP_CNF_GF_EPS_GF_EPS_WIDTH
+#define NEON_FX1_ISP_CNF_GF_EPS_GF_EPS_MASK FX1_ISP_CNF_GF_EPS_GF_EPS_MASK
+#define NEON_FX1_ISP_CNF_GF_EPS_GF_EPS_ACCESS NEON_FX1_ACCESS_RW
+#define NEON_FX1_ISP_CNF_GF_EPS_GF_EPS_RESET FX1_ISP_CNF_GF_EPS_GF_EPS_RESET
+#define NEON_FX1_ISP_CNF_GF_EPS_RO_MASK 0x00000000u
+#define NEON_FX1_ISP_CNF_GF_EPS_RW_MASK 0x0000FFFFu
+#define NEON_FX1_ISP_CNF_GF_EPS_W1C_MASK 0x00000000u
+#define NEON_FX1_ISP_CNF_GF_EPS_W1S_MASK 0x00000000u
+#define NEON_FX1_ISP_CNF_GF_EPS_W1P_MASK 0x00000000u
+#define NEON_FX1_ISP_CNF_GF_EPS_W1SC_MASK 0x00000000u
+#define NEON_FX1_ISP_CNF_GF_EPS_UNKNOWN_MASK 0x00000000u
+#define NEON_FX1_ISP_CNF_GF_EPS_WO_MASK 0x00000000u
+/* CNF: reserved strength control. The specified filter uses enable and CNF_GF_EPS; this field has no processing effect. */
 #define NEON_FX1_ISP_CNF_STRENGTH_OFFSET FX1_ISP_CNF_STRENGTH_OFFSET
 #define NEON_FX1_ISP_CNF_STRENGTH_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_CNF_STRENGTH_RESET_KNOWN 1u
@@ -3501,7 +3488,7 @@
 #define NEON_FX1_ISP_CNF_STATUS_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_CNF_STATUS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_CNF_STATUS_RESET FX1_ISP_CNF_STATUS_RESET
-/* Chroma Noise Filter Busy 1 while the block holds in-flight pixels. Follow the block-specific configuration and LUT loading sequence; busy alone does not grant permission to rewrite live tables. */
+/* Chroma Noise Filter Busy 1 while the block itself holds pixels: the block's own busy, as defined in its MAS section. It can read 0 inside a frame (line fill, input gaps), so it does not show that a frame has drained; use COMMON_STATUS.BUSY = 0 for no frame in flight. Follow the block-specific configuration and LUT loading sequence; busy alone does not grant permission to rewrite live tables. */
 #define NEON_FX1_ISP_CNF_STATUS_BUSY_SHIFT FX1_ISP_CNF_STATUS_BUSY_SHIFT
 #define NEON_FX1_ISP_CNF_STATUS_BUSY_WIDTH FX1_ISP_CNF_STATUS_BUSY_WIDTH
 #define NEON_FX1_ISP_CNF_STATUS_BUSY_MASK FX1_ISP_CNF_STATUS_BUSY_MASK
@@ -3627,7 +3614,7 @@
 #define NEON_FX1_ISP_RESIZER_STATUS_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_RESIZER_STATUS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_RESIZER_STATUS_RESET FX1_ISP_RESIZER_STATUS_RESET
-/* Resizer Busy 1 while the block holds in-flight pixels. Follow the block-specific configuration and LUT loading sequence; busy alone does not grant permission to rewrite live tables. */
+/* Resizer Busy 1 while the block itself holds pixels: the block's own busy, as defined in its MAS section. It can read 0 inside a frame (line fill, input gaps), so it does not show that a frame has drained; use COMMON_STATUS.BUSY = 0 for no frame in flight. Follow the block-specific configuration and LUT loading sequence; busy alone does not grant permission to rewrite live tables. */
 #define NEON_FX1_ISP_RESIZER_STATUS_BUSY_SHIFT FX1_ISP_RESIZER_STATUS_BUSY_SHIFT
 #define NEON_FX1_ISP_RESIZER_STATUS_BUSY_WIDTH FX1_ISP_RESIZER_STATUS_BUSY_WIDTH
 #define NEON_FX1_ISP_RESIZER_STATUS_BUSY_MASK FX1_ISP_RESIZER_STATUS_BUSY_MASK
@@ -4144,6 +4131,31 @@
 #define NEON_FX1_ISP_AEC_HIST_DATA_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_AEC_HIST_DATA_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_AEC_HIST_DATA_WO_MASK 0x00000000u
+/* AEC: global over- and under-exposed sample percentages of the leased frame, read-only. Each is floor(25600 * count / (width * height)) in unsigned Q7.8 (value / 256 = percent; 100% = 0x6400), where count is the global OE or UE count and width * height is every observed RAW12 Bayer sample of the frame. Published together with the other AEC results. No-lease reads return zero and set NO_LEASE. */
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_OFFSET FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_OFFSET
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_RESET_KNOWN 1u
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_RESET FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_RESET
+/* Under-exposed percentage, Q7.8: floor(25600 * UE_COUNT / (W * H)); 0..0x6400. */
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_UE_PERCENT_SHIFT FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_UE_PERCENT_SHIFT
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_UE_PERCENT_WIDTH FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_UE_PERCENT_WIDTH
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_UE_PERCENT_MASK FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_UE_PERCENT_MASK
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_UE_PERCENT_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_UE_PERCENT_RESET FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_UE_PERCENT_RESET
+/* Over-exposed percentage, Q7.8: floor(25600 * OE_COUNT / (W * H)); 0..0x6400. */
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_OE_PERCENT_SHIFT FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_OE_PERCENT_SHIFT
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_OE_PERCENT_WIDTH FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_OE_PERCENT_WIDTH
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_OE_PERCENT_MASK FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_OE_PERCENT_MASK
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_OE_PERCENT_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_OE_PERCENT_RESET FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_OE_PERCENT_RESET
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_RO_MASK 0xFFFFFFFFu
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_RW_MASK 0x00000000u
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_W1C_MASK 0x00000000u
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_W1S_MASK 0x00000000u
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_W1P_MASK 0x00000000u
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_W1SC_MASK 0x00000000u
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_UNKNOWN_MASK 0x00000000u
+#define NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_WO_MASK 0x00000000u
 /* AWB: non-blocking post-BPC Bayer-cell statistics. Each accepted 2x2 RGGB cell contributes R, rounded-average green and B once on the uniform cell grid. */
 #define NEON_FX1_ISP_AWB_CTRL_OFFSET FX1_ISP_AWB_CTRL_OFFSET
 #define NEON_FX1_ISP_AWB_CTRL_ACCESS NEON_FX1_ACCESS_RW
@@ -5198,7 +5210,7 @@
 #define NEON_FX1_ISP_DMA_CTRL_ACCESS NEON_FX1_ACCESS_MIXED
 #define NEON_FX1_ISP_DMA_CTRL_RESET_KNOWN 1u
 #define NEON_FX1_ISP_DMA_CTRL_RESET FX1_ISP_DMA_CTRL_RESET
-/* Input DMA Enable 1 = the input DMA fetches frames from DDR. */
+/* Input Enable 1 = the input path admits frames: the input DMA fetches frames from DDR (INPUT_SRC_CTRL.SEL = 0) or the AXI4-Stream adapter accepts frames from the stream port (SEL = 1). */
 #define NEON_FX1_ISP_DMA_CTRL_IDMA_EN_SHIFT FX1_ISP_DMA_CTRL_IDMA_EN_SHIFT
 #define NEON_FX1_ISP_DMA_CTRL_IDMA_EN_WIDTH FX1_ISP_DMA_CTRL_IDMA_EN_WIDTH
 #define NEON_FX1_ISP_DMA_CTRL_IDMA_EN_MASK FX1_ISP_DMA_CTRL_IDMA_EN_MASK
@@ -5214,7 +5226,7 @@
 #define NEON_FX1_ISP_DMA_CTRL_SOFT_RESET_SHIFT FX1_ISP_DMA_CTRL_SOFT_RESET_SHIFT
 #define NEON_FX1_ISP_DMA_CTRL_SOFT_RESET_WIDTH FX1_ISP_DMA_CTRL_SOFT_RESET_WIDTH
 #define NEON_FX1_ISP_DMA_CTRL_SOFT_RESET_MASK FX1_ISP_DMA_CTRL_SOFT_RESET_MASK
-#define NEON_FX1_ISP_DMA_CTRL_SOFT_RESET_ACCESS NEON_FX1_ACCESS_W1SC
+#define NEON_FX1_ISP_DMA_CTRL_SOFT_RESET_ACCESS NEON_FX1_ACCESS_W1P
 #define NEON_FX1_ISP_DMA_CTRL_SOFT_RESET_RESET FX1_ISP_DMA_CTRL_SOFT_RESET_RESET
 /* Maximum AXI Burst Length Minus One Encoded value 0..255 gives 1..256 beats. Reset 63 gives 64 beats. MAX_BURST_BEATS in the MAS is the effective value MAX_BURST_M1+1; bursts also split at line and 4 KiB boundaries. */
 #define NEON_FX1_ISP_DMA_CTRL_MAX_BURST_M1_SHIFT FX1_ISP_DMA_CTRL_MAX_BURST_M1_SHIFT
@@ -5226,8 +5238,8 @@
 #define NEON_FX1_ISP_DMA_CTRL_RW_MASK 0x0000FF03u
 #define NEON_FX1_ISP_DMA_CTRL_W1C_MASK 0x00000000u
 #define NEON_FX1_ISP_DMA_CTRL_W1S_MASK 0x00000000u
-#define NEON_FX1_ISP_DMA_CTRL_W1P_MASK 0x00000000u
-#define NEON_FX1_ISP_DMA_CTRL_W1SC_MASK 0x00000004u
+#define NEON_FX1_ISP_DMA_CTRL_W1P_MASK 0x00000004u
+#define NEON_FX1_ISP_DMA_CTRL_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_DMA_CTRL_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_DMA_CTRL_WO_MASK 0x00000000u
 /* DMA Engine: engine status, read-only. Both bits read 0 on a wedged engine as well as an idle one, so do not treat 0 here as proof the engine is healthy -- check the frame counters advance. */
@@ -5235,7 +5247,7 @@
 #define NEON_FX1_ISP_DMA_STAT_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_DMA_STAT_RESET_KNOWN 1u
 #define NEON_FX1_ISP_DMA_STAT_RESET FX1_ISP_DMA_STAT_RESET
-/* Input DMA Busy 1 = the input DMA has a transfer outstanding. */
+/* Input Busy 1 = the input DMA has a transfer outstanding, or the AXI4-Stream adapter is forwarding a frame (SEL = 1). */
 #define NEON_FX1_ISP_DMA_STAT_IDMA_BUSY_SHIFT FX1_ISP_DMA_STAT_IDMA_BUSY_SHIFT
 #define NEON_FX1_ISP_DMA_STAT_IDMA_BUSY_WIDTH FX1_ISP_DMA_STAT_IDMA_BUSY_WIDTH
 #define NEON_FX1_ISP_DMA_STAT_IDMA_BUSY_MASK FX1_ISP_DMA_STAT_IDMA_BUSY_MASK
@@ -5260,7 +5272,7 @@
 #define NEON_FX1_ISP_DMA_ERR_ACCESS NEON_FX1_ACCESS_W1C
 #define NEON_FX1_ISP_DMA_ERR_RESET_KNOWN 1u
 #define NEON_FX1_ISP_DMA_ERR_RESET FX1_ISP_DMA_ERR_RESET
-/* ERR; documented width 6, implemented mask 0x1f. */
+/* Sticky DMA Error Flags W1C, hardware set wins over simultaneous clear. DMA-scope recovery, automatic or commanded, preserves these bits; only W1C, common recovery and hard reset clear them. Bit 0 ALIGN: illegal address/stride alignment or geometry, a base-address bit at or above the build address width, or a plane whose last byte reaches 2^ADDR_W; checked at IDMA frame start and ODMA buffer claim. The buffer is not used, its ownership bit clears and the rotation does not advance. Bit 1 IDMA_UNDERRUN: enabled idle input DMA has no valid head buffer (never with INPUT_SRC_CTRL.SEL = 1); stalls without dropping data. Bit 2 ODMA_OVERFLOW: pixels await an output buffer; backpressure at a line boundary until one is free. Bit 3 AXI_RD: terminal read response error; starts automatic DMA-scope recovery. Bit 4 AXI_WR: terminal write response error; starts automatic DMA-scope recovery. Bit 5 STREAM: AXI4-Stream input framing error or dropped frame; INPUT_STREAM_ERR holds the cause. The adapter repairs the frame; no recovery starts. */
 #define NEON_FX1_ISP_DMA_ERR_ERR_SHIFT FX1_ISP_DMA_ERR_ERR_SHIFT
 #define NEON_FX1_ISP_DMA_ERR_ERR_WIDTH FX1_ISP_DMA_ERR_ERR_WIDTH
 #define NEON_FX1_ISP_DMA_ERR_ERR_MASK FX1_ISP_DMA_ERR_ERR_MASK
@@ -5268,7 +5280,7 @@
 #define NEON_FX1_ISP_DMA_ERR_ERR_RESET FX1_ISP_DMA_ERR_ERR_RESET
 #define NEON_FX1_ISP_DMA_ERR_RO_MASK 0x00000000u
 #define NEON_FX1_ISP_DMA_ERR_RW_MASK 0x00000000u
-#define NEON_FX1_ISP_DMA_ERR_W1C_MASK 0x0000001Fu
+#define NEON_FX1_ISP_DMA_ERR_W1C_MASK 0x0000003Fu
 #define NEON_FX1_ISP_DMA_ERR_W1S_MASK 0x00000000u
 #define NEON_FX1_ISP_DMA_ERR_W1P_MASK 0x00000000u
 #define NEON_FX1_ISP_DMA_ERR_W1SC_MASK 0x00000000u
@@ -5279,14 +5291,14 @@
 #define NEON_FX1_ISP_DMA_IRQ_EN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_DMA_IRQ_EN_RESET_KNOWN 1u
 #define NEON_FX1_ISP_DMA_IRQ_EN_RESET FX1_ISP_DMA_IRQ_EN_RESET
-/* DMA Interrupt Enable Mask Mask gates the interrupt output, not sticky status. Bit 0 CFG_ERROR (illegal start configuration). Bit 1 IDMA_START. Bit 2 IDMA_DONE. Bit 3 IDMA_UNDERRUN. Bit 4 ODMA_DONE. Bit 5 ODMA_OVERFLOW. Bit 6 AXI_ERROR (either master). */
+/* DMA Interrupt Enable Mask Mask gates the interrupt output, not sticky status. Bit 0 CFG_ERROR (illegal start configuration). Bit 1 IDMA_START. Bit 2 IDMA_DONE. Bit 3 IDMA_UNDERRUN. Bit 4 ODMA_DONE. Bit 5 ODMA_OVERFLOW. Bit 6 AXI_ERROR (either master). Bit 7 STREAM_ERROR (DMA_ERR.STREAM set). Bits 1 and 2 report the input frame start and completion for either input source. */
 #define NEON_FX1_ISP_DMA_IRQ_EN_IRQ_EN_SHIFT FX1_ISP_DMA_IRQ_EN_IRQ_EN_SHIFT
 #define NEON_FX1_ISP_DMA_IRQ_EN_IRQ_EN_WIDTH FX1_ISP_DMA_IRQ_EN_IRQ_EN_WIDTH
 #define NEON_FX1_ISP_DMA_IRQ_EN_IRQ_EN_MASK FX1_ISP_DMA_IRQ_EN_IRQ_EN_MASK
 #define NEON_FX1_ISP_DMA_IRQ_EN_IRQ_EN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_DMA_IRQ_EN_IRQ_EN_RESET FX1_ISP_DMA_IRQ_EN_IRQ_EN_RESET
 #define NEON_FX1_ISP_DMA_IRQ_EN_RO_MASK 0x00000000u
-#define NEON_FX1_ISP_DMA_IRQ_EN_RW_MASK 0x0000007Fu
+#define NEON_FX1_ISP_DMA_IRQ_EN_RW_MASK 0x000000FFu
 #define NEON_FX1_ISP_DMA_IRQ_EN_W1C_MASK 0x00000000u
 #define NEON_FX1_ISP_DMA_IRQ_EN_W1S_MASK 0x00000000u
 #define NEON_FX1_ISP_DMA_IRQ_EN_W1P_MASK 0x00000000u
@@ -5298,7 +5310,7 @@
 #define NEON_FX1_ISP_DMA_IRQ_STAT_ACCESS NEON_FX1_ACCESS_W1C
 #define NEON_FX1_ISP_DMA_IRQ_STAT_RESET_KNOWN 1u
 #define NEON_FX1_ISP_DMA_IRQ_STAT_RESET FX1_ISP_DMA_IRQ_STAT_RESET
-/* DMA Interrupt Status Flags Sticky W1C; hardware set wins over simultaneous clear. DMA-scope recovery, automatic or commanded, preserves these bits; only W1C, common recovery and hard reset clear them. Bit 0 CFG_ERROR (illegal start configuration). Bit 1 IDMA_START. Bit 2 IDMA_DONE. Bit 3 IDMA_UNDERRUN. Bit 4 ODMA_DONE. Bit 5 ODMA_OVERFLOW. Bit 6 AXI_ERROR (either master). */
+/* DMA Interrupt Status Flags Sticky W1C; hardware set wins over simultaneous clear. DMA-scope recovery, automatic or commanded, preserves these bits; only W1C, common recovery and hard reset clear them. Bit 0 CFG_ERROR (illegal start configuration). Bit 1 IDMA_START. Bit 2 IDMA_DONE. Bit 3 IDMA_UNDERRUN. Bit 4 ODMA_DONE. Bit 5 ODMA_OVERFLOW. Bit 6 AXI_ERROR (either master). Bit 7 STREAM_ERROR (DMA_ERR.STREAM set). Bits 1 and 2 report the input frame start and completion for either input source. */
 #define NEON_FX1_ISP_DMA_IRQ_STAT_IRQ_SHIFT FX1_ISP_DMA_IRQ_STAT_IRQ_SHIFT
 #define NEON_FX1_ISP_DMA_IRQ_STAT_IRQ_WIDTH FX1_ISP_DMA_IRQ_STAT_IRQ_WIDTH
 #define NEON_FX1_ISP_DMA_IRQ_STAT_IRQ_MASK FX1_ISP_DMA_IRQ_STAT_IRQ_MASK
@@ -5306,7 +5318,7 @@
 #define NEON_FX1_ISP_DMA_IRQ_STAT_IRQ_RESET FX1_ISP_DMA_IRQ_STAT_IRQ_RESET
 #define NEON_FX1_ISP_DMA_IRQ_STAT_RO_MASK 0x00000000u
 #define NEON_FX1_ISP_DMA_IRQ_STAT_RW_MASK 0x00000000u
-#define NEON_FX1_ISP_DMA_IRQ_STAT_W1C_MASK 0x0000007Fu
+#define NEON_FX1_ISP_DMA_IRQ_STAT_W1C_MASK 0x000000FFu
 #define NEON_FX1_ISP_DMA_IRQ_STAT_W1S_MASK 0x00000000u
 #define NEON_FX1_ISP_DMA_IRQ_STAT_W1P_MASK 0x00000000u
 #define NEON_FX1_ISP_DMA_IRQ_STAT_W1SC_MASK 0x00000000u
@@ -5336,7 +5348,7 @@
 #define NEON_FX1_ISP_IDMA_BUF_VALID_ACCESS NEON_FX1_ACCESS_W1S
 #define NEON_FX1_ISP_IDMA_BUF_VALID_RESET_KNOWN 1u
 #define NEON_FX1_ISP_IDMA_BUF_VALID_RESET FX1_ISP_IDMA_BUF_VALID_RESET
-/* IDMA_BUF_VALID; documented width 8, implemented mask 0xf. */
+/* Input Buffer Valid Flags One bit per input buffer; write 1 to hand a filled buffer to the engine. 7:4 unused -- the engine implements four buffers Bits at or above the build buffer count read zero and ignore writes. Hardware clears a bit when it has finished reading that buffer. bit 0 = BUFFER_0 (Address from IDMA_BUF_ADDR_L0/H0) bit 1 = BUFFER_1 bit 2 = BUFFER_2 bit 3 = BUFFER_3 */
 #define NEON_FX1_ISP_IDMA_BUF_VALID_IDMA_BUF_VALID_SHIFT FX1_ISP_IDMA_BUF_VALID_IDMA_BUF_VALID_SHIFT
 #define NEON_FX1_ISP_IDMA_BUF_VALID_IDMA_BUF_VALID_WIDTH FX1_ISP_IDMA_BUF_VALID_IDMA_BUF_VALID_WIDTH
 #define NEON_FX1_ISP_IDMA_BUF_VALID_IDMA_BUF_VALID_MASK FX1_ISP_IDMA_BUF_VALID_IDMA_BUF_VALID_MASK
@@ -5345,17 +5357,17 @@
 #define NEON_FX1_ISP_IDMA_BUF_VALID_RO_MASK 0x00000000u
 #define NEON_FX1_ISP_IDMA_BUF_VALID_RW_MASK 0x00000000u
 #define NEON_FX1_ISP_IDMA_BUF_VALID_W1C_MASK 0x00000000u
-#define NEON_FX1_ISP_IDMA_BUF_VALID_W1S_MASK 0x0000000Fu
+#define NEON_FX1_ISP_IDMA_BUF_VALID_W1S_MASK 0x000000FFu
 #define NEON_FX1_ISP_IDMA_BUF_VALID_W1P_MASK 0x00000000u
 #define NEON_FX1_ISP_IDMA_BUF_VALID_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_IDMA_BUF_VALID_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_IDMA_BUF_VALID_WO_MASK 0x00000000u
-/* DMA Engine: frames fetched since reset, read-only. The reliable way to wait for a frame: it only ever increases, so it cannot be missed the way a level or an interrupt can. */
+/* DMA Engine: number of successfully retired input frames since reset, modulo 2^32. Frame retirement waits for enabled outputs and statistics. */
 #define NEON_FX1_ISP_IDMA_FRAME_COUNT_OFFSET FX1_ISP_IDMA_FRAME_COUNT_OFFSET
 #define NEON_FX1_ISP_IDMA_FRAME_COUNT_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_IDMA_FRAME_COUNT_RESET_KNOWN 1u
 #define NEON_FX1_ISP_IDMA_FRAME_COUNT_RESET FX1_ISP_IDMA_FRAME_COUNT_RESET
-/* Input Frame Counter Input frame counter, wraps modulo 2^32. */
+/* Input Frame Counter Counts successfully retired frames, including statistics-only frames; wraps modulo 2^32. */
 #define NEON_FX1_ISP_IDMA_FRAME_COUNT_IDMA_FRAME_COUNT_SHIFT FX1_ISP_IDMA_FRAME_COUNT_IDMA_FRAME_COUNT_SHIFT
 #define NEON_FX1_ISP_IDMA_FRAME_COUNT_IDMA_FRAME_COUNT_WIDTH FX1_ISP_IDMA_FRAME_COUNT_IDMA_FRAME_COUNT_WIDTH
 #define NEON_FX1_ISP_IDMA_FRAME_COUNT_IDMA_FRAME_COUNT_MASK FX1_ISP_IDMA_FRAME_COUNT_IDMA_FRAME_COUNT_MASK
@@ -5564,7 +5576,7 @@
 #define NEON_FX1_ISP_ODMA_BUF_FREE_ACCESS NEON_FX1_ACCESS_W1S
 #define NEON_FX1_ISP_ODMA_BUF_FREE_RESET_KNOWN 1u
 #define NEON_FX1_ISP_ODMA_BUF_FREE_RESET FX1_ISP_ODMA_BUF_FREE_RESET
-/* ODMA_BUF_FREE; documented width 8, implemented mask 0xf. */
+/* Output Buffer Free Flags Bits 3:0 identify the four buffers; bits 7:4 are unused. Bits at or above the build buffer count read zero and ignore writes. Write 1 to make a buffer available. Hardware clears the bit when the output frame claims the buffer. Acknowledge DONE before rearming FREE. With no free buffer the pipeline stalls and reports ODMA_OVERFLOW. */
 #define NEON_FX1_ISP_ODMA_BUF_FREE_ODMA_BUF_FREE_SHIFT FX1_ISP_ODMA_BUF_FREE_ODMA_BUF_FREE_SHIFT
 #define NEON_FX1_ISP_ODMA_BUF_FREE_ODMA_BUF_FREE_WIDTH FX1_ISP_ODMA_BUF_FREE_ODMA_BUF_FREE_WIDTH
 #define NEON_FX1_ISP_ODMA_BUF_FREE_ODMA_BUF_FREE_MASK FX1_ISP_ODMA_BUF_FREE_ODMA_BUF_FREE_MASK
@@ -5573,17 +5585,17 @@
 #define NEON_FX1_ISP_ODMA_BUF_FREE_RO_MASK 0x00000000u
 #define NEON_FX1_ISP_ODMA_BUF_FREE_RW_MASK 0x00000000u
 #define NEON_FX1_ISP_ODMA_BUF_FREE_W1C_MASK 0x00000000u
-#define NEON_FX1_ISP_ODMA_BUF_FREE_W1S_MASK 0x0000000Fu
+#define NEON_FX1_ISP_ODMA_BUF_FREE_W1S_MASK 0x000000FFu
 #define NEON_FX1_ISP_ODMA_BUF_FREE_W1P_MASK 0x00000000u
 #define NEON_FX1_ISP_ODMA_BUF_FREE_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_ODMA_BUF_FREE_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_ODMA_BUF_FREE_WO_MASK 0x00000000u
-/* DMA Engine: completed output buffers, sticky W1C. Set only after both planes and all AXI write responses retire. Clear DONE before returning a buffer through ODMA_BUF_FREE. */
+/* CH0: DMA Engine: completed output buffers, sticky W1C. After both NV12 planes and all enabled channels and statistics drain, publish DONE and metadata together at successful frame retirement. Clear DONE before returning a buffer through ODMA_BUF_FREE. */
 #define NEON_FX1_ISP_ODMA_BUF_DONE_OFFSET FX1_ISP_ODMA_BUF_DONE_OFFSET
 #define NEON_FX1_ISP_ODMA_BUF_DONE_ACCESS NEON_FX1_ACCESS_W1C
 #define NEON_FX1_ISP_ODMA_BUF_DONE_RESET_KNOWN 1u
 #define NEON_FX1_ISP_ODMA_BUF_DONE_RESET FX1_ISP_ODMA_BUF_DONE_RESET
-/* ODMA_BUF_DONE; documented width 8, implemented mask 0xf. */
+/* Output Buffer Done Flags Bits 3:0 identify buffers; bits 7:4 unused. Set only at successful frame retirement. Write 1 to acknowledge, then separately set FREE to permit reuse. A simultaneous completion wins over clear. */
 #define NEON_FX1_ISP_ODMA_BUF_DONE_ODMA_BUF_DONE_SHIFT FX1_ISP_ODMA_BUF_DONE_ODMA_BUF_DONE_SHIFT
 #define NEON_FX1_ISP_ODMA_BUF_DONE_ODMA_BUF_DONE_WIDTH FX1_ISP_ODMA_BUF_DONE_ODMA_BUF_DONE_WIDTH
 #define NEON_FX1_ISP_ODMA_BUF_DONE_ODMA_BUF_DONE_MASK FX1_ISP_ODMA_BUF_DONE_ODMA_BUF_DONE_MASK
@@ -5591,18 +5603,18 @@
 #define NEON_FX1_ISP_ODMA_BUF_DONE_ODMA_BUF_DONE_RESET FX1_ISP_ODMA_BUF_DONE_ODMA_BUF_DONE_RESET
 #define NEON_FX1_ISP_ODMA_BUF_DONE_RO_MASK 0x00000000u
 #define NEON_FX1_ISP_ODMA_BUF_DONE_RW_MASK 0x00000000u
-#define NEON_FX1_ISP_ODMA_BUF_DONE_W1C_MASK 0x0000000Fu
+#define NEON_FX1_ISP_ODMA_BUF_DONE_W1C_MASK 0x000000FFu
 #define NEON_FX1_ISP_ODMA_BUF_DONE_W1S_MASK 0x00000000u
 #define NEON_FX1_ISP_ODMA_BUF_DONE_W1P_MASK 0x00000000u
 #define NEON_FX1_ISP_ODMA_BUF_DONE_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_ODMA_BUF_DONE_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_ODMA_BUF_DONE_WO_MASK 0x00000000u
-/* DMA Engine: frames written since reset, read-only. Wait on this rather than on ODMA_BUF_DONE: the done bits are write-1-to-clear and shared with the previous acknowledge, while the counter only goes up. */
+/* CH0: DMA Engine: number of successfully retired frames with this output enabled, modulo 2^32. */
 #define NEON_FX1_ISP_ODMA_FRAME_COUNT_OFFSET FX1_ISP_ODMA_FRAME_COUNT_OFFSET
 #define NEON_FX1_ISP_ODMA_FRAME_COUNT_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_ODMA_FRAME_COUNT_RESET_KNOWN 1u
 #define NEON_FX1_ISP_ODMA_FRAME_COUNT_RESET FX1_ISP_ODMA_FRAME_COUNT_RESET
-/* Output Frame Counter Output frame counter, wraps modulo 2^32. */
+/* Output Frame Counter Counts successful frame retirements for this enabled channel; wraps modulo 2^32. */
 #define NEON_FX1_ISP_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_SHIFT FX1_ISP_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_SHIFT
 #define NEON_FX1_ISP_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_WIDTH FX1_ISP_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_WIDTH
 #define NEON_FX1_ISP_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_MASK FX1_ISP_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_MASK
@@ -6395,6 +6407,149 @@
 #define NEON_FX1_ISP_FRAME_COUNTER_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_FRAME_COUNTER_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_FRAME_COUNTER_WO_MASK 0x00000000u
+/* Input source: DDR through the input DMA, or the AXI4-Stream slave port. DMA_CTRL.IDMA_EN enables the input path for either source. IDLE update; input-domain: the stream source supplies no trailing parity row, so the active geometry is re-derived on a change. */
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_OFFSET FX1_ISP_INPUT_SRC_CTRL_OFFSET
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_ACCESS NEON_FX1_ACCESS_RW
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_RESET_KNOWN 1u
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_RESET FX1_ISP_INPUT_SRC_CTRL_RESET
+/* Input Source Select 0: the input DMA reads raw frames from DDR (IDMA_* registers, reset). 1: raw frames arrive on the AXI4-Stream slave port (TUSER = SOF, TLAST = end of line); the input DMA is idle and the IDMA buffer registers are ignored. IDLE update. */
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_SEL_SHIFT FX1_ISP_INPUT_SRC_CTRL_SEL_SHIFT
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_SEL_WIDTH FX1_ISP_INPUT_SRC_CTRL_SEL_WIDTH
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_SEL_MASK FX1_ISP_INPUT_SRC_CTRL_SEL_MASK
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_SEL_ACCESS NEON_FX1_ACCESS_RW
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_SEL_RESET FX1_ISP_INPUT_SRC_CTRL_SEL_RESET
+/* Stream Admission Policy 0: hold the SOF beat (TREADY low) until the frame is admitted (reset). 1: discard a whole frame whose SOF arrives while the ISP cannot admit it; INPUT_STREAM_ERR.DROP sets and INPUT_STREAM_DROP_COUNT increments. Use 1 for live sources without flow control. */
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_DROP_SHIFT FX1_ISP_INPUT_SRC_CTRL_DROP_SHIFT
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_DROP_WIDTH FX1_ISP_INPUT_SRC_CTRL_DROP_WIDTH
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_DROP_MASK FX1_ISP_INPUT_SRC_CTRL_DROP_MASK
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_DROP_ACCESS NEON_FX1_ACCESS_RW
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_DROP_RESET FX1_ISP_INPUT_SRC_CTRL_DROP_RESET
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_RO_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_RW_MASK 0x00000003u
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_W1C_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_W1S_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_W1P_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_W1SC_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_UNKNOWN_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_SRC_CTRL_WO_MASK 0x00000000u
+/* AXI4-Stream input adapter state, read-only. All bits read 0 while SEL = 0. */
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_OFFSET FX1_ISP_INPUT_STREAM_STATUS_OFFSET
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_RESET_KNOWN 1u
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_RESET FX1_ISP_INPUT_STREAM_STATUS_RESET
+/* Frame In Progress 1 from the admitted SOF until the last beat of the frame (received, padded or completed) has been passed to the pipeline. */
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_BUSY_SHIFT FX1_ISP_INPUT_STREAM_STATUS_BUSY_SHIFT
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_BUSY_WIDTH FX1_ISP_INPUT_STREAM_STATUS_BUSY_WIDTH
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_BUSY_MASK FX1_ISP_INPUT_STREAM_STATUS_BUSY_MASK
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_BUSY_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_BUSY_RESET FX1_ISP_INPUT_STREAM_STATUS_BUSY_RESET
+/* SOF Held 1 while an SOF beat waits for admission with DROP = 0. */
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_HOLD_SHIFT FX1_ISP_INPUT_STREAM_STATUS_HOLD_SHIFT
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_HOLD_WIDTH FX1_ISP_INPUT_STREAM_STATUS_HOLD_WIDTH
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_HOLD_MASK FX1_ISP_INPUT_STREAM_STATUS_HOLD_MASK
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_HOLD_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_HOLD_RESET FX1_ISP_INPUT_STREAM_STATUS_HOLD_RESET
+/* Frame Being Discarded 1 while the beats of a dropped frame are discarded. */
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_DROPPING_SHIFT FX1_ISP_INPUT_STREAM_STATUS_DROPPING_SHIFT
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_DROPPING_WIDTH FX1_ISP_INPUT_STREAM_STATUS_DROPPING_WIDTH
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_DROPPING_MASK FX1_ISP_INPUT_STREAM_STATUS_DROPPING_MASK
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_DROPPING_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_DROPPING_RESET FX1_ISP_INPUT_STREAM_STATUS_DROPPING_RESET
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_RO_MASK 0x00000007u
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_RW_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_W1C_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_W1S_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_W1P_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_W1SC_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_UNKNOWN_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_STATUS_WO_MASK 0x00000000u
+/* AXI4-Stream input framing errors, sticky, write 1 to clear. The adapter repairs every error, so the pipeline always receives complete frames of the programmed geometry; any bit also sets DMA_ERR.STREAM. */
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_OFFSET FX1_ISP_INPUT_STREAM_ERR_OFFSET
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_ACCESS NEON_FX1_ACCESS_W1C
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_RESET_KNOWN 1u
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_RESET FX1_ISP_INPUT_STREAM_ERR_RESET
+/* Data Before SOF A beat without TUSER arrived outside a frame (before the first SOF or after a dropped frame); it was discarded. */
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_NO_SOF_SHIFT FX1_ISP_INPUT_STREAM_ERR_NO_SOF_SHIFT
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_NO_SOF_WIDTH FX1_ISP_INPUT_STREAM_ERR_NO_SOF_WIDTH
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_NO_SOF_MASK FX1_ISP_INPUT_STREAM_ERR_NO_SOF_MASK
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_NO_SOF_ACCESS NEON_FX1_ACCESS_W1C
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_NO_SOF_RESET FX1_ISP_INPUT_STREAM_ERR_NO_SOF_RESET
+/* Short Frame TUSER arrived before the last line of the frame; the rest of the frame was completed with zero samples and the SOF starts the next frame. */
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_EARLY_SOF_SHIFT FX1_ISP_INPUT_STREAM_ERR_EARLY_SOF_SHIFT
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_EARLY_SOF_WIDTH FX1_ISP_INPUT_STREAM_ERR_EARLY_SOF_WIDTH
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_EARLY_SOF_MASK FX1_ISP_INPUT_STREAM_ERR_EARLY_SOF_MASK
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_EARLY_SOF_ACCESS NEON_FX1_ACCESS_W1C
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_EARLY_SOF_RESET FX1_ISP_INPUT_STREAM_ERR_EARLY_SOF_RESET
+/* Short Line TLAST arrived before the last column; the rest of the line was completed by repeating the sample two columns back (same CFA colour). */
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_SHORT_LINE_SHIFT FX1_ISP_INPUT_STREAM_ERR_SHORT_LINE_SHIFT
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_SHORT_LINE_WIDTH FX1_ISP_INPUT_STREAM_ERR_SHORT_LINE_WIDTH
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_SHORT_LINE_MASK FX1_ISP_INPUT_STREAM_ERR_SHORT_LINE_MASK
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_SHORT_LINE_ACCESS NEON_FX1_ACCESS_W1C
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_SHORT_LINE_RESET FX1_ISP_INPUT_STREAM_ERR_SHORT_LINE_RESET
+/* Long Line No TLAST on the last column; the extra beats of the line were discarded up to and including the next TLAST. */
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_LONG_LINE_SHIFT FX1_ISP_INPUT_STREAM_ERR_LONG_LINE_SHIFT
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_LONG_LINE_WIDTH FX1_ISP_INPUT_STREAM_ERR_LONG_LINE_WIDTH
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_LONG_LINE_MASK FX1_ISP_INPUT_STREAM_ERR_LONG_LINE_MASK
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_LONG_LINE_ACCESS NEON_FX1_ACCESS_W1C
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_LONG_LINE_RESET FX1_ISP_INPUT_STREAM_ERR_LONG_LINE_RESET
+/* Long Frame Beats without TUSER followed a complete frame; they were discarded until the next SOF. */
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_LONG_FRAME_SHIFT FX1_ISP_INPUT_STREAM_ERR_LONG_FRAME_SHIFT
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_LONG_FRAME_WIDTH FX1_ISP_INPUT_STREAM_ERR_LONG_FRAME_WIDTH
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_LONG_FRAME_MASK FX1_ISP_INPUT_STREAM_ERR_LONG_FRAME_MASK
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_LONG_FRAME_ACCESS NEON_FX1_ACCESS_W1C
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_LONG_FRAME_RESET FX1_ISP_INPUT_STREAM_ERR_LONG_FRAME_RESET
+/* Frame Dropped With INPUT_SRC_CTRL.DROP = 1 an SOF arrived while the ISP could not admit a frame; the whole frame was discarded. */
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_DROP_SHIFT FX1_ISP_INPUT_STREAM_ERR_DROP_SHIFT
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_DROP_WIDTH FX1_ISP_INPUT_STREAM_ERR_DROP_WIDTH
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_DROP_MASK FX1_ISP_INPUT_STREAM_ERR_DROP_MASK
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_DROP_ACCESS NEON_FX1_ACCESS_W1C
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_DROP_RESET FX1_ISP_INPUT_STREAM_ERR_DROP_RESET
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_RO_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_RW_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_W1C_MASK 0x0000003Fu
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_W1S_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_W1P_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_W1SC_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_UNKNOWN_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_ERR_WO_MASK 0x00000000u
+/* AXI4-Stream input: frames admitted from the stream since reset, modulo 2^32. */
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_OFFSET FX1_ISP_INPUT_STREAM_FRAME_COUNT_OFFSET
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_RESET_KNOWN 1u
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_RESET FX1_ISP_INPUT_STREAM_FRAME_COUNT_RESET
+/* Admitted Stream Frames Increments at each admitted SOF; cleared by hard reset and by the DMA engine reset of a recovery. */
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_COUNT_SHIFT FX1_ISP_INPUT_STREAM_FRAME_COUNT_COUNT_SHIFT
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_COUNT_WIDTH FX1_ISP_INPUT_STREAM_FRAME_COUNT_COUNT_WIDTH
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_COUNT_MASK FX1_ISP_INPUT_STREAM_FRAME_COUNT_COUNT_MASK
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_COUNT_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_COUNT_RESET FX1_ISP_INPUT_STREAM_FRAME_COUNT_COUNT_RESET
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_RO_MASK 0xFFFFFFFFu
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_RW_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_W1C_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_W1S_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_W1P_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_W1SC_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_UNKNOWN_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_WO_MASK 0x00000000u
+/* AXI4-Stream input: frames discarded by the admission policy since reset, modulo 2^32. */
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_OFFSET FX1_ISP_INPUT_STREAM_DROP_COUNT_OFFSET
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_RESET_KNOWN 1u
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_RESET FX1_ISP_INPUT_STREAM_DROP_COUNT_RESET
+/* Dropped Stream Frames Increments for each frame discarded with INPUT_SRC_CTRL.DROP = 1; cleared by hard reset and by the DMA engine reset of a recovery. */
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_COUNT_SHIFT FX1_ISP_INPUT_STREAM_DROP_COUNT_COUNT_SHIFT
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_COUNT_WIDTH FX1_ISP_INPUT_STREAM_DROP_COUNT_COUNT_WIDTH
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_COUNT_MASK FX1_ISP_INPUT_STREAM_DROP_COUNT_COUNT_MASK
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_COUNT_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_COUNT_RESET FX1_ISP_INPUT_STREAM_DROP_COUNT_COUNT_RESET
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_RO_MASK 0xFFFFFFFFu
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_RW_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_W1C_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_W1S_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_W1P_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_W1SC_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_UNKNOWN_MASK 0x00000000u
+#define NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_WO_MASK 0x00000000u
 /* CH1 NV12 output resizer control, maximum output 3840x2160. Input is the post-IQ crop for this channel; the crop may be larger than the output. No upscaling or custom target sizes. Reject invalid targets before DMA arm; no silent FullRes fallback. Wait for channel OUT_W/H to settle. */
 #define NEON_FX1_ISP_CH1_RESIZER_CTRL_OFFSET FX1_ISP_CH1_RESIZER_CTRL_OFFSET
 #define NEON_FX1_ISP_CH1_RESIZER_CTRL_ACCESS NEON_FX1_ACCESS_RW
@@ -6507,7 +6662,7 @@
 #define NEON_FX1_ISP_CH1_RESIZER_STATUS_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_CH1_RESIZER_STATUS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_CH1_RESIZER_STATUS_RESET FX1_ISP_CH1_RESIZER_STATUS_RESET
-/* Resizer Busy 1 = the resizer currently holds pixels. COMMON_STATUS.BUSY aggregates in-flight pipeline frames and output DMAs; this register is the per-channel view. */
+/* Resizer Busy 1 while the block itself holds pixels: the block's own busy, as defined in its MAS section. It can read 0 inside a frame (line fill, input gaps), so it does not show that a frame has drained; use COMMON_STATUS.BUSY = 0 for no frame in flight. This channel's resizer only. */
 #define NEON_FX1_ISP_CH1_RESIZER_STATUS_BUSY_SHIFT FX1_ISP_CH1_RESIZER_STATUS_BUSY_SHIFT
 #define NEON_FX1_ISP_CH1_RESIZER_STATUS_BUSY_WIDTH FX1_ISP_CH1_RESIZER_STATUS_BUSY_WIDTH
 #define NEON_FX1_ISP_CH1_RESIZER_STATUS_BUSY_MASK FX1_ISP_CH1_RESIZER_STATUS_BUSY_MASK
@@ -6564,7 +6719,7 @@
 #define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_ACCESS NEON_FX1_ACCESS_W1S
 #define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_RESET_KNOWN 1u
 #define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_RESET FX1_ISP_CH1_ODMA_BUF_FREE_RESET
-/* ODMA_BUF_FREE; documented width 8, implemented mask 0xf. */
+/* Output Buffer Free Flags Bits 3:0 identify the four buffers; bits 7:4 are unused. Write 1 to release a buffer to hardware. Hardware clears the bit at frame start. Acknowledge DONE before rearming FREE. With no free buffer the pipeline stalls and reports ODMA_OVERFLOW. */
 #define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_ODMA_BUF_FREE_SHIFT FX1_ISP_CH1_ODMA_BUF_FREE_ODMA_BUF_FREE_SHIFT
 #define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_ODMA_BUF_FREE_WIDTH FX1_ISP_CH1_ODMA_BUF_FREE_ODMA_BUF_FREE_WIDTH
 #define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_ODMA_BUF_FREE_MASK FX1_ISP_CH1_ODMA_BUF_FREE_ODMA_BUF_FREE_MASK
@@ -6573,17 +6728,17 @@
 #define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_RO_MASK 0x00000000u
 #define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_RW_MASK 0x00000000u
 #define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_W1C_MASK 0x00000000u
-#define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_W1S_MASK 0x0000000Fu
+#define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_W1S_MASK 0x000000FFu
 #define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_W1P_MASK 0x00000000u
 #define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_CH1_ODMA_BUF_FREE_WO_MASK 0x00000000u
-/* CH1: DMA Engine: completed output buffers, sticky W1C. Set only after both planes and all AXI write responses retire. Clear DONE before returning a buffer through ODMA_BUF_FREE. */
+/* CH1: DMA Engine: completed output buffers, sticky W1C. After both NV12 planes and all enabled channels and statistics drain, publish DONE and metadata together at successful frame retirement. Clear DONE before returning a buffer through ODMA_BUF_FREE. */
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_OFFSET FX1_ISP_CH1_ODMA_BUF_DONE_OFFSET
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_ACCESS NEON_FX1_ACCESS_W1C
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_RESET_KNOWN 1u
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_RESET FX1_ISP_CH1_ODMA_BUF_DONE_RESET
-/* ODMA_BUF_DONE; documented width 8, implemented mask 0xf. */
+/* Output Buffer Done Flags Bits 3:0 identify buffers; bits 7:4 unused. Set only at successful frame retirement. Write 1 to acknowledge, then separately set FREE to permit reuse. A simultaneous completion wins over clear. */
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_ODMA_BUF_DONE_SHIFT FX1_ISP_CH1_ODMA_BUF_DONE_ODMA_BUF_DONE_SHIFT
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_ODMA_BUF_DONE_WIDTH FX1_ISP_CH1_ODMA_BUF_DONE_ODMA_BUF_DONE_WIDTH
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_ODMA_BUF_DONE_MASK FX1_ISP_CH1_ODMA_BUF_DONE_ODMA_BUF_DONE_MASK
@@ -6591,18 +6746,18 @@
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_ODMA_BUF_DONE_RESET FX1_ISP_CH1_ODMA_BUF_DONE_ODMA_BUF_DONE_RESET
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_RO_MASK 0x00000000u
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_RW_MASK 0x00000000u
-#define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_W1C_MASK 0x0000000Fu
+#define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_W1C_MASK 0x000000FFu
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_W1S_MASK 0x00000000u
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_W1P_MASK 0x00000000u
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_CH1_ODMA_BUF_DONE_WO_MASK 0x00000000u
-/* DMA Engine: frames written since reset, read-only. Wait on this rather than on ODMA_BUF_DONE: the done bits are write-1-to-clear and shared with the previous acknowledge, while the counter only goes up. */
+/* CH1: DMA Engine: number of successfully retired frames with this output enabled, modulo 2^32. */
 #define NEON_FX1_ISP_CH1_ODMA_FRAME_COUNT_OFFSET FX1_ISP_CH1_ODMA_FRAME_COUNT_OFFSET
 #define NEON_FX1_ISP_CH1_ODMA_FRAME_COUNT_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_CH1_ODMA_FRAME_COUNT_RESET_KNOWN 1u
 #define NEON_FX1_ISP_CH1_ODMA_FRAME_COUNT_RESET FX1_ISP_CH1_ODMA_FRAME_COUNT_RESET
-/* Output Frame Counter Output frame counter, wraps modulo 2^32. */
+/* Output Frame Counter Counts successful frame retirements for this enabled channel; wraps modulo 2^32. */
 #define NEON_FX1_ISP_CH1_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_SHIFT FX1_ISP_CH1_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_SHIFT
 #define NEON_FX1_ISP_CH1_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_WIDTH FX1_ISP_CH1_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_WIDTH
 #define NEON_FX1_ISP_CH1_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_MASK FX1_ISP_CH1_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_MASK
@@ -7336,7 +7491,7 @@
 #define NEON_FX1_ISP_CH2_RESIZER_STATUS_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_CH2_RESIZER_STATUS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_CH2_RESIZER_STATUS_RESET FX1_ISP_CH2_RESIZER_STATUS_RESET
-/* Resizer Busy 1 = the resizer currently holds pixels. COMMON_STATUS.BUSY aggregates in-flight pipeline frames and output DMAs; this register is the per-channel view. */
+/* Resizer Busy 1 while the block itself holds pixels: the block's own busy, as defined in its MAS section. It can read 0 inside a frame (line fill, input gaps), so it does not show that a frame has drained; use COMMON_STATUS.BUSY = 0 for no frame in flight. This channel's resizer only. */
 #define NEON_FX1_ISP_CH2_RESIZER_STATUS_BUSY_SHIFT FX1_ISP_CH2_RESIZER_STATUS_BUSY_SHIFT
 #define NEON_FX1_ISP_CH2_RESIZER_STATUS_BUSY_WIDTH FX1_ISP_CH2_RESIZER_STATUS_BUSY_WIDTH
 #define NEON_FX1_ISP_CH2_RESIZER_STATUS_BUSY_MASK FX1_ISP_CH2_RESIZER_STATUS_BUSY_MASK
@@ -7374,7 +7529,7 @@
 #define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_ACCESS NEON_FX1_ACCESS_W1S
 #define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_RESET_KNOWN 1u
 #define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_RESET FX1_ISP_CH2_ODMA_BUF_FREE_RESET
-/* ODMA_BUF_FREE; documented width 8, implemented mask 0xf. */
+/* Output Buffer Free Flags Bits 3:0 identify the four buffers; bits 7:4 are unused. Write 1 to release a buffer to hardware. Hardware clears the bit at frame start. Acknowledge DONE before rearming FREE. With no free buffer the pipeline stalls and reports ODMA_OVERFLOW. */
 #define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_ODMA_BUF_FREE_SHIFT FX1_ISP_CH2_ODMA_BUF_FREE_ODMA_BUF_FREE_SHIFT
 #define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_ODMA_BUF_FREE_WIDTH FX1_ISP_CH2_ODMA_BUF_FREE_ODMA_BUF_FREE_WIDTH
 #define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_ODMA_BUF_FREE_MASK FX1_ISP_CH2_ODMA_BUF_FREE_ODMA_BUF_FREE_MASK
@@ -7383,17 +7538,17 @@
 #define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_RO_MASK 0x00000000u
 #define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_RW_MASK 0x00000000u
 #define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_W1C_MASK 0x00000000u
-#define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_W1S_MASK 0x0000000Fu
+#define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_W1S_MASK 0x000000FFu
 #define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_W1P_MASK 0x00000000u
 #define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_CH2_ODMA_BUF_FREE_WO_MASK 0x00000000u
-/* CH2: DMA Engine: completed output buffers, sticky W1C. Set only after the packed RGB plane and all AXI write responses retire. Clear DONE before returning a buffer through ODMA_BUF_FREE. */
+/* CH2: DMA Engine: completed output buffers, sticky W1C. After the single packed RGB plane and all enabled channels and statistics drain, publish DONE and metadata together at successful frame retirement. Clear DONE before returning a buffer through ODMA_BUF_FREE. */
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_OFFSET FX1_ISP_CH2_ODMA_BUF_DONE_OFFSET
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_ACCESS NEON_FX1_ACCESS_W1C
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_RESET_KNOWN 1u
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_RESET FX1_ISP_CH2_ODMA_BUF_DONE_RESET
-/* ODMA_BUF_DONE; documented width 8, implemented mask 0xf. */
+/* Output Buffer Done Flags Bits 3:0 identify buffers; bits 7:4 unused. Set only at successful frame retirement. Write 1 to acknowledge, then separately set FREE to permit reuse. A simultaneous completion wins over clear. */
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_ODMA_BUF_DONE_SHIFT FX1_ISP_CH2_ODMA_BUF_DONE_ODMA_BUF_DONE_SHIFT
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_ODMA_BUF_DONE_WIDTH FX1_ISP_CH2_ODMA_BUF_DONE_ODMA_BUF_DONE_WIDTH
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_ODMA_BUF_DONE_MASK FX1_ISP_CH2_ODMA_BUF_DONE_ODMA_BUF_DONE_MASK
@@ -7401,18 +7556,18 @@
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_ODMA_BUF_DONE_RESET FX1_ISP_CH2_ODMA_BUF_DONE_ODMA_BUF_DONE_RESET
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_RO_MASK 0x00000000u
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_RW_MASK 0x00000000u
-#define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_W1C_MASK 0x0000000Fu
+#define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_W1C_MASK 0x000000FFu
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_W1S_MASK 0x00000000u
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_W1P_MASK 0x00000000u
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_CH2_ODMA_BUF_DONE_WO_MASK 0x00000000u
-/* RGB888 output: DMA Engine: frames written since reset, read-only. Wait on this rather than on ODMA_BUF_DONE: the done bits are write-1-to-clear and shared with the previous acknowledge, while the counter only goes up. */
+/* CH2: DMA Engine: number of successfully retired frames with this output enabled, modulo 2^32. */
 #define NEON_FX1_ISP_CH2_ODMA_FRAME_COUNT_OFFSET FX1_ISP_CH2_ODMA_FRAME_COUNT_OFFSET
 #define NEON_FX1_ISP_CH2_ODMA_FRAME_COUNT_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_CH2_ODMA_FRAME_COUNT_RESET_KNOWN 1u
 #define NEON_FX1_ISP_CH2_ODMA_FRAME_COUNT_RESET FX1_ISP_CH2_ODMA_FRAME_COUNT_RESET
-/* Output Frame Counter Output frame counter, wraps modulo 2^32. */
+/* Output Frame Counter Counts successful frame retirements for this enabled channel; wraps modulo 2^32. */
 #define NEON_FX1_ISP_CH2_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_SHIFT FX1_ISP_CH2_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_SHIFT
 #define NEON_FX1_ISP_CH2_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_WIDTH FX1_ISP_CH2_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_WIDTH
 #define NEON_FX1_ISP_CH2_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_MASK FX1_ISP_CH2_ODMA_FRAME_COUNT_ODMA_FRAME_COUNT_MASK
@@ -7920,7 +8075,7 @@
 #define NEON_FX1_ISP_TUNE_REV_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_TUNE_REV_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_TUNE_REV_WO_MASK 0x00000000u
-/* Read-only capabilities. Full v1.07 conformance requires bits 0..21 set (0x003FFFFF). Unsupported features read zero; software checks this value before use. */
+/* Read-only capabilities. This build sets bits 0..23 (0x00FFFFFF). Without INPUT_PAD, the build uses legacy crop regardless of COMMON_INPUT_FORMAT.CROP. Unsupported features read zero; software checks the relevant bits before use. */
 #define NEON_FX1_ISP_TUNE_CAPS_OFFSET FX1_ISP_TUNE_CAPS_OFFSET
 #define NEON_FX1_ISP_TUNE_CAPS_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_TUNE_CAPS_RESET_KNOWN 1u
@@ -8057,7 +8212,19 @@
 #define NEON_FX1_ISP_TUNE_CAPS_RESIDENT_OWNERSHIP_MASK FX1_ISP_TUNE_CAPS_RESIDENT_OWNERSHIP_MASK
 #define NEON_FX1_ISP_TUNE_CAPS_RESIDENT_OWNERSHIP_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_TUNE_CAPS_RESIDENT_OWNERSHIP_RESET FX1_ISP_TUNE_CAPS_RESIDENT_OWNERSHIP_RESET
-#define NEON_FX1_ISP_TUNE_CAPS_RO_MASK 0x003FFFFFu
+/* Input formatter supports default same-colour padding and selectable legacy crop. */
+#define NEON_FX1_ISP_TUNE_CAPS_INPUT_PAD_SHIFT FX1_ISP_TUNE_CAPS_INPUT_PAD_SHIFT
+#define NEON_FX1_ISP_TUNE_CAPS_INPUT_PAD_WIDTH FX1_ISP_TUNE_CAPS_INPUT_PAD_WIDTH
+#define NEON_FX1_ISP_TUNE_CAPS_INPUT_PAD_MASK FX1_ISP_TUNE_CAPS_INPUT_PAD_MASK
+#define NEON_FX1_ISP_TUNE_CAPS_INPUT_PAD_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_TUNE_CAPS_INPUT_PAD_RESET FX1_ISP_TUNE_CAPS_INPUT_PAD_RESET
+/* AXI4-Stream raw input port with INPUT_SRC_CTRL source select, framing repair and admission policy. */
+#define NEON_FX1_ISP_TUNE_CAPS_INPUT_STREAM_SHIFT FX1_ISP_TUNE_CAPS_INPUT_STREAM_SHIFT
+#define NEON_FX1_ISP_TUNE_CAPS_INPUT_STREAM_WIDTH FX1_ISP_TUNE_CAPS_INPUT_STREAM_WIDTH
+#define NEON_FX1_ISP_TUNE_CAPS_INPUT_STREAM_MASK FX1_ISP_TUNE_CAPS_INPUT_STREAM_MASK
+#define NEON_FX1_ISP_TUNE_CAPS_INPUT_STREAM_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_TUNE_CAPS_INPUT_STREAM_RESET FX1_ISP_TUNE_CAPS_INPUT_STREAM_RESET
+#define NEON_FX1_ISP_TUNE_CAPS_RO_MASK 0x00FFFFFFu
 #define NEON_FX1_ISP_TUNE_CAPS_RW_MASK 0x00000000u
 #define NEON_FX1_ISP_TUNE_CAPS_W1C_MASK 0x00000000u
 #define NEON_FX1_ISP_TUNE_CAPS_W1S_MASK 0x00000000u
@@ -8108,7 +8275,7 @@
 #define NEON_FX1_ISP_TUNE_PROFILE_ID_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_PROFILE_ID_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_PROFILE_ID_RESET FX1_ISP_TUNE_PROFILE_ID_RESET
-/* Software profile identifier stored in the selected bank. Zero is allowed. */
+/* Software profile identifier stored in the selected bank. Zero is allowed. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_PROFILE_ID_VALUE_SHIFT FX1_ISP_TUNE_PROFILE_ID_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_PROFILE_ID_VALUE_WIDTH FX1_ISP_TUNE_PROFILE_ID_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_PROFILE_ID_VALUE_MASK FX1_ISP_TUNE_PROFILE_ID_VALUE_MASK
@@ -8141,7 +8308,7 @@
 #define NEON_FX1_ISP_TUNE_APPLY_FRAME_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_TUNE_APPLY_FRAME_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_TUNE_APPLY_FRAME_WO_MASK 0x00000000u
-/* One command per write, except EXACT with APPLY; any other nonzero combination, including EXACT alone, executes nothing and sets INVALID. In legacy mode any nonzero write sets only MODE. SEAL validates but does not activate. UNSEAL permits edits only when inactive, nonpending and unreferenced. APPLY drains the old epoch before activation at an eligible ingress SOF. Check TUNE_STATUS/TUNE_ERROR after each command. */
+/* One command per write, except EXACT with APPLY; any other nonzero combination, including EXACT alone, executes nothing and sets INVALID. In legacy mode any nonzero write sets only MODE. SEAL validates but does not activate. UNSEAL permits edits only when inactive, nonpending and unreferenced. APPLY drains the old epoch before activation at an eligible ingress SOF. After SEAL, poll TUNE_STATUS.CHECK_BUSY until clear before inspecting TUNE_ERROR and confirmation flags. */
 #define NEON_FX1_ISP_TUNE_CMD_OFFSET FX1_ISP_TUNE_CMD_OFFSET
 #define NEON_FX1_ISP_TUNE_CMD_ACCESS NEON_FX1_ACCESS_W1P
 #define NEON_FX1_ISP_TUNE_CMD_RESET_KNOWN 1u
@@ -8152,7 +8319,7 @@
 #define NEON_FX1_ISP_TUNE_CMD_INIT_MASK FX1_ISP_TUNE_CMD_INIT_MASK
 #define NEON_FX1_ISP_TUNE_CMD_INIT_ACCESS NEON_FX1_ACCESS_W1P
 #define NEON_FX1_ISP_TUNE_CMD_INIT_RESET FX1_ISP_TUNE_CMD_INIT_RESET
-/* Validate and seal selected bank including required tables. */
+/* Validate and seal the selected bank, including required tables and build capabilities; an unsupported requested capability sets INVALID. Poll CHECK_BUSY until clear before reading the result. */
 #define NEON_FX1_ISP_TUNE_CMD_SEAL_SHIFT FX1_ISP_TUNE_CMD_SEAL_SHIFT
 #define NEON_FX1_ISP_TUNE_CMD_SEAL_WIDTH FX1_ISP_TUNE_CMD_SEAL_WIDTH
 #define NEON_FX1_ISP_TUNE_CMD_SEAL_MASK FX1_ISP_TUNE_CMD_SEAL_MASK
@@ -8261,7 +8428,13 @@
 #define NEON_FX1_ISP_TUNE_STATUS_BANK1_REFERENCED_MASK FX1_ISP_TUNE_STATUS_BANK1_REFERENCED_MASK
 #define NEON_FX1_ISP_TUNE_STATUS_BANK1_REFERENCED_ACCESS NEON_FX1_ACCESS_RO
 #define NEON_FX1_ISP_TUNE_STATUS_BANK1_REFERENCED_RESET FX1_ISP_TUNE_STATUS_BANK1_REFERENCED_RESET
-#define NEON_FX1_ISP_TUNE_STATUS_RO_MASK 0x000007FFu
+/* A SEAL or table-validation check is running. If still running after the command write response, CHECK_BUSY is asserted no later than that response; a check completed by then may never be observed busy. After the response, poll until clear before interpreting TUNE_ERROR and confirmation flags. Geometry derivation uses each channel geometry BUSY bit. */
+#define NEON_FX1_ISP_TUNE_STATUS_CHECK_BUSY_SHIFT FX1_ISP_TUNE_STATUS_CHECK_BUSY_SHIFT
+#define NEON_FX1_ISP_TUNE_STATUS_CHECK_BUSY_WIDTH FX1_ISP_TUNE_STATUS_CHECK_BUSY_WIDTH
+#define NEON_FX1_ISP_TUNE_STATUS_CHECK_BUSY_MASK FX1_ISP_TUNE_STATUS_CHECK_BUSY_MASK
+#define NEON_FX1_ISP_TUNE_STATUS_CHECK_BUSY_ACCESS NEON_FX1_ACCESS_RO
+#define NEON_FX1_ISP_TUNE_STATUS_CHECK_BUSY_RESET FX1_ISP_TUNE_STATUS_CHECK_BUSY_RESET
+#define NEON_FX1_ISP_TUNE_STATUS_RO_MASK 0x00000FFFu
 #define NEON_FX1_ISP_TUNE_STATUS_RW_MASK 0x00000000u
 #define NEON_FX1_ISP_TUNE_STATUS_W1C_MASK 0x00000000u
 #define NEON_FX1_ISP_TUNE_STATUS_W1S_MASK 0x00000000u
@@ -8620,13 +8793,13 @@
 #define NEON_FX1_ISP_TUNE_NR_CTRL_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_NR_CTRL_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_NR_CTRL_RESET FX1_ISP_TUNE_NR_CTRL_RESET
-/* 0 prior-frame estimate, 1 manual variance, 2 intensity variance LUT, 3 invalid. */
+/* 0 prior-frame estimate, 1 manual variance, 2 intensity variance LUT, 3 invalid. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_NR_CTRL_MODE_SHIFT FX1_ISP_TUNE_NR_CTRL_MODE_SHIFT
 #define NEON_FX1_ISP_TUNE_NR_CTRL_MODE_WIDTH FX1_ISP_TUNE_NR_CTRL_MODE_WIDTH
 #define NEON_FX1_ISP_TUNE_NR_CTRL_MODE_MASK FX1_ISP_TUNE_NR_CTRL_MODE_MASK
 #define NEON_FX1_ISP_TUNE_NR_CTRL_MODE_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_NR_CTRL_MODE_RESET FX1_ISP_TUNE_NR_CTRL_MODE_RESET
-/* Median prefilter enabled. Disabled path retains matched timing. */
+/* Median prefilter enabled. Disabled path retains matched timing. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_NR_CTRL_MEDIAN_EN_SHIFT FX1_ISP_TUNE_NR_CTRL_MEDIAN_EN_SHIFT
 #define NEON_FX1_ISP_TUNE_NR_CTRL_MEDIAN_EN_WIDTH FX1_ISP_TUNE_NR_CTRL_MEDIAN_EN_WIDTH
 #define NEON_FX1_ISP_TUNE_NR_CTRL_MEDIAN_EN_MASK FX1_ISP_TUNE_NR_CTRL_MEDIAN_EN_MASK
@@ -8645,7 +8818,7 @@
 #define NEON_FX1_ISP_TUNE_NR_VARIANCE_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_NR_VARIANCE_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_NR_VARIANCE_RESET FX1_ISP_TUNE_NR_VARIANCE_RESET
-/* Manual noise variance in the existing Haar-coefficient variance units. */
+/* Manual noise variance in the existing Haar-coefficient variance units. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_NR_VARIANCE_VALUE_SHIFT FX1_ISP_TUNE_NR_VARIANCE_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_NR_VARIANCE_VALUE_WIDTH FX1_ISP_TUNE_NR_VARIANCE_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_NR_VARIANCE_VALUE_MASK FX1_ISP_TUNE_NR_VARIANCE_VALUE_MASK
@@ -8664,7 +8837,7 @@
 #define NEON_FX1_ISP_TUNE_NR_SCALE_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_NR_SCALE_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_NR_SCALE_RESET FX1_ISP_TUNE_NR_SCALE_RESET
-/* Unsigned Q8.8 variance scale, half-up multiply then clamp. */
+/* Unsigned Q8.8 variance scale, half-up multiply then clamp. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_NR_SCALE_VALUE_SHIFT FX1_ISP_TUNE_NR_SCALE_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_NR_SCALE_VALUE_WIDTH FX1_ISP_TUNE_NR_SCALE_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_NR_SCALE_VALUE_MASK FX1_ISP_TUNE_NR_SCALE_VALUE_MASK
@@ -8683,13 +8856,13 @@
 #define NEON_FX1_ISP_TUNE_NR_LIMITS_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_NR_LIMITS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_NR_LIMITS_RESET FX1_ISP_TUNE_NR_LIMITS_RESET
-/* Lower variance bound. */
+/* Lower variance bound. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_NR_LIMITS_MIN_SHIFT FX1_ISP_TUNE_NR_LIMITS_MIN_SHIFT
 #define NEON_FX1_ISP_TUNE_NR_LIMITS_MIN_WIDTH FX1_ISP_TUNE_NR_LIMITS_MIN_WIDTH
 #define NEON_FX1_ISP_TUNE_NR_LIMITS_MIN_MASK FX1_ISP_TUNE_NR_LIMITS_MIN_MASK
 #define NEON_FX1_ISP_TUNE_NR_LIMITS_MIN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_NR_LIMITS_MIN_RESET FX1_ISP_TUNE_NR_LIMITS_MIN_RESET
-/* Upper variance bound; SEAL rejects MIN above MAX with INVALID. */
+/* Upper variance bound; SEAL rejects MIN above MAX with INVALID. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_NR_LIMITS_MAX_SHIFT FX1_ISP_TUNE_NR_LIMITS_MAX_SHIFT
 #define NEON_FX1_ISP_TUNE_NR_LIMITS_MAX_WIDTH FX1_ISP_TUNE_NR_LIMITS_MAX_WIDTH
 #define NEON_FX1_ISP_TUNE_NR_LIMITS_MAX_MASK FX1_ISP_TUNE_NR_LIMITS_MAX_MASK
@@ -8708,7 +8881,7 @@
 #define NEON_FX1_ISP_TUNE_NR_LL_SCALE_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_NR_LL_SCALE_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_NR_LL_SCALE_RESET FX1_ISP_TUNE_NR_LL_SCALE_RESET
-/* Unsigned Q8.8 multiplier on effective variance for LL; saturate to 16 bits. */
+/* Unsigned Q8.8 multiplier on effective variance for LL; saturate to 16 bits. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_NR_LL_SCALE_VALUE_SHIFT FX1_ISP_TUNE_NR_LL_SCALE_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_NR_LL_SCALE_VALUE_WIDTH FX1_ISP_TUNE_NR_LL_SCALE_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_NR_LL_SCALE_VALUE_MASK FX1_ISP_TUNE_NR_LL_SCALE_VALUE_MASK
@@ -8727,7 +8900,7 @@
 #define NEON_FX1_ISP_TUNE_NR_LH_SCALE_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_NR_LH_SCALE_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_NR_LH_SCALE_RESET FX1_ISP_TUNE_NR_LH_SCALE_RESET
-/* Unsigned Q8.8 multiplier on effective variance for LH; saturate to 16 bits. */
+/* Unsigned Q8.8 multiplier on effective variance for LH; saturate to 16 bits. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_NR_LH_SCALE_VALUE_SHIFT FX1_ISP_TUNE_NR_LH_SCALE_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_NR_LH_SCALE_VALUE_WIDTH FX1_ISP_TUNE_NR_LH_SCALE_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_NR_LH_SCALE_VALUE_MASK FX1_ISP_TUNE_NR_LH_SCALE_VALUE_MASK
@@ -8746,7 +8919,7 @@
 #define NEON_FX1_ISP_TUNE_NR_HL_SCALE_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_NR_HL_SCALE_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_NR_HL_SCALE_RESET FX1_ISP_TUNE_NR_HL_SCALE_RESET
-/* Unsigned Q8.8 multiplier on effective variance for HL; saturate to 16 bits. */
+/* Unsigned Q8.8 multiplier on effective variance for HL; saturate to 16 bits. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_NR_HL_SCALE_VALUE_SHIFT FX1_ISP_TUNE_NR_HL_SCALE_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_NR_HL_SCALE_VALUE_WIDTH FX1_ISP_TUNE_NR_HL_SCALE_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_NR_HL_SCALE_VALUE_MASK FX1_ISP_TUNE_NR_HL_SCALE_VALUE_MASK
@@ -8765,7 +8938,7 @@
 #define NEON_FX1_ISP_TUNE_NR_HH_SCALE_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_NR_HH_SCALE_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_NR_HH_SCALE_RESET FX1_ISP_TUNE_NR_HH_SCALE_RESET
-/* Unsigned Q8.8 multiplier on effective variance for HH; saturate to 16 bits. */
+/* Unsigned Q8.8 multiplier on effective variance for HH; saturate to 16 bits. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_NR_HH_SCALE_VALUE_SHIFT FX1_ISP_TUNE_NR_HH_SCALE_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_NR_HH_SCALE_VALUE_WIDTH FX1_ISP_TUNE_NR_HH_SCALE_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_NR_HH_SCALE_VALUE_MASK FX1_ISP_TUNE_NR_HH_SCALE_VALUE_MASK
@@ -8784,7 +8957,7 @@
 #define NEON_FX1_ISP_TUNE_NR_BLEND_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_NR_BLEND_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_NR_BLEND_RESET FX1_ISP_TUNE_NR_BLEND_RESET
-/* 0..256: filtered weight in ((256-w)*original+w*filtered+128)>>8. */
+/* 0..256: filtered weight in ((256-w)*original+w*filtered+128)>>8. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_NR_BLEND_VALUE_SHIFT FX1_ISP_TUNE_NR_BLEND_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_NR_BLEND_VALUE_WIDTH FX1_ISP_TUNE_NR_BLEND_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_NR_BLEND_VALUE_MASK FX1_ISP_TUNE_NR_BLEND_VALUE_MASK
@@ -8822,7 +8995,7 @@
 #define NEON_FX1_ISP_TUNE_NR_LUT_DATA_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_NR_LUT_DATA_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_NR_LUT_DATA_RESET FX1_ISP_TUNE_NR_LUT_DATA_RESET
-/* Variance knot, not sigma. Payload has no reset guarantee; readback selected index. */
+/* Variance knot, not sigma. Payload has no reset guarantee; readback selected index. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_NR_LUT_DATA_VALUE_SHIFT FX1_ISP_TUNE_NR_LUT_DATA_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_NR_LUT_DATA_VALUE_WIDTH FX1_ISP_TUNE_NR_LUT_DATA_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_NR_LUT_DATA_VALUE_MASK FX1_ISP_TUNE_NR_LUT_DATA_VALUE_MASK
@@ -8841,7 +9014,7 @@
 #define NEON_FX1_ISP_TUNE_NR_SEED_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_NR_SEED_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_NR_SEED_RESET FX1_ISP_TUNE_NR_SEED_RESET
-/* Initial automatic variance after reset or profile switch. Subsequent completed same-profile frames replace it. */
+/* Initial automatic variance after reset or profile switch. Subsequent completed same-profile frames replace it. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_NR_SEED_VALUE_SHIFT FX1_ISP_TUNE_NR_SEED_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_NR_SEED_VALUE_WIDTH FX1_ISP_TUNE_NR_SEED_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_NR_SEED_VALUE_MASK FX1_ISP_TUNE_NR_SEED_VALUE_MASK
@@ -8860,7 +9033,7 @@
 #define NEON_FX1_ISP_TUNE_WB_GB_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_WB_GB_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_WB_GB_RESET FX1_ISP_TUNE_WB_GB_RESET
-/* Gb gain UQ4.8. Existing WB_GAIN_G becomes Gr only in extension mode. */
+/* Gb gain UQ4.8. Existing WB_GAIN_G becomes Gr only in extension mode. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_WB_GB_VALUE_SHIFT FX1_ISP_TUNE_WB_GB_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_WB_GB_VALUE_WIDTH FX1_ISP_TUNE_WB_GB_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_WB_GB_VALUE_MASK FX1_ISP_TUNE_WB_GB_VALUE_MASK
@@ -8879,13 +9052,13 @@
 #define NEON_FX1_ISP_TUNE_DEMOSAIC_MARGIN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_DEMOSAIC_MARGIN_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_DEMOSAIC_MARGIN_RESET FX1_ISP_TUNE_DEMOSAIC_MARGIN_RESET
-/* Use equal-gradient branch when abs(deltaH-deltaV)<=GREEN. */
+/* Use equal-gradient branch when abs(deltaH-deltaV)<=GREEN. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_DEMOSAIC_MARGIN_GREEN_SHIFT FX1_ISP_TUNE_DEMOSAIC_MARGIN_GREEN_SHIFT
 #define NEON_FX1_ISP_TUNE_DEMOSAIC_MARGIN_GREEN_WIDTH FX1_ISP_TUNE_DEMOSAIC_MARGIN_GREEN_WIDTH
 #define NEON_FX1_ISP_TUNE_DEMOSAIC_MARGIN_GREEN_MASK FX1_ISP_TUNE_DEMOSAIC_MARGIN_GREEN_MASK
 #define NEON_FX1_ISP_TUNE_DEMOSAIC_MARGIN_GREEN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_DEMOSAIC_MARGIN_GREEN_RESET FX1_ISP_TUNE_DEMOSAIC_MARGIN_GREEN_RESET
-/* Use equal-gradient diagonal branch when abs(DN-DP)<=RB. */
+/* Use equal-gradient diagonal branch when abs(DN-DP)<=RB. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_DEMOSAIC_MARGIN_RB_SHIFT FX1_ISP_TUNE_DEMOSAIC_MARGIN_RB_SHIFT
 #define NEON_FX1_ISP_TUNE_DEMOSAIC_MARGIN_RB_WIDTH FX1_ISP_TUNE_DEMOSAIC_MARGIN_RB_WIDTH
 #define NEON_FX1_ISP_TUNE_DEMOSAIC_MARGIN_RB_MASK FX1_ISP_TUNE_DEMOSAIC_MARGIN_RB_MASK
@@ -8904,7 +9077,7 @@
 #define NEON_FX1_ISP_TUNE_CNF_BLEND_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_CNF_BLEND_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_CNF_BLEND_RESET FX1_ISP_TUNE_CNF_BLEND_RESET
-/* 0..256 filtered chroma weight; 0 original, 256 current CNF result. */
+/* 0..256 filtered chroma weight; 0 original, 256 current CNF result. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_CNF_BLEND_VALUE_SHIFT FX1_ISP_TUNE_CNF_BLEND_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_CNF_BLEND_VALUE_WIDTH FX1_ISP_TUNE_CNF_BLEND_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_CNF_BLEND_VALUE_MASK FX1_ISP_TUNE_CNF_BLEND_VALUE_MASK
@@ -8923,13 +9096,13 @@
 #define NEON_FX1_ISP_TUNE_CSC_CTRL_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_CSC_CTRL_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_CSC_CTRL_RESET FX1_ISP_TUNE_CSC_CTRL_RESET
-/* Enable brightness/contrast and chroma matrix. */
+/* Enable brightness/contrast and chroma matrix. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_CSC_CTRL_LOOK_EN_SHIFT FX1_ISP_TUNE_CSC_CTRL_LOOK_EN_SHIFT
 #define NEON_FX1_ISP_TUNE_CSC_CTRL_LOOK_EN_WIDTH FX1_ISP_TUNE_CSC_CTRL_LOOK_EN_WIDTH
 #define NEON_FX1_ISP_TUNE_CSC_CTRL_LOOK_EN_MASK FX1_ISP_TUNE_CSC_CTRL_LOOK_EN_MASK
 #define NEON_FX1_ISP_TUNE_CSC_CTRL_LOOK_EN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_CSC_CTRL_LOOK_EN_RESET FX1_ISP_TUNE_CSC_CTRL_LOOK_EN_RESET
-/* 1: full-range branch scales and Y offset 0 (default). 0: limited-range scales and Y offset 16. Quantize once after wide range multiplication. Independent of CSC_CTRL.STD. */
+/* 1: full-range branch scales and Y offset 0 (default). 0: limited-range scales and Y offset 16. Quantize once after wide range multiplication. Independent of CSC_CTRL.STD. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_CSC_CTRL_FULL_RANGE_SHIFT FX1_ISP_TUNE_CSC_CTRL_FULL_RANGE_SHIFT
 #define NEON_FX1_ISP_TUNE_CSC_CTRL_FULL_RANGE_WIDTH FX1_ISP_TUNE_CSC_CTRL_FULL_RANGE_WIDTH
 #define NEON_FX1_ISP_TUNE_CSC_CTRL_FULL_RANGE_MASK FX1_ISP_TUNE_CSC_CTRL_FULL_RANGE_MASK
@@ -8948,7 +9121,7 @@
 #define NEON_FX1_ISP_TUNE_CSC_CONTRAST_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_CSC_CONTRAST_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_CSC_CONTRAST_RESET FX1_ISP_TUNE_CSC_CONTRAST_RESET
-/* Unsigned Q4.8 luma gain around the selected range pedestal. */
+/* Unsigned Q4.8 luma gain around the selected range pedestal. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_CSC_CONTRAST_VALUE_SHIFT FX1_ISP_TUNE_CSC_CONTRAST_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_CSC_CONTRAST_VALUE_WIDTH FX1_ISP_TUNE_CSC_CONTRAST_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_CSC_CONTRAST_VALUE_MASK FX1_ISP_TUNE_CSC_CONTRAST_VALUE_MASK
@@ -8967,7 +9140,7 @@
 #define NEON_FX1_ISP_TUNE_CSC_BRIGHTNESS_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_CSC_BRIGHTNESS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_CSC_BRIGHTNESS_RESET FX1_ISP_TUNE_CSC_BRIGHTNESS_RESET
-/* Signed two-complement 10-bit luma offset in output Y codes. */
+/* Signed two-complement 10-bit luma offset in output Y codes. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_CSC_BRIGHTNESS_VALUE_SHIFT FX1_ISP_TUNE_CSC_BRIGHTNESS_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_CSC_BRIGHTNESS_VALUE_WIDTH FX1_ISP_TUNE_CSC_BRIGHTNESS_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_CSC_BRIGHTNESS_VALUE_MASK FX1_ISP_TUNE_CSC_BRIGHTNESS_VALUE_MASK
@@ -8986,7 +9159,7 @@
 #define NEON_FX1_ISP_TUNE_CSC_UU_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_CSC_UU_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_CSC_UU_RESET FX1_ISP_TUNE_CSC_UU_RESET
-/* Signed Q4.14 chroma-matrix coefficient about neutral 128. Hue/saturation computed by firmware. */
+/* Signed Q4.14 chroma-matrix coefficient about neutral 128. Hue/saturation computed by firmware. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_CSC_UU_VALUE_SHIFT FX1_ISP_TUNE_CSC_UU_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_CSC_UU_VALUE_WIDTH FX1_ISP_TUNE_CSC_UU_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_CSC_UU_VALUE_MASK FX1_ISP_TUNE_CSC_UU_VALUE_MASK
@@ -9005,7 +9178,7 @@
 #define NEON_FX1_ISP_TUNE_CSC_UV_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_CSC_UV_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_CSC_UV_RESET FX1_ISP_TUNE_CSC_UV_RESET
-/* Signed Q4.14 chroma-matrix coefficient about neutral 128. Hue/saturation computed by firmware. */
+/* Signed Q4.14 chroma-matrix coefficient about neutral 128. Hue/saturation computed by firmware. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_CSC_UV_VALUE_SHIFT FX1_ISP_TUNE_CSC_UV_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_CSC_UV_VALUE_WIDTH FX1_ISP_TUNE_CSC_UV_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_CSC_UV_VALUE_MASK FX1_ISP_TUNE_CSC_UV_VALUE_MASK
@@ -9024,7 +9197,7 @@
 #define NEON_FX1_ISP_TUNE_CSC_VU_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_CSC_VU_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_CSC_VU_RESET FX1_ISP_TUNE_CSC_VU_RESET
-/* Signed Q4.14 chroma-matrix coefficient about neutral 128. Hue/saturation computed by firmware. */
+/* Signed Q4.14 chroma-matrix coefficient about neutral 128. Hue/saturation computed by firmware. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_CSC_VU_VALUE_SHIFT FX1_ISP_TUNE_CSC_VU_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_CSC_VU_VALUE_WIDTH FX1_ISP_TUNE_CSC_VU_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_CSC_VU_VALUE_MASK FX1_ISP_TUNE_CSC_VU_VALUE_MASK
@@ -9043,7 +9216,7 @@
 #define NEON_FX1_ISP_TUNE_CSC_VV_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_CSC_VV_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_CSC_VV_RESET FX1_ISP_TUNE_CSC_VV_RESET
-/* Signed Q4.14 chroma-matrix coefficient about neutral 128. Hue/saturation computed by firmware. */
+/* Signed Q4.14 chroma-matrix coefficient about neutral 128. Hue/saturation computed by firmware. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_CSC_VV_VALUE_SHIFT FX1_ISP_TUNE_CSC_VV_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_CSC_VV_VALUE_WIDTH FX1_ISP_TUNE_CSC_VV_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_CSC_VV_VALUE_MASK FX1_ISP_TUNE_CSC_VV_VALUE_MASK
@@ -9062,19 +9235,19 @@
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_RESET FX1_ISP_TUNE_AWB_CTRL_RESET
-/* ROI in complete-cell coordinates. */
+/* ROI in complete-cell coordinates. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_ROI_EN_SHIFT FX1_ISP_TUNE_AWB_CTRL_ROI_EN_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_ROI_EN_WIDTH FX1_ISP_TUNE_AWB_CTRL_ROI_EN_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_ROI_EN_MASK FX1_ISP_TUNE_AWB_CTRL_ROI_EN_MASK
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_ROI_EN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_ROI_EN_RESET FX1_ISP_TUNE_AWB_CTRL_ROI_EN_RESET
-/* Apply enabled ellipse union; mask zero accepts no cells. */
+/* Apply enabled ellipse union; mask zero accepts no cells. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_COLOR_EN_SHIFT FX1_ISP_TUNE_AWB_CTRL_COLOR_EN_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_COLOR_EN_WIDTH FX1_ISP_TUNE_AWB_CTRL_COLOR_EN_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_COLOR_EN_MASK FX1_ISP_TUNE_AWB_CTRL_COLOR_EN_MASK
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_COLOR_EN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_COLOR_EN_RESET FX1_ISP_TUNE_AWB_CTRL_COLOR_EN_RESET
-/* Eight independent color regions; union, count each cell once. */
+/* Eight independent color regions; union, count each cell once. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_ELLIPSE_MASK_SHIFT FX1_ISP_TUNE_AWB_CTRL_ELLIPSE_MASK_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_ELLIPSE_MASK_WIDTH FX1_ISP_TUNE_AWB_CTRL_ELLIPSE_MASK_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_CTRL_ELLIPSE_MASK_MASK FX1_ISP_TUNE_AWB_CTRL_ELLIPSE_MASK_MASK
@@ -9093,13 +9266,13 @@
 #define NEON_FX1_ISP_TUNE_AWB_ROI_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_ROI_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_ROI_START_RESET FX1_ISP_TUNE_AWB_ROI_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_ROI_START_X_SHIFT FX1_ISP_TUNE_AWB_ROI_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_ROI_START_X_WIDTH FX1_ISP_TUNE_AWB_ROI_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_ROI_START_X_MASK FX1_ISP_TUNE_AWB_ROI_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AWB_ROI_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_ROI_START_X_RESET FX1_ISP_TUNE_AWB_ROI_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_ROI_START_Y_SHIFT FX1_ISP_TUNE_AWB_ROI_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_ROI_START_Y_WIDTH FX1_ISP_TUNE_AWB_ROI_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_ROI_START_Y_MASK FX1_ISP_TUNE_AWB_ROI_START_Y_MASK
@@ -9118,13 +9291,13 @@
 #define NEON_FX1_ISP_TUNE_AWB_ROI_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_ROI_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_ROI_END_RESET FX1_ISP_TUNE_AWB_ROI_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_ROI_END_X_SHIFT FX1_ISP_TUNE_AWB_ROI_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_ROI_END_X_WIDTH FX1_ISP_TUNE_AWB_ROI_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_ROI_END_X_MASK FX1_ISP_TUNE_AWB_ROI_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AWB_ROI_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_ROI_END_X_RESET FX1_ISP_TUNE_AWB_ROI_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_ROI_END_Y_SHIFT FX1_ISP_TUNE_AWB_ROI_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_ROI_END_Y_WIDTH FX1_ISP_TUNE_AWB_ROI_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_ROI_END_Y_MASK FX1_ISP_TUNE_AWB_ROI_END_Y_MASK
@@ -9143,13 +9316,13 @@
 #define NEON_FX1_ISP_TUNE_AWB_R_LIMITS_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_R_LIMITS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_R_LIMITS_RESET FX1_ISP_TUNE_AWB_R_LIMITS_RESET
-/* Inclusive lower bound. */
+/* Inclusive lower bound. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_R_LIMITS_MIN_SHIFT FX1_ISP_TUNE_AWB_R_LIMITS_MIN_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_R_LIMITS_MIN_WIDTH FX1_ISP_TUNE_AWB_R_LIMITS_MIN_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_R_LIMITS_MIN_MASK FX1_ISP_TUNE_AWB_R_LIMITS_MIN_MASK
 #define NEON_FX1_ISP_TUNE_AWB_R_LIMITS_MIN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_R_LIMITS_MIN_RESET FX1_ISP_TUNE_AWB_R_LIMITS_MIN_RESET
-/* Inclusive upper bound. */
+/* Inclusive upper bound. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_R_LIMITS_MAX_SHIFT FX1_ISP_TUNE_AWB_R_LIMITS_MAX_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_R_LIMITS_MAX_WIDTH FX1_ISP_TUNE_AWB_R_LIMITS_MAX_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_R_LIMITS_MAX_MASK FX1_ISP_TUNE_AWB_R_LIMITS_MAX_MASK
@@ -9168,13 +9341,13 @@
 #define NEON_FX1_ISP_TUNE_AWB_G_LIMITS_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_G_LIMITS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_G_LIMITS_RESET FX1_ISP_TUNE_AWB_G_LIMITS_RESET
-/* Inclusive lower bound. */
+/* Inclusive lower bound. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_G_LIMITS_MIN_SHIFT FX1_ISP_TUNE_AWB_G_LIMITS_MIN_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_G_LIMITS_MIN_WIDTH FX1_ISP_TUNE_AWB_G_LIMITS_MIN_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_G_LIMITS_MIN_MASK FX1_ISP_TUNE_AWB_G_LIMITS_MIN_MASK
 #define NEON_FX1_ISP_TUNE_AWB_G_LIMITS_MIN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_G_LIMITS_MIN_RESET FX1_ISP_TUNE_AWB_G_LIMITS_MIN_RESET
-/* Inclusive upper bound. */
+/* Inclusive upper bound. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_G_LIMITS_MAX_SHIFT FX1_ISP_TUNE_AWB_G_LIMITS_MAX_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_G_LIMITS_MAX_WIDTH FX1_ISP_TUNE_AWB_G_LIMITS_MAX_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_G_LIMITS_MAX_MASK FX1_ISP_TUNE_AWB_G_LIMITS_MAX_MASK
@@ -9193,13 +9366,13 @@
 #define NEON_FX1_ISP_TUNE_AWB_B_LIMITS_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_B_LIMITS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_B_LIMITS_RESET FX1_ISP_TUNE_AWB_B_LIMITS_RESET
-/* Inclusive lower bound. */
+/* Inclusive lower bound. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_B_LIMITS_MIN_SHIFT FX1_ISP_TUNE_AWB_B_LIMITS_MIN_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_B_LIMITS_MIN_WIDTH FX1_ISP_TUNE_AWB_B_LIMITS_MIN_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_B_LIMITS_MIN_MASK FX1_ISP_TUNE_AWB_B_LIMITS_MIN_MASK
 #define NEON_FX1_ISP_TUNE_AWB_B_LIMITS_MIN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_B_LIMITS_MIN_RESET FX1_ISP_TUNE_AWB_B_LIMITS_MIN_RESET
-/* Inclusive upper bound. */
+/* Inclusive upper bound. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_B_LIMITS_MAX_SHIFT FX1_ISP_TUNE_AWB_B_LIMITS_MAX_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_B_LIMITS_MAX_WIDTH FX1_ISP_TUNE_AWB_B_LIMITS_MAX_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_B_LIMITS_MAX_MASK FX1_ISP_TUNE_AWB_B_LIMITS_MAX_MASK
@@ -9218,7 +9391,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_MIN_G_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_MIN_G_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_MIN_G_RESET FX1_ISP_TUNE_AWB_MIN_G_RESET
-/* Minimum G for color-ratio division. Applies only with COLOR_EN; SEAL rejects 0 with COLOR_EN=1 (INVALID). */
+/* Minimum G for color-ratio division. Applies only with COLOR_EN; SEAL rejects 0 with COLOR_EN=1 (INVALID). External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_MIN_G_VALUE_SHIFT FX1_ISP_TUNE_AWB_MIN_G_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_MIN_G_VALUE_WIDTH FX1_ISP_TUNE_AWB_MIN_G_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_MIN_G_VALUE_MASK FX1_ISP_TUNE_AWB_MIN_G_VALUE_MASK
@@ -9237,13 +9410,13 @@
 #define NEON_FX1_ISP_TUNE_AWB_E0_CENTER_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E0_CENTER_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E0_CENTER_RESET FX1_ISP_TUNE_AWB_E0_CENTER_RESET
-/* R/G center. */
+/* R/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E0_CENTER_RG_SHIFT FX1_ISP_TUNE_AWB_E0_CENTER_RG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E0_CENTER_RG_WIDTH FX1_ISP_TUNE_AWB_E0_CENTER_RG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E0_CENTER_RG_MASK FX1_ISP_TUNE_AWB_E0_CENTER_RG_MASK
 #define NEON_FX1_ISP_TUNE_AWB_E0_CENTER_RG_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E0_CENTER_RG_RESET FX1_ISP_TUNE_AWB_E0_CENTER_RG_RESET
-/* B/G center. */
+/* B/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E0_CENTER_BG_SHIFT FX1_ISP_TUNE_AWB_E0_CENTER_BG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E0_CENTER_BG_WIDTH FX1_ISP_TUNE_AWB_E0_CENTER_BG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E0_CENTER_BG_MASK FX1_ISP_TUNE_AWB_E0_CENTER_BG_MASK
@@ -9262,7 +9435,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E0_A_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E0_A_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E0_A_RESET FX1_ISP_TUNE_AWB_E0_A_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E0_A_VALUE_SHIFT FX1_ISP_TUNE_AWB_E0_A_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E0_A_VALUE_WIDTH FX1_ISP_TUNE_AWB_E0_A_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E0_A_VALUE_MASK FX1_ISP_TUNE_AWB_E0_A_VALUE_MASK
@@ -9281,7 +9454,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E0_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E0_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E0_B_RESET FX1_ISP_TUNE_AWB_E0_B_RESET
-/* Signed Q1.14 cross coefficient. */
+/* Signed Q1.14 cross coefficient. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E0_B_VALUE_SHIFT FX1_ISP_TUNE_AWB_E0_B_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E0_B_VALUE_WIDTH FX1_ISP_TUNE_AWB_E0_B_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E0_B_VALUE_MASK FX1_ISP_TUNE_AWB_E0_B_VALUE_MASK
@@ -9300,7 +9473,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E0_C_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E0_C_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E0_C_RESET FX1_ISP_TUNE_AWB_E0_C_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E0_C_VALUE_SHIFT FX1_ISP_TUNE_AWB_E0_C_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E0_C_VALUE_WIDTH FX1_ISP_TUNE_AWB_E0_C_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E0_C_VALUE_MASK FX1_ISP_TUNE_AWB_E0_C_VALUE_MASK
@@ -9319,7 +9492,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E0_RADIUS2_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E0_RADIUS2_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E0_RADIUS2_RESET FX1_ISP_TUNE_AWB_E0_RADIUS2_RESET
-/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. */
+/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E0_RADIUS2_VALUE_SHIFT FX1_ISP_TUNE_AWB_E0_RADIUS2_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E0_RADIUS2_VALUE_WIDTH FX1_ISP_TUNE_AWB_E0_RADIUS2_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E0_RADIUS2_VALUE_MASK FX1_ISP_TUNE_AWB_E0_RADIUS2_VALUE_MASK
@@ -9338,13 +9511,13 @@
 #define NEON_FX1_ISP_TUNE_AWB_E1_CENTER_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E1_CENTER_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E1_CENTER_RESET FX1_ISP_TUNE_AWB_E1_CENTER_RESET
-/* R/G center. */
+/* R/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E1_CENTER_RG_SHIFT FX1_ISP_TUNE_AWB_E1_CENTER_RG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E1_CENTER_RG_WIDTH FX1_ISP_TUNE_AWB_E1_CENTER_RG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E1_CENTER_RG_MASK FX1_ISP_TUNE_AWB_E1_CENTER_RG_MASK
 #define NEON_FX1_ISP_TUNE_AWB_E1_CENTER_RG_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E1_CENTER_RG_RESET FX1_ISP_TUNE_AWB_E1_CENTER_RG_RESET
-/* B/G center. */
+/* B/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E1_CENTER_BG_SHIFT FX1_ISP_TUNE_AWB_E1_CENTER_BG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E1_CENTER_BG_WIDTH FX1_ISP_TUNE_AWB_E1_CENTER_BG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E1_CENTER_BG_MASK FX1_ISP_TUNE_AWB_E1_CENTER_BG_MASK
@@ -9363,7 +9536,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E1_A_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E1_A_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E1_A_RESET FX1_ISP_TUNE_AWB_E1_A_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E1_A_VALUE_SHIFT FX1_ISP_TUNE_AWB_E1_A_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E1_A_VALUE_WIDTH FX1_ISP_TUNE_AWB_E1_A_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E1_A_VALUE_MASK FX1_ISP_TUNE_AWB_E1_A_VALUE_MASK
@@ -9382,7 +9555,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E1_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E1_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E1_B_RESET FX1_ISP_TUNE_AWB_E1_B_RESET
-/* Signed Q1.14 cross coefficient. */
+/* Signed Q1.14 cross coefficient. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E1_B_VALUE_SHIFT FX1_ISP_TUNE_AWB_E1_B_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E1_B_VALUE_WIDTH FX1_ISP_TUNE_AWB_E1_B_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E1_B_VALUE_MASK FX1_ISP_TUNE_AWB_E1_B_VALUE_MASK
@@ -9401,7 +9574,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E1_C_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E1_C_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E1_C_RESET FX1_ISP_TUNE_AWB_E1_C_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E1_C_VALUE_SHIFT FX1_ISP_TUNE_AWB_E1_C_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E1_C_VALUE_WIDTH FX1_ISP_TUNE_AWB_E1_C_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E1_C_VALUE_MASK FX1_ISP_TUNE_AWB_E1_C_VALUE_MASK
@@ -9420,7 +9593,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E1_RADIUS2_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E1_RADIUS2_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E1_RADIUS2_RESET FX1_ISP_TUNE_AWB_E1_RADIUS2_RESET
-/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. */
+/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E1_RADIUS2_VALUE_SHIFT FX1_ISP_TUNE_AWB_E1_RADIUS2_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E1_RADIUS2_VALUE_WIDTH FX1_ISP_TUNE_AWB_E1_RADIUS2_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E1_RADIUS2_VALUE_MASK FX1_ISP_TUNE_AWB_E1_RADIUS2_VALUE_MASK
@@ -9439,13 +9612,13 @@
 #define NEON_FX1_ISP_TUNE_AWB_E2_CENTER_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E2_CENTER_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E2_CENTER_RESET FX1_ISP_TUNE_AWB_E2_CENTER_RESET
-/* R/G center. */
+/* R/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E2_CENTER_RG_SHIFT FX1_ISP_TUNE_AWB_E2_CENTER_RG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E2_CENTER_RG_WIDTH FX1_ISP_TUNE_AWB_E2_CENTER_RG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E2_CENTER_RG_MASK FX1_ISP_TUNE_AWB_E2_CENTER_RG_MASK
 #define NEON_FX1_ISP_TUNE_AWB_E2_CENTER_RG_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E2_CENTER_RG_RESET FX1_ISP_TUNE_AWB_E2_CENTER_RG_RESET
-/* B/G center. */
+/* B/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E2_CENTER_BG_SHIFT FX1_ISP_TUNE_AWB_E2_CENTER_BG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E2_CENTER_BG_WIDTH FX1_ISP_TUNE_AWB_E2_CENTER_BG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E2_CENTER_BG_MASK FX1_ISP_TUNE_AWB_E2_CENTER_BG_MASK
@@ -9464,7 +9637,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E2_A_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E2_A_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E2_A_RESET FX1_ISP_TUNE_AWB_E2_A_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E2_A_VALUE_SHIFT FX1_ISP_TUNE_AWB_E2_A_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E2_A_VALUE_WIDTH FX1_ISP_TUNE_AWB_E2_A_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E2_A_VALUE_MASK FX1_ISP_TUNE_AWB_E2_A_VALUE_MASK
@@ -9483,7 +9656,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E2_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E2_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E2_B_RESET FX1_ISP_TUNE_AWB_E2_B_RESET
-/* Signed Q1.14 cross coefficient. */
+/* Signed Q1.14 cross coefficient. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E2_B_VALUE_SHIFT FX1_ISP_TUNE_AWB_E2_B_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E2_B_VALUE_WIDTH FX1_ISP_TUNE_AWB_E2_B_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E2_B_VALUE_MASK FX1_ISP_TUNE_AWB_E2_B_VALUE_MASK
@@ -9502,7 +9675,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E2_C_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E2_C_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E2_C_RESET FX1_ISP_TUNE_AWB_E2_C_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E2_C_VALUE_SHIFT FX1_ISP_TUNE_AWB_E2_C_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E2_C_VALUE_WIDTH FX1_ISP_TUNE_AWB_E2_C_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E2_C_VALUE_MASK FX1_ISP_TUNE_AWB_E2_C_VALUE_MASK
@@ -9521,7 +9694,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E2_RADIUS2_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E2_RADIUS2_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E2_RADIUS2_RESET FX1_ISP_TUNE_AWB_E2_RADIUS2_RESET
-/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. */
+/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E2_RADIUS2_VALUE_SHIFT FX1_ISP_TUNE_AWB_E2_RADIUS2_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E2_RADIUS2_VALUE_WIDTH FX1_ISP_TUNE_AWB_E2_RADIUS2_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E2_RADIUS2_VALUE_MASK FX1_ISP_TUNE_AWB_E2_RADIUS2_VALUE_MASK
@@ -9540,13 +9713,13 @@
 #define NEON_FX1_ISP_TUNE_AWB_E3_CENTER_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E3_CENTER_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E3_CENTER_RESET FX1_ISP_TUNE_AWB_E3_CENTER_RESET
-/* R/G center. */
+/* R/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E3_CENTER_RG_SHIFT FX1_ISP_TUNE_AWB_E3_CENTER_RG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E3_CENTER_RG_WIDTH FX1_ISP_TUNE_AWB_E3_CENTER_RG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E3_CENTER_RG_MASK FX1_ISP_TUNE_AWB_E3_CENTER_RG_MASK
 #define NEON_FX1_ISP_TUNE_AWB_E3_CENTER_RG_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E3_CENTER_RG_RESET FX1_ISP_TUNE_AWB_E3_CENTER_RG_RESET
-/* B/G center. */
+/* B/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E3_CENTER_BG_SHIFT FX1_ISP_TUNE_AWB_E3_CENTER_BG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E3_CENTER_BG_WIDTH FX1_ISP_TUNE_AWB_E3_CENTER_BG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E3_CENTER_BG_MASK FX1_ISP_TUNE_AWB_E3_CENTER_BG_MASK
@@ -9565,7 +9738,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E3_A_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E3_A_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E3_A_RESET FX1_ISP_TUNE_AWB_E3_A_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E3_A_VALUE_SHIFT FX1_ISP_TUNE_AWB_E3_A_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E3_A_VALUE_WIDTH FX1_ISP_TUNE_AWB_E3_A_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E3_A_VALUE_MASK FX1_ISP_TUNE_AWB_E3_A_VALUE_MASK
@@ -9584,7 +9757,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E3_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E3_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E3_B_RESET FX1_ISP_TUNE_AWB_E3_B_RESET
-/* Signed Q1.14 cross coefficient. */
+/* Signed Q1.14 cross coefficient. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E3_B_VALUE_SHIFT FX1_ISP_TUNE_AWB_E3_B_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E3_B_VALUE_WIDTH FX1_ISP_TUNE_AWB_E3_B_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E3_B_VALUE_MASK FX1_ISP_TUNE_AWB_E3_B_VALUE_MASK
@@ -9603,7 +9776,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E3_C_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E3_C_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E3_C_RESET FX1_ISP_TUNE_AWB_E3_C_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E3_C_VALUE_SHIFT FX1_ISP_TUNE_AWB_E3_C_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E3_C_VALUE_WIDTH FX1_ISP_TUNE_AWB_E3_C_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E3_C_VALUE_MASK FX1_ISP_TUNE_AWB_E3_C_VALUE_MASK
@@ -9622,7 +9795,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E3_RADIUS2_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E3_RADIUS2_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E3_RADIUS2_RESET FX1_ISP_TUNE_AWB_E3_RADIUS2_RESET
-/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. */
+/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E3_RADIUS2_VALUE_SHIFT FX1_ISP_TUNE_AWB_E3_RADIUS2_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E3_RADIUS2_VALUE_WIDTH FX1_ISP_TUNE_AWB_E3_RADIUS2_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E3_RADIUS2_VALUE_MASK FX1_ISP_TUNE_AWB_E3_RADIUS2_VALUE_MASK
@@ -9641,13 +9814,13 @@
 #define NEON_FX1_ISP_TUNE_AWB_E4_CENTER_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E4_CENTER_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E4_CENTER_RESET FX1_ISP_TUNE_AWB_E4_CENTER_RESET
-/* R/G center. */
+/* R/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E4_CENTER_RG_SHIFT FX1_ISP_TUNE_AWB_E4_CENTER_RG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E4_CENTER_RG_WIDTH FX1_ISP_TUNE_AWB_E4_CENTER_RG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E4_CENTER_RG_MASK FX1_ISP_TUNE_AWB_E4_CENTER_RG_MASK
 #define NEON_FX1_ISP_TUNE_AWB_E4_CENTER_RG_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E4_CENTER_RG_RESET FX1_ISP_TUNE_AWB_E4_CENTER_RG_RESET
-/* B/G center. */
+/* B/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E4_CENTER_BG_SHIFT FX1_ISP_TUNE_AWB_E4_CENTER_BG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E4_CENTER_BG_WIDTH FX1_ISP_TUNE_AWB_E4_CENTER_BG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E4_CENTER_BG_MASK FX1_ISP_TUNE_AWB_E4_CENTER_BG_MASK
@@ -9666,7 +9839,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E4_A_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E4_A_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E4_A_RESET FX1_ISP_TUNE_AWB_E4_A_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E4_A_VALUE_SHIFT FX1_ISP_TUNE_AWB_E4_A_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E4_A_VALUE_WIDTH FX1_ISP_TUNE_AWB_E4_A_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E4_A_VALUE_MASK FX1_ISP_TUNE_AWB_E4_A_VALUE_MASK
@@ -9685,7 +9858,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E4_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E4_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E4_B_RESET FX1_ISP_TUNE_AWB_E4_B_RESET
-/* Signed Q1.14 cross coefficient. */
+/* Signed Q1.14 cross coefficient. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E4_B_VALUE_SHIFT FX1_ISP_TUNE_AWB_E4_B_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E4_B_VALUE_WIDTH FX1_ISP_TUNE_AWB_E4_B_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E4_B_VALUE_MASK FX1_ISP_TUNE_AWB_E4_B_VALUE_MASK
@@ -9704,7 +9877,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E4_C_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E4_C_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E4_C_RESET FX1_ISP_TUNE_AWB_E4_C_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E4_C_VALUE_SHIFT FX1_ISP_TUNE_AWB_E4_C_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E4_C_VALUE_WIDTH FX1_ISP_TUNE_AWB_E4_C_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E4_C_VALUE_MASK FX1_ISP_TUNE_AWB_E4_C_VALUE_MASK
@@ -9723,7 +9896,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E4_RADIUS2_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E4_RADIUS2_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E4_RADIUS2_RESET FX1_ISP_TUNE_AWB_E4_RADIUS2_RESET
-/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. */
+/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E4_RADIUS2_VALUE_SHIFT FX1_ISP_TUNE_AWB_E4_RADIUS2_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E4_RADIUS2_VALUE_WIDTH FX1_ISP_TUNE_AWB_E4_RADIUS2_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E4_RADIUS2_VALUE_MASK FX1_ISP_TUNE_AWB_E4_RADIUS2_VALUE_MASK
@@ -9742,13 +9915,13 @@
 #define NEON_FX1_ISP_TUNE_AWB_E5_CENTER_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E5_CENTER_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E5_CENTER_RESET FX1_ISP_TUNE_AWB_E5_CENTER_RESET
-/* R/G center. */
+/* R/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E5_CENTER_RG_SHIFT FX1_ISP_TUNE_AWB_E5_CENTER_RG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E5_CENTER_RG_WIDTH FX1_ISP_TUNE_AWB_E5_CENTER_RG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E5_CENTER_RG_MASK FX1_ISP_TUNE_AWB_E5_CENTER_RG_MASK
 #define NEON_FX1_ISP_TUNE_AWB_E5_CENTER_RG_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E5_CENTER_RG_RESET FX1_ISP_TUNE_AWB_E5_CENTER_RG_RESET
-/* B/G center. */
+/* B/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E5_CENTER_BG_SHIFT FX1_ISP_TUNE_AWB_E5_CENTER_BG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E5_CENTER_BG_WIDTH FX1_ISP_TUNE_AWB_E5_CENTER_BG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E5_CENTER_BG_MASK FX1_ISP_TUNE_AWB_E5_CENTER_BG_MASK
@@ -9767,7 +9940,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E5_A_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E5_A_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E5_A_RESET FX1_ISP_TUNE_AWB_E5_A_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E5_A_VALUE_SHIFT FX1_ISP_TUNE_AWB_E5_A_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E5_A_VALUE_WIDTH FX1_ISP_TUNE_AWB_E5_A_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E5_A_VALUE_MASK FX1_ISP_TUNE_AWB_E5_A_VALUE_MASK
@@ -9786,7 +9959,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E5_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E5_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E5_B_RESET FX1_ISP_TUNE_AWB_E5_B_RESET
-/* Signed Q1.14 cross coefficient. */
+/* Signed Q1.14 cross coefficient. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E5_B_VALUE_SHIFT FX1_ISP_TUNE_AWB_E5_B_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E5_B_VALUE_WIDTH FX1_ISP_TUNE_AWB_E5_B_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E5_B_VALUE_MASK FX1_ISP_TUNE_AWB_E5_B_VALUE_MASK
@@ -9805,7 +9978,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E5_C_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E5_C_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E5_C_RESET FX1_ISP_TUNE_AWB_E5_C_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E5_C_VALUE_SHIFT FX1_ISP_TUNE_AWB_E5_C_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E5_C_VALUE_WIDTH FX1_ISP_TUNE_AWB_E5_C_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E5_C_VALUE_MASK FX1_ISP_TUNE_AWB_E5_C_VALUE_MASK
@@ -9824,7 +9997,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E5_RADIUS2_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E5_RADIUS2_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E5_RADIUS2_RESET FX1_ISP_TUNE_AWB_E5_RADIUS2_RESET
-/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. */
+/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E5_RADIUS2_VALUE_SHIFT FX1_ISP_TUNE_AWB_E5_RADIUS2_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E5_RADIUS2_VALUE_WIDTH FX1_ISP_TUNE_AWB_E5_RADIUS2_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E5_RADIUS2_VALUE_MASK FX1_ISP_TUNE_AWB_E5_RADIUS2_VALUE_MASK
@@ -9843,13 +10016,13 @@
 #define NEON_FX1_ISP_TUNE_AWB_E6_CENTER_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E6_CENTER_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E6_CENTER_RESET FX1_ISP_TUNE_AWB_E6_CENTER_RESET
-/* R/G center. */
+/* R/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E6_CENTER_RG_SHIFT FX1_ISP_TUNE_AWB_E6_CENTER_RG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E6_CENTER_RG_WIDTH FX1_ISP_TUNE_AWB_E6_CENTER_RG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E6_CENTER_RG_MASK FX1_ISP_TUNE_AWB_E6_CENTER_RG_MASK
 #define NEON_FX1_ISP_TUNE_AWB_E6_CENTER_RG_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E6_CENTER_RG_RESET FX1_ISP_TUNE_AWB_E6_CENTER_RG_RESET
-/* B/G center. */
+/* B/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E6_CENTER_BG_SHIFT FX1_ISP_TUNE_AWB_E6_CENTER_BG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E6_CENTER_BG_WIDTH FX1_ISP_TUNE_AWB_E6_CENTER_BG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E6_CENTER_BG_MASK FX1_ISP_TUNE_AWB_E6_CENTER_BG_MASK
@@ -9868,7 +10041,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E6_A_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E6_A_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E6_A_RESET FX1_ISP_TUNE_AWB_E6_A_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E6_A_VALUE_SHIFT FX1_ISP_TUNE_AWB_E6_A_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E6_A_VALUE_WIDTH FX1_ISP_TUNE_AWB_E6_A_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E6_A_VALUE_MASK FX1_ISP_TUNE_AWB_E6_A_VALUE_MASK
@@ -9887,7 +10060,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E6_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E6_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E6_B_RESET FX1_ISP_TUNE_AWB_E6_B_RESET
-/* Signed Q1.14 cross coefficient. */
+/* Signed Q1.14 cross coefficient. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E6_B_VALUE_SHIFT FX1_ISP_TUNE_AWB_E6_B_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E6_B_VALUE_WIDTH FX1_ISP_TUNE_AWB_E6_B_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E6_B_VALUE_MASK FX1_ISP_TUNE_AWB_E6_B_VALUE_MASK
@@ -9906,7 +10079,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E6_C_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E6_C_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E6_C_RESET FX1_ISP_TUNE_AWB_E6_C_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E6_C_VALUE_SHIFT FX1_ISP_TUNE_AWB_E6_C_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E6_C_VALUE_WIDTH FX1_ISP_TUNE_AWB_E6_C_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E6_C_VALUE_MASK FX1_ISP_TUNE_AWB_E6_C_VALUE_MASK
@@ -9925,7 +10098,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E6_RADIUS2_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E6_RADIUS2_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E6_RADIUS2_RESET FX1_ISP_TUNE_AWB_E6_RADIUS2_RESET
-/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. */
+/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E6_RADIUS2_VALUE_SHIFT FX1_ISP_TUNE_AWB_E6_RADIUS2_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E6_RADIUS2_VALUE_WIDTH FX1_ISP_TUNE_AWB_E6_RADIUS2_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E6_RADIUS2_VALUE_MASK FX1_ISP_TUNE_AWB_E6_RADIUS2_VALUE_MASK
@@ -9944,13 +10117,13 @@
 #define NEON_FX1_ISP_TUNE_AWB_E7_CENTER_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E7_CENTER_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E7_CENTER_RESET FX1_ISP_TUNE_AWB_E7_CENTER_RESET
-/* R/G center. */
+/* R/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E7_CENTER_RG_SHIFT FX1_ISP_TUNE_AWB_E7_CENTER_RG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E7_CENTER_RG_WIDTH FX1_ISP_TUNE_AWB_E7_CENTER_RG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E7_CENTER_RG_MASK FX1_ISP_TUNE_AWB_E7_CENTER_RG_MASK
 #define NEON_FX1_ISP_TUNE_AWB_E7_CENTER_RG_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E7_CENTER_RG_RESET FX1_ISP_TUNE_AWB_E7_CENTER_RG_RESET
-/* B/G center. */
+/* B/G center. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E7_CENTER_BG_SHIFT FX1_ISP_TUNE_AWB_E7_CENTER_BG_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E7_CENTER_BG_WIDTH FX1_ISP_TUNE_AWB_E7_CENTER_BG_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E7_CENTER_BG_MASK FX1_ISP_TUNE_AWB_E7_CENTER_BG_MASK
@@ -9969,7 +10142,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E7_A_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E7_A_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E7_A_RESET FX1_ISP_TUNE_AWB_E7_A_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E7_A_VALUE_SHIFT FX1_ISP_TUNE_AWB_E7_A_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E7_A_VALUE_WIDTH FX1_ISP_TUNE_AWB_E7_A_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E7_A_VALUE_MASK FX1_ISP_TUNE_AWB_E7_A_VALUE_MASK
@@ -9988,7 +10161,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E7_B_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E7_B_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E7_B_RESET FX1_ISP_TUNE_AWB_E7_B_RESET
-/* Signed Q1.14 cross coefficient. */
+/* Signed Q1.14 cross coefficient. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E7_B_VALUE_SHIFT FX1_ISP_TUNE_AWB_E7_B_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E7_B_VALUE_WIDTH FX1_ISP_TUNE_AWB_E7_B_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E7_B_VALUE_MASK FX1_ISP_TUNE_AWB_E7_B_VALUE_MASK
@@ -10007,7 +10180,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E7_C_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E7_C_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E7_C_RESET FX1_ISP_TUNE_AWB_E7_C_RESET
-/* Unsigned Q2.14 diagonal coefficient, must be positive. */
+/* Unsigned Q2.14 diagonal coefficient, must be positive. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E7_C_VALUE_SHIFT FX1_ISP_TUNE_AWB_E7_C_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E7_C_VALUE_WIDTH FX1_ISP_TUNE_AWB_E7_C_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E7_C_VALUE_MASK FX1_ISP_TUNE_AWB_E7_C_VALUE_MASK
@@ -10026,7 +10199,7 @@
 #define NEON_FX1_ISP_TUNE_AWB_E7_RADIUS2_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AWB_E7_RADIUS2_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AWB_E7_RADIUS2_RESET FX1_ISP_TUNE_AWB_E7_RADIUS2_RESET
-/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. */
+/* Unsigned squared radius in Q16.16; compare metric <= RADIUS2 << 14. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AWB_E7_RADIUS2_VALUE_SHIFT FX1_ISP_TUNE_AWB_E7_RADIUS2_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AWB_E7_RADIUS2_VALUE_WIDTH FX1_ISP_TUNE_AWB_E7_RADIUS2_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AWB_E7_RADIUS2_VALUE_MASK FX1_ISP_TUNE_AWB_E7_RADIUS2_VALUE_MASK
@@ -10045,13 +10218,13 @@
 #define NEON_FX1_ISP_TUNE_AF_CTRL_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_CTRL_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_CTRL_RESET FX1_ISP_TUNE_AF_CTRL_RESET
-/* 0 legacy uniform 4x4; 1 sixteen programmable windows. */
+/* 0 legacy uniform 4x4; 1 sixteen programmable windows. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_CTRL_WINDOW_MODE_SHIFT FX1_ISP_TUNE_AF_CTRL_WINDOW_MODE_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_CTRL_WINDOW_MODE_WIDTH FX1_ISP_TUNE_AF_CTRL_WINDOW_MODE_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_CTRL_WINDOW_MODE_MASK FX1_ISP_TUNE_AF_CTRL_WINDOW_MODE_MASK
 #define NEON_FX1_ISP_TUNE_AF_CTRL_WINDOW_MODE_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_CTRL_WINDOW_MODE_RESET FX1_ISP_TUNE_AF_CTRL_WINDOW_MODE_RESET
-/* Enable each metric accumulator. Overlapping windows count independently. */
+/* Enable each metric accumulator. Overlapping windows count independently. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_CTRL_WINDOW_MASK_SHIFT FX1_ISP_TUNE_AF_CTRL_WINDOW_MASK_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_CTRL_WINDOW_MASK_WIDTH FX1_ISP_TUNE_AF_CTRL_WINDOW_MASK_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_CTRL_WINDOW_MASK_MASK FX1_ISP_TUNE_AF_CTRL_WINDOW_MASK_MASK
@@ -10070,7 +10243,7 @@
 #define NEON_FX1_ISP_TUNE_AF_NOISE_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_NOISE_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_NOISE_RESET FX1_ISP_TUNE_AF_NOISE_RESET
-/* Subtract from abs(SobelX)+abs(SobelY), floor at zero before summing. */
+/* Subtract from abs(SobelX)+abs(SobelY), floor at zero before summing. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_NOISE_VALUE_SHIFT FX1_ISP_TUNE_AF_NOISE_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_NOISE_VALUE_WIDTH FX1_ISP_TUNE_AF_NOISE_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_NOISE_VALUE_MASK FX1_ISP_TUNE_AF_NOISE_VALUE_MASK
@@ -10089,13 +10262,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W0_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W0_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W0_START_RESET FX1_ISP_TUNE_AF_W0_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W0_START_X_SHIFT FX1_ISP_TUNE_AF_W0_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W0_START_X_WIDTH FX1_ISP_TUNE_AF_W0_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W0_START_X_MASK FX1_ISP_TUNE_AF_W0_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W0_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W0_START_X_RESET FX1_ISP_TUNE_AF_W0_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W0_START_Y_SHIFT FX1_ISP_TUNE_AF_W0_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W0_START_Y_WIDTH FX1_ISP_TUNE_AF_W0_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W0_START_Y_MASK FX1_ISP_TUNE_AF_W0_START_Y_MASK
@@ -10114,13 +10287,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W0_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W0_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W0_END_RESET FX1_ISP_TUNE_AF_W0_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W0_END_X_SHIFT FX1_ISP_TUNE_AF_W0_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W0_END_X_WIDTH FX1_ISP_TUNE_AF_W0_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W0_END_X_MASK FX1_ISP_TUNE_AF_W0_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W0_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W0_END_X_RESET FX1_ISP_TUNE_AF_W0_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W0_END_Y_SHIFT FX1_ISP_TUNE_AF_W0_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W0_END_Y_WIDTH FX1_ISP_TUNE_AF_W0_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W0_END_Y_MASK FX1_ISP_TUNE_AF_W0_END_Y_MASK
@@ -10139,13 +10312,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W1_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W1_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W1_START_RESET FX1_ISP_TUNE_AF_W1_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W1_START_X_SHIFT FX1_ISP_TUNE_AF_W1_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W1_START_X_WIDTH FX1_ISP_TUNE_AF_W1_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W1_START_X_MASK FX1_ISP_TUNE_AF_W1_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W1_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W1_START_X_RESET FX1_ISP_TUNE_AF_W1_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W1_START_Y_SHIFT FX1_ISP_TUNE_AF_W1_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W1_START_Y_WIDTH FX1_ISP_TUNE_AF_W1_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W1_START_Y_MASK FX1_ISP_TUNE_AF_W1_START_Y_MASK
@@ -10164,13 +10337,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W1_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W1_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W1_END_RESET FX1_ISP_TUNE_AF_W1_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W1_END_X_SHIFT FX1_ISP_TUNE_AF_W1_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W1_END_X_WIDTH FX1_ISP_TUNE_AF_W1_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W1_END_X_MASK FX1_ISP_TUNE_AF_W1_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W1_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W1_END_X_RESET FX1_ISP_TUNE_AF_W1_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W1_END_Y_SHIFT FX1_ISP_TUNE_AF_W1_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W1_END_Y_WIDTH FX1_ISP_TUNE_AF_W1_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W1_END_Y_MASK FX1_ISP_TUNE_AF_W1_END_Y_MASK
@@ -10189,13 +10362,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W2_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W2_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W2_START_RESET FX1_ISP_TUNE_AF_W2_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W2_START_X_SHIFT FX1_ISP_TUNE_AF_W2_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W2_START_X_WIDTH FX1_ISP_TUNE_AF_W2_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W2_START_X_MASK FX1_ISP_TUNE_AF_W2_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W2_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W2_START_X_RESET FX1_ISP_TUNE_AF_W2_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W2_START_Y_SHIFT FX1_ISP_TUNE_AF_W2_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W2_START_Y_WIDTH FX1_ISP_TUNE_AF_W2_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W2_START_Y_MASK FX1_ISP_TUNE_AF_W2_START_Y_MASK
@@ -10214,13 +10387,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W2_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W2_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W2_END_RESET FX1_ISP_TUNE_AF_W2_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W2_END_X_SHIFT FX1_ISP_TUNE_AF_W2_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W2_END_X_WIDTH FX1_ISP_TUNE_AF_W2_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W2_END_X_MASK FX1_ISP_TUNE_AF_W2_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W2_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W2_END_X_RESET FX1_ISP_TUNE_AF_W2_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W2_END_Y_SHIFT FX1_ISP_TUNE_AF_W2_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W2_END_Y_WIDTH FX1_ISP_TUNE_AF_W2_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W2_END_Y_MASK FX1_ISP_TUNE_AF_W2_END_Y_MASK
@@ -10239,13 +10412,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W3_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W3_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W3_START_RESET FX1_ISP_TUNE_AF_W3_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W3_START_X_SHIFT FX1_ISP_TUNE_AF_W3_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W3_START_X_WIDTH FX1_ISP_TUNE_AF_W3_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W3_START_X_MASK FX1_ISP_TUNE_AF_W3_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W3_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W3_START_X_RESET FX1_ISP_TUNE_AF_W3_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W3_START_Y_SHIFT FX1_ISP_TUNE_AF_W3_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W3_START_Y_WIDTH FX1_ISP_TUNE_AF_W3_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W3_START_Y_MASK FX1_ISP_TUNE_AF_W3_START_Y_MASK
@@ -10264,13 +10437,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W3_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W3_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W3_END_RESET FX1_ISP_TUNE_AF_W3_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W3_END_X_SHIFT FX1_ISP_TUNE_AF_W3_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W3_END_X_WIDTH FX1_ISP_TUNE_AF_W3_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W3_END_X_MASK FX1_ISP_TUNE_AF_W3_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W3_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W3_END_X_RESET FX1_ISP_TUNE_AF_W3_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W3_END_Y_SHIFT FX1_ISP_TUNE_AF_W3_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W3_END_Y_WIDTH FX1_ISP_TUNE_AF_W3_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W3_END_Y_MASK FX1_ISP_TUNE_AF_W3_END_Y_MASK
@@ -10289,13 +10462,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W4_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W4_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W4_START_RESET FX1_ISP_TUNE_AF_W4_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W4_START_X_SHIFT FX1_ISP_TUNE_AF_W4_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W4_START_X_WIDTH FX1_ISP_TUNE_AF_W4_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W4_START_X_MASK FX1_ISP_TUNE_AF_W4_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W4_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W4_START_X_RESET FX1_ISP_TUNE_AF_W4_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W4_START_Y_SHIFT FX1_ISP_TUNE_AF_W4_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W4_START_Y_WIDTH FX1_ISP_TUNE_AF_W4_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W4_START_Y_MASK FX1_ISP_TUNE_AF_W4_START_Y_MASK
@@ -10314,13 +10487,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W4_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W4_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W4_END_RESET FX1_ISP_TUNE_AF_W4_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W4_END_X_SHIFT FX1_ISP_TUNE_AF_W4_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W4_END_X_WIDTH FX1_ISP_TUNE_AF_W4_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W4_END_X_MASK FX1_ISP_TUNE_AF_W4_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W4_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W4_END_X_RESET FX1_ISP_TUNE_AF_W4_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W4_END_Y_SHIFT FX1_ISP_TUNE_AF_W4_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W4_END_Y_WIDTH FX1_ISP_TUNE_AF_W4_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W4_END_Y_MASK FX1_ISP_TUNE_AF_W4_END_Y_MASK
@@ -10339,13 +10512,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W5_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W5_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W5_START_RESET FX1_ISP_TUNE_AF_W5_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W5_START_X_SHIFT FX1_ISP_TUNE_AF_W5_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W5_START_X_WIDTH FX1_ISP_TUNE_AF_W5_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W5_START_X_MASK FX1_ISP_TUNE_AF_W5_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W5_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W5_START_X_RESET FX1_ISP_TUNE_AF_W5_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W5_START_Y_SHIFT FX1_ISP_TUNE_AF_W5_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W5_START_Y_WIDTH FX1_ISP_TUNE_AF_W5_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W5_START_Y_MASK FX1_ISP_TUNE_AF_W5_START_Y_MASK
@@ -10364,13 +10537,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W5_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W5_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W5_END_RESET FX1_ISP_TUNE_AF_W5_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W5_END_X_SHIFT FX1_ISP_TUNE_AF_W5_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W5_END_X_WIDTH FX1_ISP_TUNE_AF_W5_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W5_END_X_MASK FX1_ISP_TUNE_AF_W5_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W5_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W5_END_X_RESET FX1_ISP_TUNE_AF_W5_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W5_END_Y_SHIFT FX1_ISP_TUNE_AF_W5_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W5_END_Y_WIDTH FX1_ISP_TUNE_AF_W5_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W5_END_Y_MASK FX1_ISP_TUNE_AF_W5_END_Y_MASK
@@ -10389,13 +10562,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W6_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W6_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W6_START_RESET FX1_ISP_TUNE_AF_W6_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W6_START_X_SHIFT FX1_ISP_TUNE_AF_W6_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W6_START_X_WIDTH FX1_ISP_TUNE_AF_W6_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W6_START_X_MASK FX1_ISP_TUNE_AF_W6_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W6_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W6_START_X_RESET FX1_ISP_TUNE_AF_W6_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W6_START_Y_SHIFT FX1_ISP_TUNE_AF_W6_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W6_START_Y_WIDTH FX1_ISP_TUNE_AF_W6_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W6_START_Y_MASK FX1_ISP_TUNE_AF_W6_START_Y_MASK
@@ -10414,13 +10587,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W6_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W6_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W6_END_RESET FX1_ISP_TUNE_AF_W6_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W6_END_X_SHIFT FX1_ISP_TUNE_AF_W6_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W6_END_X_WIDTH FX1_ISP_TUNE_AF_W6_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W6_END_X_MASK FX1_ISP_TUNE_AF_W6_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W6_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W6_END_X_RESET FX1_ISP_TUNE_AF_W6_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W6_END_Y_SHIFT FX1_ISP_TUNE_AF_W6_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W6_END_Y_WIDTH FX1_ISP_TUNE_AF_W6_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W6_END_Y_MASK FX1_ISP_TUNE_AF_W6_END_Y_MASK
@@ -10439,13 +10612,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W7_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W7_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W7_START_RESET FX1_ISP_TUNE_AF_W7_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W7_START_X_SHIFT FX1_ISP_TUNE_AF_W7_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W7_START_X_WIDTH FX1_ISP_TUNE_AF_W7_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W7_START_X_MASK FX1_ISP_TUNE_AF_W7_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W7_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W7_START_X_RESET FX1_ISP_TUNE_AF_W7_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W7_START_Y_SHIFT FX1_ISP_TUNE_AF_W7_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W7_START_Y_WIDTH FX1_ISP_TUNE_AF_W7_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W7_START_Y_MASK FX1_ISP_TUNE_AF_W7_START_Y_MASK
@@ -10464,13 +10637,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W7_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W7_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W7_END_RESET FX1_ISP_TUNE_AF_W7_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W7_END_X_SHIFT FX1_ISP_TUNE_AF_W7_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W7_END_X_WIDTH FX1_ISP_TUNE_AF_W7_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W7_END_X_MASK FX1_ISP_TUNE_AF_W7_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W7_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W7_END_X_RESET FX1_ISP_TUNE_AF_W7_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W7_END_Y_SHIFT FX1_ISP_TUNE_AF_W7_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W7_END_Y_WIDTH FX1_ISP_TUNE_AF_W7_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W7_END_Y_MASK FX1_ISP_TUNE_AF_W7_END_Y_MASK
@@ -10489,13 +10662,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W8_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W8_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W8_START_RESET FX1_ISP_TUNE_AF_W8_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W8_START_X_SHIFT FX1_ISP_TUNE_AF_W8_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W8_START_X_WIDTH FX1_ISP_TUNE_AF_W8_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W8_START_X_MASK FX1_ISP_TUNE_AF_W8_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W8_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W8_START_X_RESET FX1_ISP_TUNE_AF_W8_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W8_START_Y_SHIFT FX1_ISP_TUNE_AF_W8_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W8_START_Y_WIDTH FX1_ISP_TUNE_AF_W8_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W8_START_Y_MASK FX1_ISP_TUNE_AF_W8_START_Y_MASK
@@ -10514,13 +10687,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W8_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W8_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W8_END_RESET FX1_ISP_TUNE_AF_W8_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W8_END_X_SHIFT FX1_ISP_TUNE_AF_W8_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W8_END_X_WIDTH FX1_ISP_TUNE_AF_W8_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W8_END_X_MASK FX1_ISP_TUNE_AF_W8_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W8_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W8_END_X_RESET FX1_ISP_TUNE_AF_W8_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W8_END_Y_SHIFT FX1_ISP_TUNE_AF_W8_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W8_END_Y_WIDTH FX1_ISP_TUNE_AF_W8_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W8_END_Y_MASK FX1_ISP_TUNE_AF_W8_END_Y_MASK
@@ -10539,13 +10712,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W9_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W9_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W9_START_RESET FX1_ISP_TUNE_AF_W9_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W9_START_X_SHIFT FX1_ISP_TUNE_AF_W9_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W9_START_X_WIDTH FX1_ISP_TUNE_AF_W9_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W9_START_X_MASK FX1_ISP_TUNE_AF_W9_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W9_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W9_START_X_RESET FX1_ISP_TUNE_AF_W9_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W9_START_Y_SHIFT FX1_ISP_TUNE_AF_W9_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W9_START_Y_WIDTH FX1_ISP_TUNE_AF_W9_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W9_START_Y_MASK FX1_ISP_TUNE_AF_W9_START_Y_MASK
@@ -10564,13 +10737,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W9_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W9_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W9_END_RESET FX1_ISP_TUNE_AF_W9_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W9_END_X_SHIFT FX1_ISP_TUNE_AF_W9_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W9_END_X_WIDTH FX1_ISP_TUNE_AF_W9_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W9_END_X_MASK FX1_ISP_TUNE_AF_W9_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W9_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W9_END_X_RESET FX1_ISP_TUNE_AF_W9_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W9_END_Y_SHIFT FX1_ISP_TUNE_AF_W9_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W9_END_Y_WIDTH FX1_ISP_TUNE_AF_W9_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W9_END_Y_MASK FX1_ISP_TUNE_AF_W9_END_Y_MASK
@@ -10589,13 +10762,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W10_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W10_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W10_START_RESET FX1_ISP_TUNE_AF_W10_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W10_START_X_SHIFT FX1_ISP_TUNE_AF_W10_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W10_START_X_WIDTH FX1_ISP_TUNE_AF_W10_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W10_START_X_MASK FX1_ISP_TUNE_AF_W10_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W10_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W10_START_X_RESET FX1_ISP_TUNE_AF_W10_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W10_START_Y_SHIFT FX1_ISP_TUNE_AF_W10_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W10_START_Y_WIDTH FX1_ISP_TUNE_AF_W10_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W10_START_Y_MASK FX1_ISP_TUNE_AF_W10_START_Y_MASK
@@ -10614,13 +10787,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W10_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W10_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W10_END_RESET FX1_ISP_TUNE_AF_W10_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W10_END_X_SHIFT FX1_ISP_TUNE_AF_W10_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W10_END_X_WIDTH FX1_ISP_TUNE_AF_W10_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W10_END_X_MASK FX1_ISP_TUNE_AF_W10_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W10_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W10_END_X_RESET FX1_ISP_TUNE_AF_W10_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W10_END_Y_SHIFT FX1_ISP_TUNE_AF_W10_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W10_END_Y_WIDTH FX1_ISP_TUNE_AF_W10_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W10_END_Y_MASK FX1_ISP_TUNE_AF_W10_END_Y_MASK
@@ -10639,13 +10812,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W11_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W11_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W11_START_RESET FX1_ISP_TUNE_AF_W11_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W11_START_X_SHIFT FX1_ISP_TUNE_AF_W11_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W11_START_X_WIDTH FX1_ISP_TUNE_AF_W11_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W11_START_X_MASK FX1_ISP_TUNE_AF_W11_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W11_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W11_START_X_RESET FX1_ISP_TUNE_AF_W11_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W11_START_Y_SHIFT FX1_ISP_TUNE_AF_W11_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W11_START_Y_WIDTH FX1_ISP_TUNE_AF_W11_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W11_START_Y_MASK FX1_ISP_TUNE_AF_W11_START_Y_MASK
@@ -10664,13 +10837,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W11_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W11_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W11_END_RESET FX1_ISP_TUNE_AF_W11_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W11_END_X_SHIFT FX1_ISP_TUNE_AF_W11_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W11_END_X_WIDTH FX1_ISP_TUNE_AF_W11_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W11_END_X_MASK FX1_ISP_TUNE_AF_W11_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W11_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W11_END_X_RESET FX1_ISP_TUNE_AF_W11_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W11_END_Y_SHIFT FX1_ISP_TUNE_AF_W11_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W11_END_Y_WIDTH FX1_ISP_TUNE_AF_W11_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W11_END_Y_MASK FX1_ISP_TUNE_AF_W11_END_Y_MASK
@@ -10689,13 +10862,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W12_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W12_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W12_START_RESET FX1_ISP_TUNE_AF_W12_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W12_START_X_SHIFT FX1_ISP_TUNE_AF_W12_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W12_START_X_WIDTH FX1_ISP_TUNE_AF_W12_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W12_START_X_MASK FX1_ISP_TUNE_AF_W12_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W12_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W12_START_X_RESET FX1_ISP_TUNE_AF_W12_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W12_START_Y_SHIFT FX1_ISP_TUNE_AF_W12_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W12_START_Y_WIDTH FX1_ISP_TUNE_AF_W12_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W12_START_Y_MASK FX1_ISP_TUNE_AF_W12_START_Y_MASK
@@ -10714,13 +10887,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W12_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W12_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W12_END_RESET FX1_ISP_TUNE_AF_W12_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W12_END_X_SHIFT FX1_ISP_TUNE_AF_W12_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W12_END_X_WIDTH FX1_ISP_TUNE_AF_W12_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W12_END_X_MASK FX1_ISP_TUNE_AF_W12_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W12_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W12_END_X_RESET FX1_ISP_TUNE_AF_W12_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W12_END_Y_SHIFT FX1_ISP_TUNE_AF_W12_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W12_END_Y_WIDTH FX1_ISP_TUNE_AF_W12_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W12_END_Y_MASK FX1_ISP_TUNE_AF_W12_END_Y_MASK
@@ -10739,13 +10912,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W13_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W13_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W13_START_RESET FX1_ISP_TUNE_AF_W13_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W13_START_X_SHIFT FX1_ISP_TUNE_AF_W13_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W13_START_X_WIDTH FX1_ISP_TUNE_AF_W13_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W13_START_X_MASK FX1_ISP_TUNE_AF_W13_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W13_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W13_START_X_RESET FX1_ISP_TUNE_AF_W13_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W13_START_Y_SHIFT FX1_ISP_TUNE_AF_W13_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W13_START_Y_WIDTH FX1_ISP_TUNE_AF_W13_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W13_START_Y_MASK FX1_ISP_TUNE_AF_W13_START_Y_MASK
@@ -10764,13 +10937,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W13_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W13_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W13_END_RESET FX1_ISP_TUNE_AF_W13_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W13_END_X_SHIFT FX1_ISP_TUNE_AF_W13_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W13_END_X_WIDTH FX1_ISP_TUNE_AF_W13_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W13_END_X_MASK FX1_ISP_TUNE_AF_W13_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W13_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W13_END_X_RESET FX1_ISP_TUNE_AF_W13_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W13_END_Y_SHIFT FX1_ISP_TUNE_AF_W13_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W13_END_Y_WIDTH FX1_ISP_TUNE_AF_W13_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W13_END_Y_MASK FX1_ISP_TUNE_AF_W13_END_Y_MASK
@@ -10789,13 +10962,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W14_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W14_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W14_START_RESET FX1_ISP_TUNE_AF_W14_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W14_START_X_SHIFT FX1_ISP_TUNE_AF_W14_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W14_START_X_WIDTH FX1_ISP_TUNE_AF_W14_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W14_START_X_MASK FX1_ISP_TUNE_AF_W14_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W14_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W14_START_X_RESET FX1_ISP_TUNE_AF_W14_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W14_START_Y_SHIFT FX1_ISP_TUNE_AF_W14_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W14_START_Y_WIDTH FX1_ISP_TUNE_AF_W14_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W14_START_Y_MASK FX1_ISP_TUNE_AF_W14_START_Y_MASK
@@ -10814,13 +10987,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W14_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W14_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W14_END_RESET FX1_ISP_TUNE_AF_W14_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W14_END_X_SHIFT FX1_ISP_TUNE_AF_W14_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W14_END_X_WIDTH FX1_ISP_TUNE_AF_W14_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W14_END_X_MASK FX1_ISP_TUNE_AF_W14_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W14_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W14_END_X_RESET FX1_ISP_TUNE_AF_W14_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W14_END_Y_SHIFT FX1_ISP_TUNE_AF_W14_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W14_END_Y_WIDTH FX1_ISP_TUNE_AF_W14_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W14_END_Y_MASK FX1_ISP_TUNE_AF_W14_END_Y_MASK
@@ -10839,13 +11012,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W15_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W15_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W15_START_RESET FX1_ISP_TUNE_AF_W15_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W15_START_X_SHIFT FX1_ISP_TUNE_AF_W15_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W15_START_X_WIDTH FX1_ISP_TUNE_AF_W15_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W15_START_X_MASK FX1_ISP_TUNE_AF_W15_START_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W15_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W15_START_X_RESET FX1_ISP_TUNE_AF_W15_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W15_START_Y_SHIFT FX1_ISP_TUNE_AF_W15_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W15_START_Y_WIDTH FX1_ISP_TUNE_AF_W15_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W15_START_Y_MASK FX1_ISP_TUNE_AF_W15_START_Y_MASK
@@ -10864,13 +11037,13 @@
 #define NEON_FX1_ISP_TUNE_AF_W15_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W15_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_W15_END_RESET FX1_ISP_TUNE_AF_W15_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W15_END_X_SHIFT FX1_ISP_TUNE_AF_W15_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W15_END_X_WIDTH FX1_ISP_TUNE_AF_W15_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W15_END_X_MASK FX1_ISP_TUNE_AF_W15_END_X_MASK
 #define NEON_FX1_ISP_TUNE_AF_W15_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AF_W15_END_X_RESET FX1_ISP_TUNE_AF_W15_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_W15_END_Y_SHIFT FX1_ISP_TUNE_AF_W15_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_W15_END_Y_WIDTH FX1_ISP_TUNE_AF_W15_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_W15_END_Y_MASK FX1_ISP_TUNE_AF_W15_END_Y_MASK
@@ -10889,13 +11062,13 @@
 #define NEON_FX1_ISP_TUNE_HIST_CTRL_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_CTRL_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_CTRL_RESET FX1_ISP_TUNE_HIST_CTRL_RESET
-/* Enable weighted histogram. */
+/* Enable weighted histogram. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_CTRL_ENABLE_SHIFT FX1_ISP_TUNE_HIST_CTRL_ENABLE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_CTRL_ENABLE_WIDTH FX1_ISP_TUNE_HIST_CTRL_ENABLE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_CTRL_ENABLE_MASK FX1_ISP_TUNE_HIST_CTRL_ENABLE_MASK
 #define NEON_FX1_ISP_TUNE_HIST_CTRL_ENABLE_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_CTRL_ENABLE_RESET FX1_ISP_TUNE_HIST_CTRL_ENABLE_RESET
-/* Use programmed ROI; otherwise full frame. */
+/* Use programmed ROI; otherwise full frame. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_CTRL_ROI_EN_SHIFT FX1_ISP_TUNE_HIST_CTRL_ROI_EN_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_CTRL_ROI_EN_WIDTH FX1_ISP_TUNE_HIST_CTRL_ROI_EN_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_CTRL_ROI_EN_MASK FX1_ISP_TUNE_HIST_CTRL_ROI_EN_MASK
@@ -10914,13 +11087,13 @@
 #define NEON_FX1_ISP_TUNE_HIST_START_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_START_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_START_RESET FX1_ISP_TUNE_HIST_START_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_START_X_SHIFT FX1_ISP_TUNE_HIST_START_X_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_START_X_WIDTH FX1_ISP_TUNE_HIST_START_X_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_START_X_MASK FX1_ISP_TUNE_HIST_START_X_MASK
 #define NEON_FX1_ISP_TUNE_HIST_START_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_START_X_RESET FX1_ISP_TUNE_HIST_START_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_START_Y_SHIFT FX1_ISP_TUNE_HIST_START_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_START_Y_WIDTH FX1_ISP_TUNE_HIST_START_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_START_Y_MASK FX1_ISP_TUNE_HIST_START_Y_MASK
@@ -10939,13 +11112,13 @@
 #define NEON_FX1_ISP_TUNE_HIST_END_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_END_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_END_RESET FX1_ISP_TUNE_HIST_END_RESET
-/* Horizontal coordinate, inclusive start or exclusive end. */
+/* Horizontal coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_END_X_SHIFT FX1_ISP_TUNE_HIST_END_X_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_END_X_WIDTH FX1_ISP_TUNE_HIST_END_X_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_END_X_MASK FX1_ISP_TUNE_HIST_END_X_MASK
 #define NEON_FX1_ISP_TUNE_HIST_END_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_END_X_RESET FX1_ISP_TUNE_HIST_END_X_RESET
-/* Vertical coordinate, inclusive start or exclusive end. */
+/* Vertical coordinate, inclusive start or exclusive end. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_END_Y_SHIFT FX1_ISP_TUNE_HIST_END_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_END_Y_WIDTH FX1_ISP_TUNE_HIST_END_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_END_Y_MASK FX1_ISP_TUNE_HIST_END_Y_MASK
@@ -10964,13 +11137,13 @@
 #define NEON_FX1_ISP_TUNE_HIST_STEP_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_STEP_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_STEP_RESET FX1_ISP_TUNE_HIST_STEP_RESET
-/* Horizontal step 1..255. */
+/* Horizontal step 1..255. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_STEP_X_SHIFT FX1_ISP_TUNE_HIST_STEP_X_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_STEP_X_WIDTH FX1_ISP_TUNE_HIST_STEP_X_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_STEP_X_MASK FX1_ISP_TUNE_HIST_STEP_X_MASK
 #define NEON_FX1_ISP_TUNE_HIST_STEP_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_STEP_X_RESET FX1_ISP_TUNE_HIST_STEP_X_RESET
-/* Vertical step 1..255. */
+/* Vertical step 1..255. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_STEP_Y_SHIFT FX1_ISP_TUNE_HIST_STEP_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_STEP_Y_WIDTH FX1_ISP_TUNE_HIST_STEP_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_STEP_Y_MASK FX1_ISP_TUNE_HIST_STEP_Y_MASK
@@ -10989,7 +11162,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT0_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT0_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT0_RESET FX1_ISP_TUNE_HIST_WEIGHT0_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT0_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT0_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT0_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT0_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT0_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT0_VALUE_MASK
@@ -11008,7 +11181,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT1_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT1_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT1_RESET FX1_ISP_TUNE_HIST_WEIGHT1_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT1_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT1_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT1_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT1_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT1_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT1_VALUE_MASK
@@ -11027,7 +11200,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT2_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT2_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT2_RESET FX1_ISP_TUNE_HIST_WEIGHT2_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT2_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT2_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT2_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT2_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT2_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT2_VALUE_MASK
@@ -11046,7 +11219,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT3_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT3_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT3_RESET FX1_ISP_TUNE_HIST_WEIGHT3_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT3_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT3_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT3_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT3_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT3_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT3_VALUE_MASK
@@ -11065,7 +11238,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT4_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT4_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT4_RESET FX1_ISP_TUNE_HIST_WEIGHT4_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT4_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT4_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT4_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT4_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT4_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT4_VALUE_MASK
@@ -11084,7 +11257,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT5_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT5_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT5_RESET FX1_ISP_TUNE_HIST_WEIGHT5_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT5_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT5_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT5_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT5_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT5_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT5_VALUE_MASK
@@ -11103,7 +11276,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT6_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT6_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT6_RESET FX1_ISP_TUNE_HIST_WEIGHT6_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT6_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT6_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT6_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT6_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT6_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT6_VALUE_MASK
@@ -11122,7 +11295,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT7_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT7_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT7_RESET FX1_ISP_TUNE_HIST_WEIGHT7_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT7_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT7_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT7_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT7_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT7_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT7_VALUE_MASK
@@ -11141,7 +11314,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT8_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT8_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT8_RESET FX1_ISP_TUNE_HIST_WEIGHT8_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT8_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT8_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT8_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT8_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT8_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT8_VALUE_MASK
@@ -11160,7 +11333,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT9_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT9_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT9_RESET FX1_ISP_TUNE_HIST_WEIGHT9_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT9_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT9_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT9_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT9_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT9_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT9_VALUE_MASK
@@ -11179,7 +11352,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT10_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT10_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT10_RESET FX1_ISP_TUNE_HIST_WEIGHT10_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT10_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT10_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT10_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT10_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT10_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT10_VALUE_MASK
@@ -11198,7 +11371,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT11_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT11_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT11_RESET FX1_ISP_TUNE_HIST_WEIGHT11_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT11_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT11_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT11_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT11_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT11_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT11_VALUE_MASK
@@ -11217,7 +11390,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT12_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT12_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT12_RESET FX1_ISP_TUNE_HIST_WEIGHT12_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT12_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT12_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT12_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT12_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT12_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT12_VALUE_MASK
@@ -11236,7 +11409,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT13_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT13_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT13_RESET FX1_ISP_TUNE_HIST_WEIGHT13_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT13_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT13_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT13_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT13_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT13_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT13_VALUE_MASK
@@ -11255,7 +11428,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT14_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT14_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT14_RESET FX1_ISP_TUNE_HIST_WEIGHT14_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT14_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT14_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT14_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT14_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT14_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT14_VALUE_MASK
@@ -11274,7 +11447,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT15_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT15_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT15_RESET FX1_ISP_TUNE_HIST_WEIGHT15_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT15_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT15_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT15_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT15_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT15_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT15_VALUE_MASK
@@ -11293,7 +11466,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT16_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT16_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT16_RESET FX1_ISP_TUNE_HIST_WEIGHT16_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT16_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT16_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT16_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT16_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT16_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT16_VALUE_MASK
@@ -11312,7 +11485,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT17_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT17_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT17_RESET FX1_ISP_TUNE_HIST_WEIGHT17_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT17_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT17_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT17_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT17_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT17_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT17_VALUE_MASK
@@ -11331,7 +11504,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT18_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT18_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT18_RESET FX1_ISP_TUNE_HIST_WEIGHT18_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT18_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT18_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT18_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT18_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT18_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT18_VALUE_MASK
@@ -11350,7 +11523,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT19_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT19_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT19_RESET FX1_ISP_TUNE_HIST_WEIGHT19_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT19_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT19_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT19_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT19_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT19_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT19_VALUE_MASK
@@ -11369,7 +11542,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT20_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT20_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT20_RESET FX1_ISP_TUNE_HIST_WEIGHT20_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT20_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT20_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT20_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT20_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT20_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT20_VALUE_MASK
@@ -11388,7 +11561,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT21_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT21_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT21_RESET FX1_ISP_TUNE_HIST_WEIGHT21_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT21_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT21_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT21_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT21_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT21_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT21_VALUE_MASK
@@ -11407,7 +11580,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT22_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT22_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT22_RESET FX1_ISP_TUNE_HIST_WEIGHT22_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT22_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT22_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT22_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT22_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT22_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT22_VALUE_MASK
@@ -11426,7 +11599,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT23_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT23_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT23_RESET FX1_ISP_TUNE_HIST_WEIGHT23_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT23_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT23_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT23_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT23_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT23_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT23_VALUE_MASK
@@ -11445,7 +11618,7 @@
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT24_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT24_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT24_RESET FX1_ISP_TUNE_HIST_WEIGHT24_RESET
-/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. */
+/* 5x5 spatial weight, row-major. Zero excludes the cell; increment bin by this value. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT24_VALUE_SHIFT FX1_ISP_TUNE_HIST_WEIGHT24_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT24_VALUE_WIDTH FX1_ISP_TUNE_HIST_WEIGHT24_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_HIST_WEIGHT24_VALUE_MASK FX1_ISP_TUNE_HIST_WEIGHT24_VALUE_MASK
@@ -11520,7 +11693,7 @@
 #define NEON_FX1_ISP_TUNE_AEC_DROPS_ACCESS NEON_FX1_ACCESS_W1C
 #define NEON_FX1_ISP_TUNE_AEC_DROPS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AEC_DROPS_RESET FX1_ISP_TUNE_AEC_DROPS_RESET
-/* Saturating skipped-measurement count. W1C nonzero clears entire word; new drop wins. */
+/* Saturating skipped-measurement count. W1C nonzero clears entire word; new drop wins. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AEC_DROPS_VALUE_SHIFT FX1_ISP_TUNE_AEC_DROPS_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AEC_DROPS_VALUE_WIDTH FX1_ISP_TUNE_AEC_DROPS_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AEC_DROPS_VALUE_MASK FX1_ISP_TUNE_AEC_DROPS_VALUE_MASK
@@ -11690,7 +11863,7 @@
 #define NEON_FX1_ISP_TUNE_AF_DROPS_ACCESS NEON_FX1_ACCESS_W1C
 #define NEON_FX1_ISP_TUNE_AF_DROPS_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AF_DROPS_RESET FX1_ISP_TUNE_AF_DROPS_RESET
-/* Saturating skipped-measurement count. W1C nonzero clears entire word; new drop wins. */
+/* Saturating skipped-measurement count. W1C nonzero clears entire word; new drop wins. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AF_DROPS_VALUE_SHIFT FX1_ISP_TUNE_AF_DROPS_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_AF_DROPS_VALUE_WIDTH FX1_ISP_TUNE_AF_DROPS_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_AF_DROPS_VALUE_MASK FX1_ISP_TUNE_AF_DROPS_VALUE_MASK
@@ -11842,7 +12015,7 @@
 #define NEON_FX1_ISP_TUNE_GAMMA_DATA_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_GAMMA_DATA_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_GAMMA_DATA_RESET FX1_ISP_TUNE_GAMMA_DATA_RESET
-/* Selected profile gamma entry. SRAM has no reset contents; readback supported. */
+/* Selected profile gamma entry. SRAM has no reset contents; readback supported. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_GAMMA_DATA_VALUE_SHIFT FX1_ISP_TUNE_GAMMA_DATA_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_GAMMA_DATA_VALUE_WIDTH FX1_ISP_TUNE_GAMMA_DATA_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_GAMMA_DATA_VALUE_MASK FX1_ISP_TUNE_GAMMA_DATA_VALUE_MASK
@@ -11879,7 +12052,7 @@
 #define NEON_FX1_ISP_TUNE_TABLE_CMD_BPC_CONFIRM_MASK FX1_ISP_TUNE_TABLE_CMD_BPC_CONFIRM_MASK
 #define NEON_FX1_ISP_TUNE_TABLE_CMD_BPC_CONFIRM_ACCESS NEON_FX1_ACCESS_W1P
 #define NEON_FX1_ISP_TUNE_TABLE_CMD_BPC_CONFIRM_RESET FX1_ISP_TUNE_TABLE_CMD_BPC_CONFIRM_RESET
-/* All sector intervals written, nonzero and covering the mesh span; completes after the per-interval weight constants are formed. */
+/* All sector intervals of the TUNE_BANK-selected configuration bank written, nonzero and covering the mesh span. The bank controller computes Q=floor(65536/d) and R=65536 mod d for each interval by sequenced division. Completes only after all interval constants are stored in that bank. */
 #define NEON_FX1_ISP_TUNE_TABLE_CMD_LSC_CONFIRM_SHIFT FX1_ISP_TUNE_TABLE_CMD_LSC_CONFIRM_SHIFT
 #define NEON_FX1_ISP_TUNE_TABLE_CMD_LSC_CONFIRM_WIDTH FX1_ISP_TUNE_TABLE_CMD_LSC_CONFIRM_WIDTH
 #define NEON_FX1_ISP_TUNE_TABLE_CMD_LSC_CONFIRM_MASK FX1_ISP_TUNE_TABLE_CMD_LSC_CONFIRM_MASK
@@ -11935,13 +12108,13 @@
 #define NEON_FX1_ISP_TUNE_BPC_CTRL_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_BPC_CTRL_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_BPC_CTRL_RESET FX1_ISP_TUNE_BPC_CTRL_RESET
-/* Use green/RB threshold parameters below. */
+/* Use green/RB threshold parameters below. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_BPC_CTRL_COLOR_THRESH_EN_SHIFT FX1_ISP_TUNE_BPC_CTRL_COLOR_THRESH_EN_SHIFT
 #define NEON_FX1_ISP_TUNE_BPC_CTRL_COLOR_THRESH_EN_WIDTH FX1_ISP_TUNE_BPC_CTRL_COLOR_THRESH_EN_WIDTH
 #define NEON_FX1_ISP_TUNE_BPC_CTRL_COLOR_THRESH_EN_MASK FX1_ISP_TUNE_BPC_CTRL_COLOR_THRESH_EN_MASK
 #define NEON_FX1_ISP_TUNE_BPC_CTRL_COLOR_THRESH_EN_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_BPC_CTRL_COLOR_THRESH_EN_RESET FX1_ISP_TUNE_BPC_CTRL_COLOR_THRESH_EN_RESET
-/* Correct listed defect coordinates before applying dynamic detector decision. */
+/* Correct listed defect coordinates before applying dynamic detector decision. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_BPC_CTRL_FACTORY_EN_SHIFT FX1_ISP_TUNE_BPC_CTRL_FACTORY_EN_SHIFT
 #define NEON_FX1_ISP_TUNE_BPC_CTRL_FACTORY_EN_WIDTH FX1_ISP_TUNE_BPC_CTRL_FACTORY_EN_WIDTH
 #define NEON_FX1_ISP_TUNE_BPC_CTRL_FACTORY_EN_MASK FX1_ISP_TUNE_BPC_CTRL_FACTORY_EN_MASK
@@ -11960,13 +12133,13 @@
 #define NEON_FX1_ISP_TUNE_BPC_G_THRESH_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_BPC_G_THRESH_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_BPC_G_THRESH_RESET FX1_ISP_TUNE_BPC_G_THRESH_RESET
-/* Unsigned Q4.8 activity multiplier. */
+/* Unsigned Q4.8 activity multiplier. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_BPC_G_THRESH_K_SHIFT FX1_ISP_TUNE_BPC_G_THRESH_K_SHIFT
 #define NEON_FX1_ISP_TUNE_BPC_G_THRESH_K_WIDTH FX1_ISP_TUNE_BPC_G_THRESH_K_WIDTH
 #define NEON_FX1_ISP_TUNE_BPC_G_THRESH_K_MASK FX1_ISP_TUNE_BPC_G_THRESH_K_MASK
 #define NEON_FX1_ISP_TUNE_BPC_G_THRESH_K_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_BPC_G_THRESH_K_RESET FX1_ISP_TUNE_BPC_G_THRESH_K_RESET
-/* Raw12 threshold floor. */
+/* Raw12 threshold floor. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_BPC_G_THRESH_FLOOR_SHIFT FX1_ISP_TUNE_BPC_G_THRESH_FLOOR_SHIFT
 #define NEON_FX1_ISP_TUNE_BPC_G_THRESH_FLOOR_WIDTH FX1_ISP_TUNE_BPC_G_THRESH_FLOOR_WIDTH
 #define NEON_FX1_ISP_TUNE_BPC_G_THRESH_FLOOR_MASK FX1_ISP_TUNE_BPC_G_THRESH_FLOOR_MASK
@@ -11985,13 +12158,13 @@
 #define NEON_FX1_ISP_TUNE_BPC_RB_THRESH_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_BPC_RB_THRESH_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_BPC_RB_THRESH_RESET FX1_ISP_TUNE_BPC_RB_THRESH_RESET
-/* Unsigned Q4.8 activity multiplier. */
+/* Unsigned Q4.8 activity multiplier. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_BPC_RB_THRESH_K_SHIFT FX1_ISP_TUNE_BPC_RB_THRESH_K_SHIFT
 #define NEON_FX1_ISP_TUNE_BPC_RB_THRESH_K_WIDTH FX1_ISP_TUNE_BPC_RB_THRESH_K_WIDTH
 #define NEON_FX1_ISP_TUNE_BPC_RB_THRESH_K_MASK FX1_ISP_TUNE_BPC_RB_THRESH_K_MASK
 #define NEON_FX1_ISP_TUNE_BPC_RB_THRESH_K_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_BPC_RB_THRESH_K_RESET FX1_ISP_TUNE_BPC_RB_THRESH_K_RESET
-/* Raw12 threshold floor. */
+/* Raw12 threshold floor. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_BPC_RB_THRESH_FLOOR_SHIFT FX1_ISP_TUNE_BPC_RB_THRESH_FLOOR_SHIFT
 #define NEON_FX1_ISP_TUNE_BPC_RB_THRESH_FLOOR_WIDTH FX1_ISP_TUNE_BPC_RB_THRESH_FLOOR_WIDTH
 #define NEON_FX1_ISP_TUNE_BPC_RB_THRESH_FLOOR_MASK FX1_ISP_TUNE_BPC_RB_THRESH_FLOOR_MASK
@@ -12010,7 +12183,7 @@
 #define NEON_FX1_ISP_TUNE_BPC_COUNT_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_BPC_COUNT_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_BPC_COUNT_RESET FX1_ISP_TUNE_BPC_COUNT_RESET
-/* Factory defect coordinates 0..1024; strict increasing raster order. BPC_CONFIRM checks count, order and bounds; a write clears BPC confirmation. */
+/* Factory defect coordinates 0..1024; strict increasing raster order. BPC_CONFIRM checks count, order and bounds; a write clears BPC confirmation. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_BPC_COUNT_VALUE_SHIFT FX1_ISP_TUNE_BPC_COUNT_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_BPC_COUNT_VALUE_WIDTH FX1_ISP_TUNE_BPC_COUNT_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_BPC_COUNT_VALUE_MASK FX1_ISP_TUNE_BPC_COUNT_VALUE_MASK
@@ -12048,13 +12221,13 @@
 #define NEON_FX1_ISP_TUNE_BPC_DATA_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_BPC_DATA_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_BPC_DATA_RESET FX1_ISP_TUNE_BPC_DATA_RESET
-/* Factory defect point coordinate in the normalized active Bayer image: 0 <= X < W. This is a pixel location, not a rectangle endpoint. */
+/* Factory defect point coordinate in the normalized active Bayer image: 0 <= X < W. This is a pixel location, not a rectangle endpoint. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_BPC_DATA_X_SHIFT FX1_ISP_TUNE_BPC_DATA_X_SHIFT
 #define NEON_FX1_ISP_TUNE_BPC_DATA_X_WIDTH FX1_ISP_TUNE_BPC_DATA_X_WIDTH
 #define NEON_FX1_ISP_TUNE_BPC_DATA_X_MASK FX1_ISP_TUNE_BPC_DATA_X_MASK
 #define NEON_FX1_ISP_TUNE_BPC_DATA_X_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_BPC_DATA_X_RESET FX1_ISP_TUNE_BPC_DATA_X_RESET
-/* Factory defect point coordinate in the normalized active Bayer image: 0 <= Y < H. This is a pixel location, not a rectangle endpoint. */
+/* Factory defect point coordinate in the normalized active Bayer image: 0 <= Y < H. This is a pixel location, not a rectangle endpoint. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_BPC_DATA_Y_SHIFT FX1_ISP_TUNE_BPC_DATA_Y_SHIFT
 #define NEON_FX1_ISP_TUNE_BPC_DATA_Y_WIDTH FX1_ISP_TUNE_BPC_DATA_Y_WIDTH
 #define NEON_FX1_ISP_TUNE_BPC_DATA_Y_MASK FX1_ISP_TUNE_BPC_DATA_Y_MASK
@@ -12073,7 +12246,7 @@
 #define NEON_FX1_ISP_TUNE_LSC_CTRL_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_LSC_CTRL_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_LSC_CTRL_RESET FX1_ISP_TUNE_LSC_CTRL_RESET
-/* Use nonuniform sector extents instead of uniform DDA spacing. */
+/* In profile mode use the selected bank's confirmed nonuniform sector intervals instead of uniform DDA spacing. Legacy mode stores this field but uses uniform DDA. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_LSC_CTRL_SECTOR_EN_SHIFT FX1_ISP_TUNE_LSC_CTRL_SECTOR_EN_SHIFT
 #define NEON_FX1_ISP_TUNE_LSC_CTRL_SECTOR_EN_WIDTH FX1_ISP_TUNE_LSC_CTRL_SECTOR_EN_WIDTH
 #define NEON_FX1_ISP_TUNE_LSC_CTRL_SECTOR_EN_MASK FX1_ISP_TUNE_LSC_CTRL_SECTOR_EN_MASK
@@ -12117,7 +12290,7 @@
 #define NEON_FX1_ISP_TUNE_LSC_SECTOR_DATA_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_LSC_SECTOR_DATA_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_LSC_SECTOR_DATA_RESET FX1_ISP_TUNE_LSC_SECTOR_DATA_RESET
-/* Positive interval length in the existing LSC coordinate domain. Sum must equal last-minus-first node coordinate. */
+/* Positive interval length in the existing LSC coordinate domain. Sum must equal last-minus-first node coordinate. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_LSC_SECTOR_DATA_VALUE_SHIFT FX1_ISP_TUNE_LSC_SECTOR_DATA_VALUE_SHIFT
 #define NEON_FX1_ISP_TUNE_LSC_SECTOR_DATA_VALUE_WIDTH FX1_ISP_TUNE_LSC_SECTOR_DATA_VALUE_WIDTH
 #define NEON_FX1_ISP_TUNE_LSC_SECTOR_DATA_VALUE_MASK FX1_ISP_TUNE_LSC_SECTOR_DATA_VALUE_MASK
@@ -12131,7 +12304,7 @@
 #define NEON_FX1_ISP_TUNE_LSC_SECTOR_DATA_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_TUNE_LSC_SECTOR_DATA_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_TUNE_LSC_SECTOR_DATA_WO_MASK 0x00000000u
-/* Native depth before once-only RAW12 normalization. Change only with ingress stopped and all output/context uses drained. Reserved depth encodings invalidate admission. Input-domain changes require stopped/drained legacy mode; reject in profile mode with MODE, preserve state. Accepted changes invalidate dependent LSC/EE residents and output geometry. */
+/* Native RAW depth and input padding policy. DEPTH[1:0]: 0 RAW12, 1 RAW10, 2/3 invalid. CROP[2]: 0 same-CFA trailing padding (reset), 1 legacy crop. IDLE update; frame-coherent input-domain geometry. */
 #define NEON_FX1_ISP_COMMON_INPUT_FORMAT_OFFSET FX1_ISP_COMMON_INPUT_FORMAT_OFFSET
 #define NEON_FX1_ISP_COMMON_INPUT_FORMAT_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_COMMON_INPUT_FORMAT_RESET_KNOWN 1u
@@ -12142,20 +12315,26 @@
 #define NEON_FX1_ISP_COMMON_INPUT_FORMAT_DEPTH_MASK FX1_ISP_COMMON_INPUT_FORMAT_DEPTH_MASK
 #define NEON_FX1_ISP_COMMON_INPUT_FORMAT_DEPTH_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_COMMON_INPUT_FORMAT_DEPTH_RESET FX1_ISP_COMMON_INPUT_FORMAT_DEPTH_RESET
+/* 0: nearest same-CFA-colour padding to capped even input size (reset); 1: legacy phase crop. IDLE update. */
+#define NEON_FX1_ISP_COMMON_INPUT_FORMAT_CROP_SHIFT FX1_ISP_COMMON_INPUT_FORMAT_CROP_SHIFT
+#define NEON_FX1_ISP_COMMON_INPUT_FORMAT_CROP_WIDTH FX1_ISP_COMMON_INPUT_FORMAT_CROP_WIDTH
+#define NEON_FX1_ISP_COMMON_INPUT_FORMAT_CROP_MASK FX1_ISP_COMMON_INPUT_FORMAT_CROP_MASK
+#define NEON_FX1_ISP_COMMON_INPUT_FORMAT_CROP_ACCESS NEON_FX1_ACCESS_RW
+#define NEON_FX1_ISP_COMMON_INPUT_FORMAT_CROP_RESET FX1_ISP_COMMON_INPUT_FORMAT_CROP_RESET
 #define NEON_FX1_ISP_COMMON_INPUT_FORMAT_RO_MASK 0x00000000u
-#define NEON_FX1_ISP_COMMON_INPUT_FORMAT_RW_MASK 0x00000003u
+#define NEON_FX1_ISP_COMMON_INPUT_FORMAT_RW_MASK 0x00000007u
 #define NEON_FX1_ISP_COMMON_INPUT_FORMAT_W1C_MASK 0x00000000u
 #define NEON_FX1_ISP_COMMON_INPUT_FORMAT_W1S_MASK 0x00000000u
 #define NEON_FX1_ISP_COMMON_INPUT_FORMAT_W1P_MASK 0x00000000u
 #define NEON_FX1_ISP_COMMON_INPUT_FORMAT_W1SC_MASK 0x00000000u
 #define NEON_FX1_ISP_COMMON_INPUT_FORMAT_UNKNOWN_MASK 0x00000000u
 #define NEON_FX1_ISP_COMMON_INPUT_FORMAT_WO_MASK 0x00000000u
-/* AE tap selector, independent of weighting. In profile mode reads/writes the selected editable bank; in legacy mode changes join AEC COMMIT. Capture at ingress and activate at the chosen tap SOF. */
+/* AE tap selector, independent of weighting. In profile mode reads/writes the selected editable bank; in legacy mode changes join AEC COMMIT. Capture at ingress and activate at the chosen tap SOF. In legacy mode the last COMMIT accepted before ingress admission selects this frame; later commits apply to a later frame. */
 #define NEON_FX1_ISP_TUNE_AEC_SOURCE_OFFSET FX1_ISP_TUNE_AEC_SOURCE_OFFSET
 #define NEON_FX1_ISP_TUNE_AEC_SOURCE_ACCESS NEON_FX1_ACCESS_RW
 #define NEON_FX1_ISP_TUNE_AEC_SOURCE_RESET_KNOWN 1u
 #define NEON_FX1_ISP_TUNE_AEC_SOURCE_RESET FX1_ISP_TUNE_AEC_SOURCE_RESET
-/* 0 BPC (default); 1 DG after white balance. Both measured as RAW12 Bayer. */
+/* 0 BPC (default); 1 DG after white balance. Both measured as RAW12 Bayer. External: the value is held outside the CSR block; the type is the bus behaviour. */
 #define NEON_FX1_ISP_TUNE_AEC_SOURCE_SOURCE_SHIFT FX1_ISP_TUNE_AEC_SOURCE_SOURCE_SHIFT
 #define NEON_FX1_ISP_TUNE_AEC_SOURCE_SOURCE_WIDTH FX1_ISP_TUNE_AEC_SOURCE_SOURCE_WIDTH
 #define NEON_FX1_ISP_TUNE_AEC_SOURCE_SOURCE_MASK FX1_ISP_TUNE_AEC_SOURCE_SOURCE_MASK
@@ -13480,22 +13659,22 @@ typedef struct {
     volatile const uint32_t EE_LUT_RDATA; /* 0x1C3C, ro */
     uint32_t RESERVED_16[112];
     volatile uint32_t CNF_CTRL; /* 0x1E00, rw */
-    volatile uint32_t CNF_CHROMA_TH; /* 0x1E04, rw */
-    volatile uint32_t CNF_LUMA_TH; /* 0x1E08, rw */
+    volatile uint32_t CNF_GF_EPS; /* 0x1E04, rw */
+    uint32_t RESERVED_17[1];
     volatile uint32_t CNF_STRENGTH; /* 0x1E0C, rw */
     volatile const uint32_t CNF_STATUS; /* 0x1E10, ro */
-    uint32_t RESERVED_17[123];
+    uint32_t RESERVED_18[123];
     volatile uint32_t RESIZER_CTRL; /* 0x2000, rw */
     volatile const uint32_t RESIZER_CUSTOM_W; /* 0x2004, ro */
     volatile const uint32_t RESIZER_CUSTOM_H; /* 0x2008, ro */
-    uint32_t RESERVED_18[2];
+    uint32_t RESERVED_19[2];
     volatile const uint32_t RESIZER_OUT_W; /* 0x2014, ro */
     volatile const uint32_t RESIZER_OUT_H; /* 0x2018, ro */
     volatile const uint32_t RESIZER_STATUS; /* 0x201C, ro */
     volatile uint32_t OUTPUT_ENABLE; /* 0x2020, rw */
     volatile uint32_t OUTPUT_IRQ_EN; /* 0x2024, rw */
     volatile uint32_t OUTPUT_IRQ_STATUS; /* 0x2028, w1c */
-    uint32_t RESERVED_19[117];
+    uint32_t RESERVED_20[117];
     volatile uint32_t AEC_CTRL; /* 0x2200, mixed */
     volatile uint32_t AEC_CONTEXT_ID; /* 0x2204, rw */
     volatile uint32_t AEC_ZONE_CFG; /* 0x2208, rw */
@@ -13516,7 +13695,8 @@ typedef struct {
     volatile const uint32_t AEC_ZONE_GREEN_MIN_MAX; /* 0x2244, ro */
     volatile uint32_t AEC_HIST_ADDR; /* 0x2248, rw */
     volatile const uint32_t AEC_HIST_DATA; /* 0x224C, ro */
-    uint32_t RESERVED_20[108];
+    volatile const uint32_t AEC_GLOBAL_OE_UE_PERCENT; /* 0x2250, ro */
+    uint32_t RESERVED_21[107];
     volatile uint32_t AWB_CTRL; /* 0x2400, rw */
     volatile uint32_t AWB_X_BOUND_ADDR; /* 0x2404, rw */
     volatile uint32_t AWB_Y_BOUND_ADDR; /* 0x2408, rw */
@@ -13546,7 +13726,7 @@ typedef struct {
     volatile uint32_t AWB_RESULT_CTRL; /* 0x2468, w1p */
     volatile const uint32_t AWB_RESULT_STATUS; /* 0x246C, ro */
     volatile const uint32_t AWB_DROP_COUNT; /* 0x2470, ro */
-    uint32_t RESERVED_21[99];
+    uint32_t RESERVED_22[99];
     volatile uint32_t AF_CTRL; /* 0x2600, mixed */
     volatile uint32_t AF_ZONE_EN; /* 0x2604, rw */
     volatile uint32_t AF_METRIC_CFG; /* 0x2608, rw */
@@ -13562,21 +13742,21 @@ typedef struct {
     volatile uint32_t AF_CONTEXT_ID; /* 0x2630, rw */
     volatile const uint32_t AF_RESULT_CONTEXT_ID; /* 0x2634, ro */
     volatile const uint32_t AF_FRAME_ID; /* 0x2638, ro */
-    uint32_t RESERVED_22[113];
+    uint32_t RESERVED_23[113];
     volatile uint32_t OFMT_CTRL; /* 0x2800, rw */
     volatile uint32_t OFMT_Y_STRIDE; /* 0x2804, rw */
     volatile uint32_t OFMT_UV_STRIDE; /* 0x2808, rw */
-    uint32_t RESERVED_23[509];
+    uint32_t RESERVED_24[509];
     volatile uint32_t DMA_CTRL; /* 0x3000, mixed */
     volatile const uint32_t DMA_STAT; /* 0x3004, ro */
     volatile uint32_t DMA_ERR; /* 0x3008, w1c */
     volatile uint32_t DMA_IRQ_EN; /* 0x300C, rw */
     volatile uint32_t DMA_IRQ_STAT; /* 0x3010, w1c */
-    uint32_t RESERVED_24[3];
+    uint32_t RESERVED_25[3];
     volatile uint32_t IDMA_STRIDE; /* 0x3020, rw */
     volatile uint32_t IDMA_BUF_VALID; /* 0x3024, w1s */
     volatile const uint32_t IDMA_FRAME_COUNT; /* 0x3028, ro */
-    uint32_t RESERVED_25[5];
+    uint32_t RESERVED_26[5];
     volatile uint32_t IDMA_BUF_ADDR_L0; /* 0x3040, rw */
     volatile uint32_t IDMA_BUF_ADDR_H0; /* 0x3044, rw */
     volatile uint32_t IDMA_BUF_ADDR_L1; /* 0x3048, rw */
@@ -13585,13 +13765,13 @@ typedef struct {
     volatile uint32_t IDMA_BUF_ADDR_H2; /* 0x3054, rw */
     volatile uint32_t IDMA_BUF_ADDR_L3; /* 0x3058, rw */
     volatile uint32_t IDMA_BUF_ADDR_H3; /* 0x305C, rw */
-    uint32_t RESERVED_26[8];
+    uint32_t RESERVED_27[8];
     volatile uint32_t ODMA_Y_STRIDE; /* 0x3080, rw */
     volatile uint32_t ODMA_UV_STRIDE; /* 0x3084, rw */
     volatile uint32_t ODMA_BUF_FREE; /* 0x3088, w1s */
     volatile uint32_t ODMA_BUF_DONE; /* 0x308C, w1c */
     volatile const uint32_t ODMA_FRAME_COUNT; /* 0x3090, ro */
-    uint32_t RESERVED_27[3];
+    uint32_t RESERVED_28[3];
     volatile uint32_t ODMA_Y_ADDR_L0; /* 0x30A0, rw */
     volatile uint32_t ODMA_Y_ADDR_H0; /* 0x30A4, rw */
     volatile uint32_t ODMA_UV_ADDR_L0; /* 0x30A8, rw */
@@ -13608,7 +13788,7 @@ typedef struct {
     volatile uint32_t ODMA_Y_ADDR_H3; /* 0x30D4, rw */
     volatile uint32_t ODMA_UV_ADDR_L3; /* 0x30D8, rw */
     volatile uint32_t ODMA_UV_ADDR_H3; /* 0x30DC, rw */
-    uint32_t RESERVED_28[8];
+    uint32_t RESERVED_29[8];
     volatile uint32_t IDMA_BUF_TAG0; /* 0x3100, rw */
     volatile uint32_t IDMA_BUF_TAG1; /* 0x3104, rw */
     volatile uint32_t IDMA_BUF_TAG2; /* 0x3108, rw */
@@ -13634,21 +13814,27 @@ typedef struct {
     volatile const uint32_t ODMA_BUF_EOF_TS2; /* 0x3158, ro */
     volatile const uint32_t ODMA_BUF_EOF_TS3; /* 0x315C, ro */
     volatile const uint32_t FRAME_COUNTER; /* 0x3160, ro */
-    uint32_t RESERVED_29[39];
+    uint32_t RESERVED_30[7];
+    volatile uint32_t INPUT_SRC_CTRL; /* 0x3180, rw */
+    volatile const uint32_t INPUT_STREAM_STATUS; /* 0x3184, ro */
+    volatile uint32_t INPUT_STREAM_ERR; /* 0x3188, w1c */
+    volatile const uint32_t INPUT_STREAM_FRAME_COUNT; /* 0x318C, ro */
+    volatile const uint32_t INPUT_STREAM_DROP_COUNT; /* 0x3190, ro */
+    uint32_t RESERVED_31[27];
     volatile uint32_t CH1_RESIZER_CTRL; /* 0x3200, rw */
     volatile const uint32_t CH1_RESIZER_CUSTOM_W; /* 0x3204, ro */
     volatile const uint32_t CH1_RESIZER_CUSTOM_H; /* 0x3208, ro */
-    uint32_t RESERVED_30[2];
+    uint32_t RESERVED_32[2];
     volatile const uint32_t CH1_RESIZER_OUT_W; /* 0x3214, ro */
     volatile const uint32_t CH1_RESIZER_OUT_H; /* 0x3218, ro */
     volatile const uint32_t CH1_RESIZER_STATUS; /* 0x321C, ro */
-    uint32_t RESERVED_31[24];
+    uint32_t RESERVED_33[24];
     volatile uint32_t CH1_ODMA_Y_STRIDE; /* 0x3280, rw */
     volatile uint32_t CH1_ODMA_UV_STRIDE; /* 0x3284, rw */
     volatile uint32_t CH1_ODMA_BUF_FREE; /* 0x3288, w1s */
     volatile uint32_t CH1_ODMA_BUF_DONE; /* 0x328C, w1c */
     volatile const uint32_t CH1_ODMA_FRAME_COUNT; /* 0x3290, ro */
-    uint32_t RESERVED_32[3];
+    uint32_t RESERVED_34[3];
     volatile uint32_t CH1_ODMA_Y_ADDR_L0; /* 0x32A0, rw */
     volatile uint32_t CH1_ODMA_Y_ADDR_H0; /* 0x32A4, rw */
     volatile uint32_t CH1_ODMA_UV_ADDR_L0; /* 0x32A8, rw */
@@ -13665,7 +13851,7 @@ typedef struct {
     volatile uint32_t CH1_ODMA_Y_ADDR_H3; /* 0x32D4, rw */
     volatile uint32_t CH1_ODMA_UV_ADDR_L3; /* 0x32D8, rw */
     volatile uint32_t CH1_ODMA_UV_ADDR_H3; /* 0x32DC, rw */
-    uint32_t RESERVED_33[8];
+    uint32_t RESERVED_35[8];
     volatile const uint32_t CH1_ODMA_BUF_TAG0; /* 0x3300, ro */
     volatile const uint32_t CH1_ODMA_BUF_TAG1; /* 0x3304, ro */
     volatile const uint32_t CH1_ODMA_BUF_TAG2; /* 0x3308, ro */
@@ -13682,33 +13868,33 @@ typedef struct {
     volatile const uint32_t CH1_ODMA_BUF_EOF_TS1; /* 0x3334, ro */
     volatile const uint32_t CH1_ODMA_BUF_EOF_TS2; /* 0x3338, ro */
     volatile const uint32_t CH1_ODMA_BUF_EOF_TS3; /* 0x333C, ro */
-    uint32_t RESERVED_34[48];
+    uint32_t RESERVED_36[48];
     volatile uint32_t CH2_RESIZER_CTRL; /* 0x3400, rw */
     volatile const uint32_t CH2_RESIZER_CUSTOM_W; /* 0x3404, ro */
     volatile const uint32_t CH2_RESIZER_CUSTOM_H; /* 0x3408, ro */
-    uint32_t RESERVED_35[2];
+    uint32_t RESERVED_37[2];
     volatile const uint32_t CH2_RESIZER_OUT_W; /* 0x3414, ro */
     volatile const uint32_t CH2_RESIZER_OUT_H; /* 0x3418, ro */
     volatile const uint32_t CH2_RESIZER_STATUS; /* 0x341C, ro */
-    uint32_t RESERVED_36[24];
+    uint32_t RESERVED_38[24];
     volatile uint32_t CH2_ODMA_Y_STRIDE; /* 0x3480, rw */
-    uint32_t RESERVED_37[1];
+    uint32_t RESERVED_39[1];
     volatile uint32_t CH2_ODMA_BUF_FREE; /* 0x3488, w1s */
     volatile uint32_t CH2_ODMA_BUF_DONE; /* 0x348C, w1c */
     volatile const uint32_t CH2_ODMA_FRAME_COUNT; /* 0x3490, ro */
-    uint32_t RESERVED_38[3];
+    uint32_t RESERVED_40[3];
     volatile uint32_t CH2_ODMA_Y_ADDR_L0; /* 0x34A0, rw */
     volatile uint32_t CH2_ODMA_Y_ADDR_H0; /* 0x34A4, rw */
-    uint32_t RESERVED_39[2];
+    uint32_t RESERVED_41[2];
     volatile uint32_t CH2_ODMA_Y_ADDR_L1; /* 0x34B0, rw */
     volatile uint32_t CH2_ODMA_Y_ADDR_H1; /* 0x34B4, rw */
-    uint32_t RESERVED_40[2];
+    uint32_t RESERVED_42[2];
     volatile uint32_t CH2_ODMA_Y_ADDR_L2; /* 0x34C0, rw */
     volatile uint32_t CH2_ODMA_Y_ADDR_H2; /* 0x34C4, rw */
-    uint32_t RESERVED_41[2];
+    uint32_t RESERVED_43[2];
     volatile uint32_t CH2_ODMA_Y_ADDR_L3; /* 0x34D0, rw */
     volatile uint32_t CH2_ODMA_Y_ADDR_H3; /* 0x34D4, rw */
-    uint32_t RESERVED_42[10];
+    uint32_t RESERVED_44[10];
     volatile const uint32_t CH2_ODMA_BUF_TAG0; /* 0x3500, ro */
     volatile const uint32_t CH2_ODMA_BUF_TAG1; /* 0x3504, ro */
     volatile const uint32_t CH2_ODMA_BUF_TAG2; /* 0x3508, ro */
@@ -13725,7 +13911,7 @@ typedef struct {
     volatile const uint32_t CH2_ODMA_BUF_EOF_TS1; /* 0x3534, ro */
     volatile const uint32_t CH2_ODMA_BUF_EOF_TS2; /* 0x3538, ro */
     volatile const uint32_t CH2_ODMA_BUF_EOF_TS3; /* 0x353C, ro */
-    uint32_t RESERVED_43[4784];
+    uint32_t RESERVED_45[4784];
     volatile const uint32_t TUNE_ID; /* 0x8000, ro */
     volatile const uint32_t TUNE_REV; /* 0x8004, ro */
     volatile const uint32_t TUNE_CAPS; /* 0x8008, ro */
@@ -13739,7 +13925,7 @@ typedef struct {
     volatile const uint32_t TUNE_ACTIVE_FRAME; /* 0x8028, ro */
     volatile uint32_t TUNE_ERROR; /* 0x802C, w1c */
     volatile const uint32_t TUNE_NEXT_FRAME; /* 0x8030, ro */
-    uint32_t RESERVED_44[3];
+    uint32_t RESERVED_46[3];
     volatile const uint32_t TUNE_CH0_BUF0_PROFILE; /* 0x8040, ro */
     volatile const uint32_t TUNE_CH0_BUF1_PROFILE; /* 0x8044, ro */
     volatile const uint32_t TUNE_CH0_BUF2_PROFILE; /* 0x8048, ro */
@@ -13752,7 +13938,7 @@ typedef struct {
     volatile const uint32_t TUNE_CH2_BUF1_PROFILE; /* 0x8064, ro */
     volatile const uint32_t TUNE_CH2_BUF2_PROFILE; /* 0x8068, ro */
     volatile const uint32_t TUNE_CH2_BUF3_PROFILE; /* 0x806C, ro */
-    uint32_t RESERVED_45[36];
+    uint32_t RESERVED_47[36];
     volatile uint32_t TUNE_NR_CTRL; /* 0x8100, rw */
     volatile uint32_t TUNE_NR_VARIANCE; /* 0x8104, rw */
     volatile uint32_t TUNE_NR_SCALE; /* 0x8108, rw */
@@ -13765,80 +13951,80 @@ typedef struct {
     volatile uint32_t TUNE_NR_LUT_ADDR; /* 0x8124, rw */
     volatile uint32_t TUNE_NR_LUT_DATA; /* 0x8128, rw */
     volatile uint32_t TUNE_NR_SEED; /* 0x812C, rw */
-    uint32_t RESERVED_46[52];
+    uint32_t RESERVED_48[52];
     volatile uint32_t TUNE_WB_GB; /* 0x8200, rw */
     volatile uint32_t TUNE_DEMOSAIC_MARGIN; /* 0x8204, rw */
     volatile uint32_t TUNE_CNF_BLEND; /* 0x8208, rw */
-    uint32_t RESERVED_47[1];
+    uint32_t RESERVED_49[1];
     volatile uint32_t TUNE_CSC_CTRL; /* 0x8210, rw */
     volatile uint32_t TUNE_CSC_CONTRAST; /* 0x8214, rw */
     volatile uint32_t TUNE_CSC_BRIGHTNESS; /* 0x8218, rw */
-    uint32_t RESERVED_48[1];
+    uint32_t RESERVED_50[1];
     volatile uint32_t TUNE_CSC_UU; /* 0x8220, rw */
     volatile uint32_t TUNE_CSC_UV; /* 0x8224, rw */
     volatile uint32_t TUNE_CSC_VU; /* 0x8228, rw */
     volatile uint32_t TUNE_CSC_VV; /* 0x822C, rw */
-    uint32_t RESERVED_49[52];
+    uint32_t RESERVED_51[52];
     volatile uint32_t TUNE_AWB_CTRL; /* 0x8300, rw */
     volatile uint32_t TUNE_AWB_ROI_START; /* 0x8304, rw */
     volatile uint32_t TUNE_AWB_ROI_END; /* 0x8308, rw */
-    uint32_t RESERVED_50[1];
+    uint32_t RESERVED_52[1];
     volatile uint32_t TUNE_AWB_R_LIMITS; /* 0x8310, rw */
     volatile uint32_t TUNE_AWB_G_LIMITS; /* 0x8314, rw */
     volatile uint32_t TUNE_AWB_B_LIMITS; /* 0x8318, rw */
     volatile uint32_t TUNE_AWB_MIN_G; /* 0x831C, rw */
-    uint32_t RESERVED_51[8];
+    uint32_t RESERVED_53[8];
     volatile uint32_t TUNE_AWB_E0_CENTER; /* 0x8340, rw */
     volatile uint32_t TUNE_AWB_E0_A; /* 0x8344, rw */
     volatile uint32_t TUNE_AWB_E0_B; /* 0x8348, rw */
     volatile uint32_t TUNE_AWB_E0_C; /* 0x834C, rw */
     volatile uint32_t TUNE_AWB_E0_RADIUS2; /* 0x8350, rw */
-    uint32_t RESERVED_52[3];
+    uint32_t RESERVED_54[3];
     volatile uint32_t TUNE_AWB_E1_CENTER; /* 0x8360, rw */
     volatile uint32_t TUNE_AWB_E1_A; /* 0x8364, rw */
     volatile uint32_t TUNE_AWB_E1_B; /* 0x8368, rw */
     volatile uint32_t TUNE_AWB_E1_C; /* 0x836C, rw */
     volatile uint32_t TUNE_AWB_E1_RADIUS2; /* 0x8370, rw */
-    uint32_t RESERVED_53[3];
+    uint32_t RESERVED_55[3];
     volatile uint32_t TUNE_AWB_E2_CENTER; /* 0x8380, rw */
     volatile uint32_t TUNE_AWB_E2_A; /* 0x8384, rw */
     volatile uint32_t TUNE_AWB_E2_B; /* 0x8388, rw */
     volatile uint32_t TUNE_AWB_E2_C; /* 0x838C, rw */
     volatile uint32_t TUNE_AWB_E2_RADIUS2; /* 0x8390, rw */
-    uint32_t RESERVED_54[3];
+    uint32_t RESERVED_56[3];
     volatile uint32_t TUNE_AWB_E3_CENTER; /* 0x83A0, rw */
     volatile uint32_t TUNE_AWB_E3_A; /* 0x83A4, rw */
     volatile uint32_t TUNE_AWB_E3_B; /* 0x83A8, rw */
     volatile uint32_t TUNE_AWB_E3_C; /* 0x83AC, rw */
     volatile uint32_t TUNE_AWB_E3_RADIUS2; /* 0x83B0, rw */
-    uint32_t RESERVED_55[3];
+    uint32_t RESERVED_57[3];
     volatile uint32_t TUNE_AWB_E4_CENTER; /* 0x83C0, rw */
     volatile uint32_t TUNE_AWB_E4_A; /* 0x83C4, rw */
     volatile uint32_t TUNE_AWB_E4_B; /* 0x83C8, rw */
     volatile uint32_t TUNE_AWB_E4_C; /* 0x83CC, rw */
     volatile uint32_t TUNE_AWB_E4_RADIUS2; /* 0x83D0, rw */
-    uint32_t RESERVED_56[3];
+    uint32_t RESERVED_58[3];
     volatile uint32_t TUNE_AWB_E5_CENTER; /* 0x83E0, rw */
     volatile uint32_t TUNE_AWB_E5_A; /* 0x83E4, rw */
     volatile uint32_t TUNE_AWB_E5_B; /* 0x83E8, rw */
     volatile uint32_t TUNE_AWB_E5_C; /* 0x83EC, rw */
     volatile uint32_t TUNE_AWB_E5_RADIUS2; /* 0x83F0, rw */
-    uint32_t RESERVED_57[3];
+    uint32_t RESERVED_59[3];
     volatile uint32_t TUNE_AWB_E6_CENTER; /* 0x8400, rw */
     volatile uint32_t TUNE_AWB_E6_A; /* 0x8404, rw */
     volatile uint32_t TUNE_AWB_E6_B; /* 0x8408, rw */
     volatile uint32_t TUNE_AWB_E6_C; /* 0x840C, rw */
     volatile uint32_t TUNE_AWB_E6_RADIUS2; /* 0x8410, rw */
-    uint32_t RESERVED_58[3];
+    uint32_t RESERVED_60[3];
     volatile uint32_t TUNE_AWB_E7_CENTER; /* 0x8420, rw */
     volatile uint32_t TUNE_AWB_E7_A; /* 0x8424, rw */
     volatile uint32_t TUNE_AWB_E7_B; /* 0x8428, rw */
     volatile uint32_t TUNE_AWB_E7_C; /* 0x842C, rw */
     volatile uint32_t TUNE_AWB_E7_RADIUS2; /* 0x8430, rw */
-    uint32_t RESERVED_59[51];
+    uint32_t RESERVED_61[51];
     volatile uint32_t TUNE_AF_CTRL; /* 0x8500, rw */
     volatile uint32_t TUNE_AF_NOISE; /* 0x8504, rw */
-    uint32_t RESERVED_60[14];
+    uint32_t RESERVED_62[14];
     volatile uint32_t TUNE_AF_W0_START; /* 0x8540, rw */
     volatile uint32_t TUNE_AF_W0_END; /* 0x8544, rw */
     volatile uint32_t TUNE_AF_W1_START; /* 0x8548, rw */
@@ -13871,12 +14057,12 @@ typedef struct {
     volatile uint32_t TUNE_AF_W14_END; /* 0x85B4, rw */
     volatile uint32_t TUNE_AF_W15_START; /* 0x85B8, rw */
     volatile uint32_t TUNE_AF_W15_END; /* 0x85BC, rw */
-    uint32_t RESERVED_61[16];
+    uint32_t RESERVED_63[16];
     volatile uint32_t TUNE_HIST_CTRL; /* 0x8600, rw */
     volatile uint32_t TUNE_HIST_START; /* 0x8604, rw */
     volatile uint32_t TUNE_HIST_END; /* 0x8608, rw */
     volatile uint32_t TUNE_HIST_STEP; /* 0x860C, rw */
-    uint32_t RESERVED_62[12];
+    uint32_t RESERVED_64[12];
     volatile uint32_t TUNE_HIST_WEIGHT0; /* 0x8640, rw */
     volatile uint32_t TUNE_HIST_WEIGHT1; /* 0x8644, rw */
     volatile uint32_t TUNE_HIST_WEIGHT2; /* 0x8648, rw */
@@ -13902,7 +14088,7 @@ typedef struct {
     volatile uint32_t TUNE_HIST_WEIGHT22; /* 0x8698, rw */
     volatile uint32_t TUNE_HIST_WEIGHT23; /* 0x869C, rw */
     volatile uint32_t TUNE_HIST_WEIGHT24; /* 0x86A0, rw */
-    uint32_t RESERVED_63[23];
+    uint32_t RESERVED_65[23];
     volatile uint32_t TUNE_AEC_CMD; /* 0x8700, w1p */
     volatile const uint32_t TUNE_AEC_STATUS; /* 0x8704, ro */
     volatile uint32_t TUNE_AEC_DROPS; /* 0x8708, w1c */
@@ -13911,7 +14097,7 @@ typedef struct {
     volatile uint32_t TUNE_AEC_INDEX; /* 0x8714, rw */
     volatile const uint32_t TUNE_AEC_DATA_LO; /* 0x8718, ro */
     volatile const uint32_t TUNE_AEC_DATA_HI; /* 0x871C, ro */
-    uint32_t RESERVED_64[8];
+    uint32_t RESERVED_66[8];
     volatile uint32_t TUNE_AF_CMD; /* 0x8740, w1p */
     volatile const uint32_t TUNE_AF_STATUS; /* 0x8744, ro */
     volatile uint32_t TUNE_AF_DROPS; /* 0x8748, w1c */
@@ -13920,31 +14106,31 @@ typedef struct {
     volatile uint32_t TUNE_AF_INDEX; /* 0x8754, rw */
     volatile const uint32_t TUNE_AF_DATA_LO; /* 0x8758, ro */
     volatile const uint32_t TUNE_AF_DATA_HI; /* 0x875C, ro */
-    uint32_t RESERVED_65[8];
+    uint32_t RESERVED_67[8];
     volatile const uint32_t TUNE_AWB_PROFILE; /* 0x8780, ro */
-    uint32_t RESERVED_66[31];
+    uint32_t RESERVED_68[31];
     volatile uint32_t TUNE_GAMMA_PORT; /* 0x8800, rw */
     volatile uint32_t TUNE_GAMMA_DATA; /* 0x8804, rw */
     volatile uint32_t TUNE_TABLE_CMD; /* 0x8808, w1p */
     volatile const uint32_t TUNE_TABLE_STATUS; /* 0x880C, ro */
-    uint32_t RESERVED_67[60];
+    uint32_t RESERVED_69[60];
     volatile uint32_t TUNE_BPC_CTRL; /* 0x8900, rw */
     volatile uint32_t TUNE_BPC_G_THRESH; /* 0x8904, rw */
     volatile uint32_t TUNE_BPC_RB_THRESH; /* 0x8908, rw */
-    uint32_t RESERVED_68[1];
+    uint32_t RESERVED_70[1];
     volatile uint32_t TUNE_BPC_COUNT; /* 0x8910, rw */
     volatile uint32_t TUNE_BPC_ADDR; /* 0x8914, rw */
     volatile uint32_t TUNE_BPC_DATA; /* 0x8918, rw */
-    uint32_t RESERVED_69[57];
+    uint32_t RESERVED_71[57];
     volatile uint32_t TUNE_LSC_CTRL; /* 0x8A00, rw */
     volatile uint32_t TUNE_LSC_SECTOR_ADDR; /* 0x8A04, rw */
     volatile uint32_t TUNE_LSC_SECTOR_DATA; /* 0x8A08, rw */
-    uint32_t RESERVED_70[61];
+    uint32_t RESERVED_72[61];
     volatile uint32_t COMMON_INPUT_FORMAT; /* 0x8B00, rw */
-    uint32_t RESERVED_71[1];
+    uint32_t RESERVED_73[1];
     volatile uint32_t TUNE_AEC_SOURCE; /* 0x8B08, rw */
     volatile const uint32_t TUNE_AEC_RESULT_META; /* 0x8B0C, ro */
-    uint32_t RESERVED_72[12];
+    uint32_t RESERVED_74[12];
     volatile uint32_t CH0_CROP_CTRL; /* 0x8B40, rw */
     volatile uint32_t CH0_CROP_ORIGIN; /* 0x8B44, rw */
     volatile uint32_t CH0_CROP_SIZE; /* 0x8B48, rw */
@@ -13952,7 +14138,7 @@ typedef struct {
     volatile const uint32_t CH0_ACTIVE_CROP_ORIGIN; /* 0x8B50, ro */
     volatile const uint32_t CH0_ACTIVE_CROP_SIZE; /* 0x8B54, ro */
     volatile const uint32_t CH0_OUTPUT_LIMIT; /* 0x8B58, ro */
-    uint32_t RESERVED_73[9];
+    uint32_t RESERVED_75[9];
     volatile uint32_t CH1_CROP_CTRL; /* 0x8B80, rw */
     volatile uint32_t CH1_CROP_ORIGIN; /* 0x8B84, rw */
     volatile uint32_t CH1_CROP_SIZE; /* 0x8B88, rw */
@@ -13960,7 +14146,7 @@ typedef struct {
     volatile const uint32_t CH1_ACTIVE_CROP_ORIGIN; /* 0x8B90, ro */
     volatile const uint32_t CH1_ACTIVE_CROP_SIZE; /* 0x8B94, ro */
     volatile const uint32_t CH1_OUTPUT_LIMIT; /* 0x8B98, ro */
-    uint32_t RESERVED_74[9];
+    uint32_t RESERVED_76[9];
     volatile uint32_t CH2_CROP_CTRL; /* 0x8BC0, rw */
     volatile uint32_t CH2_CROP_ORIGIN; /* 0x8BC4, rw */
     volatile uint32_t CH2_CROP_SIZE; /* 0x8BC8, rw */
@@ -13968,10 +14154,10 @@ typedef struct {
     volatile const uint32_t CH2_ACTIVE_CROP_ORIGIN; /* 0x8BD0, ro */
     volatile const uint32_t CH2_ACTIVE_CROP_SIZE; /* 0x8BD4, ro */
     volatile const uint32_t CH2_OUTPUT_LIMIT; /* 0x8BD8, ro */
-    uint32_t RESERVED_75[9];
+    uint32_t RESERVED_77[9];
     volatile uint32_t COMMON_RECOVERY_STATUS; /* 0x8C00, mixed */
     volatile const uint32_t COMMON_RECOVERY_SEQUENCE; /* 0x8C04, ro */
-    uint32_t RESERVED_76[2];
+    uint32_t RESERVED_78[2];
     volatile const uint32_t COMMON_ABORT0_FRAME; /* 0x8C10, ro */
     volatile const uint32_t COMMON_ABORT0_OUTCOME; /* 0x8C14, ro */
     volatile const uint32_t COMMON_ABORT1_FRAME; /* 0x8C18, ro */
@@ -13980,7 +14166,7 @@ typedef struct {
     volatile const uint32_t COMMON_ABORT2_OUTCOME; /* 0x8C24, ro */
     volatile const uint32_t COMMON_ABORT3_FRAME; /* 0x8C28, ro */
     volatile const uint32_t COMMON_ABORT3_OUTCOME; /* 0x8C2C, ro */
-    uint32_t RESERVED_77[4];
+    uint32_t RESERVED_79[4];
     volatile const uint32_t TUNE_CH0_BUF0_FRAME; /* 0x8C40, ro */
     volatile const uint32_t TUNE_CH0_BUF1_FRAME; /* 0x8C44, ro */
     volatile const uint32_t TUNE_CH0_BUF2_FRAME; /* 0x8C48, ro */
@@ -13993,11 +14179,11 @@ typedef struct {
     volatile const uint32_t TUNE_CH2_BUF1_FRAME; /* 0x8C64, ro */
     volatile const uint32_t TUNE_CH2_BUF2_FRAME; /* 0x8C68, ro */
     volatile const uint32_t TUNE_CH2_BUF3_FRAME; /* 0x8C6C, ro */
-    uint32_t RESERVED_78[4];
+    uint32_t RESERVED_80[4];
     volatile const uint32_t TUNE_AE_FRAME_SIZE; /* 0x8C80, ro */
     volatile const uint32_t TUNE_AE_GRID; /* 0x8C84, ro */
     volatile const uint32_t TUNE_AE_ZONE_SIZE; /* 0x8C88, ro */
-    uint32_t RESERVED_79[1];
+    uint32_t RESERVED_81[1];
     volatile const uint32_t TUNE_AWB_FRAME_SIZE; /* 0x8C90, ro */
 } NEON_FX1_ISP_Regs_t;
 #define NEON_FX1_ISP ((NEON_FX1_ISP_Regs_t *)(uintptr_t)NEON_FX1_ISP_BASE)
@@ -14166,8 +14352,7 @@ NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, EE_LUT_WDATA) == NEON_FX1_I
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, EE_STATUS) == NEON_FX1_ISP_EE_STATUS_OFFSET, "ISP.EE_STATUS");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, EE_LUT_RDATA) == NEON_FX1_ISP_EE_LUT_RDATA_OFFSET, "ISP.EE_LUT_RDATA");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, CNF_CTRL) == NEON_FX1_ISP_CNF_CTRL_OFFSET, "ISP.CNF_CTRL");
-NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, CNF_CHROMA_TH) == NEON_FX1_ISP_CNF_CHROMA_TH_OFFSET, "ISP.CNF_CHROMA_TH");
-NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, CNF_LUMA_TH) == NEON_FX1_ISP_CNF_LUMA_TH_OFFSET, "ISP.CNF_LUMA_TH");
+NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, CNF_GF_EPS) == NEON_FX1_ISP_CNF_GF_EPS_OFFSET, "ISP.CNF_GF_EPS");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, CNF_STRENGTH) == NEON_FX1_ISP_CNF_STRENGTH_OFFSET, "ISP.CNF_STRENGTH");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, CNF_STATUS) == NEON_FX1_ISP_CNF_STATUS_OFFSET, "ISP.CNF_STATUS");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, RESIZER_CTRL) == NEON_FX1_ISP_RESIZER_CTRL_OFFSET, "ISP.RESIZER_CTRL");
@@ -14199,6 +14384,7 @@ NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, AEC_ZONE_GREEN_OE_UE) == NE
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, AEC_ZONE_GREEN_MIN_MAX) == NEON_FX1_ISP_AEC_ZONE_GREEN_MIN_MAX_OFFSET, "ISP.AEC_ZONE_GREEN_MIN_MAX");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, AEC_HIST_ADDR) == NEON_FX1_ISP_AEC_HIST_ADDR_OFFSET, "ISP.AEC_HIST_ADDR");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, AEC_HIST_DATA) == NEON_FX1_ISP_AEC_HIST_DATA_OFFSET, "ISP.AEC_HIST_DATA");
+NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, AEC_GLOBAL_OE_UE_PERCENT) == NEON_FX1_ISP_AEC_GLOBAL_OE_UE_PERCENT_OFFSET, "ISP.AEC_GLOBAL_OE_UE_PERCENT");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, AWB_CTRL) == NEON_FX1_ISP_AWB_CTRL_OFFSET, "ISP.AWB_CTRL");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, AWB_X_BOUND_ADDR) == NEON_FX1_ISP_AWB_X_BOUND_ADDR_OFFSET, "ISP.AWB_X_BOUND_ADDR");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, AWB_Y_BOUND_ADDR) == NEON_FX1_ISP_AWB_Y_BOUND_ADDR_OFFSET, "ISP.AWB_Y_BOUND_ADDR");
@@ -14308,6 +14494,11 @@ NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, ODMA_BUF_EOF_TS1) == NEON_F
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, ODMA_BUF_EOF_TS2) == NEON_FX1_ISP_ODMA_BUF_EOF_TS2_OFFSET, "ISP.ODMA_BUF_EOF_TS2");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, ODMA_BUF_EOF_TS3) == NEON_FX1_ISP_ODMA_BUF_EOF_TS3_OFFSET, "ISP.ODMA_BUF_EOF_TS3");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, FRAME_COUNTER) == NEON_FX1_ISP_FRAME_COUNTER_OFFSET, "ISP.FRAME_COUNTER");
+NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, INPUT_SRC_CTRL) == NEON_FX1_ISP_INPUT_SRC_CTRL_OFFSET, "ISP.INPUT_SRC_CTRL");
+NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, INPUT_STREAM_STATUS) == NEON_FX1_ISP_INPUT_STREAM_STATUS_OFFSET, "ISP.INPUT_STREAM_STATUS");
+NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, INPUT_STREAM_ERR) == NEON_FX1_ISP_INPUT_STREAM_ERR_OFFSET, "ISP.INPUT_STREAM_ERR");
+NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, INPUT_STREAM_FRAME_COUNT) == NEON_FX1_ISP_INPUT_STREAM_FRAME_COUNT_OFFSET, "ISP.INPUT_STREAM_FRAME_COUNT");
+NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, INPUT_STREAM_DROP_COUNT) == NEON_FX1_ISP_INPUT_STREAM_DROP_COUNT_OFFSET, "ISP.INPUT_STREAM_DROP_COUNT");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, CH1_RESIZER_CTRL) == NEON_FX1_ISP_CH1_RESIZER_CTRL_OFFSET, "ISP.CH1_RESIZER_CTRL");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, CH1_RESIZER_CUSTOM_W) == NEON_FX1_ISP_CH1_RESIZER_CUSTOM_W_OFFSET, "ISP.CH1_RESIZER_CUSTOM_W");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, CH1_RESIZER_CUSTOM_H) == NEON_FX1_ISP_CH1_RESIZER_CUSTOM_H_OFFSET, "ISP.CH1_RESIZER_CUSTOM_H");
@@ -14622,7 +14813,7 @@ NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, TUNE_AE_FRAME_SIZE) == NEON
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, TUNE_AE_GRID) == NEON_FX1_ISP_TUNE_AE_GRID_OFFSET, "ISP.TUNE_AE_GRID");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, TUNE_AE_ZONE_SIZE) == NEON_FX1_ISP_TUNE_AE_ZONE_SIZE_OFFSET, "ISP.TUNE_AE_ZONE_SIZE");
 NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, TUNE_AWB_FRAME_SIZE) == NEON_FX1_ISP_TUNE_AWB_FRAME_SIZE_OFFSET, "ISP.TUNE_AWB_FRAME_SIZE");
-#define NEON_FX1_ISP_REGISTER_COUNT 621u
+#define NEON_FX1_ISP_REGISTER_COUNT 626u
 #define NEON_FX1_ISP_REGISTER_LIST(X) \
     X(COMMON_VER_DATE, 0x00000000u, NEON_FX1_ACCESS_RO) \
     X(COMMON_VER_ID, 0x00000004u, NEON_FX1_ACCESS_RO) \
@@ -14789,8 +14980,7 @@ NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, TUNE_AWB_FRAME_SIZE) == NEO
     X(EE_STATUS, 0x00001C38u, NEON_FX1_ACCESS_MIXED) \
     X(EE_LUT_RDATA, 0x00001C3Cu, NEON_FX1_ACCESS_RO) \
     X(CNF_CTRL, 0x00001E00u, NEON_FX1_ACCESS_RW) \
-    X(CNF_CHROMA_TH, 0x00001E04u, NEON_FX1_ACCESS_RW) \
-    X(CNF_LUMA_TH, 0x00001E08u, NEON_FX1_ACCESS_RW) \
+    X(CNF_GF_EPS, 0x00001E04u, NEON_FX1_ACCESS_RW) \
     X(CNF_STRENGTH, 0x00001E0Cu, NEON_FX1_ACCESS_RW) \
     X(CNF_STATUS, 0x00001E10u, NEON_FX1_ACCESS_RO) \
     X(RESIZER_CTRL, 0x00002000u, NEON_FX1_ACCESS_RW) \
@@ -14822,6 +15012,7 @@ NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, TUNE_AWB_FRAME_SIZE) == NEO
     X(AEC_ZONE_GREEN_MIN_MAX, 0x00002244u, NEON_FX1_ACCESS_RO) \
     X(AEC_HIST_ADDR, 0x00002248u, NEON_FX1_ACCESS_RW) \
     X(AEC_HIST_DATA, 0x0000224Cu, NEON_FX1_ACCESS_RO) \
+    X(AEC_GLOBAL_OE_UE_PERCENT, 0x00002250u, NEON_FX1_ACCESS_RO) \
     X(AWB_CTRL, 0x00002400u, NEON_FX1_ACCESS_RW) \
     X(AWB_X_BOUND_ADDR, 0x00002404u, NEON_FX1_ACCESS_RW) \
     X(AWB_Y_BOUND_ADDR, 0x00002408u, NEON_FX1_ACCESS_RW) \
@@ -14931,6 +15122,11 @@ NEON_FX1_OFFSET_ASSERT(offsetof(NEON_FX1_ISP_Regs_t, TUNE_AWB_FRAME_SIZE) == NEO
     X(ODMA_BUF_EOF_TS2, 0x00003158u, NEON_FX1_ACCESS_RO) \
     X(ODMA_BUF_EOF_TS3, 0x0000315Cu, NEON_FX1_ACCESS_RO) \
     X(FRAME_COUNTER, 0x00003160u, NEON_FX1_ACCESS_RO) \
+    X(INPUT_SRC_CTRL, 0x00003180u, NEON_FX1_ACCESS_RW) \
+    X(INPUT_STREAM_STATUS, 0x00003184u, NEON_FX1_ACCESS_RO) \
+    X(INPUT_STREAM_ERR, 0x00003188u, NEON_FX1_ACCESS_W1C) \
+    X(INPUT_STREAM_FRAME_COUNT, 0x0000318Cu, NEON_FX1_ACCESS_RO) \
+    X(INPUT_STREAM_DROP_COUNT, 0x00003190u, NEON_FX1_ACCESS_RO) \
     X(CH1_RESIZER_CTRL, 0x00003200u, NEON_FX1_ACCESS_RW) \
     X(CH1_RESIZER_CUSTOM_W, 0x00003204u, NEON_FX1_ACCESS_RO) \
     X(CH1_RESIZER_CUSTOM_H, 0x00003208u, NEON_FX1_ACCESS_RO) \

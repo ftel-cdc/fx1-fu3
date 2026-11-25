@@ -14,7 +14,7 @@ CSI_SRC := $(DRV)/csi/platform/fx1/neon_csi.c host/csi_mmio.c
 ISP_SRC := $(DRV)/isp/platform/common/neon_isp.c $(DRV)/isp/platform/fx1/fx1_isp_caps.c $(DRV)/isp/platform/fx1/fx1_isp_profile.c \
             $(DRV)/isp/platform/fx1/fx1_isp_simulation.c
 RT_SRC := $(RT)/src/neon_camera_runtime.c $(RT)/src/neon_camera_runtime_init.c $(RT)/3a/neon_camera_3a_reference.c
-TESTS := $(BUILD)/test_neon_isp
+TESTS := $(BUILD)/test_neon_isp $(BUILD)/test_ftel_isp_contract
 
 .PHONY: all test fuzz clean
 all: $(TESTS)
@@ -44,3 +44,13 @@ fuzz: | $(BUILD)
 
 clean:
 	rm -rf $(BUILD)
+
+# CSR/MAS contract checks with memory-backed MMIO, independent of the VP version.
+FTEL := ../../components/driver/isp
+FTEL_CONTRACT_SRC := $(FTEL)/common/ftel_isp_common.c $(FTEL)/stats/aec/ftel_isp_aec.c $(FTEL)/io/dma/ftel_isp_dma.c
+$(BUILD)/test_ftel_isp_contract: test_ftel_isp_contract.c host/ftel_isp_mmio.h $(FTEL_CONTRACT_SRC) $(wildcard $(FTEL)/common/*.h) $(wildcard $(FTEL)/registers/*.h) $(ARCH)/fx1_isp/fx1_isp_csr.h $(FTEL)/bayer\ domain/ifmt/ftel_isp_ifmt.c $(FTEL)/bayer\ domain/lsc/ftel_isp_lsc.c $(FTEL)/rgb\ domain/ccm/ftel_isp_ccm.c $(FTEL)/yuv\ domain/cnf/ftel_isp_cnf.c | $(BUILD)
+	$(CC) -std=c11 -Wall -Wextra -Werror -g -I. -I$(FTEL) -I$(ARCH) -DISP_BASE=0x11000000u \
+	  -include host/ftel_isp_mmio.h -ffunction-sections -fdata-sections -Wl,--gc-sections \
+	  -o $@ test_ftel_isp_contract.c $(FTEL_CONTRACT_SRC) \
+	  "$(FTEL)/bayer domain/ifmt/ftel_isp_ifmt.c" "$(FTEL)/bayer domain/lsc/ftel_isp_lsc.c" \
+	  "$(FTEL)/rgb domain/ccm/ftel_isp_ccm.c" "$(FTEL)/yuv domain/cnf/ftel_isp_cnf.c"

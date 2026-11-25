@@ -55,7 +55,7 @@ static const char *const FX1_ISP_OWNED[] = {
 
 /* Register groups the HAL owns entirely, by name prefix. */
 static const char *const FX1_ISP_OWNED_GROUPS[] = {
-    "DMA_", "IDMA_", "ODMA_", "FRAME_", "OFMT_", "OUTPUT_", "RESIZER_", "CH0_", "CH1_", "CH2_",
+    "INPUT_", "DMA_", "IDMA_", "ODMA_", "FRAME_", "OFMT_", "OUTPUT_", "RESIZER_", "CH0_", "CH1_", "CH2_",
 };
 
 /*==================================================================================================

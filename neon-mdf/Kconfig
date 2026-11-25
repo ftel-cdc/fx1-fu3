@@ -13,7 +13,7 @@ osource "$(NEON_MDF_APP_KCONFIG)"
 
 menu "FTEL FX1 camera stack"
 
-rsource "components/ftel_isp/Kconfig"
+rsource "components/driver/isp/Kconfig"
 
 rsource "components/neon_camera_runtime/Kconfig"
 
