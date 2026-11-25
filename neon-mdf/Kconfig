@@ -18,3 +18,9 @@ rsource "components/driver/isp/Kconfig"
 rsource "components/neon_camera_runtime/Kconfig"
 
 endmenu
+
+menu "FTEL FX1 network stack"
+
+rsource "components/neon_net/Kconfig"
+
+endmenu
