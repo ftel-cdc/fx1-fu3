@@ -184,6 +184,7 @@ neon_status_t neon_net_start(neon_net_handle_t *handle) {
     handle->speed_mbps = handle->config.eth.speed_mbps;
     handle->service_pending = 0U;
     (void)netif_add(&handle->netif, &address, &netmask, &gateway, handle, neon_net_netif_init, tcpip_input);
+    handle->netif_added = 1U;
     netif_set_status_callback(&handle->netif, net_status_changed);
     netif_set_default(&handle->netif);
     netif_set_up(&handle->netif);
@@ -287,17 +288,19 @@ neon_status_t neon_net_stop(neon_net_handle_t *handle) {
         UNLOCK_TCPIP_CORE();
         return NEON_OK;
     }
-    if (handle->state == NEON_NET_STATE_RUNNING) {
-        sys_untimeout(net_service_timer, handle);
-        sys_untimeout(net_link_timer, handle);
+    sys_untimeout(net_service_timer, handle);
+    sys_untimeout(net_link_timer, handle);
+    /* Also after a fault in the service: the interface is still registered with lwIP. */
+    if (handle->netif_added != 0U) {
 #if LWIP_DHCP
         dhcp_stop(&handle->netif);
 #endif
         netif_set_down(&handle->netif);
         netif_remove(&handle->netif);
-        handle->link_up = 0U;
-        handle->ipv4_up = 0U;
+        handle->netif_added = 0U;
     }
+    handle->link_up = 0U;
+    handle->ipv4_up = 0U;
     SDK_IRQ_Disable((int32_t)FX1_IRQ_ETH);
     if (neon_eth_get_state(handle->eth) == NEON_ETH_STATE_FAULTED) {
         (void)neon_eth_recover(handle->eth);

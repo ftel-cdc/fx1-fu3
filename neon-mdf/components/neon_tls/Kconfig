@@ -1,0 +1,30 @@
+config NEON_MDF_TLS
+    bool "Build Neon TLS (mbedTLS 3.6.8 LTS over lwIP sockets)"
+    default n
+    depends on NEON_MDF_NET
+    help
+        TLS 1.2 client/server sessions over lwIP sockets with software
+        crypto. The application adds it with neon_mdf_add_tls() after
+        neon_mdf_add_net(). mbedTLS 3.6 LTS is supported until March 2027.
+
+if NEON_MDF_TLS
+
+config NEON_MDF_TLS_MAX_SESSIONS
+    int "TLS sessions that can exist at once"
+    default 2
+    range 1 8
+    help
+        Static handle pool. Each live session also takes up to about 48 KiB
+        of FreeRTOS heap during an ECDHE handshake (16 KiB input record,
+        4 KiB output record, handshake state, certificates).
+
+config NEON_MDF_TLS_DEV_ENTROPY
+    bool "Development entropy from timer jitter (INSECURE)"
+    default y
+    help
+        FX1 has no documented TRNG yet. This source mixes mtime jitter and
+        the MAC address; on the VP it is fully deterministic. It lets TLS run
+        for bring-up only: keys and nonces are predictable. Disable it and
+        provide neon_tls_port_entropy() from a real TRNG for any product.
+
+endif

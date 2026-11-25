@@ -23,6 +23,25 @@
 #define PORT_ASSERT_FAIL_CODE 0xF400U
 
 /*==================================================================================================
+*                                  STRUCTURES AND OTHER TYPEDEFS
+==================================================================================================*/
+/* Formatter output: the console, or a bounded buffer (which may be NULL with size 0). */
+typedef struct {
+    int console;
+    char *buffer;
+    size_t size;
+    size_t length;
+} port_sink_t;
+
+typedef struct {
+    uint32_t width;
+    int precision;
+    int left;
+    int zero;
+    int upper;
+} port_spec_t;
+
+/*==================================================================================================
 *                                        LOCAL VARIABLES
 ==================================================================================================*/
 static uint32_t port_rand_state;
@@ -36,7 +55,11 @@ static int port_errno;
 /*==================================================================================================
 *                                   PRIVATE FUNCTION PROTOTYPES
 ==================================================================================================*/
-static void port_put_unsigned(unsigned long long value, uint32_t base, uint32_t upper, uint32_t width);
+static void port_emit(port_sink_t *sink, char c);
+static void port_emit_padded(port_sink_t *sink, const char *text, uint32_t length, const port_spec_t *spec);
+static void port_emit_number(port_sink_t *sink, unsigned long long value, int negative, uint32_t base,
+                             const port_spec_t *spec);
+static void port_format(port_sink_t *sink, const char *format, va_list args);
 
 /*==================================================================================================
 *                                         GLOBAL FUNCTIONS
@@ -68,68 +91,33 @@ uint32_t neon_net_port_rand(void) {
 
 /** @copydoc neon_net_port_printf */
 void neon_net_port_printf(const char *format, ...) {
+    port_sink_t sink = {.console = 1, .buffer = NULL, .size = 0U, .length = 0U};
     va_list args;
     va_start(args, format);
-    for (const char *p = format; *p != '\0'; ++p) {
-        if (*p != '%') {
-            fx1_putc(*p);
-            continue;
-        }
-        ++p;
-        uint32_t width = 0U;
-        while (*p >= '0' && *p <= '9') {
-            width = width * 10U + (uint32_t)(*p - '0');
-            ++p;
-        }
-        uint32_t longs = 0U;
-        while (*p == 'l' || *p == 'h' || *p == 'z') {
-            longs += (*p == 'l') ? 1U : 0U;
-            ++p;
-        }
-        switch (*p) {
-            case 'c':
-                fx1_putc((char)va_arg(args, int));
-                break;
-            case 's': {
-                const char *text = va_arg(args, const char *);
-                fx1_puts(text != NULL ? text : "(null)");
-                break;
-            }
-            case 'd':
-            case 'i': {
-                long long value = longs >= 2U ? va_arg(args, long long) : (long long)va_arg(args, long);
-                if (value < 0) {
-                    fx1_putc('-');
-                    value = -value;
-                }
-                port_put_unsigned((unsigned long long)value, 10U, 0U, width);
-                break;
-            }
-            case 'u':
-            case 'x':
-            case 'X': {
-                unsigned long long value =
-                    longs >= 2U ? va_arg(args, unsigned long long) : (unsigned long long)va_arg(args, unsigned long);
-                port_put_unsigned(value, *p == 'u' ? 10U : 16U, *p == 'X' ? 1U : 0U, width);
-                break;
-            }
-            case 'p':
-                fx1_puts("0x");
-                port_put_unsigned((uintptr_t)va_arg(args, void *), 16U, 0U, 8U);
-                break;
-            case '%':
-                fx1_putc('%');
-                break;
-            case '\0':
-                va_end(args);
-                return;
-            default:
-                fx1_putc('%');
-                fx1_putc(*p);
-                break;
-        }
-    }
+    port_format(&sink, format, args);
     va_end(args);
+}
+
+/** @copydoc neon_net_port_vsnprintf */
+int neon_net_port_vsnprintf(char *buffer, size_t size, const char *format, va_list args) {
+    port_sink_t sink = {.console = 0, .buffer = buffer, .size = size, .length = 0U};
+    if (buffer == NULL && size != 0U) {
+        return -1;
+    }
+    port_format(&sink, format, args);
+    if (size != 0U) {
+        buffer[sink.length < size ? sink.length : size - 1U] = '\0';
+    }
+    return (int)sink.length;
+}
+
+/** @copydoc neon_net_port_snprintf */
+int neon_net_port_snprintf(char *buffer, size_t size, const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    int length = neon_net_port_vsnprintf(buffer, size, format, args);
+    va_end(args);
+    return length;
 }
 
 /** @copydoc neon_net_port_assert */
@@ -181,19 +169,169 @@ int atoi(const char *text) {
 /*==================================================================================================
 *                                        PRIVATE FUNCTIONS
 ==================================================================================================*/
-static void port_put_unsigned(unsigned long long value, uint32_t base, uint32_t upper, uint32_t width) {
+static void port_emit(port_sink_t *sink, char c) {
+    if (sink->console != 0) {
+        fx1_putc(c);
+    } else if (sink->length + 1U < sink->size) {
+        sink->buffer[sink->length] = c;
+    }
+    ++sink->length;
+}
+
+static void port_emit_padded(port_sink_t *sink, const char *text, uint32_t length, const port_spec_t *spec) {
+    uint32_t pad = spec->width > length ? spec->width - length : 0U;
+    if (!spec->left) {
+        for (; pad > 0U; --pad) {
+            port_emit(sink, ' ');
+        }
+    }
+    for (uint32_t i = 0U; i < length; ++i) {
+        port_emit(sink, text[i]);
+    }
+    for (; pad > 0U; --pad) {
+        port_emit(sink, ' ');
+    }
+}
+
+static void port_emit_number(port_sink_t *sink, unsigned long long value, int negative, uint32_t base,
+                             const port_spec_t *spec) {
     char digits[24];
     uint32_t count = 0U;
-    const char *table = upper != 0U ? "0123456789ABCDEF" : "0123456789abcdef";
+    const char *table = spec->upper ? "0123456789ABCDEF" : "0123456789abcdef";
     do {
         digits[count++] = table[value % base];
         value /= base;
     } while (value != 0ULL && count < sizeof(digits));
-    while (width > count) {
-        fx1_putc('0');
-        --width;
+    uint32_t length = count + (negative ? 1U : 0U);
+    uint32_t pad = spec->width > length ? spec->width - length : 0U;
+    if (!spec->left && !spec->zero) {
+        for (; pad > 0U; --pad) {
+            port_emit(sink, ' ');
+        }
+    }
+    if (negative) {
+        port_emit(sink, '-');
+    }
+    if (!spec->left && spec->zero) {
+        for (; pad > 0U; --pad) {
+            port_emit(sink, '0');
+        }
     }
     while (count > 0U) {
-        fx1_putc(digits[--count]);
+        port_emit(sink, digits[--count]);
+    }
+    for (; pad > 0U; --pad) {
+        port_emit(sink, ' ');
+    }
+}
+
+/* Subset of C99 printf used by lwIP diagnostics and mbedTLS: flags '-' '0', width and precision
+ * (digits or '*'), length hh/h/l/ll/z, conversions c s d i u x X p %. */
+static void port_format(port_sink_t *sink, const char *format, va_list args) {
+    for (const char *p = format; *p != '\0'; ++p) {
+        if (*p != '%') {
+            port_emit(sink, *p);
+            continue;
+        }
+        port_spec_t spec = {0};
+        spec.precision = -1;
+        for (++p; *p == '-' || *p == '0'; ++p) {
+            spec.left |= (*p == '-');
+            spec.zero |= (*p == '0');
+        }
+        if (*p == '*') {
+            int width = va_arg(args, int);
+            spec.left |= width < 0;
+            spec.width = (uint32_t)(width < 0 ? -width : width);
+            ++p;
+        }
+        for (; *p >= '0' && *p <= '9'; ++p) {
+            spec.width = spec.width * 10U + (uint32_t)(*p - '0');
+        }
+        if (*p == '.') {
+            spec.precision = 0;
+            if (*++p == '*') {
+                spec.precision = va_arg(args, int);
+                ++p;
+            }
+            for (; *p >= '0' && *p <= '9'; ++p) {
+                spec.precision = spec.precision * 10 + (*p - '0');
+            }
+        }
+        /* Arguments are read with their promoted type: int, long, long long or size_t. */
+        uint32_t longs = 0U;
+        int size_type = 0;
+        for (; *p == 'l' || *p == 'h' || *p == 'z'; ++p) {
+            longs += (*p == 'l') ? 1U : 0U;
+            size_type |= (*p == 'z');
+        }
+        switch (*p) {
+            case 'c': {
+                char c = (char)va_arg(args, int);
+                port_emit_padded(sink, &c, 1U, &spec);
+                break;
+            }
+            case 's': {
+                const char *text = va_arg(args, const char *);
+                if (text == NULL) {
+                    text = "(null)";
+                }
+                uint32_t length = 0U;
+                while (text[length] != '\0' && (spec.precision < 0 || length < (uint32_t)spec.precision)) {
+                    ++length;
+                }
+                port_emit_padded(sink, text, length, &spec);
+                break;
+            }
+            case 'd':
+            case 'i': {
+                long long value;
+                if (longs >= 2U) {
+                    value = va_arg(args, long long);
+                } else if (longs == 1U) {
+                    value = va_arg(args, long);
+                } else if (size_type != 0) {
+                    value = (long long)va_arg(args, size_t);
+                } else {
+                    value = va_arg(args, int);
+                }
+                unsigned long long magnitude = value < 0 ? 0ULL - (unsigned long long)value : (unsigned long long)value;
+                port_emit_number(sink, magnitude, value < 0, 10U, &spec);
+                break;
+            }
+            case 'u':
+            case 'x':
+            case 'X': {
+                unsigned long long value;
+                if (longs >= 2U) {
+                    value = va_arg(args, unsigned long long);
+                } else if (longs == 1U) {
+                    value = va_arg(args, unsigned long);
+                } else if (size_type != 0) {
+                    value = va_arg(args, size_t);
+                } else {
+                    value = va_arg(args, unsigned int);
+                }
+                spec.upper = *p == 'X';
+                port_emit_number(sink, value, 0, *p == 'u' ? 10U : 16U, &spec);
+                break;
+            }
+            case 'p':
+                port_emit(sink, '0');
+                port_emit(sink, 'x');
+                spec.zero = 1;
+                spec.width = 8U;
+                port_emit_number(sink, (uintptr_t)va_arg(args, void *), 0, 16U, &spec);
+                break;
+            case '%':
+                port_emit(sink, '%');
+                break;
+            case '\0':
+                return;
+            default:
+                port_emit(sink, '%');
+                port_emit(sink, *p);
+                break;
+        }
     }
 }

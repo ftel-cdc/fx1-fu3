@@ -23,4 +23,6 @@ menu "FTEL FX1 network stack"
 
 rsource "components/neon_net/Kconfig"
 
+rsource "components/neon_tls/Kconfig"
+
 endmenu

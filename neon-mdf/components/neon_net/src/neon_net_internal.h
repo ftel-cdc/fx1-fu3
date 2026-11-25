@@ -26,6 +26,7 @@ struct neon_net_handle_s {
     neon_net_config_t config;
     neon_eth_handle_t *eth;
     struct netif netif;
+    uint32_t netif_added;
     neon_net_event_callback_t callback;
     void *callback_context;
     uint32_t link_up;

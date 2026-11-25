@@ -11,6 +11,8 @@
 /*==================================================================================================
 *                                          INCLUDE FILES
 ==================================================================================================*/
+#include <stdarg.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <sys/time.h>
 
@@ -47,10 +49,28 @@
  */
 uint32_t neon_net_port_rand(void);
 /**
- * @brief Minimal printf for lwIP diagnostics: %c %s %d %i %u %x %X %p with h/l/ll/z modifiers.
+ * @brief printf to the board console for lwIP diagnostics (subset, see neon_net_port_vsnprintf).
  * @param[in] format Format string.
  */
 void neon_net_port_printf(const char *format, ...) __attribute__((format(printf, 1, 2)));
+/**
+ * @brief Bounded formatter, C99 vsnprintf semantics, for lwIP and mbedTLS (no C library on FX1).
+ * @param[out] buffer Output, always terminated when size > 0.
+ * @param[in] size Buffer size in bytes.
+ * @param[in] format Flags '-' '0', width/precision (digits or '*'), length hh/h/l/ll/z,
+ *            conversions c s d i u x X p %.
+ * @param[in] args Arguments.
+ * @return Length the full output would have, excluding the terminator; -1 on bad arguments.
+ */
+int neon_net_port_vsnprintf(char *buffer, size_t size, const char *format, va_list args);
+/**
+ * @brief Bounded formatter, C99 snprintf semantics (see neon_net_port_vsnprintf).
+ * @param[out] buffer Output.
+ * @param[in] size Buffer size in bytes.
+ * @param[in] format Format string.
+ * @return Length the full output would have, excluding the terminator.
+ */
+int neon_net_port_snprintf(char *buffer, size_t size, const char *format, ...) __attribute__((format(printf, 3, 4)));
 /**
  * @brief Report a failed lwIP assertion and stop.
  * @param[in] message Assertion text.
