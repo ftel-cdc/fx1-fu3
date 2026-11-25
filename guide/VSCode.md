@@ -18,8 +18,9 @@ npm run compile
 npm run vsix
 ```
 
-The last command creates `neon-mdf-tools-0.1.6.vsix`. In VS Code, open Extensions →
-the `…` menu → **Install from VSIX...** and select the generated file. Press `F5`
+The last command creates `neon-mdf-tools-<version>.vsix` using the version in
+`vscode-extension/package.json`. In VS Code, open Extensions → the `…` menu →
+**Install from VSIX...** and select the generated file. Press `F5`
 from the extension project to test in an Extension Development Host. `.vsix`
 packages and `dist/` are generated artifacts; rebuild them after extension changes.
 

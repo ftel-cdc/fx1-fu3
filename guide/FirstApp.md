@@ -115,3 +115,9 @@ python "$NEON_MDF_PATH/tools/neon_mdf.py" -p /dev/ttyUSB0 -b 19200 build flash-u
 
 Available actions are `build`, `flash-uart-gt32u2086`, `monitor`, `menuconfig`
 and `set-target`. `GT32U2086` is the only target; see `--help` for parameters.
+
+Check the SDK version from any directory after setting `NEON_MDF_PATH`:
+
+```sh
+python "$NEON_MDF_PATH/tools/neon_mdf.py" --version
+```

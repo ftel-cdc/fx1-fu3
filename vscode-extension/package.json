@@ -3,7 +3,7 @@
   "displayName": "NEON-MDF Tools",
   "description": "Build, flash, monitor, configure and debug GT32U2086 applications with NEON-MDF.",
   "publisher": "neon-mdf",
-  "version": "0.1.6",
+  "version": "1.0.0",
   "private": true,
   "engines": {
     "vscode": "^1.90.0"

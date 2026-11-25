@@ -8,9 +8,6 @@
 # Python caches
 __pycache__/
 
-# Local Python environment and generated extension packages
+# Local Python environment and extension build output
 /.venv/
 /vscode-extension/dist/
-/vscode-extension/*.vsix
-# Bundled extension release
-!/vscode-extension/neon-mdf-tools-0.1.6.vsix

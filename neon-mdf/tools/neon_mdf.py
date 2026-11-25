@@ -19,6 +19,14 @@ from pathlib import Path
 TARGET_STATE_FILE = "build/.neon_mdf_target"
 
 
+def sdk_version() -> str:
+    version_file = Path(__file__).resolve().parents[1] / "VERSION"
+    try:
+        return version_file.read_text(encoding="utf-8").strip() or "unknown"
+    except (OSError, UnicodeError):
+        return "unknown"
+
+
 def project_root() -> Path:
     return Path.cwd()
 
@@ -161,6 +169,7 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
+    parser.add_argument("--version", action="version", version=f"NEON-MDF SDK {sdk_version()}")
     parser.add_argument("-t", "--target", choices=["GT32U2086"], help="Device preset (GT32U2086).")
     parser.add_argument("-p", "--port", help="Serial port, e.g. /dev/cu.usbmodem102.")
     parser.add_argument("-b", "--baud", type=int, help="Programming baud matching ROMCODE; alternatively NEON_MDF_SERIAL_BAUD.")
