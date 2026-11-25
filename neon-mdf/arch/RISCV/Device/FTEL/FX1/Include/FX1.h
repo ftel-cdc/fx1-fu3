@@ -9,7 +9,7 @@
 #if FX1_MTIME_HZ != 0x1312D00
 #error "FX1.yaml khong khop BSP: FX1_MTIME_HZ"
 #endif
-#if FX1_PLIC_NUM_SOURCES != 0xA
+#if FX1_PLIC_NUM_SOURCES != 0xC
 #error "FX1.yaml khong khop BSP: FX1_PLIC_NUM_SOURCES"
 #endif
 #if FX1_BOOTROM_BASE != 0x0

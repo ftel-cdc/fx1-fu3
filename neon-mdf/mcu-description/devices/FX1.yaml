@@ -22,7 +22,7 @@ cpu:
   mtvec_mode: direct
   interrupt_controller: plic
   hart_count: 2
-  num_irq: 10
+  num_irq: 12
   mtime_hz: 20000000
   bsp_provider: fx1-vp
 memory:
@@ -12494,6 +12494,28 @@ peripherals:
             bit_offset: 0
             bit_width: 3
             description: ''
+      - name: PRIORITY_10
+        offset: 0x00000028
+        size: 32
+        access: rw
+        reset: null
+        description: Priority nguồn PLIC, hợp lệ 0..7; 0 tắt ưu tiên. Source 10 = đường test 0 của SIM_CTRL (chỉ VP).
+        fields:
+          - name: PRIORITY
+            bit_offset: 0
+            bit_width: 3
+            description: ''
+      - name: PRIORITY_11
+        offset: 0x0000002C
+        size: 32
+        access: rw
+        reset: null
+        description: Priority nguồn PLIC, hợp lệ 0..7; 0 tắt ưu tiên. Source 11 = đường test 1 của SIM_CTRL (chỉ VP).
+        fields:
+          - name: PRIORITY
+            bit_offset: 0
+            bit_width: 3
+            description: ''
       - name: PENDING
         offset: 0x00001000
         size: 32
@@ -16317,11 +16339,11 @@ peripherals:
         size: 32
         access: rw
         reset: null
-        description: Bit 0..2 điều khiển nguồn test PLIC 4..6.
+        description: Bit i điều khiển đường test i, nối PLIC source FX1_SIM_CTRL_IRQ_FIRST_SOURCE + i (10..11).
         fields:
           - name: TEST_LINES
             bit_offset: 0
-            bit_width: 3
+            bit_width: 2
             description: ''
   - name: I2C0
     base: 0x10030000
@@ -16430,7 +16452,8 @@ peripherals:
             description: ''
   - name: NPU
     base: 0x11010000
-    description: 'RESERVED: VP hiện tại chưa mô phỏng; truy cập gây fault.'
+    description: 'RESERVED tại địa chỉ này: không mô phỏng, truy cập gây fault. NPU SAURIA v4.7 của VP nằm ở aperture
+      riêng FX1_NPU_VP_BASE 0x13000000 (1 MiB, chỉ VP, không có khi --no-npu); chưa nhập vào YAML.'
     registers: []
   - name: H264_H265
     base: 0x11020000
@@ -19045,13 +19068,13 @@ interrupts:
   description: ISP combined IRQ
 - number: 4
   name: NPU
-  description: Reserved; SIM_CTRL có thể kích thích trong test VP
+  description: NPU level; luôn 0 khi VP chạy --no-npu
 - number: 5
   name: H264_H265
-  description: Reserved; SIM_CTRL test
+  description: Reserved, không bao giờ bật
 - number: 6
   name: ETH
-  description: Reserved; SIM_CTRL test
+  description: Ethernet MAC level
 - number: 7
   name: MIPI
   description: MIPI CSI-2 RX csi2_irq (level, IRQ_STATUS & IRQ_ENABLE & GLOBAL_ENABLE); không kích hoạt nếu VP không bật --camera
@@ -19061,3 +19084,5 @@ interrupts:
 - number: 9
   name: I2C0
   description: I2C0 level
+# Source 10..11: đường test CHỈ VP của SIM_CTRL (FX1_SIM_CTRL_IRQ_FIRST_SOURCE + i), không phải IP nên không khai
+# ở đây; num_irq = 12 để PLIC/SDK_IRQ chấp nhận chúng.

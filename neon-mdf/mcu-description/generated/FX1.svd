@@ -13696,6 +13696,38 @@ External: the value is held outside the CSR block; the type is the bus behaviour
           </fields>
         </register>
         <register>
+          <name>PRIORITY_10</name>
+          <description>Priority nguồn PLIC, hợp lệ 0..7; 0 tắt ưu tiên. Source 10 = đường test 0 của SIM_CTRL (chỉ VP). [access=rw]</description>
+          <addressOffset>0x28</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>PRIORITY</name>
+              <description> [access=rw]</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>3</bitWidth>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>PRIORITY_11</name>
+          <description>Priority nguồn PLIC, hợp lệ 0..7; 0 tắt ưu tiên. Source 11 = đường test 1 của SIM_CTRL (chỉ VP). [access=rw]</description>
+          <addressOffset>0x2c</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>PRIORITY</name>
+              <description> [access=rw]</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>3</bitWidth>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
           <name>PENDING</name>
           <description>Bit i: pending nguồn i, nguồn 0 không sử dụng. [access=ro]</description>
           <addressOffset>0x1000</addressOffset>
@@ -19763,7 +19795,7 @@ External: the value is held outside the CSR block; the type is the bus behaviour
         </register>
         <register>
           <name>IRQ</name>
-          <description>Bit 0..2 điều khiển nguồn test PLIC 4..6. [access=rw]</description>
+          <description>Bit i điều khiển đường test i, nối PLIC source FX1_SIM_CTRL_IRQ_FIRST_SOURCE + i (10..11). [access=rw]</description>
           <addressOffset>0x4</addressOffset>
           <size>32</size>
           <access>read-write</access>
@@ -19772,7 +19804,7 @@ External: the value is held outside the CSR block; the type is the bus behaviour
               <name>TEST_LINES</name>
               <description> [access=rw]</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>3</bitWidth>
+              <bitWidth>2</bitWidth>
               <access>read-write</access>
             </field>
           </fields>
