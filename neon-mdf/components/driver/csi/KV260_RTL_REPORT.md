@@ -105,3 +105,27 @@ At 93.75 MHz (see R1) `sys_clk` is below the 100 MHz byte clock, which the contr
 requires to be at least equal. The KV260 build compensates with `PARA_ASYNC_FIFO_DEPTH` = 256. A
 640-pixel line builds about 25 entries of backlog and drains during line blanking. This holds only
 for short lines. It is reported as an FPGA constraint, not an RTL defect.
+
+## R7: AXI4-Stream (towards the ISP) under back-pressure
+
+Test setup:
+- An ISP stand-in sits on the KV260 at the Block 12 output, in place of an ISP.
+- It counts per VC: frames (TUSER[0]), lines (TLAST), beats per line, TUSER[1] beats and abort beats.
+- It computes a CRC-32 of every frame.
+- It drives TREADY low at random or periodically.
+- Source: IMX219, 640x480 RAW10, `stream_format` RAW16. The DMA path runs at the same time.
+
+Results:
+
+| TREADY low | Stream | DMA buffers |
+|---|---|---|
+| 0 % | 480 lines x 160 beats per frame. TUSER = 01 on the first beat only, TLAST on beat 159 of each line, TKEEP 0xFF, TID 0, no TUSER[1] beat. Frame CRC-32 identical to the DMA buffer of the same frame. | all SW_VALID |
+| 25 / 50 / 75 % random; 50 % at 1 us period; 75 % in 15 us of every 20 us | unchanged | all SW_VALID |
+| 94 % random | every frame aborted after about 23 lines: one abort beat and one TUSER[1] beat per frame | **every buffer SW_ERROR** (45/45) |
+
+So when the ISP cannot keep up, the receiver drops the whole capture, on the DMA path as well as on the stream.
+
+Questions for the RTL team:
+1. Is this frame-level coupling intended? `stream_follow_dma_drop` covers only the other direction, a DMA drop reaching the stream.
+2. What raised the drop? `IRQ_STATUS.fmtbridge_overflow` and `BUFFER_STATUS.linebuf_overflow` both read 0 after the 94 % phase. Only `frame_dropped` was set.
+

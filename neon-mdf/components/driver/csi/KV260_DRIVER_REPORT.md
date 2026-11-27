@@ -32,7 +32,7 @@ the driver only; neither the RTL nor the MAS needs a change.
 | `neon_csi_start` + sensor stream | not reached | OK. `active_lanes_applied` matches once the sensor streams. |
 | `acquire_frame` / `release_frame`, 10 s | not reached; with D1 alone fixed, **every buffer SW_ERROR** (D2) | 300/300 SW_VALID, `frame_id` consecutive, timestamps 33.3 ms apart |
 | Pixel check | n/a | Both DMA buffers identical to the golden frame (307200/307200 px) |
-| AXI4-Stream path with no consumer (ISP absent) | n/a | DMA unaffected: 150/150 SW_VALID |
+| AXI4-Stream taken by an ISP stand-in (TREADY random or periodic) | n/a | Stream frames identical to the DMA buffer (CRC-32). Up to 75 % stall: no effect. At 94 % stall the stream frame is aborted and **the DMA buffer of the same capture also completes SW_ERROR** (45/45), see RTL report R7. (An earlier run with an idle AXI VDMA as the sink did not stall the stream and reported the DMA unaffected; that result was not a real back-pressure test.) |
 | `neon_csi_stop` | n/a | OK |
 
 ## D1 (must fix): `active_lanes_applied` is polled at step 4; MAS confirms it at step 13
