@@ -5,7 +5,7 @@
  */
 
 #include "test_common.h"
-#include "neon_camera_runtime.h"
+#include "neon_camera_legacy.h"
 #include "host/csi_mmio.h"
 #include "isp/platform/fx1/fx1_isp_simulation.h"
 #include "mipi/platform/fx1/fx1_mipi_simulation.h"

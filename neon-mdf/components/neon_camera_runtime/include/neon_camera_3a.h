@@ -3,7 +3,30 @@
 
 #include <stdint.h>
 #include "isp/neon_isp.h"
+#include "neon_camera_iq.h"
 
+/* Future algorithm-only boundary: each packet is copied coherently under its
+ * driver lease, then released before process_snapshot runs. Engine packets must
+ * match ingress/context/profile; absence is explicit, never latest-value merge.
+ * No binary adapter is implemented by this declaration. */
+typedef struct {
+    bool valid;
+    neon_isp_frame_identity_t identity;
+    const void *payload;
+    size_t bytes;
+} neon_camera_stats_packet_t;
+typedef struct {
+    neon_camera_stats_packet_t aec, awb, af;
+    neon_camera_controls_t effective;
+} neon_camera_stats_snapshot_t;
+typedef struct {
+    uint32_t abi;
+    size_t workspace_bytes, workspace_alignment;
+    neon_camera_result_t (*process_snapshot)(void *workspace,
+        const neon_camera_stats_snapshot_t *, neon_camera_iq_input_t *proposal);
+} neon_camera_3a_snapshot_ops_t;
+
+/* Compatibility reference algorithm below uses the legacy statistics API. */
 typedef struct {
     uint32_t target_frame_id, exposure_lines;
     uint16_t analogue_gain_q8, digital_gain_q8, wb_red_gain_q8, wb_blue_gain_q8, lens_position;

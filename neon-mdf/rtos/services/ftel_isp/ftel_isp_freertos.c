@@ -42,7 +42,7 @@ typedef struct {
 } job_t;
 
 static struct {
-    unsigned state; /* 0 chưa start, 1 đang tạo, 2 hoạt động. */
+    unsigned state; /* 0 chưa start, 1 đang tạo, 2 hoạt động, 3 startup lỗi. */
     bool faulted, recovery_pending;
     SemaphoreHandle_t lock, startup, recovery_done;
     QueueHandle_t queue;
@@ -314,12 +314,11 @@ failed:
 static void worker(void *unused)
 {
     (void)unused;
+    /* start() claimed before allocating the worker. Only this task may enter. */
     service.startup_status = NEON_FX1_IRQ_Register(FX1_IRQ_ISP,
         service.config.irq_priority, isp_isr, NULL) == pdPASS ? FTEL_ISP_OK : FTEL_ISP_E_CONFIG;
-    if (service.startup_status == FTEL_ISP_OK) {
-        mask_irq();
-        ftel_isp_fx1_set_owner(worker_owns_isp, NULL);
-    }
+    if (service.startup_status == FTEL_ISP_OK) mask_irq();
+    else (void)ftel_isp_fx1_set_owner(NULL, NULL);
     xSemaphoreGive(service.startup);
     if (service.startup_status != FTEL_ISP_OK) vTaskDelete(NULL);
     for (;;) {
@@ -386,6 +385,12 @@ ftel_isp_status_t ftel_isp_freertos_start(const ftel_isp_freertos_config_t *conf
     ftel_isp_status_t status = ftel_isp_get_info(&info);
     if (status == FTEL_ISP_OK && (info.busy || aec_lease_valid())) status = FTEL_ISP_E_BUSY;
     if (status != FTEL_ISP_OK) { service.state = 0; return status; }
+    /* Atomic claim closes the preflight race with camera sessions. A rejection
+     * leaves the service retryable and does not allocate a worker or touch IRQ. */
+    if (!ftel_isp_fx1_set_owner(worker_owns_isp, NULL)) {
+        service.state = 0;
+        return FTEL_ISP_E_BUSY;
+    }
     service.config = c;
     service.lock = xSemaphoreCreateMutex();
     service.queue = xQueueCreate(FTEL_ISP_FREERTOS_MAX_JOBS + 1u, sizeof(uint32_t));
@@ -399,7 +404,7 @@ ftel_isp_status_t ftel_isp_freertos_start(const ftel_isp_freertos_config_t *conf
     configASSERT(xTaskCreate(worker, "isp_worker", c.stack_words, NULL,
                             c.task_priority, &service.worker) == pdPASS);
     configASSERT(xSemaphoreTake(service.startup, portMAX_DELAY) == pdTRUE);
-    service.state = 2;
+    service.state = service.startup_status == FTEL_ISP_OK ? 2u : 3u;
     return service.startup_status;
 }
 

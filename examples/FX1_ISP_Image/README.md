@@ -1,151 +1,59 @@
-# FX1_ISP_Image — Neon ISP với profile ứng dụng
+# FX1_ISP_Image — camera session với deferred IRQ
 
-App dùng `neon_mdf_ftel_isp`, nạp full tuning D65 và chạy 2 frame bằng polling.
-RAW đầu vào 2688×1520 BGGR RAW12; output NV12 1920×1080, stride 2688.
-`sdkconfig` mặc định bật thư viện 3A kín: loader và thuật toán lấy từ `.a`,
-hai binary camera được nhúng vào ELF. Không dùng FreeRTOS.
-
-[Hướng dẫn đầy đủ: build, chuyển RAW, chạy VP và xuất PNG](../../guide/FX1_NEON_ISP_RUN.md).
-
-Từ thư mục example:
+Example này dùng `neon_camera_freertos`, register backend scalar MAS v1.07 và
+session core. Mặc định replay tám frame RAW12 BGGR 2688×1520, bốn slot luân phiên,
+output CH0 NV12 cùng kích thước. WB/DG unity, CSC BT.601 limited range; table
+consumers và 3A/statistics tắt. Các file `profile/*.csrw`, binary 3A và generator
+cũ còn lưu nhưng **không được nạp hoặc link vào đường mới**. Hướng dẫn legacy
+`guide/FX1_NEON_ISP_RUN.md` và hash ảnh D65 cũ không áp dụng cho example này.
 
 ```sh
-python3 tools/generate_profile.py
-cmake --preset FX1
-cmake --build --preset FX1
+cmake --preset FX1 -B /tmp/fx1-camera-image
+cmake --build /tmp/fx1-camera-image
 ```
 
-ELF nằm ở `build/FX1/fx1_isp_image.elf`. Tuning nằm tại
-`profile/profile.csrw`; generator tạo `profile/profile.h` để điền
-`isp_config_t`. Không biên dịch Reference driver, không dùng SEAL/APPLY.
+Nếu toolchain chưa có trong PATH, truyền
+`-DNEON_FX1_TOOLCHAIN_DIR=/opt/toolchains/riscv-none-elf/bin` hoặc thư mục tương ứng.
+ELF: `/tmp/fx1-camera-image/fx1_isp_image.elf`. `sdkconfig` bật CAMERA_RUNTIME và
+CAMERA_FX1_BACKEND; FreeRTOS config nằm trong `Inc/` của chính example.
 
-Chạy một frame, giữ cùng tuning:
+RAW là 16-bit little-endian containers, lower 12 bits, stride `2*WIDTH`. Nạp cùng
+geometry vào cả bốn địa chỉ `0x81000000`, `0x81800000`, `0x82000000`, `0x82800000`
+trước khi chạy. Output Y ở `0x88000000 + slot*0x00800000`, UV ở Y+`0x00400000`.
+Y/UV strides bằng WIDTH. Ví dụ tối thiểu cho VP có capability v1.07 phù hợp:
 
 ```sh
-cmake --preset FX1 -B build/FX1-1frame -DFX1_IMAGE_FRAME_COUNT=1
-cmake --build build/FX1-1frame
+fx1_soc --fw /tmp/fx1-camera-image/fx1_isp_image.elf --timeout-ms 6000 \
+  --load 0x81000000:raw.bin --load 0x81800000:raw.bin \
+  --load 0x82000000:raw.bin --load 0x82800000:raw.bin
 ```
 
-Bật/tắt BLC bằng `BLC_CTRL 0x1` / `BLC_CTRL 0x0` trong
-`profile/profile.csrw`, rồi sinh lại header và build. Không dùng cờ CMake. Số frame mặc định 2; có thể chọn số nguyên dương và tái sử dụng 4 DMA slot.
-Nạp RAW vào các slot được dùng. Runner `run_vp_neon` hiện hỗ trợ xuất ảnh cho 1..4 frame;
-với hơn 4 frame, chạy VP trực tiếp và lấy output theo `NV12_BASE` trong log.
+`-DFX1_IMAGE_FRAME_COUNT=N`, `-DFX1_IMAGE_WIDTH=W`, `-DFX1_IMAGE_HEIGHT=H` cấu hình
+replay; kích thước chẵn 32..3840 × 32..2160, stride phải chia hết 16. Slot buffers
+vẫn ở vùng DDR nêu trên. Consumer acquire/return qua command queue; STOP dùng
+mailbox riêng. Worker giữ claim đến drain, mọi lease return và IRQ detach hoàn tất.
 
-Kiểm chứng ngày 23/11/2026 với D65, 2 frame, tắt 3A: bản port bare-metal,
-FreeRTOS và code nguồn `c95aa1b` chạy trên cùng VP cho NV12 khớp từng byte.
-SHA-256 NV12: `003445eab6533523f0742d2805d76d868fb56b545f26437193d1037ca78fe79f`.
-SHA-256 VP: `93386efedcc8caef3db6b65b0e46350805c803705cda19dd4592267f3b6451c8`.
-SHA-256 RAW: `b0a001c3cfd89155561a23300925e54fcf126dde622b33b7a2cb05eaa744168b`.
-Hash `4822cf3199fef425980e47a2c357e97745517f3f39ef50066c248224ba912627`
-trong kết quả cũ không được dùng làm chuẩn cho VP hiện tại. Chưa đối chiếu lại
-ProfileReplay trong lần kiểm chứng này. Một frame có thể khác hai frame do trạng thái GTM.
+## Evidence ngày 27/11/2026
 
-Hash trên thuộc đường profile tĩnh khi **tắt 3A**. Khi bật 3A, startup WB từ
-binary thay WB của profile nên ảnh không còn dùng hash chuẩn đó.
+Cross-build RV32 pass cả default geometry và 64×48. VP local revision
+`36ad26a4b200232ff49570c2b31f1120ccec5bd3` có version `0x00010007`, TUNE_ID
+`0x54554E45` nhưng caps `0x003FFFFF` thiếu INPUT_PAD. Example log START_RESULT=5
+(UNSUPPORTED), dừng bằng mã `0xca01`; chưa xử lý được ảnh trên VP này. Không có
+legacy fallback, không suy build/host-test pass thành image end-to-end pass.
 
-## Tích hợp binary 3A
-
-Các file bàn giao đặt tại:
-
-```text
-neon-mdf/components/driver/isp/algorithms/isp_3a/
-  include/fpt_3a.h
-  lib/fx1/libisp_3a.a
-examples/FX1_ISP_Image/profile/
-  fpt.tuned.sony_imx675.bin
-  fpt.sensormodule.sony_imx675.bin
-```
-
-Thư viện là bản `isp_3a_distribution` của SDK, chứa cả parser. Không thay bằng
-archive thuật toán-only ở gốc thư mục build SDK. Neon build không cần source
-hay đường dẫn tới `isp_19_11`. Header không lộ state thuật toán.
-
-`CONFIG_NEON_MDF_FTEL_ISP_3A` nằm trong Kconfig ISP hiện có; dùng menuconfig
-để tắt nếu cần đường profile tĩnh. Hai `.bin` chọn qua CMake
-`FX1_3A_SENSOR_BIN` và `FX1_3A_TUNING_BIN`; build nhúng nguyên bytes bằng
-assembly `.incbin`, giữ chúng ở vùng read-only trong ELF. Không sửa header
-profile hay file trong `build/.../generated/` bằng tay.
-
-Chế độ mặc định `FX1_3A_REPLAY=ON` vì binary IMX675 mô tả 2592×1944 RGGB
-RAW10, khác RAW của example. 3A binary tạo đề xuất exposure/gain, không áp exposure/gain
-lên ảnh RAW đã nạp. Các giá trị `3A_EFFECTIVE_*` giữ metadata baseline của
-replay; không phải controls đã được xác nhận trên sensor thật.
-
-AWB ROI screening cần số mẫu scalar UE/OE thật. CSR v1.07 hiện không cung cấp
-đủ các số này, nên mặc định thư viện giữ startup WB và đặt cờ AWB_HELD.
-Muốn thử đường hội tụ WB trên replay, bật tường minh:
+Có probe riêng trong `neon-mdf/tests/camera_hal/fx1_irq_port_probe.c`, build bằng:
 
 ```sh
-cmake --preset FX1 -B build/3a-unscreened \
-  -DFX1_3A_REPLAY_UNSCREENED_AWB=ON -DFX1_IMAGE_FRAME_COUNT=4
-cmake --build build/3a-unscreened
+cmake --preset FX1 -B /tmp/fx1-camera-probe -DFX1_CAMERA_IRQ_PORT_PROBE=ON
+cmake --build /tmp/fx1-camera-probe --target fx1_camera_irq_port_probe
+fx1_soc --fw /tmp/fx1-camera-probe/fx1_camera_irq_port_probe.elf --timeout-ms 500
 ```
 
-Đường này bỏ ROI screening trong bản tuning RAM, vẫn giữ ngưỡng qualification
-RGB phần cứng. Log và result luôn đánh dấu `UNSCREENED_AWB`; không dùng làm
-kết quả tuning camera sản phẩm. Sau `wait`, app thu và giải phóng lease stats,
-chạy 3A, release output, rồi áp WB và context mới khi ISP/DMA idle trước submit
-frame kế. Exposure/gain mới chỉ được log; không giả lập việc sensor đã áp.
+Probe chỉ chạy trên ISP stopped/exclusive, chủ động tạo lỗi alignment DMA,
+không đọc/ghi ảnh hợp lệ. VP PASS deferred IP mask giữ sticky status, PLIC complete,
+đăng ký trùng bị chặn, unregister đúng context và re-register với stale pending.
+Đây là kiểm chứng port IRQ độc lập, không vượt kiểm tra capability của session.
 
-Strict mode kiểm tra camera mode; với bộ binary hiện tại lệnh sau build được
-nhưng firmware sẽ từ chối init trước khi cấu hình/chạy ISP:
-
-```sh
-cmake --preset FX1 -B build/3a-strict -DFX1_3A_REPLAY=OFF
-cmake --build build/3a-strict
-```
-
-Log: `3A_FRAME_ID`, `3A_CONTEXT_ID`, `3A_FLAGS`, `3A_LUMA`, controls, Lux/CCT
-và `3A_RESULT=PASS`. Flags: bit 0 replay, bit 1 AWB held, bit 2 unscreened AWB,
-bit 3 Lux valid, bit 4 CCT valid, bit 5 CCT còn là startup seed.
-Chỉ đọc Lux/CCT khi bit valid tương ứng bật. App cấp 160 KiB vùng nhớ opaque,
-kiểm tra size/alignment yêu cầu của archive tại init; state giữ xuyên các frame.
-
-Test VP với UE/OE tính sẵn dùng một file `CC/awb_ue_oe.json` cho cả 9 ảnh.
-Chỉ executable test ghép các số này vào stats; firmware thường và component
-SDK không đọc file hay tự đếm UE/OE.
-
-```sh
-# Tại thư mục example:
-cmake --build --preset FX1 --target fx1_isp_image_vp
-
-# Từ gốc workspace:
-python3 fx1/vp_neon/run_vp_neon \
-  neon_mdf/examples/FX1_ISP_Image/build/FX1/fx1_isp_image_vp.elf \
-  CC/D65_raw_2688x1520_5376.raw --awb-counts CC/awb_ue_oe.json
-```
-
-## Dọn build
-
-Từ thư mục `examples/FX1_ISP_Image`:
-
-```sh
-make clean
-```
-
-Xóa `build/FX1/`, gồm ELF/MAP/BIN và CMake cache. Giữ nguyên
-source, tuning, header đã sinh và ảnh/log trong `artifacts/`. Các build folder
-thử nghiệm khác không bị xóa. Sau đó chạy lại ba lệnh build ở trên;
-`make build` cũng thực hiện cùng ba bước sinh header, configure và build.
-
-## Profile độc lập của ứng dụng
-
-- `profile/profile.csrw`: sửa tuning tại đây.
-- `profile/profile.h`: được sinh bởi `tools/generate_profile.py`.
-
-App không đọc CSR profile của VP hoặc ProfileReplay. Profile mặc định giữ
-bộ hệ số đã kiểm chứng trên D65. Thay các tham số được API Neon hỗ trợ,
-sinh lại header rồi build. Tên profile chung không tự tạo calibration cho
-mọi nguồn sáng; hãy chọn tuning phù hợp với ảnh.
-
-Cùng ELF chạy được các RAW khác nhau cùng định dạng BGGR RAW10 căn trái,
-2688×1520 bằng `run_vp_neon ELF RAW`. Đổi tuning phải build lại ELF.
-Kích thước/Bayer/depth đầu vào vẫn được đặt trong main.c, chưa tự nhận mọi
-độ phân giải hoặc định dạng RAW.
-
-## Kiểm tra profile lúc build
-
-CMake tự sinh và dùng `build/FX1/generated/profile.h`; không phụ thuộc việc
-nhớ chạy Python trước. Có thể chọn file riêng bằng `-DFX1_ISP_PROFILE=/path/profile.csrw`.
-Xem phạm vi schema và các mode bị từ chối trong hướng dẫn. BIN là binary thô;
-VP dùng ELF. Các example FX1 khác vẫn được giữ, gồm bản FreeRTOS và ISP_Bayer_AE.
+Xem [runtime README](../../neon-mdf/components/neon_camera_runtime/README.md) và
+[MAS mapping](../../neon-mdf/components/neon_camera_runtime/MAS_MAPPING.md) cho
+phạm vi scalar, kiểm thử, cache hooks và các phần chưa nghiệm thu trên hardware.

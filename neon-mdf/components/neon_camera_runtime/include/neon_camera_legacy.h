@@ -1,5 +1,7 @@
-#ifndef NEON_CAMERA_RUNTIME_H
-#define NEON_CAMERA_RUNTIME_H
+#ifndef NEON_CAMERA_LEGACY_H
+#define NEON_CAMERA_LEGACY_H
+
+/* Deprecated CSI/legacy-register path. Not a MAS profile-mode session. */
 
 #include <stdbool.h>
 #include <stdint.h>

@@ -3,6 +3,7 @@
  * và đọc thống kê. Init toàn pipeline nằm riêng trong ftel_isp_init.c.
  */
 #include "ftel_isp_private.h"
+#include "neon_isp_claim.h"
 
 /* Session chỉ do bên sở hữu truy cập; lớp FreeRTOS nhận quyền cho worker. */
 ftel_isp_fx1_session_t ftel_isp_fx1_session;
@@ -11,13 +12,23 @@ static void *owner_user;
 
 bool ftel_isp_fx1_access_allowed(void)
 {
-    return owner_allowed == NULL || owner_allowed(owner_user);
+    return neon_isp_device_available_to(&ftel_isp_fx1_session) &&
+           (owner_allowed == NULL || owner_allowed(owner_user));
 }
 
-void ftel_isp_fx1_set_owner(bool (*allowed)(void *), void *user)
+bool ftel_isp_fx1_set_owner(bool (*allowed)(void *), void *user)
 {
+    if (allowed == NULL) {
+        if (owner_allowed == NULL || !owner_allowed(owner_user) ||
+            !neon_isp_device_release(&ftel_isp_fx1_session)) return false;
+        owner_allowed = NULL;
+        owner_user = NULL;
+        return true;
+    }
+    if (!neon_isp_device_claim(&ftel_isp_fx1_session)) return false;
     owner_allowed = allowed;
     owner_user = user;
+    return true;
 }
 
 ftel_isp_status_t ftel_isp_get_info(ftel_isp_info_t *info)

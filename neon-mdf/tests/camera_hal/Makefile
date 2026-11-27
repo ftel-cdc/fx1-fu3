@@ -3,7 +3,8 @@ DRV := ../../components/driver
 RT := ../../components/neon_camera_runtime
 ARCH := ../../arch/RISCV/Device/FTEL/FX1/Include
 CC ?= gcc
-CFLAGS := -std=c11 -Wall -Wextra -Wpedantic -Wconversion -Werror -g -O0 -Ihost -I$(DRV) -I$(RT) -I$(ARCH) -I.
+.DEFAULT_GOAL := all
+CFLAGS := -std=c11 -Wall -Wextra -Wpedantic -Wconversion -Werror -g -O0 -Ihost -I$(DRV) -I$(RT)/include -I$(ARCH) -I.
 BUILD ?= build
 
 PHY_SRC := $(DRV)/phy/neon_phy.c $(DRV)/phy/neon_phy_mipi_dphy.c \
@@ -13,8 +14,14 @@ PHY_SRC := $(DRV)/phy/neon_phy.c $(DRV)/phy/neon_phy_mipi_dphy.c \
 CSI_SRC := $(DRV)/csi/platform/fx1/neon_csi.c host/csi_mmio.c
 ISP_SRC := $(DRV)/isp/platform/common/neon_isp.c $(DRV)/isp/platform/fx1/fx1_isp_caps.c $(DRV)/isp/platform/fx1/fx1_isp_profile.c \
             $(DRV)/isp/platform/fx1/fx1_isp_simulation.c
-RT_SRC := $(RT)/src/neon_camera_runtime.c $(RT)/src/neon_camera_runtime_init.c $(RT)/3a/neon_camera_3a_reference.c
-TESTS := $(BUILD)/test_neon_isp $(BUILD)/test_ftel_isp_contract
+RT_SRC := $(RT)/src/camera_legacy.c $(RT)/src/camera_legacy_config.c $(RT)/algorithms/camera_3a_reference.c
+SESSION_SRC := $(RT)/src/camera_runtime.c $(RT)/src/camera_config.c $(RT)/src/camera_events.c \
+  $(RT)/src/camera_scheduler.c $(RT)/src/camera_buffers.c $(RT)/src/camera_history.c $(RT)/src/camera_recovery.c
+CLAIM_SRC := $(DRV)/isp/platform/common/neon_isp_claim.c
+TESTS := $(BUILD)/test_neon_isp $(BUILD)/test_ftel_isp_contract $(BUILD)/test_camera_session $(BUILD)/test_fx1_camera_irq $(BUILD)/test_camera_freertos
+
+$(BUILD)/test_camera_session: test_camera_session.c test_common.h $(SESSION_SRC) $(CLAIM_SRC) $(wildcard $(RT)/include/*.h) $(RT)/src/camera_internal.h $(DRV)/isp/neon_isp_session.h $(DRV)/isp/neon_isp_claim.h | $(BUILD)
+	$(CC) $(CFLAGS) -o $@ test_camera_session.c $(SESSION_SRC) $(CLAIM_SRC)
 
 .PHONY: all test fuzz clean
 all: $(TESTS)
@@ -54,3 +61,12 @@ $(BUILD)/test_ftel_isp_contract: test_ftel_isp_contract.c host/ftel_isp_mmio.h $
 	  -o $@ test_ftel_isp_contract.c $(FTEL_CONTRACT_SRC) \
 	  "$(FTEL)/bayer domain/ifmt/ftel_isp_ifmt.c" "$(FTEL)/bayer domain/lsc/ftel_isp_lsc.c" \
 	  "$(FTEL)/rgb domain/ccm/ftel_isp_ccm.c" "$(FTEL)/yuv domain/cnf/ftel_isp_cnf.c"
+
+FX1_SESSION_HEADERS := $(wildcard $(DRV)/isp/platform/fx1/fx1_isp_*.h) $(ARCH)/fx1_isp/fx1_isp_csr.h $(DRV)/isp/neon_isp_session.h $(wildcard $(RT)/include/*.h)
+FX1_SESSION_SRC := $(DRV)/isp/platform/fx1/fx1_isp_irq.c $(DRV)/isp/platform/fx1/fx1_isp_backend.c $(DRV)/isp/platform/fx1/fx1_isp_profile_txn.c
+$(BUILD)/test_fx1_camera_irq: test_fx1_camera_irq.c host/isp_runtime_mmio.h $(FX1_SESSION_HEADERS) $(FX1_SESSION_SRC) $(SESSION_SRC) $(CLAIM_SRC) | $(BUILD)
+	$(CC) $(CFLAGS) -o $@ test_fx1_camera_irq.c $(FX1_SESSION_SRC) $(SESSION_SRC) $(CLAIM_SRC)
+
+CAMERA_SERVICE := ../../rtos/services/camera
+$(BUILD)/test_camera_freertos: test_camera_freertos.c host/isp_runtime_mmio.h $(wildcard host/freertos/*.h) $(CAMERA_SERVICE)/neon_camera_freertos.c $(CAMERA_SERVICE)/include/neon_camera_freertos.h $(FX1_SESSION_HEADERS) $(FX1_SESSION_SRC) $(SESSION_SRC) $(CLAIM_SRC) | $(BUILD)
+	$(CC) -Ihost/freertos $(CFLAGS) -I$(CAMERA_SERVICE)/include -o $@ test_camera_freertos.c $(FX1_SESSION_SRC) $(SESSION_SRC) $(CLAIM_SRC)

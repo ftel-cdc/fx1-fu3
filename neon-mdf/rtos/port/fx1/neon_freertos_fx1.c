@@ -35,11 +35,34 @@ BaseType_t NEON_FX1_IRQ_Register(uint32_t source, uint32_t priority,
         priority == 0 || priority > FX1_PLIC_PRIORITY_MAX || handler == NULL)
         return pdFAIL;
     uint32_t saved = SDK_IRQ_EnterCritical();
+    if (irq_handlers[source].handler != NULL) {
+        SDK_IRQ_ExitCritical(saved);
+        return pdFAIL;
+    }
     SDK_IRQ_Disable((int32_t)source);
     irq_handlers[source].handler = handler;
     irq_handlers[source].user = user;
     SDK_IRQ_SetPriority((int32_t)source, priority);
     SDK_IRQ_Enable((int32_t)source);
+    SDK_IRQ_ExitCritical(saved);
+    return pdPASS;
+}
+
+BaseType_t NEON_FX1_IRQ_Unregister(uint32_t source,
+                                  NEON_FX1_IRQ_Handler handler, void *user)
+{
+    if (fx1_hartid() != 0 || source == 0 || source >= FX1_PLIC_NUM_SOURCES || !handler)
+        return pdFAIL;
+    uint32_t saved = SDK_IRQ_EnterCritical();
+    if (irq_handlers[source].handler != handler || irq_handlers[source].user != user) {
+        SDK_IRQ_ExitCritical(saved);
+        return pdFAIL;
+    }
+    SDK_IRQ_Disable((int32_t)source);
+    fx1_mb();
+    irq_handlers[source].handler = NULL;
+    irq_handlers[source].user = NULL;
+    fx1_mb();
     SDK_IRQ_ExitCritical(saved);
     return pdPASS;
 }

@@ -1,3 +1,10 @@
+# Shared claim for both the profile backend and the compatibility service.
+add_library(neon_mdf_isp_claim STATIC platform/common/neon_isp_claim.c)
+target_compile_features(neon_mdf_isp_claim PUBLIC c_std_11)
+target_link_libraries(neon_mdf_isp_claim PRIVATE ${NEON_MDF_DEVICE_TARGET})
+target_include_directories(neon_mdf_isp_claim PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(neon_mdf_driver PUBLIC neon_mdf_isp_claim)
+
 # ISP HAL. The headers outside platform/ are the public API.
 #   platform/common/neon_isp.c    every rule of the module, the same for every chip; it calls only the
 #                                  neon_isp_hw_*() contract of platform/common/neon_isp_hw.h
@@ -62,7 +69,7 @@ if(CONFIG_NEON_MDF_FTEL_ISP OR NEON_MDF_ENABLE_FTEL_ISP)
   )
   target_compile_features(neon_mdf_ftel_isp PUBLIC c_std_11)
   target_include_directories(neon_mdf_ftel_isp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(neon_mdf_ftel_isp PUBLIC ${NEON_MDF_DEVICE_TARGET} neon_mdf_kconfig)
+  target_link_libraries(neon_mdf_ftel_isp PUBLIC ${NEON_MDF_DEVICE_TARGET} neon_mdf_kconfig neon_mdf_isp_claim)
   target_compile_definitions(neon_mdf_ftel_isp PUBLIC
     ISP_BASE=FX1_ISP_CSR_BASE ISP_CHECK_RECOVERY_IDLE=1 COMMON_RECOVERY_STATUS_BUSY=1u)
   target_compile_options(neon_mdf_ftel_isp PUBLIC -include fx1/fx1_memory_map.h)
@@ -88,4 +95,16 @@ if(CONFIG_NEON_MDF_FTEL_ISP OR NEON_MDF_ENABLE_FTEL_ISP)
     target_link_libraries(neon_mdf_ftel_isp PRIVATE neon_mdf_isp_3a_binary ${NEON_MDF_DEVICE_TARGET} gcc)
     target_compile_definitions(neon_mdf_ftel_isp PUBLIC NEON_MDF_HAS_ISP_3A=1)
   endif()
+endif()
+
+if(CONFIG_NEON_MDF_CAMERA_FX1_BACKEND)
+  if(NOT NEON_MDF_TARGET_${NEON_MDF_TARGET}_FAMILY STREQUAL "FX1")
+    message(FATAL_ERROR "Camera register session backend requires FX1")
+  endif()
+  add_library(neon_mdf_isp_session_fx1 STATIC
+    platform/fx1/fx1_isp_irq.c platform/fx1/fx1_isp_backend.c platform/fx1/fx1_isp_profile_txn.c)
+  add_library(neon_mdf::isp_session_fx1 ALIAS neon_mdf_isp_session_fx1)
+  target_include_directories(neon_mdf_isp_session_fx1 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")
+  target_compile_features(neon_mdf_isp_session_fx1 PUBLIC c_std_11)
+  target_link_libraries(neon_mdf_isp_session_fx1 PUBLIC neon_mdf_isp_claim ${NEON_MDF_DEVICE_TARGET})
 endif()

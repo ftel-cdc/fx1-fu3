@@ -175,3 +175,14 @@ function(neon_mdf_add_isp_freertos)
   add_subdirectory("${NEON_MDF_PATH}/rtos/services/ftel_isp"
                    "${CMAKE_CURRENT_BINARY_DIR}/ftel-isp-freertos")
 endfunction()
+
+# Explicit opt-in; never starts the legacy ftel_isp service.
+function(neon_mdf_add_camera_freertos)
+  if(TARGET neon_mdf::camera_freertos)
+    return()
+  endif()
+  if(NOT TARGET neon_mdf::freertos OR NOT TARGET neon_mdf::camera_runtime OR NOT TARGET neon_mdf::isp_session_fx1)
+    message(FATAL_ERROR "Camera requires FreeRTOS, CAMERA_RUNTIME and CAMERA_FX1_BACKEND")
+  endif()
+  add_subdirectory("${NEON_MDF_PATH}/rtos/services/camera" "${CMAKE_CURRENT_BINARY_DIR}/camera-freertos")
+endfunction()

@@ -33,7 +33,7 @@ typedef struct {
 extern ftel_isp_fx1_session_t ftel_isp_fx1_session;
 /* Lớp OS giữ quyền truy cập bằng callback; driver thuần không include RTOS. */
 bool ftel_isp_fx1_access_allowed(void);
-void ftel_isp_fx1_set_owner(bool (*allowed)(void *), void *user);
+bool ftel_isp_fx1_set_owner(bool (*allowed)(void *), void *user);
 ftel_isp_status_t ftel_isp_fx1_submit(const ftel_isp_frame_t *frame, bool irq,
                                        uint32_t prepare_timeout_us);
 ftel_isp_status_t ftel_isp_fx1_collect(ftel_isp_frame_result_t *result);

@@ -1,0 +1,5 @@
+add_library(neon_mdf_camera_freertos STATIC neon_camera_freertos.c)
+add_library(neon_mdf::camera_freertos ALIAS neon_mdf_camera_freertos)
+target_include_directories(neon_mdf_camera_freertos PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_compile_features(neon_mdf_camera_freertos PUBLIC c_std_11)
+target_link_libraries(neon_mdf_camera_freertos PUBLIC neon_mdf::camera_runtime neon_mdf::isp_session_fx1 neon_mdf::freertos)

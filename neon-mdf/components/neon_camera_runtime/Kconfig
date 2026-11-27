@@ -1,24 +1,37 @@
 config NEON_MDF_CAMERA_RUNTIME
-    bool "Build Neon camera runtime"
+    bool "Build Neon camera runtime session core"
+    default n
+    help
+        Single-owner, OS-independent profile session core. Requires a backend
+        implementing neon_isp_session.h; optionally enable the FX1 scalar backend.
+        The core alone does not enable CSI, simulation or legacy ISP writes.
+
+if NEON_MDF_CAMERA_RUNTIME
+
+config NEON_MDF_CAMERA_FX1_BACKEND
+    bool "Build FX1 MAS v1.07 scalar profile register backend"
+    default n
+    help
+        Linear RAW12 replay, CH0 NV12, WB/DG scalar profiles. Table consumers
+        and statistics disabled; no legacy fallback or binary IQ adapter.
+
+config NEON_MDF_CAMERA_LEGACY
+    bool "Build deprecated CSI/legacy-register camera compatibility API"
     default n
     select NEON_MDF_DRIVER_CSI
     select NEON_MDF_DRIVER_ISP
     help
-        Owns one camera pipeline, camera profiles, sensor HAL binding and 3A.
-        Hardware access remains in the reusable driver components.
+        Explicit opt-in for neon_camera_legacy.h. This is not a profile-mode
+        backend and must not run alongside a camera profile session.
 
-if NEON_MDF_CAMERA_RUNTIME
-
+if NEON_MDF_CAMERA_LEGACY
 choice NEON_MDF_CAMERA_SENSOR
     prompt "Reference sensor module"
     default NEON_MDF_CAMERA_SENSOR_IMX675
-
 config NEON_MDF_CAMERA_SENSOR_IMX675
     bool "IMX675"
-
 config NEON_MDF_CAMERA_SENSOR_OS04C10
     bool "OS04C10"
-
 endchoice
-
+endif
 endif

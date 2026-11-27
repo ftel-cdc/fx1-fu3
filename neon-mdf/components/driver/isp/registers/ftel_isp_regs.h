@@ -451,7 +451,7 @@ _Static_assert(((uintptr_t)(ISP_BASE) & 3u) == 0u, "ISP_BASE must be 32-bit alig
 #define TUNE_CAP_WB_GB              (1u << 5)
 #define TUNE_CAP_AEC_LEASE          (1u << 9)
 #define TUNE_CAP_AF_LEASE           (1u << 13)
-#define TUNE_CAP_FULL_V107          0x003FFFFFu
+#define TUNE_CAP_FULL_V107          FX1_ISP_TUNE_CAPS_RO_MASK
 
 /* TUNE_MODE */
 #define TUNE_MODE_ENABLE            (1u << 0)

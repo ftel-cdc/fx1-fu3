@@ -1,4 +1,4 @@
-#include "neon_camera_runtime.h"
+#include "neon_camera_legacy.h"
 
 /* Stages that start() completes, in order. A rollback undoes every stage up to the one it is given. */
 typedef enum {
